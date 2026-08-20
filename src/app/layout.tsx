@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/contexts/AppContext';
+import { WordaiAuthProvider } from '@/contexts/WordaiAuthContext';
 
 export const metadata: Metadata = {
   title: 'WynMotion AI Studio — Video & Voiceover',
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col antialiased selection:bg-rose-100 selection:text-rose-900">
-        <AppProvider>{children}</AppProvider>
+        <WordaiAuthProvider>
+          <AppProvider>{children}</AppProvider>
+        </WordaiAuthProvider>
       </body>
     </html>
   );
