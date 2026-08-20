@@ -16,6 +16,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  deleteUser,
 } from 'firebase/auth';
 import { wordaiAuth, wordaiGoogleProvider } from '@/lib/wordai-firebase';
 import { linkAppleAccount } from '@/services/appleAuthService';
@@ -39,6 +40,7 @@ interface WordaiAuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   getValidToken: () => Promise<string>;
   refreshSubscription: () => Promise<void>;
 }
@@ -194,6 +196,15 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteAccount = async (): Promise<void> => {
+    if (!wordaiAuth.currentUser) throw new Error('Chua dang nhap');
+    await deleteUser(wordaiAuth.currentUser);
+    setUser(null);
+    setUserSubscription({ points_balance: 100 });
+    try { localStorage.clear(); } catch {}
+    try { sessionStorage.clear(); } catch {}
+  };
+
   return (
     <WordaiAuthContext.Provider
       value={{
@@ -209,6 +220,7 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
         forgotPassword,
         sendPasswordReset: forgotPassword,
         signOut,
+        deleteAccount,
         getValidToken,
         refreshSubscription: async () => {
           if (user) await fetchUserSubscription(user);
@@ -225,3 +237,4 @@ export function useWordaiAuth() {
   if (!context) throw new Error('useWordaiAuth must be used within WordaiAuthProvider');
   return context;
 }
+

@@ -6,7 +6,7 @@
   --primary-coral: #FF2D55;
   --primary-coral-hover: #E11D48;
   --primary-coral-soft: #FFF1F2;
-  --bg-main: #FAFAFC;
+  --bg-main: #F8F9FC;
   --bg-card: #FFFFFF;
   --text-main: #0F172A;
   --text-muted: #64748B;
@@ -15,10 +15,18 @@
   --sab: env(safe-area-inset-bottom, 0px);
 }
 
+/* ── Base typography — Mobile-first, readable sizes ── */
+html {
+  /* 16px base — matches iOS system font scale */
+  font-size: 16px;
+}
+
 html, body {
   background-color: var(--bg-main);
   color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* SF Pro Display → SF Pro Text → System stack (matches iOS native feel) */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
@@ -27,13 +35,36 @@ html, body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  /* Slightly larger line-height for better mobile readability */
+  line-height: 1.5;
 }
 
-/* iOS momentum scroll & custom scrollbars */
+/* ── Override Tailwind xs / sm / base / lg for readable mobile sizes ── */
+@layer base {
+  /* Mobile heading scale */
+  h1 { font-size: 1.5rem;   font-weight: 900; letter-spacing: -0.02em; }
+  h2 { font-size: 1.25rem;  font-weight: 800; }
+  h3 { font-size: 1.125rem; font-weight: 700; }
+  h4 { font-size: 1rem;     font-weight: 700; }
+  h5 { font-size: 0.9375rem; font-weight: 600; }
+  h6 { font-size: 0.875rem;  font-weight: 600; }
+
+  /* Body text */
+  p  { font-size: 0.9375rem; } /* 15px */
+
+  /* Labels & UI text — minimum 13px on mobile */
+  label { font-size: 0.875rem; font-weight: 500; }
+
+  /* Button text */
+  button { font-size: 0.9375rem; font-weight: 600; }
+}
+
+/* iOS momentum scroll */
 * {
   -webkit-overflow-scrolling: touch;
 }
 
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -48,7 +79,7 @@ html, body {
   border-radius: 9999px;
 }
 
-/* Glassmorphism utilities */
+/* ── Custom utilities ── */
 .glass-card {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
@@ -59,4 +90,13 @@ html, body {
 .glass-coral {
   background: linear-gradient(135deg, rgba(255, 45, 85, 0.08) 0%, rgba(255, 94, 133, 0.04) 100%);
   border: 1.5px solid rgba(255, 45, 85, 0.3);
+}
+
+/* ── Hide scrollbar but keep scrolling ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Mobile tap state ── */
+@media (hover: none) {
+  button:active, a:active { opacity: 0.75; }
 }
