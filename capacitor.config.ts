@@ -6,12 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'out',
   appendUserAgent: 'Safari/604.1 WynMotionApp/1.0',
   server: {
-    hostname: 'www.wynai.pro',
-    iosScheme: 'https',
-    allowNavigation: ['*'],
+    androidScheme: 'https',
   },
   ios: {
-    scheme: 'App',
     contentInset: 'always',
   },
   cordova: {
