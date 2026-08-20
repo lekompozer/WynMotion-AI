@@ -22,6 +22,22 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+	<!-- ── Google Sign-In URL scheme (from GoogleService-Info.plist REVERSED_CLIENT_ID) ── -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>GoogleSignIn</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1005896242828-huvtt9j77663g2j04qrnvrl0o719s0lk</string>
+			</array>
+		</dict>
+	</array>
+
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -43,6 +59,8 @@
 	<string>WynMotion cần quyền truy cập ảnh để chọn tài nguyên minh họa.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>WynMotion cần quyền sử dụng microphone để thu âm giọng đọc cho video.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>WynMotion cần quyền camera để quay video và chụp ảnh minh họa.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
