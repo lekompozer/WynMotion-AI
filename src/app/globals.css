@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-coral: #FF2D55;
+  --primary-coral-hover: #E11D48;
+  --primary-coral-soft: #FFF1F2;
+  --bg-main: #FAFAFC;
+  --bg-card: #FFFFFF;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --border-color: #E2E8F0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* iOS momentum scroll & custom scrollbars */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+/* Glassmorphism utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-coral {
+  background: linear-gradient(135deg, rgba(255, 45, 85, 0.08) 0%, rgba(255, 94, 133, 0.04) 100%);
+  border: 1.5px solid rgba(255, 45, 85, 0.3);
+}

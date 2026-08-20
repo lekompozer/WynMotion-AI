@@ -1,0 +1,38 @@
+{
+  "name": "wynmotion-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WynMotion AI Studio — AI Animated Video, 48kHz Voiceover, Art & Cloud Library for iOS",
+  "scripts": {
+    "dev": "next dev --port 3005",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/cli": "^7.6.5",
+    "@capacitor/core": "^7.6.5",
+    "@capacitor/filesystem": "^7.1.5",
+    "@capacitor/haptics": "^7.0.2",
+    "@capacitor/ios": "^7.6.5",
+    "@capacitor/keyboard": "^7.0.3",
+    "@capacitor/share": "^7.0.2",
+    "@capacitor/status-bar": "^7.0.2",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.16.0",
+    "next": "15.5.15",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  }
+}
