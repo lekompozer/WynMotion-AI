@@ -3,7 +3,25 @@
  * Connects to WordAI / WynAI AI Microservices
  */
 
-const API_BASE_URL = 'https://ai.wordai.pro';
+import { wordaiAuth } from '@/lib/wordai-firebase';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL || process.env.NEXT_PUBLIC_API_URL || 'https://ai.wordai.pro';
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  try {
+    const user = wordaiAuth?.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch (err) {
+    // Guest / unauthenticated fallback
+  }
+  return headers;
+}
 
 export interface SceneAction {
   action_type: string;
@@ -78,9 +96,10 @@ export const wynmotionService = {
     duration_sec: number;
     audio_id?: string;
   }> {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/api/ai/motion/generate-audio`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(params),
     });
     const data = await res.json();
@@ -106,9 +125,10 @@ export const wynmotionService = {
     success: boolean;
     project: MotionProject;
   }> {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/api/ai/motion/generate-scenes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(params),
     });
     const data = await res.json();
@@ -120,7 +140,10 @@ export const wynmotionService = {
    * Get Project Details
    */
   async getProject(projectId: string): Promise<{ success: boolean; project: MotionProject }> {
-    const res = await fetch(`${API_BASE_URL}/api/ai/motion/project/${projectId}`);
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/project/${projectId}`, {
+      headers,
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tải dự án');
     return data;
@@ -130,7 +153,10 @@ export const wynmotionService = {
    * List Recent Projects
    */
   async listProjects(): Promise<{ success: boolean; projects: MotionProject[] }> {
-    const res = await fetch(`${API_BASE_URL}/api/ai/motion/projects`);
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/projects`, {
+      headers,
+    });
     const data = await res.json();
     if (!res.ok) return { success: true, projects: [] };
     return data;
