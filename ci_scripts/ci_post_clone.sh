@@ -39,6 +39,9 @@ npm run build
 echo "⚙️ Syncing Capacitor iOS platform..."
 npx cap sync ios
 
+echo "⚙️ Disabling Xcode User Script Sandboxing..."
+node scripts/patch-xcode-sandboxing.js
+
 echo "⚙️ Installing Pods in ios/App..."
 cd ios/App
 pod install --repo-update
