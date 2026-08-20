@@ -28,7 +28,7 @@ const config: CapacitorConfig = {
       style: 'DARK',
       backgroundColor: '#FFFFFF',
     },
-  },
+  } as any,
 };
 
 export default config;

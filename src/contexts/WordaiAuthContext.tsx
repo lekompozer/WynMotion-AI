@@ -19,7 +19,6 @@ import {
   deleteUser,
 } from 'firebase/auth';
 import { wordaiAuth, wordaiGoogleProvider } from '@/lib/wordai-firebase';
-import { linkAppleAccount } from '@/services/appleAuthService';
 
 export interface UserSubscription {
   points_balance: number;
@@ -35,17 +34,34 @@ interface WordaiAuthContextType {
   error: string | null;
   signIn: () => Promise<boolean>;
   signInWithApple: () => Promise<void>;
+  signOut: () => Promise<void>;
+  getValidToken: () => Promise<string>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string, name?: string) => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
+  checkEmailVerified: (email: string, pass: string) => Promise<boolean>;
+  resendVerificationEmail: (email: string, pass: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
-  signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  getValidToken: () => Promise<string>;
   refreshSubscription: () => Promise<void>;
 }
 
 const WordaiAuthContext = createContext<WordaiAuthContextType | undefined>(undefined);
+
+export function mapFirebaseAuthError(code: string): string {
+  const messages: Record<string, string> = {
+    'auth/email-already-in-use': 'Email này đã được đăng ký. Vui lòng đăng nhập.',
+    'auth/invalid-email': 'Email không hợp lệ.',
+    'auth/weak-password': 'Mật khẩu quá yếu (tối thiểu 6 ký tự).',
+    'auth/user-not-found': 'Không tìm thấy tài khoản với email này.',
+    'auth/wrong-password': 'Mật khẩu không đúng.',
+    'auth/invalid-credential': 'Email hoặc mật khẩu không đúng.',
+    'auth/too-many-requests': 'Quá nhiều lần thử. Vui lòng thử lại sau ít phút.',
+    'auth/network-request-failed': 'Lỗi kết nối mạng. Kiểm tra internet.',
+    'auth/user-disabled': 'Tài khoản này đã bị vô hiệu hóa.',
+    'auth/operation-not-allowed': 'Phương thức đăng nhập này chưa được bật trên server.',
+  };
+  return messages[code] || `Lỗi đăng nhập (${code})`;
+}
 
 export function WordaiAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -111,15 +127,15 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (err: any) {
       // Fallback to redirect if popup is blocked
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         try {
           await signInWithRedirect(wordaiAuth, wordaiGoogleProvider);
           return true;
         } catch (rErr: any) {
-          setError(rErr.message);
+          setError(mapFirebaseAuthError(rErr.code || ''));
         }
       } else {
-        setError(err.message);
+        setError(mapFirebaseAuthError(err.code || ''));
       }
       return false;
     } finally {
@@ -138,7 +154,7 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
       setUser(res.user);
       await fetchUserSubscription(res.user);
     } catch (err: any) {
-      setError(err.message);
+      setError(mapFirebaseAuthError(err.code || ''));
       throw err;
     } finally {
       setIsLoading(false);
@@ -153,8 +169,9 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
       setUser(res.user);
       await fetchUserSubscription(res.user);
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      const msg = mapFirebaseAuthError(err.code || '');
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -166,23 +183,56 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await createUserWithEmailAndPassword(wordaiAuth, email, pass);
       if (name && res.user) {
-        await updateProfile(res.user, { displayName: name });
+        await updateProfile(res.user, { displayName: name.trim() });
       }
       if (res.user) {
         await sendEmailVerification(res.user);
-        setUser(res.user);
+        // Sign out immediately so user must verify email before full login
+        await firebaseSignOut(wordaiAuth);
       }
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      const msg = mapFirebaseAuthError(err.code || '');
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const forgotPassword = async (email: string): Promise<void> => {
+  const checkEmailVerified = async (email: string, pass: string): Promise<boolean> => {
+    try {
+      const res = await signInWithEmailAndPassword(wordaiAuth, email, pass);
+      await res.user.reload();
+      const fresh = wordaiAuth.currentUser;
+      if (fresh?.emailVerified) {
+        setUser(fresh);
+        await fetchUserSubscription(fresh);
+        return true;
+      }
+      await firebaseSignOut(wordaiAuth);
+      return false;
+    } catch (err: any) {
+      throw new Error(mapFirebaseAuthError(err.code || ''));
+    }
+  };
+
+  const resendVerificationEmail = async (email: string, pass: string): Promise<void> => {
+    try {
+      const res = await signInWithEmailAndPassword(wordaiAuth, email, pass);
+      await sendEmailVerification(res.user);
+      await firebaseSignOut(wordaiAuth);
+    } catch (err: any) {
+      throw new Error(mapFirebaseAuthError(err.code || ''));
+    }
+  };
+
+  const sendPasswordReset = async (email: string): Promise<void> => {
     setError(null);
-    await sendPasswordResetEmail(wordaiAuth, email);
+    try {
+      await sendPasswordResetEmail(wordaiAuth, email);
+    } catch (err: any) {
+      throw new Error(mapFirebaseAuthError(err.code || ''));
+    }
   };
 
   const signOut = async (): Promise<void> => {
@@ -197,7 +247,7 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteAccount = async (): Promise<void> => {
-    if (!wordaiAuth.currentUser) throw new Error('Chua dang nhap');
+    if (!wordaiAuth.currentUser) throw new Error('Chưa đăng nhập');
     await deleteUser(wordaiAuth.currentUser);
     setUser(null);
     setUserSubscription({ points_balance: 100 });
@@ -217,8 +267,9 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
         signInWithApple,
         signInWithEmail,
         registerWithEmail,
-        forgotPassword,
-        sendPasswordReset: forgotPassword,
+        checkEmailVerified,
+        resendVerificationEmail,
+        sendPasswordReset,
         signOut,
         deleteAccount,
         getValidToken,
@@ -237,4 +288,3 @@ export function useWordaiAuth() {
   if (!context) throw new Error('useWordaiAuth must be used within WordaiAuthProvider');
   return context;
 }
-
