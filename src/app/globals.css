@@ -11,9 +11,11 @@
   --text-main: #0F172A;
   --text-muted: #64748B;
   --border-color: #E2E8F0;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
 }
 
-body {
+html, body {
   background-color: var(--bg-main);
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -22,7 +24,9 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  padding-top: env(safe-area-inset-top, 0px);
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 /* iOS momentum scroll & custom scrollbars */
@@ -31,8 +35,8 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -44,9 +48,9 @@ body {
   border-radius: 9999px;
 }
 
-/* Glassmorphism utility */
+/* Glassmorphism utilities */
 .glass-card {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(226, 232, 240, 0.8);
