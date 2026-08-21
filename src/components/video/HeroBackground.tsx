@@ -27,47 +27,50 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
 
   return (
     <div className={`relative w-full overflow-hidden min-h-[410px] flex flex-col justify-between ${className}`}>
-      {/* Dynamic CSS for Liquid Fluid Color Morphing & Drifting (Apple Intelligence / Gemini Style) */}
+      {/* Dynamic CSS for Orbiting Warm & Cool Liquid Glowing Orbs */}
       <style jsx>{`
-        @keyframes liquidFlow1 {
+        /* Warm Glowing Orb (Coral Pink -> Sunset Orange -> Amber -> Magenta) Orbiting Motion */
+        @keyframes warmOrbFloat {
           0% {
             transform: translate(0px, 0px) scale(1) rotate(0deg);
           }
-          33% {
-            transform: translate(45px, 25px) scale(1.18) rotate(45deg);
+          25% {
+            transform: translate(50px, -20px) scale(1.15) rotate(90deg);
           }
-          66% {
-            transform: translate(-30px, 40px) scale(0.92) rotate(90deg);
+          50% {
+            transform: translate(90px, 35px) scale(1.22) rotate(180deg);
+          }
+          75% {
+            transform: translate(25px, 50px) scale(0.95) rotate(270deg);
           }
           100% {
-            transform: translate(0px, 0px) scale(1) rotate(0deg);
+            transform: translate(0px, 0px) scale(1) rotate(360deg);
           }
         }
 
-        @keyframes liquidFlow2 {
-          0% {
-            transform: translate(0px, 0px) scale(1) rotate(0deg);
-          }
-          33% {
-            transform: translate(-40px, -25px) scale(1.22) rotate(-60deg);
-          }
-          66% {
-            transform: translate(35px, -30px) scale(0.9) rotate(-120deg);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1) rotate(0deg);
-          }
-        }
-
-        @keyframes liquidFlow3 {
+        /* Cool Liquid Blob (Sky Blue -> Cyan -> Royal Indigo -> Deep Violet) at Bottom-Right */
+        @keyframes coolLiquidDrift {
           0% {
             transform: translate(0px, 0px) scale(1);
           }
-          40% {
-            transform: translate(-45px, -35px) scale(1.25);
+          33% {
+            transform: translate(-45px, -30px) scale(1.18);
           }
-          75% {
-            transform: translate(30px, -20px) scale(1.05);
+          66% {
+            transform: translate(20px, -45px) scale(0.92);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+
+        /* Aqua Cyan Ambient Flow */
+        @keyframes cyanFlow {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          50% {
+            transform: translate(-35px, 30px) scale(1.12);
           }
           100% {
             transform: translate(0px, 0px) scale(1);
@@ -78,14 +81,14 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           0% {
             background-color: #FF2D55; /* Neon Coral Pink */
           }
-          35% {
+          30% {
             background-color: #FF5E3A; /* Sunset Orange */
           }
-          65% {
-            background-color: #FFAA00; /* Golden Amber */
+          60% {
+            background-color: #FF9500; /* Golden Amber / Warm Coral */
           }
           85% {
-            background-color: #E02475; /* Vivid Magenta */
+            background-color: #E11D48; /* Deep Rose Magenta */
           }
           100% {
             background-color: #FF2D55;
@@ -96,60 +99,59 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           0% {
             background-color: #0EA5E9; /* Sky Blue */
           }
-          35% {
-            background-color: #38BDF8; /* Electric Cyan */
+          30% {
+            background-color: #06B6D4; /* Electric Cyan */
           }
-          65% {
+          60% {
             background-color: #6366F1; /* Royal Indigo */
           }
           85% {
-            background-color: #8B5CF6; /* Deep Violet */
+            background-color: #7C3AED; /* Deep Violet */
           }
           100% {
             background-color: #0EA5E9;
           }
         }
 
-        .liquid-blob-1 {
-          animation: liquidFlow1 10s ease-in-out infinite, morphCoolColors 14s ease-in-out infinite;
+        .warm-orb {
+          animation: warmOrbFloat 11s ease-in-out infinite, morphWarmColors 12s ease-in-out infinite;
         }
 
-        .liquid-blob-2 {
-          animation: liquidFlow2 12s ease-in-out infinite;
+        .cool-liquid-bottom-right {
+          animation: coolLiquidDrift 10s ease-in-out infinite, morphCoolColors 13s ease-in-out infinite;
         }
 
-        .liquid-blob-3 {
-          animation: liquidFlow3 9s ease-in-out infinite, morphWarmColors 12s ease-in-out infinite;
+        .cyan-orb {
+          animation: cyanFlow 9s ease-in-out infinite;
         }
       `}</style>
 
-      {/* 1. Deep Midnight Base with Fluid Liquid Glowing Blobs (No blinking/pulse, 100% smooth fluid drift) */}
+      {/* 1. Deep Midnight Base with Vivid Warm Orbiting Orb + Cool Bottom-Right Liquid */}
       <div className="absolute inset-0 z-0 bg-[#07132B] overflow-hidden pointer-events-none">
         {/* Ambient base gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0A2552] via-[#081B3D] to-[#061226]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0A2552] via-[#091D42] to-[#061226]" />
 
-        {/* Liquid Blob 1: Cool Azure to Royal Indigo / Violet (Top-Left) */}
+        {/* VIVID WARM ORB (Center/Top area - coral pink to orange/amber orbiting fluidly) */}
         <div
-          className="liquid-blob-1 absolute -top-16 -left-16 w-96 h-96 rounded-full blur-[80px] opacity-90"
+          className="warm-orb absolute top-8 left-10 w-80 h-80 rounded-full blur-[65px] opacity-95"
           style={{ willChange: 'transform, background-color' }}
         />
 
-        {/* Liquid Blob 2: Vibrant Cyan / Sapphire (Center-Top) */}
+        {/* COOL LIQUID BLOB (Bottom-Right quadrant - Sky Blue to Indigo to Violet) */}
         <div
-          className="liquid-blob-2 absolute top-4 left-1/4 w-80 h-80 rounded-full bg-cyan-400 blur-[85px] opacity-75"
+          className="cool-liquid-bottom-right absolute bottom-12 right-0 w-88 h-88 rounded-full blur-[70px] opacity-95"
+          style={{ willChange: 'transform, background-color' }}
+        />
+
+        {/* AMBIENT ELECTRIC CYAN (Top-Right / Center Accent) */}
+        <div
+          className="cyan-orb absolute top-4 right-12 w-72 h-72 rounded-full bg-cyan-400 blur-[75px] opacity-80"
           style={{ willChange: 'transform' }}
         />
 
-        {/* Liquid Blob 3: Coral Pink to Sunset Orange & Golden Amber (Bottom-Right) */}
+        {/* DEEP SAPPHIRE BASE (Top-Left corner) */}
         <div
-          className="liquid-blob-3 absolute -bottom-10 -right-10 w-84 h-84 rounded-full blur-[75px] opacity-85"
-          style={{ willChange: 'transform, background-color' }}
-        />
-
-        {/* Liquid Blob 4: Deep Violet Aura for richness (Bottom-Center) */}
-        <div
-          className="absolute bottom-6 left-1/3 w-72 h-72 rounded-full bg-indigo-600/60 blur-[90px] opacity-70 animate-pulse pointer-events-none"
-          style={{ animationDuration: '6s' }}
+          className="absolute -top-12 -left-12 w-80 h-80 rounded-full bg-blue-600/70 blur-[85px] opacity-75"
         />
       </div>
 
@@ -159,7 +161,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
         style={{
           background: isDark
             ? 'linear-gradient(180deg, transparent 0%, rgba(8,11,16,0.3) 30%, rgba(8,11,16,0.85) 75%, #080B10 100%)'
-            : 'linear-gradient(180deg, transparent 0%, rgba(250,250,252,0.3) 30%, rgba(250,250,252,0.85) 75%, #FAFAFC 100%)'
+            : 'linear-gradient(180deg, transparent 0%, rgba(250,250,252,0.3) 30%, rgba(250,250,252,0.85) 75%, #FAFAFC 100%)',
         }}
       />
 
