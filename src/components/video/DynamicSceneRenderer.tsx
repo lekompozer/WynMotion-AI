@@ -386,10 +386,10 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         const rw = (el.region?.width || vbWidth) * scaleX;
         const rh = (el.region?.height || vbHeight) * scaleY;
 
-        // Dynamic hand path oscillation
-        const waveX = Math.sin(prog * Math.PI * 6) * 0.35 + 0.5;
-        const waveY = Math.cos(prog * Math.PI * 4) * 0.15;
-        activePenX = rx + rw * Math.max(0.1, Math.min(0.9, waveX));
+        // Dynamic hand path oscillation (Fast & fluid handwriting speed)
+        const waveX = Math.sin(prog * Math.PI * 12) * 0.35 + 0.5;
+        const waveY = Math.cos(prog * Math.PI * 8) * 0.15;
+        activePenX = rx + rw * Math.max(0.08, Math.min(0.92, waveX));
         activePenY = ry + rh * Math.max(0.05, Math.min(0.95, prog + waveY));
       } else if (currentMs >= endMs && el.subtitle) {
         currentSubtitle = el.subtitle;
@@ -536,7 +536,34 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
             zIndex: 10,
           }}
         >
-          {scene.image_url ? (
+          {scene.video_url ? (
+            /* PRE-RENDERED OPENCV ZHANG-SUEN STREAM VIDEO CLIP (100% EXACT TO BACKEND OPENCV) */
+            <video
+              key={scene.video_url}
+              src={scene.video_url}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: isPortrait ? 'contain' : 'cover',
+                backgroundColor: '#F5EBD7',
+              }}
+              autoPlay
+              muted
+              loop
+              playsInline
+              ref={(el) => {
+                if (el) {
+                  const targetTime = frame / fps;
+                  if (Math.abs(el.currentTime - targetTime) > 0.3) {
+                    el.currentTime = targetTime;
+                  }
+                  if (el.paused) {
+                    el.play().catch(() => {});
+                  }
+                }
+              }}
+            />
+          ) : scene.image_url ? (
             <svg viewBox={`0 0 ${vbWidth} ${vbHeight}`} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
               <defs>
                 {/* 1. BLACK INK EXTRACTION FILTER FOR WARM PAPER */}
@@ -621,6 +648,26 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
                   </g>
                 );
               })}
+
+              {/* PROPORTIONAL SVG DRAWING HAND (SCALES 100% PERFECTLY WITH CANVAS) */}
+              {isPenActive && (
+                <g
+                  transform={`translate(${activePenX}, ${activePenY}) rotate(${Math.sin(frame * 1.2) * 3.5})`}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  <image
+                    href="/assets/drawing-hand.png"
+                    x={-35}
+                    y={-35}
+                    width={isPortrait ? 260 : 320}
+                    height={isPortrait ? 260 : 320}
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{
+                      filter: 'drop-shadow(0 14px 20px rgba(50, 30, 10, 0.4))',
+                    }}
+                  />
+                </g>
+              )}
             </svg>
           ) : (
             <div
@@ -639,32 +686,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
               <div style={{ fontSize: 44, marginBottom: 12 }}>🖋️</div>
               <div style={{ fontSize: 22, fontWeight: 900 }}>{scene.title}</div>
               <div style={{ fontSize: 14, color: '#78552D', marginTop: 6, maxWidth: 500 }}>{displaySummary}</div>
-            </div>
-          )}
-
-          {/* REALISTIC HAND OVERLAY TRACKER */}
-          {isPenActive && (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${(activePenX / vbWidth) * 100}%`,
-                top: `${(activePenY / vbHeight) * 100}%`,
-                transform: `translate(-28px, -28px) rotate(${Math.sin(frame * 0.8) * 2}deg)`,
-                pointerEvents: 'none',
-                zIndex: 35,
-                filter: 'drop-shadow(0 14px 20px rgba(50, 30, 10, 0.4))',
-              }}
-            >
-              <img
-                src="/assets/drawing-hand.png"
-                alt="Drawing Hand"
-                style={{
-                  width: isPortrait ? 180 : 220,
-                  height: 'auto',
-                  display: 'block',
-                  transformOrigin: '12% 12%',
-                }}
-              />
             </div>
           )}
         </div>
