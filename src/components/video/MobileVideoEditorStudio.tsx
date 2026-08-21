@@ -4,14 +4,12 @@
  * MobileVideoEditorStudio.tsx — WynMotion-AI iOS App
  *
  * Mobile-optimized Video Editor:
- * - Compact Header + Settings Action Sheet
- * - AI Assistant Left Slide-over Drawer
- * - Auto-fit Canvas Preview Stage (16:9 / 9:16 / 1:1)
- * - Playback Controls (Play / Pause / Next / Prev scene)
- * - Horizontal Scene Timeline Carousel (tap-to-seek)
+ * - 44px Safe-area Notch / Dynamic Island Header Padding
+ * - Complete 6-style dynamic rendering via MobileDynamicSceneRenderer
+ * - Full parity with web editor layout & algorithms
+ * - Large, beautiful, high-contrast typography matching Video Creation Modals
  * - Bottom Sheet from below: Assets | Audio & BGM | Canvas+Script Settings
- *   → Canvas Settings: Màu nền, Ngôn ngữ Text (VI / EN / Song ngữ),
- *     chỉnh sửa Script AI + Voice Transcript từng scene, Typography, ẩn/hiện phụ đề
+ * - AI Assistant Left Slide-over Drawer (WynRise AI)
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -31,7 +29,6 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
-  ChevronUp,
   Upload,
   Loader2,
   RefreshCw,
@@ -44,9 +41,12 @@ import {
   Globe,
   Send,
   Mic,
+  Maximize2,
+  Film,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
+import { MobileDynamicSceneRenderer } from '@/components/video/MobileDynamicSceneRenderer';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -156,7 +156,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
   // ── Scene click (timeline) ──
   const handleSceneClick = (index: number) => {
     setActiveSceneIndex(index);
-    // Seek playhead to start of scene
     let elapsed = 0;
     for (let i = 0; i < index; i++) elapsed += scenes[i].duration_sec || 0;
     setCurrentTimeSec(elapsed);
@@ -168,7 +167,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       setScenes((prev) =>
         prev.map((s) => (s.scene_id === sceneId ? { ...s, ...updates } : s))
       );
-      // Debounced auto-save
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         wynmotionService
@@ -190,7 +188,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       const res = await wynmotionService.exportMP4(project.project_id, scenes);
       setExportJobId(res.job_id);
       if (res.mp4_url) {
-        // Direct download
         const a = document.createElement('a');
         a.href = res.mp4_url;
         a.download = `WynMotion_${project.project_id.slice(0, 8)}.mp4`;
@@ -210,33 +207,32 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
     }
   };
 
-  // ── Get thumbnail for scene ──
   const getSceneThumb = (s: MotionScene) => (s as any).image_url || null;
 
-  // ─── RENDER ──────────────────────────────────────────────────────────────
   return (
     <div
       className={`fixed inset-0 z-50 flex flex-col overflow-hidden transition-colors ${
-        isDark ? 'bg-[#0C0D14] text-white' : 'bg-[#F8FAFC] text-slate-900'
+        isDark ? 'bg-[#080B10] text-white' : 'bg-[#FAFAFC] text-slate-900'
       }`}
     >
       {/* ═══════════════════════════════════════════════════════════
-          1. COMPACT HEADER
+          1. COMPACT HEADER (Pushed down 44px for iPhone Notch / Dynamic Island)
       ═══════════════════════════════════════════════════════════ */}
       <header
-        className={`flex-shrink-0 flex items-center justify-between px-4 h-14 border-b z-30 ${
-          isDark ? 'border-slate-800 bg-[#10121C]' : 'border-slate-200 bg-white shadow-sm'
+        className={`flex-shrink-0 flex items-center justify-between px-4 pb-2.5 pt-[max(env(safe-area-inset-top,44px),44px)] border-b z-30 transition-colors ${
+          isDark
+            ? 'border-slate-800/80 bg-[#0F131C]/95 backdrop-blur-md'
+            : 'border-slate-200 bg-white/95 backdrop-blur-md shadow-sm'
         }`}
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {/* Back */}
         <button
           type="button"
           onClick={onBack}
-          className={`p-2 rounded-xl transition-all active:scale-90 ${
+          className={`p-2 rounded-2xl transition-all active:scale-90 ${
             isDark
-              ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              ? 'text-slate-300 hover:text-white hover:bg-slate-800'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <ArrowLeft className="w-5 h-5" />
@@ -245,28 +241,30 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
         {/* Title */}
         <div className="flex flex-col items-center min-w-0 flex-1 mx-2">
           <h1
-            className={`text-xs font-black truncate max-w-full ${
+            className={`text-sm font-black truncate max-w-full tracking-tight ${
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
             {project.title || project.prompt?.slice(0, 30) || 'WynMotion Project'}
           </h1>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/15 px-1.5 py-0.5 rounded-full">
-              {project.visual_style?.replace('_', ' ') || 'Style'}
+            <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/15 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              {project.visual_style?.replace(/_/g, ' ') || 'Style'}
             </span>
-            <span className="text-[10px] text-slate-500">{aspectRatio}</span>
+            <span className="text-[10px] font-bold text-slate-400">{aspectRatio}</span>
           </div>
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-1.5">
-          {/* Settings */}
+        <div className="flex items-center gap-2">
+          {/* Settings button */}
           <button
             type="button"
             onClick={() => setIsSettingsSheetOpen(true)}
-            className={`p-2 rounded-xl transition-all active:scale-90 ${
-              isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'
+            className={`p-2 rounded-2xl transition-all active:scale-90 ${
+              isDark
+                ? 'text-slate-300 hover:text-white hover:bg-slate-800'
+                : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <Settings className="w-5 h-5" />
@@ -277,7 +275,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             type="button"
             onClick={handleExportMP4}
             disabled={isExporting}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 text-xs font-black shadow-md active:scale-95 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 text-xs font-black shadow-md shadow-cyan-500/20 active:scale-95 transition-all disabled:opacity-50"
           >
             {isExporting ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -290,87 +288,62 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       </header>
 
       {/* ═══════════════════════════════════════════════════════════
-          2. MAIN BODY: Canvas + Controls + Timeline + Tools
+          2. MAIN BODY: Dynamic Canvas + Controls + Timeline + Toolbar
       ═══════════════════════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
 
-        {/* AI Assistant Button (floating top-left) */}
+        {/* AI Assistant Floating Button (Top-Left) */}
         <button
           type="button"
           onClick={() => setIsAISidebarOpen(true)}
-          className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 text-[11px] font-black backdrop-blur-sm hover:bg-cyan-500/30 active:scale-90 transition-all"
+          className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-400 text-xs font-black backdrop-blur-md hover:bg-cyan-500/30 active:scale-90 transition-all shadow-md"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>AI</span>
+          <Sparkles className="w-4 h-4 text-cyan-400" />
+          <span>WynRise AI</span>
         </button>
 
-        {/* ── Canvas Stage ── */}
-        <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+        {/* ── Dynamic Canvas Stage ── */}
+        <div className="flex-1 flex items-center justify-center p-3 overflow-hidden">
           <div
-            className="relative shadow-2xl rounded-2xl overflow-hidden border border-slate-700/50 flex items-center justify-center"
+            className="relative shadow-2xl rounded-3xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all"
             style={{
               backgroundColor: bgColor,
-              width: aspectRatio === '9:16' ? '160px' : aspectRatio === '1:1' ? '240px' : '320px',
+              width: aspectRatio === '9:16' ? '180px' : aspectRatio === '1:1' ? '260px' : '340px',
               aspectRatio:
                 aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
-              maxHeight: '45vh',
+              maxHeight: '46vh',
             }}
           >
-            {/* Scene Thumbnail Preview */}
-            {activeScene && getSceneThumb(activeScene) ? (
-              <img
-                src={getSceneThumb(activeScene)!}
-                alt={activeScene.title}
-                className="w-full h-full object-cover"
+            {/* Dynamic Multi-Style Renderer */}
+            {activeScene ? (
+              <MobileDynamicSceneRenderer
+                scene={activeScene}
+                visualStyle={project.visual_style || 'whiteboard_stream_hand'}
+                currentTimeSec={currentTimeSec}
+                totalSceneDurationSec={activeScene.duration_sec || 5}
+                bgColor={bgColor}
+                aspectRatio={aspectRatio}
+                textLangMode={textLangMode}
+                showSubtitle={!(activeScene as any).hide_text}
               />
             ) : (
               <div className="flex flex-col items-center justify-center p-4 text-center">
                 <Layers className="w-8 h-8 text-slate-400 opacity-40 mb-2" />
-                <p className="text-xs font-bold text-slate-400 opacity-60">
-                  {activeScene?.title || 'Scene Preview'}
-                </p>
-                <p className="text-[10px] text-slate-500 opacity-50 mt-1 line-clamp-2 leading-relaxed">
-                  {(activeScene as any)?.voice_transcript || ''}
-                </p>
+                <p className="text-xs font-bold text-slate-400 opacity-60">Scene Preview</p>
               </div>
             )}
 
-            {/* Scene number badge */}
-            <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-black/60 text-[9px] font-bold text-white">
+            {/* Scene counter pill (top-right) */}
+            <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-black text-white z-30">
               {activeSceneIndex + 1} / {scenes.length}
             </div>
-
-            {/* Text Overlay: show subtitle based on lang mode */}
-            {activeScene && !(activeScene as any).hide_text && (
-              <div className="absolute bottom-2 left-2 right-2 text-center">
-                <div
-                  className="px-2 py-1 rounded-lg text-[10px] font-semibold text-white leading-snug"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
-                >
-                  {textLangMode === 'vi' &&
-                    ((activeScene as any).voice_transcript || activeScene.summary_text || activeScene.title)}
-                  {textLangMode === 'en' &&
-                    ((activeScene as any).voice_transcript_en || (activeScene as any).voice_transcript || activeScene.title)}
-                  {textLangMode === 'bilingual' && (
-                    <>
-                      <div>{(activeScene as any).voice_transcript || activeScene.title}</div>
-                      {(activeScene as any).voice_transcript_en && (
-                        <div className="text-cyan-200 text-[9px] mt-0.5">
-                          {(activeScene as any).voice_transcript_en}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* ── Playback Controls ── */}
+        {/* ── Playback Controller Row ── */}
         <div
-          className={`flex-shrink-0 flex items-center justify-between px-6 py-3 border-t ${
-            isDark ? 'border-slate-800 bg-[#10121C]' : 'border-slate-100 bg-white'
+          className={`flex-shrink-0 flex items-center justify-between px-6 py-2.5 border-t ${
+            isDark ? 'border-slate-800/80 bg-[#0F131C]' : 'border-slate-100 bg-white'
           }`}
         >
           {/* Prev Scene */}
@@ -378,23 +351,21 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             type="button"
             onClick={() => handleSceneClick(Math.max(0, activeSceneIndex - 1))}
             disabled={activeSceneIndex === 0}
-            className={`p-2 rounded-xl transition-all active:scale-90 disabled:opacity-30 ${
+            className={`p-2 rounded-2xl transition-all active:scale-90 disabled:opacity-30 ${
               isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <SkipBack className="w-5 h-5" />
           </button>
 
-          {/* Timecode */}
-          <div className="flex flex-col items-center gap-0.5">
+          {/* Timecode & Progress bar */}
+          <div className="flex flex-col items-center gap-1">
             <div className={`text-xs font-mono font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              {formatTimecode(currentTimeSec)} /{' '}
-              {formatTimecode(totalDurationSec)}
+              {formatTimecode(currentTimeSec)} / {formatTimecode(totalDurationSec)}
             </div>
-            {/* Mini Progress Bar */}
-            <div className={`w-32 h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+            <div className={`w-36 h-1.5 rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
               <div
-                className="h-1 rounded-full bg-cyan-400 transition-all"
+                className="h-1.5 rounded-full bg-cyan-400 transition-all shadow-sm"
                 style={{
                   width: totalDurationSec > 0 ? `${(currentTimeSec / totalDurationSec) * 100}%` : '0%',
                 }}
@@ -402,11 +373,11 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             </div>
           </div>
 
-          {/* Play / Pause */}
+          {/* Play / Pause Toggle */}
           <button
             type="button"
             onClick={() => setIsPlaying((v) => !v)}
-            className="w-11 h-11 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/20 active:scale-90 transition-all"
+            className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/25 active:scale-90 transition-all"
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 fill-slate-950" />
@@ -420,7 +391,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             type="button"
             onClick={() => handleSceneClick(Math.min(scenes.length - 1, activeSceneIndex + 1))}
             disabled={activeSceneIndex === scenes.length - 1}
-            className={`p-2 rounded-xl transition-all active:scale-90 disabled:opacity-30 ${
+            className={`p-2 rounded-2xl transition-all active:scale-90 disabled:opacity-30 ${
               isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
@@ -428,13 +399,13 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           </button>
         </div>
 
-        {/* ── Horizontal Scene Timeline ── */}
+        {/* ── Horizontal Scene Timeline Carousel ── */}
         <div
           className={`flex-shrink-0 border-t ${
-            isDark ? 'border-slate-800 bg-[#0E0F18]' : 'border-slate-100 bg-slate-50'
+            isDark ? 'border-slate-800/80 bg-[#0A0D15]' : 'border-slate-100 bg-slate-50'
           }`}
         >
-          <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 px-4 py-2.5 overflow-x-auto scrollbar-none">
             {scenes.map((s, idx) => {
               const isActive = idx === activeSceneIndex;
               const thumb = getSceneThumb(s);
@@ -443,47 +414,34 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                   key={s.scene_id || idx}
                   type="button"
                   onClick={() => handleSceneClick(idx)}
-                  className={`flex-shrink-0 w-16 rounded-2xl border overflow-hidden transition-all active:scale-95 ${
+                  className={`flex-shrink-0 w-20 rounded-2xl border overflow-hidden transition-all active:scale-95 flex flex-col ${
                     isActive
-                      ? 'border-cyan-400 shadow-md shadow-cyan-500/20 ring-1 ring-cyan-400/50'
+                      ? 'border-cyan-400 shadow-md shadow-cyan-500/20 ring-2 ring-cyan-400/50'
                       : isDark
-                      ? 'border-slate-700 hover:border-slate-500'
-                      : 'border-slate-200 hover:border-slate-300 shadow-sm'
+                      ? 'border-slate-700 bg-slate-800/60 hover:border-slate-500'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  {/* Scene thumbnail */}
                   <div
-                    className={`w-full aspect-video flex items-center justify-center ${
-                      isDark ? 'bg-slate-800' : 'bg-slate-100'
-                    }`}
-                    style={{ backgroundColor: thumb ? undefined : bgColor }}
+                    className={`w-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}
+                    style={{ aspectRatio: '16/9' }}
                   >
                     {thumb ? (
                       <img src={thumb} alt={s.title} className="w-full h-full object-cover" />
                     ) : (
-                      <Layers
-                        className={`w-4 h-4 ${
-                          isActive ? 'text-cyan-400' : isDark ? 'text-slate-600' : 'text-slate-400'
-                        }`}
-                      />
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Layers className="w-3.5 h-3.5 text-slate-400" />
+                      </div>
                     )}
                   </div>
-                  {/* Scene label */}
-                  <div
-                    className={`px-1 py-1 text-center ${
-                      isDark ? 'bg-slate-900' : 'bg-white'
-                    }`}
-                  >
-                    <div
-                      className={`text-[9px] font-bold truncate ${
-                        isActive ? 'text-cyan-400' : isDark ? 'text-slate-400' : 'text-slate-500'
+                  <div className="p-1 text-center">
+                    <span
+                      className={`text-[9px] font-bold block truncate ${
+                        isActive ? 'text-cyan-400' : isDark ? 'text-slate-300' : 'text-slate-700'
                       }`}
                     >
-                      S{idx + 1}
-                    </div>
-                    <div className={`text-[8px] ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                      {Math.round(s.duration_sec || 0)}s
-                    </div>
+                      S{idx + 1}: {Math.round(s.duration_sec || 0)}s
+                    </span>
                   </div>
                 </button>
               );
@@ -491,12 +449,11 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           </div>
         </div>
 
-        {/* ── Bottom Toolbar: Assets | Audio | Canvas Settings ── */}
+        {/* ── Bottom Action Toolbar ── */}
         <div
-          className={`flex-shrink-0 flex items-center justify-around px-4 py-3 border-t ${
-            isDark ? 'border-slate-800 bg-[#10121C]' : 'border-slate-200 bg-white shadow-sm'
+          className={`flex-shrink-0 flex items-center justify-around px-4 py-3 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),10px)+0.5rem)] ${
+            isDark ? 'border-slate-800 bg-[#0F131C]' : 'border-slate-200 bg-white shadow-sm'
           }`}
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
         >
           {[
             { id: 'assets' as BottomSheet, icon: Folder, labelVi: 'Assets', labelEn: 'Assets', color: 'text-amber-400' },
@@ -510,16 +467,16 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 key={item.id}
                 type="button"
                 onClick={() => setActiveBottomSheet(isActive ? null : item.id)}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all active:scale-90 ${
+                className={`flex flex-col items-center gap-1.5 px-5 py-2 rounded-2xl transition-all active:scale-90 ${
                   isActive
-                    ? `bg-slate-800/80 border border-slate-600 ${item.color}`
+                    ? `bg-slate-800/90 border border-slate-600 ${item.color} shadow-sm`
                     : isDark
                     ? 'text-slate-400 hover:text-white'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-bold">
+                <span className="text-xs font-bold">
                   {isVietnamese ? item.labelVi : item.labelEn}
                 </span>
               </button>
@@ -529,16 +486,13 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
-          3. BOTTOM SHEETS
+          3. BOTTOM SHEETS (Large Typography Matching Wizard Modals)
       ═══════════════════════════════════════════════════════════ */}
       {activeBottomSheet && (
-        <BottomSheetOverlay
-          isDark={isDark}
-          onClose={() => setActiveBottomSheet(null)}
-        >
+        <BottomSheetOverlay isDark={isDark} onClose={() => setActiveBottomSheet(null)}>
           {/* ── ASSETS SHEET ── */}
           {activeBottomSheet === 'assets' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <SheetHeader
                 title={t('Assets & Phân Cảnh', 'Assets & Scenes')}
                 subtitle={`${scenes.length} scenes`}
@@ -546,17 +500,17 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Upload custom image */}
+              {/* Upload image button */}
               <label
-                className={`flex items-center gap-2 p-3 rounded-2xl border border-dashed cursor-pointer transition-all ${
+                className={`flex items-center gap-2.5 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
                   isDark
-                    ? 'border-slate-600 hover:border-cyan-400 bg-slate-800/50'
+                    ? 'border-slate-700 hover:border-cyan-400 bg-slate-800/40'
                     : 'border-slate-300 hover:border-cyan-400 bg-slate-50'
                 }`}
               >
-                <Upload className="w-4 h-4 text-cyan-400" />
-                <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  {t('+ Upload Ảnh Tùy Biến vào Scene', '+ Upload Image to Scene')}
+                <Upload className="w-5 h-5 text-cyan-400" />
+                <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  {t('+ Tải Ảnh Tùy Biến Lên Scene Này', '+ Upload Custom Image to Scene')}
                 </span>
                 <input
                   ref={assetFileInputRef}
@@ -573,8 +527,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 />
               </label>
 
-              {/* Scenes list */}
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {/* Scene list */}
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                 {scenes.map((s, idx) => {
                   const isActive = idx === activeSceneIndex;
                   const thumb = getSceneThumb(s);
@@ -586,20 +540,19 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         handleSceneClick(idx);
                         setActiveBottomSheet(null);
                       }}
-                      className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98] ${
+                      className={`w-full flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all active:scale-[0.98] ${
                         isActive
                           ? isDark
-                            ? 'border-cyan-500/50 bg-cyan-500/10'
+                            ? 'border-cyan-500/60 bg-cyan-500/15 shadow-sm'
                             : 'border-cyan-400 bg-cyan-50'
                           : isDark
-                          ? 'border-slate-700 bg-slate-800/60 hover:border-slate-600'
+                          ? 'border-slate-800 bg-slate-900/80 hover:border-slate-700'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      {/* Thumbnail */}
                       <div
-                        className={`w-14 rounded-xl overflow-hidden flex-shrink-0 ${
-                          isDark ? 'bg-slate-700' : 'bg-slate-100'
+                        className={`w-16 rounded-xl overflow-hidden flex-shrink-0 ${
+                          isDark ? 'bg-slate-800' : 'bg-slate-100'
                         }`}
                         style={{ aspectRatio: '16/9' }}
                       >
@@ -611,20 +564,19 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                           </div>
                         )}
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0 text-left">
                         <div
-                          className={`text-xs font-bold truncate ${
+                          className={`text-sm font-black truncate ${
                             isActive ? 'text-cyan-400' : isDark ? 'text-white' : 'text-slate-900'
                           }`}
                         >
                           Scene {idx + 1}: {s.title}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          {Math.round(s.duration_sec || 0)}s
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {Math.round(s.duration_sec || 0)}s duration
                         </div>
                       </div>
-                      {isActive && <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />}
+                      {isActive && <Check className="w-5 h-5 text-cyan-400 flex-shrink-0" />}
                     </button>
                   );
                 })}
@@ -634,25 +586,25 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
           {/* ── AUDIO SHEET ── */}
           {activeBottomSheet === 'audio' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <SheetHeader
                 title={t('Âm Thanh & Nhạc Nền', 'Audio & Background Music')}
                 isDark={isDark}
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Voice Narration volume */}
-              <div className="space-y-2">
+              {/* Voice volume */}
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label
-                    className={`text-xs font-bold flex items-center gap-1.5 ${
-                      isDark ? 'text-slate-200' : 'text-slate-700'
+                    className={`text-sm font-bold flex items-center gap-2 ${
+                      isDark ? 'text-slate-200' : 'text-slate-800'
                     }`}
                   >
-                    <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>{t('Giọng đọc AI (Voice)', 'AI Narration Volume')}</span>
+                    <Volume2 className="w-4 h-4 text-cyan-400" />
+                    <span>{t('Giọng Đọc AI (Voice Narration)', 'AI Narration Volume')}</span>
                   </label>
-                  <span className="text-xs font-bold text-cyan-400">
+                  <span className="text-sm font-black text-cyan-400">
                     {Math.round(voiceVolume * 100)}%
                   </span>
                 </div>
@@ -663,22 +615,22 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                   step={0.05}
                   value={voiceVolume}
                   onChange={(e) => setVoiceVolume(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-400"
+                  className="w-full accent-cyan-400 h-2 rounded-lg"
                 />
               </div>
 
-              {/* BGM Volume */}
-              <div className="space-y-2">
+              {/* BGM volume */}
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label
-                    className={`text-xs font-bold flex items-center gap-1.5 ${
-                      isDark ? 'text-slate-200' : 'text-slate-700'
+                    className={`text-sm font-bold flex items-center gap-2 ${
+                      isDark ? 'text-slate-200' : 'text-slate-800'
                     }`}
                   >
-                    <Music className="w-3.5 h-3.5 text-purple-400" />
-                    <span>{t('Nhạc nền (BGM)', 'Background Music')}</span>
+                    <Music className="w-4 h-4 text-purple-400" />
+                    <span>{t('Nhạc Nền (BGM Volume)', 'Background Music Volume')}</span>
                   </label>
-                  <span className="text-xs font-bold text-purple-400">
+                  <span className="text-sm font-black text-purple-400">
                     {Math.round(bgmVolume * 100)}%
                   </span>
                 </div>
@@ -689,23 +641,23 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                   step={0.05}
                   value={bgmVolume}
                   onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
-                  className="w-full accent-purple-400"
+                  className="w-full accent-purple-400 h-2 rounded-lg"
                 />
               </div>
 
-              {/* Custom BGM upload */}
+              {/* BGM file upload */}
               <label
-                className={`flex items-center gap-2 p-3 rounded-2xl border border-dashed cursor-pointer transition-all ${
+                className={`flex items-center gap-2.5 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
                   isDark
-                    ? 'border-slate-600 hover:border-purple-400 bg-slate-800/50'
+                    ? 'border-slate-700 hover:border-purple-400 bg-slate-800/40'
                     : 'border-slate-300 hover:border-purple-400 bg-slate-50'
                 }`}
               >
-                <Upload className="w-4 h-4 text-purple-400" />
-                <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <Upload className="w-5 h-5 text-purple-400" />
+                <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                   {customBgmFile
                     ? `✓ ${customBgmFile}`
-                    : t('+ Tải nhạc nền MP3/WAV lên', '+ Upload BGM Track MP3/WAV')}
+                    : t('+ Tải File Nhạc Nền MP3/WAV Lên', '+ Upload Custom BGM Track (MP3/WAV)')}
                 </span>
                 <input
                   ref={bgmFileInputRef}
@@ -721,38 +673,36 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             </div>
           )}
 
-          {/* ── CANVAS SETTINGS SHEET ── */}
+          {/* ── CANVAS SETTINGS SHEET (Large Typography) ── */}
           {activeBottomSheet === 'canvas' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <SheetHeader
-                title={t('Canvas Settings & Script', 'Canvas Settings & Script')}
+                title={t('Cài Đặt Canvas & Kịch Bản', 'Canvas Settings & Script')}
                 isDark={isDark}
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Background Color */}
-              <div className="space-y-2.5">
-                <label
-                  className={`text-xs font-bold block ${isDark ? 'text-slate-200' : 'text-slate-700'}`}
-                >
-                  {t('Màu Nền Canvas', 'Canvas Background')}
+              {/* Background Color themes */}
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
+                  {t('1. Màu Nền Canvas', '1. Canvas Background')}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
                   {BG_THEMES.map((theme) => (
                     <button
                       key={theme.color}
                       type="button"
                       onClick={() => setBgColor(theme.color)}
-                      className={`flex items-center gap-2 p-2 rounded-xl border text-[10px] font-bold transition-all ${
+                      className={`flex items-center gap-2.5 p-3 rounded-2xl border text-xs font-bold transition-all ${
                         bgColor === theme.color
-                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/40'
+                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-2 ring-cyan-500/40 shadow-sm'
                           : isDark
-                          ? 'border-slate-700 bg-slate-800 text-slate-400'
-                          : 'border-slate-200 bg-white text-slate-500'
+                          ? 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                          : 'border-slate-200 bg-white text-slate-600'
                       }`}
                     >
                       <span
-                        className="w-4 h-4 rounded-full border border-black/20 flex-shrink-0"
+                        className="w-5 h-5 rounded-full border border-black/20 flex-shrink-0 shadow-sm"
                         style={{ backgroundColor: theme.color }}
                       />
                       <span className="truncate">{theme.label}</span>
@@ -762,22 +712,22 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
               </div>
 
               {/* Aspect Ratio */}
-              <div className="space-y-2.5 pt-3 border-t border-slate-700/40">
-                <label className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-                  {t('Tỷ Lệ Khung Hình', 'Aspect Ratio')}
+              <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
+                  {t('2. Tỷ Lệ Khung Hình', '2. Aspect Ratio')}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
                   {(['16:9', '9:16', '1:1'] as const).map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setAspectRatio(r)}
-                      className={`py-2 rounded-xl border text-xs font-bold transition-all ${
+                      className={`py-3 rounded-2xl border text-sm font-black transition-all ${
                         aspectRatio === r
-                          ? 'border-cyan-400 bg-cyan-500/15 text-cyan-300'
+                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-2 ring-cyan-500/40 shadow-sm'
                           : isDark
-                          ? 'border-slate-700 bg-slate-800 text-slate-400'
-                          : 'border-slate-200 bg-white text-slate-500'
+                          ? 'border-slate-800 bg-slate-900 text-slate-400'
+                          : 'border-slate-200 bg-white text-slate-600'
                       }`}
                     >
                       {r}
@@ -786,32 +736,28 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 </div>
               </div>
 
-              {/* Text Language Mode */}
-              <div className="space-y-2.5 pt-3 border-t border-slate-700/40">
-                <label
-                  className={`text-xs font-bold flex items-center gap-1.5 ${
-                    isDark ? 'text-slate-200' : 'text-slate-700'
-                  }`}
-                >
-                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t('Ngôn Ngữ Hiển Thị Text / Phụ Đề', 'Subtitle Language Mode')}</span>
+              {/* Text / Subtitle Language Mode */}
+              <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-cyan-400" />
+                  <span>{t('3. Chế Độ Hiển Thị Phụ Đề', '3. Subtitle Language Mode')}</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
                   {[
-                    { id: 'vi' as TextLangMode, label: '🇻🇳 VI' },
-                    { id: 'en' as TextLangMode, label: '🇺🇸 EN' },
-                    { id: 'bilingual' as TextLangMode, label: '⚡ VI+EN' },
+                    { id: 'vi' as TextLangMode, label: '🇻🇳 Tiếng Việt' },
+                    { id: 'en' as TextLangMode, label: '🇺🇸 English' },
+                    { id: 'bilingual' as TextLangMode, label: '⚡ Song Ngữ' },
                   ].map((m) => (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => setTextLangMode(m.id)}
-                      className={`py-2 rounded-xl border text-[11px] font-bold transition-all ${
+                      className={`py-3 rounded-2xl border text-xs font-black transition-all ${
                         textLangMode === m.id
-                          ? 'border-cyan-400 bg-cyan-500/15 text-cyan-300'
+                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-2 ring-cyan-500/40 shadow-sm'
                           : isDark
-                          ? 'border-slate-700 bg-slate-800 text-slate-400'
-                          : 'border-slate-200 bg-white text-slate-500'
+                          ? 'border-slate-800 bg-slate-900 text-slate-400'
+                          : 'border-slate-200 bg-white text-slate-600'
                       }`}
                     >
                       {m.label}
@@ -820,27 +766,23 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 </div>
               </div>
 
-              {/* Active Scene Script / Transcript Editor */}
+              {/* Active Scene Script Editor (Large text) */}
               {activeScene && (
-                <div className="space-y-2.5 pt-3 border-t border-slate-700/40">
-                  <label
-                    className={`text-xs font-bold flex items-center gap-1.5 ${
-                      isDark ? 'text-slate-200' : 'text-slate-700'
-                    }`}
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+                <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Edit3 className="w-4 h-4 text-cyan-400" />
                     <span>
                       {t(
-                        `Chỉnh Sửa Script · Scene ${activeSceneIndex + 1}`,
-                        `Edit Script · Scene ${activeSceneIndex + 1}`
+                        `4. Kịch Bản & Lời Thoại · Scene ${activeSceneIndex + 1}`,
+                        `4. Script & Narration · Scene ${activeSceneIndex + 1}`
                       )}
                     </span>
                   </label>
 
                   {/* Voice Transcript (VI) */}
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                      🇻🇳 Voice Transcript (VI)
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                      🇻🇳 Voice Transcript (Tiếng Việt)
                     </div>
                     <textarea
                       value={(activeScene as any).voice_transcript || activeScene.summary_text || activeScene.title || ''}
@@ -851,19 +793,19 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         } as any)
                       }
                       rows={3}
-                      className={`w-full px-3 py-2 rounded-xl text-xs border resize-none focus:outline-none focus:ring-1 focus:ring-cyan-400/50 transition-all ${
+                      className={`w-full px-4 py-3 rounded-2xl text-sm leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/40 transition-all ${
                         isDark
-                          ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500'
+                          ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'
                           : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
                       }`}
-                      placeholder={t('Nhập kịch bản / phụ đề tiếng Việt...', 'Enter Vietnamese script...')}
+                      placeholder={t('Nhập kịch bản tiếng Việt...', 'Enter Vietnamese narration...')}
                     />
                   </div>
 
-                  {/* Voice Transcript EN */}
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                      🇺🇸 Voice Transcript (EN)
+                  {/* Voice Transcript (EN) */}
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                      🇺🇸 Voice Transcript (English)
                     </div>
                     <textarea
                       value={(activeScene as any).voice_transcript_en || ''}
@@ -873,46 +815,42 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         } as any)
                       }
                       rows={3}
-                      className={`w-full px-3 py-2 rounded-xl text-xs border resize-none focus:outline-none focus:ring-1 focus:ring-cyan-400/50 transition-all ${
+                      className={`w-full px-4 py-3 rounded-2xl text-sm leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/40 transition-all ${
                         isDark
-                          ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500'
+                          ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'
                           : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
                       }`}
-                      placeholder={t('Nhập kịch bản / phụ đề tiếng Anh...', 'Enter English script...')}
+                      placeholder={t('Nhập kịch bản tiếng Anh...', 'Enter English narration...')}
                     />
                   </div>
                 </div>
               )}
 
-              {/* Hide/Show Text Per Scene */}
-              <div className="space-y-2.5 pt-3 border-t border-slate-700/40">
-                <label
-                  className={`text-xs font-bold flex items-center gap-1.5 ${
-                    isDark ? 'text-slate-200' : 'text-slate-700'
-                  }`}
-                >
-                  <Type className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t('Ẩn / Hiện Phụ Đề Từng Scene', 'Toggle Subtitle Per Scene')}</span>
+              {/* Subtitle Visibility Per Scene */}
+              <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Type className="w-4 h-4 text-cyan-400" />
+                  <span>{t('5. Ẩn / Hiện Phụ Đề Từng Scene', '5. Toggle Subtitle Per Scene')}</span>
                 </label>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {scenes.map((s, idx) => {
                     const isHidden = (s as any).hide_text === true;
                     return (
                       <div
                         key={s.scene_id || idx}
-                        className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs transition-all ${
+                        className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${
                           isHidden
                             ? isDark
-                              ? 'bg-slate-900 border-slate-800 text-slate-500 opacity-60'
+                              ? 'bg-slate-900/60 border-slate-800 text-slate-500 opacity-60'
                               : 'bg-slate-50 border-slate-200 text-slate-400'
                             : isDark
-                            ? 'bg-slate-800 border-slate-700 text-slate-200'
-                            : 'bg-white border-slate-200 text-slate-700'
+                            ? 'bg-slate-900 border-slate-700 text-slate-200'
+                            : 'bg-white border-slate-200 text-slate-800 shadow-sm'
                         }`}
                       >
-                        <div className="flex items-center gap-2 truncate">
-                          <span className="text-[10px] font-bold w-5 text-center">S{idx + 1}</span>
-                          <span className="truncate text-[11px]">
+                        <div className="flex items-center gap-2.5 truncate">
+                          <span className="text-xs font-black w-6 text-cyan-400">S{idx + 1}</span>
+                          <span className="truncate text-xs font-bold">
                             {s.title || (s as any).summary_text?.slice(0, 24) || `Scene ${idx + 1}`}
                           </span>
                         </div>
@@ -921,18 +859,14 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                           onClick={() =>
                             updateScene(s.scene_id, { hide_text: !isHidden } as any)
                           }
-                          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
                             isHidden
-                              ? 'bg-slate-700 text-slate-400'
-                              : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                              ? 'bg-slate-800 text-slate-400'
+                              : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm'
                           }`}
                         >
-                          {isHidden ? (
-                            <EyeOff className="w-3 h-3" />
-                          ) : (
-                            <Eye className="w-3 h-3" />
-                          )}
-                          <span>{isHidden ? t('Ẩn', 'Hidden') : t('Hiện', 'Shown')}</span>
+                          {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          <span>{isHidden ? t('Đang ẩn', 'Hidden') : t('Hiển thị', 'Visible')}</span>
                         </button>
                       </div>
                     );
@@ -945,71 +879,68 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       )}
 
       {/* ═══════════════════════════════════════════════════════════
-          4. AI ASSISTANT LEFT SLIDE-OVER DRAWER
+          4. AI ASSISTANT SLIDE-OVER DRAWER (WynRise AI)
       ═══════════════════════════════════════════════════════════ */}
       {isAISidebarOpen && (
         <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsAISidebarOpen(false)}
           />
-          {/* Drawer */}
           <div
-            className={`relative z-10 w-72 h-full flex flex-col animate-in slide-in-from-left-full duration-200 ${
-              isDark ? 'bg-[#10121C] border-r border-slate-800' : 'bg-white border-r border-slate-200 shadow-2xl'
+            className={`relative z-10 w-80 h-full flex flex-col animate-in slide-in-from-left-full duration-200 ${
+              isDark ? 'bg-[#0E111B] border-r border-slate-800' : 'bg-white border-r border-slate-200 shadow-2xl'
             }`}
           >
-            {/* Header */}
+            {/* Header pushed down for notch */}
             <div
-              className={`flex items-center justify-between px-4 h-14 border-b flex-shrink-0 ${
-                isDark ? 'border-slate-800' : 'border-slate-100'
+              className={`flex items-center justify-between px-4 pb-3 pt-[max(env(safe-area-inset-top,44px),44px)] border-b flex-shrink-0 ${
+                isDark ? 'border-slate-800 bg-[#121624]' : 'border-slate-100 bg-white'
               }`}
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-black text-cyan-400">WYNRISE AI</span>
+                <span className="text-sm font-black text-cyan-400 tracking-wider">WYNRISE AI</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAISidebarOpen(false)}
-                className={`p-1.5 rounded-xl transition-all ${
+                className={`p-2 rounded-2xl transition-all ${
                   isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-100'
                 }`}
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Chat area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* WynRise message */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div
-                className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                  isDark ? 'bg-slate-800 border border-slate-700 text-slate-300' : 'bg-slate-50 border border-slate-200 text-slate-700'
+                className={`p-4 rounded-2xl text-xs font-medium leading-relaxed ${
+                  isDark ? 'bg-slate-800/80 border border-slate-700 text-slate-200' : 'bg-slate-50 border border-slate-200 text-slate-800'
                 }`}
               >
                 {t(
-                  'Xin chào! Tôi là WynRise AI. Hãy nhập yêu cầu chỉnh sửa video của bạn bên dưới.',
-                  "Hello! I'm WynRise AI. Type an edit request below and I'll help you update this video."
+                  '👋 Chào bạn! Tôi là WynRise AI. Hãy nhập yêu cầu để tôi hỗ trợ biên tập và cập nhật video hoạt họa này.',
+                  "👋 Hello! I'm WynRise AI. Type an edit instruction below to modify this animation video."
                 )}
               </div>
 
-              {/* Active Scene Transcript Editor */}
+              {/* Quick Scene Transcript Editor in Drawer */}
               {activeScene && (
                 <div
-                  className={`p-3 rounded-2xl border space-y-2 ${
+                  className={`p-4 rounded-2xl border space-y-2.5 ${
                     isDark
-                      ? 'bg-gradient-to-br from-slate-800 to-slate-900 border-cyan-500/30'
-                      : 'bg-blue-50 border-cyan-300'
+                      ? 'bg-gradient-to-br from-slate-900 to-slate-800 border-cyan-500/30'
+                      : 'bg-cyan-50 border-cyan-300'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[10px] font-bold text-cyan-400">
-                    <span className="flex items-center gap-1">
-                      <Edit3 className="w-3 h-3" />
+                  <div className="flex items-center justify-between text-xs font-black text-cyan-400">
+                    <span className="flex items-center gap-1.5">
+                      <Edit3 className="w-3.5 h-3.5" />
                       {t(`Phụ Đề Scene ${activeSceneIndex + 1}`, `Scene ${activeSceneIndex + 1} Subtitle`)}
                     </span>
-                    <span className="text-slate-400 font-mono">
+                    <span className="text-slate-400 font-mono text-[10px]">
                       {(activeScene as any).start_sec?.toFixed(1)}s
                     </span>
                   </div>
@@ -1021,16 +952,13 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         summary_text: e.target.value,
                       } as any)
                     }
-                    rows={3}
-                    className={`w-full px-2.5 py-2 rounded-xl text-[11px] border resize-none focus:outline-none focus:border-cyan-400 transition-all ${
+                    rows={4}
+                    className={`w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border resize-none focus:outline-none focus:border-cyan-400 transition-all ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'
+                        ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500'
                         : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400'
                     }`}
-                    placeholder={t(
-                      'Chỉnh sửa phụ đề / kịch bản phân cảnh này...',
-                      'Edit this scene subtitle or script...'
-                    )}
+                    placeholder={t('Chỉnh sửa phụ đề phân cảnh này...', 'Edit scene subtitle...')}
                   />
                 </div>
               )}
@@ -1038,8 +966,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
             {/* Chat Input */}
             <div
-              className={`p-3 border-t flex-shrink-0 ${
-                isDark ? 'border-slate-800' : 'border-slate-100'
+              className={`p-3.5 border-t flex-shrink-0 pb-[calc(max(env(safe-area-inset-bottom,0px),10px)+0.5rem)] ${
+                isDark ? 'border-slate-800 bg-[#121624]' : 'border-slate-100 bg-white'
               }`}
             >
               <div className="relative flex items-center">
@@ -1048,24 +976,21 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder={t('Nhập yêu cầu chỉnh sửa...', 'Type an edit request...')}
-                  className={`w-full pl-3 pr-14 py-2.5 rounded-xl text-xs border focus:outline-none focus:border-cyan-400 transition-all ${
+                  className={`w-full pl-3.5 pr-14 py-3 rounded-2xl text-xs border focus:outline-none focus:border-cyan-400 transition-all ${
                     isDark
-                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
+                      ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'
                       : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
                   }`}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      // Future: trigger AI edit
-                      setChatInput('');
-                    }
+                    if (e.key === 'Enter') setChatInput('');
                   }}
                 />
                 <div className="absolute right-2 flex items-center gap-1 text-slate-400">
-                  <button className="p-1 hover:text-cyan-400 transition-colors">
-                    <Mic className="w-3.5 h-3.5" />
+                  <button className="p-1.5 hover:text-cyan-400 transition-colors">
+                    <Mic className="w-4 h-4" />
                   </button>
-                  <button className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors">
-                    <Send className="w-3.5 h-3.5" />
+                  <button className="p-1.5 text-cyan-400 hover:text-cyan-300 transition-colors">
+                    <Send className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -1075,77 +1000,87 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       )}
 
       {/* ═══════════════════════════════════════════════════════════
-          5. SETTINGS ACTION SHEET (Header Settings)
+          5. SETTINGS ACTION SHEET (Header Action Sheet)
       ═══════════════════════════════════════════════════════════ */}
       {isSettingsSheetOpen && (
         <div className="fixed inset-0 z-50 flex items-end">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsSettingsSheetOpen(false)}
           />
           <div
-            className={`relative z-10 w-full rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom-full duration-200 ${
-              isDark ? 'bg-[#12141F] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
+            className={`relative z-10 w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] ${
+              isDark ? 'bg-[#121624] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
             }`}
           >
             <div className="flex items-center justify-between">
-              <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {t('Cài Đặt & Nâng Cao', 'Settings & Advanced')}
+              <h3 className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {t('Cài Đặt Dự Án & Nâng Cao', 'Project Settings & Info')}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsSettingsSheetOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white"
+                className="p-2 rounded-2xl text-slate-400 hover:text-white"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Project info */}
+            {/* Project info card */}
             <div
-              className={`p-3.5 rounded-2xl border space-y-2 ${
-                isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'
+              className={`p-4 rounded-2xl text-xs space-y-2 border ${
+                isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
               }`}
             >
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400">{t('Dự án:', 'Project:')}</span>
-                <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {project.project_id.slice(0, 8)}...
-                </span>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-bold">{t('Mã Dự Án (ID)', 'Project ID')}</span>
+                <span className="font-mono text-cyan-400 font-bold">{project.project_id}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400">{t('Phong cách:', 'Style:')}</span>
-                <span className="font-bold text-cyan-400">{project.visual_style}</span>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-bold">{t('Phong Cách', 'Visual Style')}</span>
+                <span className="font-bold">{project.visual_style}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400">{t('Ngôn ngữ:', 'Language:')}</span>
-                <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {project.language_code?.toUpperCase() || 'VI'}
-                </span>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-bold">{t('Tổng Số Scenes', 'Total Scenes')}</span>
+                <span className="font-bold">{scenes.length}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400">{t('Số phân cảnh:', 'Scenes:')}</span>
-                <span className="font-bold text-amber-400">{scenes.length}</span>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-bold">{t('Thời Lượng', 'Total Duration')}</span>
+                <span className="font-bold">{Math.round(totalDurationSec)}s</span>
               </div>
             </div>
 
-            {/* Refresh Scenes */}
-            <button
-              type="button"
-              onClick={async () => {
-                const res = await wynmotionService.getProject(project.project_id);
-                if (res.project?.scenes) setScenes(res.project.scenes);
-                setIsSettingsSheetOpen(false);
-              }}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-bold transition-all active:scale-95 ${
-                isDark
-                  ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700'
-                  : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <RefreshCw className="w-4 h-4 text-cyan-400" />
-              <span>{t('Tải Lại Dữ Liệu Dự Án', 'Reload Project Data')}</span>
-            </button>
+            {/* Action buttons */}
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  wynmotionService
+                    .getProject(project.project_id)
+                    .then((res) => {
+                      if (res.project?.scenes) setScenes(res.project.scenes);
+                    })
+                    .catch(() => {});
+                  setIsSettingsSheetOpen(false);
+                }}
+                className={`w-full py-3.5 rounded-2xl border text-sm font-black flex items-center justify-center gap-2 transition-all ${
+                  isDark
+                    ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+                    : 'border-slate-200 bg-white text-slate-800'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4 text-cyan-400" />
+                <span>{t('Tải Lại Dữ Liệu Dự Án', 'Reload Project Data')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSettingsSheetOpen(false)}
+                className="w-full py-3.5 rounded-2xl bg-cyan-400 text-slate-950 font-black text-sm transition-all shadow-md"
+              >
+                <span>{t('Đóng Cài Đặt', 'Close Settings')}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1153,32 +1088,27 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
   );
 };
 
-// ─── Helper Sub-Components ───────────────────────────────────────────────────
+// ─── Sub-components ─────────────────────────────────────────────────────────
 
 function BottomSheetOverlay({
-  isDark,
   children,
+  isDark,
   onClose,
 }: {
-  isDark: boolean;
   children: React.ReactNode;
+  isDark: boolean;
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      {/* Sheet */}
+    <div className="fixed inset-0 z-50 flex items-end">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`relative z-10 w-full max-h-[75vh] overflow-y-auto rounded-t-3xl p-5 animate-in slide-in-from-bottom-full duration-200 ${
-          isDark ? 'bg-[#12141F] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
+        className={`relative z-10 w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] max-h-[82vh] overflow-y-auto ${
+          isDark ? 'bg-[#101422] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
         }`}
       >
-        {/* Drag handle */}
-        <div className="w-10 h-1 rounded-full bg-slate-600/60 mx-auto mb-4" />
+        <div className="w-12 h-1.5 rounded-full bg-slate-600/50 mx-auto -mt-1 mb-2" />
         {children}
-        {/* Safe area padding */}
-        <div style={{ height: 'env(safe-area-inset-bottom)' }} />
       </div>
     </div>
   );
@@ -1196,19 +1126,21 @@ function SheetHeader({
   onClose: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
       <div>
-        <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
-        {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
+        <h3 className={`text-base font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          {title}
+        </h3>
+        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
       <button
         type="button"
         onClick={onClose}
-        className={`p-1.5 rounded-xl transition-all ${
+        className={`p-2 rounded-2xl transition-all ${
           isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-100'
         }`}
       >
-        <X className="w-4 h-4" />
+        <X className="w-5 h-5" />
       </button>
     </div>
   );

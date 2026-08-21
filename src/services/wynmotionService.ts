@@ -59,7 +59,11 @@ export interface MotionScene {
   order: number;
   title: string;
   voice_transcript?: string;
+  voice_transcript_en?: string;
   summary_text?: string;
+  image_url?: string;
+  video_url?: string;
+  hide_text?: boolean;
   actions: SceneAction[];
   whisper_segments?: Array<{
     start: number;
