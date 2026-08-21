@@ -662,47 +662,49 @@ export const AiVideoTab: React.FC = () => {
         </HeroBackground>
 
         <div className="max-w-xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
-          {/* Action Cards: New Video (Larger flex-[1.35]) & Templates (flex-1) */}
+          {/* Action Cards: Both Frosted Translucent Glass (New Video flex-[1.35] & Templates flex-1) */}
           <div className="flex gap-3 items-stretch">
-            {/* New Video Button */}
+            {/* New Video Button — Frosted Glass with Translucent Blur */}
             <button
               onClick={() => handleStartStudio('whiteboard_stream_hand')}
               className={`flex-[1.35] group relative overflow-hidden rounded-3xl p-5 shadow-xl active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
                 isDark
-                  ? 'bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 text-white shadow-cyan-500/20'
-                  : 'bg-white/95 backdrop-blur-md border border-slate-200 text-slate-900 shadow-slate-200/70 hover:border-slate-300'
+                  ? 'bg-slate-900/80 backdrop-blur-xl border border-white/10 text-white shadow-black/40 hover:border-slate-700'
+                  : 'bg-white/80 backdrop-blur-xl border border-white/80 text-slate-900 shadow-lg shadow-black/5 hover:bg-white/90'
               }`}
             >
               <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
-                isDark ? 'bg-white/20 backdrop-blur-md' : 'bg-slate-100 text-slate-950'
+                isDark ? 'bg-white/10 backdrop-blur-md text-white' : 'bg-slate-950/10 text-slate-950'
               }`}>
-                <Plus className={`w-6 h-6 stroke-[2.5] ${isDark ? 'text-white' : 'text-slate-950'}`} />
+                <Plus className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div className="text-left">
                 <div className="text-base font-black tracking-tight">{t('Tạo Video Mới', 'New Project')}</div>
-                <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-white/80' : 'text-slate-500'}`}>
+                <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-white/80' : 'text-slate-600'}`}>
                   {t('Luồng 4 bước chuẩn AI', '4-Step AI Studio')}
                 </div>
               </div>
             </button>
 
-            {/* Templates Button */}
+            {/* Templates Button — Frosted Glass with Translucent Blur */}
             <button
               onClick={() => setActiveTab('library')}
-              className={`flex-1 group rounded-3xl p-5 border text-left shadow-sm active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
+              className={`flex-1 group rounded-3xl p-5 border text-left shadow-lg active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
                 isDark
-                  ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700 text-white'
-                  : 'bg-white/95 backdrop-blur-md border border-slate-200 hover:border-slate-300 text-slate-900 shadow-slate-200/70'
+                  ? 'bg-slate-900/80 backdrop-blur-xl border border-white/10 hover:border-slate-700 text-white shadow-black/40'
+                  : 'bg-white/80 backdrop-blur-xl border border-white/80 hover:bg-white/90 text-slate-900 shadow-black/5'
               }`}
             >
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                isDark ? 'bg-slate-800 text-purple-400' : 'bg-slate-100 text-slate-950'
+                isDark ? 'bg-white/10 text-white' : 'bg-slate-950/10 text-slate-950'
               }`}>
                 <LayoutGrid className="w-6 h-6" />
               </div>
               <div>
                 <div className="text-base font-black tracking-tight">{t('Mẫu Dựng Sẵn', 'Templates')}</div>
-                <div className="text-xs text-slate-400 font-medium mt-0.5">{t('Khám phá kho mẫu', 'Explore library')}</div>
+                <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {t('Khám phá kho mẫu', 'Explore library')}
+                </div>
               </div>
             </button>
           </div>
@@ -833,7 +835,7 @@ export const AiVideoTab: React.FC = () => {
   // VIEW MODE B: FULL-SCREEN IMMERSIVE 4-STEP CREATION STUDIO
   // =========================================================================
   return (
-    <div className={`min-h-screen pb-28 pt-4 px-4 sm:px-6 transition-colors duration-200 ${
+    <div className={`min-h-screen pb-28 pt-[max(env(safe-area-inset-top,44px),44px)] px-4 sm:px-6 transition-colors duration-200 ${
       isDark ? 'bg-[#080B10] text-slate-100' : 'bg-[#F8FAFC] text-slate-900'
     }`}>
       {/* Hidden audio element for preview */}
