@@ -645,27 +645,29 @@ export const AiVideoTab: React.FC = () => {
         <HeroBackground
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenUpgrade={() => setIsProfileOpen(true)}
-        >
-          {/* Banner Headline Text (CapCut style: White text on colorful animated background, 10px above New Project) */}
-          <div
-            onClick={() => handleStartStudio('whiteboard_stream_hand')}
-            className="mt-7 mb-2.5 cursor-pointer active:opacity-90 transition-opacity"
-          >
-            <div className="text-[15px] font-medium text-white/90 tracking-tight">
-              {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
-            </div>
-            <div className="text-3xl font-black text-white tracking-tight flex items-center gap-2.5 mt-0.5">
-              <span>{t('Bắt đầu', 'Get started')}</span>
-              <span className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm">
-                <ChevronRight className="w-4 h-4 stroke-[3]" />
-              </span>
-            </div>
-          </div>
-        </HeroBackground>
+        />
 
-        <div className="max-w-xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
-          {/* Action Cards: Both Frosted Translucent Glass (New Video flex-[1.35] & Templates flex-1) */}
-          <div className="flex gap-3 items-stretch">
+        <div className="max-w-xl mx-auto px-4 -mt-56 relative z-10 space-y-6">
+          {/* Top Headline + Action Cards with exactly 10px gap */}
+          <div className="space-y-2.5">
+            {/* Banner Headline Text (CapCut style: White text on colorful animated background, exactly 10px above New Project) */}
+            <div
+              onClick={() => handleStartStudio('whiteboard_stream_hand')}
+              className="cursor-pointer active:opacity-90 transition-opacity"
+            >
+              <div className="text-[15px] font-medium text-white/90 tracking-tight">
+                {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
+              </div>
+              <div className="text-3xl font-black text-white tracking-tight flex items-center gap-2 mt-0.5">
+                <span>{t('Bắt đầu', 'Get started')}</span>
+                <span className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm">
+                  <ChevronRight className="w-4 h-4 stroke-[3]" />
+                </span>
+              </div>
+            </div>
+
+            {/* Action Cards: Both Frosted Translucent Glass (New Video flex-[1.35] & Templates flex-1) */}
+            <div className="flex gap-3 items-stretch">
             {/* New Video Button — Frosted Glass with Translucent Blur */}
             <button
               onClick={() => handleStartStudio('whiteboard_stream_hand')}
@@ -710,6 +712,7 @@ export const AiVideoTab: React.FC = () => {
               </div>
             </button>
           </div>
+        </div>
 
           {/* Recent Projects (Dự Án Gần Đây) — Full Cover Black & White Cards */}
           <div className="space-y-3">

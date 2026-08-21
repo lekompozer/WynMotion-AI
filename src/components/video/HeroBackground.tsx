@@ -26,7 +26,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   const { isDark } = useApp();
 
   return (
-    <div className={`relative w-full overflow-hidden min-h-[310px] ${className}`}>
+    <div className={`relative w-full overflow-hidden min-h-[360px] ${className}`}>
       {/* 1. Fresh, Radiant Sky-Blue with Coral-Pink in Bottom-Right 1/4 */}
       <div className="absolute inset-0 z-0 bg-[#07132B]">
         {/* Dynamic bright glowing mesh */}
