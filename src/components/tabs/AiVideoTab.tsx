@@ -645,26 +645,43 @@ export const AiVideoTab: React.FC = () => {
         <HeroBackground
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenUpgrade={() => setIsProfileOpen(true)}
-        />
+        >
+          {/* Banner Headline Text (White text on colorful animated background, above New Project) */}
+          <div
+            onClick={() => handleStartStudio('whiteboard_stream_hand')}
+            className="mt-6 mb-1 cursor-pointer active:opacity-90 transition-opacity"
+          >
+            <div className="text-xs font-normal text-white/85 tracking-wide">
+              {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
+            </div>
+            <div className="text-xl font-bold text-white tracking-tight flex items-center gap-1.5 mt-0.5">
+              <span>{t('Bắt đầu', 'Get started')}</span>
+              <span className="font-extrabold text-sky-200 text-lg">&gt;</span>
+            </div>
+          </div>
+        </HeroBackground>
 
         <div className="max-w-xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
           {/* Action Cards: New Video (Larger flex-[1.35]) & Templates (flex-1) */}
           <div className="flex gap-3 items-stretch">
-            {/* New Video Button (CapCut style with white overlay text) */}
+            {/* New Video Button */}
             <button
               onClick={() => handleStartStudio('whiteboard_stream_hand')}
-              className="flex-[1.35] group relative overflow-hidden rounded-3xl p-5 shadow-xl active:scale-[0.98] transition-all flex flex-col justify-between h-38 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white shadow-slate-900/25 border border-slate-700/50"
+              className={`flex-[1.35] group relative overflow-hidden rounded-3xl p-5 shadow-xl active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
+                isDark
+                  ? 'bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 text-white shadow-cyan-500/20'
+                  : 'bg-white/95 backdrop-blur-md border border-slate-200 text-slate-900 shadow-slate-200/70 hover:border-slate-300'
+              }`}
             >
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/15 backdrop-blur-md">
-                <Plus className="w-6 h-6 stroke-[2.5] text-white" />
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
+                isDark ? 'bg-white/20 backdrop-blur-md' : 'bg-slate-100 text-slate-950'
+              }`}>
+                <Plus className={`w-6 h-6 stroke-[2.5] ${isDark ? 'text-white' : 'text-slate-950'}`} />
               </div>
-              <div className="text-left text-white">
-                <div className="text-[11px] font-normal text-white/80 tracking-wide">
-                  {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
-                </div>
-                <div className="text-base font-bold text-white tracking-tight mt-0.5 flex items-center gap-1">
-                  <span>{t('Bắt đầu', 'Get started')}</span>
-                  <span className="font-extrabold">&gt;</span>
+              <div className="text-left">
+                <div className="text-base font-black tracking-tight">{t('Tạo Video Mới', 'New Project')}</div>
+                <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-white/80' : 'text-slate-500'}`}>
+                  {t('Luồng 4 bước chuẩn AI', '4-Step AI Studio')}
                 </div>
               </div>
             </button>
