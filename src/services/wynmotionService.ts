@@ -241,11 +241,11 @@ export const wynmotionService = {
   },
 
   /**
-   * Update Project (scenes, bg_color, title, etc.)
+   * Update Project (scenes, bg_color, title, duration_sec, aspect_ratio, etc.)
    */
   async updateProject(
     projectId: string,
-    updates: Partial<Pick<MotionProject, 'title' | 'scenes' | 'bg_color' | 'script'>>
+    updates: Partial<MotionProject>
   ): Promise<{ success: boolean; project: MotionProject }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/api/ai/motion/project/${projectId}`, {
