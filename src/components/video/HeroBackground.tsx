@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Bell, Crown, User as UserIcon, ChevronRight } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
 
 interface HeroBackgroundProps {
   children?: React.ReactNode;
@@ -22,8 +23,10 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   userAvatarUrl,
   userDisplayName,
 }) => {
+  const { isDark } = useApp();
+
   return (
-    <div className={`relative w-full overflow-hidden min-h-[300px] ${className}`}>
+    <div className={`relative w-full overflow-hidden min-h-[310px] ${className}`}>
       {/* 1. Fresh, Radiant Sky-Blue with Coral-Pink in Bottom-Right 1/4 */}
       <div className="absolute inset-0 z-0 bg-[#07132B]">
         {/* Dynamic bright glowing mesh */}
@@ -32,7 +35,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           style={{
             animationDuration: '3.2s',
             background: `
-              radial-gradient(circle at 18% 22%, rgba(56, 189, 248, 0.95) 0%, rgba(14, 165, 233, 0.6) 45%, transparent 70%),
+              radial-gradient(circle at 18% 22%, rgba(56, 189, 248, 0.98) 0%, rgba(14, 165, 233, 0.65) 45%, transparent 70%),
               radial-gradient(circle at 60% 30%, rgba(125, 211, 252, 0.75) 0%, transparent 60%),
               radial-gradient(circle at 90% 85%, rgba(255, 45, 85, 0.75) 0%, rgba(244, 63, 94, 0.4) 40%, transparent 65%),
               linear-gradient(180deg, #0A1E42 0%, #0E2E66 45%, #0B1E3F 75%, transparent 100%)
@@ -52,8 +55,18 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
         />
       </div>
 
-      {/* 2. Top Header Content (Pushed up snugly to 10px below notch edge) */}
-      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] pb-12 px-4">
+      {/* 2. Bottom Fade to White/Canvas Background (CapCut iconic smooth blend) */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-40 pointer-events-none z-[2]"
+        style={{
+          background: isDark
+            ? 'linear-gradient(180deg, transparent 0%, rgba(8,11,16,0.3) 30%, rgba(8,11,16,0.85) 75%, #080B10 100%)'
+            : 'linear-gradient(180deg, transparent 0%, rgba(250,250,252,0.3) 30%, rgba(250,250,252,0.85) 75%, #FAFAFC 100%)'
+        }}
+      />
+
+      {/* 3. Top Header Content (Pushed up snugly to 10px below notch edge) */}
+      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] pb-10 px-4">
         {/* Top Header Row */}
         <div className="flex items-center justify-between gap-2 mb-2">
           {/* Left: Upgrade Pill with Bright Crisp White Background */}

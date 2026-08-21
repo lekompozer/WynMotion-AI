@@ -646,17 +646,19 @@ export const AiVideoTab: React.FC = () => {
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenUpgrade={() => setIsProfileOpen(true)}
         >
-          {/* Banner Headline Text (White text on colorful animated background, above New Project) */}
+          {/* Banner Headline Text (CapCut style: White text on colorful animated background, 10px above New Project) */}
           <div
             onClick={() => handleStartStudio('whiteboard_stream_hand')}
-            className="mt-6 mb-1 cursor-pointer active:opacity-90 transition-opacity"
+            className="mt-7 mb-2.5 cursor-pointer active:opacity-90 transition-opacity"
           >
-            <div className="text-xs font-normal text-white/85 tracking-wide">
+            <div className="text-[15px] font-medium text-white/90 tracking-tight">
               {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
             </div>
-            <div className="text-xl font-bold text-white tracking-tight flex items-center gap-1.5 mt-0.5">
+            <div className="text-3xl font-black text-white tracking-tight flex items-center gap-2.5 mt-0.5">
               <span>{t('Bắt đầu', 'Get started')}</span>
-              <span className="font-extrabold text-sky-200 text-lg">&gt;</span>
+              <span className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm">
+                <ChevronRight className="w-4 h-4 stroke-[3]" />
+              </span>
             </div>
           </div>
         </HeroBackground>
