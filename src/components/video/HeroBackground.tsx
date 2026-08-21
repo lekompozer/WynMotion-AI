@@ -26,7 +26,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   const { isDark } = useApp();
 
   return (
-    <div className={`relative w-full overflow-hidden min-h-[360px] ${className}`}>
+    <div className={`relative w-full overflow-hidden min-h-[410px] flex flex-col justify-between ${className}`}>
       {/* 1. Fresh, Radiant Sky-Blue with Coral-Pink in Bottom-Right 1/4 */}
       <div className="absolute inset-0 z-0 bg-[#07132B]">
         {/* Dynamic bright glowing mesh */}
@@ -57,7 +57,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
 
       {/* 2. Bottom Fade to White/Canvas Background (CapCut iconic smooth blend) */}
       <div
-        className="absolute inset-x-0 bottom-0 h-40 pointer-events-none z-[2]"
+        className="absolute inset-x-0 bottom-0 h-44 pointer-events-none z-[2]"
         style={{
           background: isDark
             ? 'linear-gradient(180deg, transparent 0%, rgba(8,11,16,0.3) 30%, rgba(8,11,16,0.85) 75%, #080B10 100%)'
@@ -66,7 +66,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
       />
 
       {/* 3. Top Header Content (Pushed up snugly to 10px below notch edge) */}
-      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] pb-10 px-4">
+      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] px-4">
         {/* Top Header Row */}
         <div className="flex items-center justify-between gap-2 mb-2">
           {/* Left: Upgrade Pill with Bright Crisp White Background */}
@@ -109,8 +109,10 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Hero Children */}
+      {/* 4. Bottom Hero Content: Headline lowered down to pb-[172px] */}
+      <div className="relative z-10 w-full px-4 pb-[172px] mt-auto">
         {children}
       </div>
     </div>
