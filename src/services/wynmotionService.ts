@@ -219,13 +219,85 @@ export const wynmotionService = {
   /**
    * List Recent Projects
    */
-  async listProjects(): Promise<{ success: boolean; projects: MotionProject[] }> {
+  async listProjects(
+    limit = 50,
+    offset = 0
+  ): Promise<{ success: boolean; projects: MotionProject[] }> {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE_URL}/api/ai/motion/projects`, {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/projects?${params}`, {
       headers,
     });
     const data = await res.json();
     if (!res.ok) return { success: true, projects: [] };
+    return data;
+  },
+
+  /**
+   * Update Project (scenes, bg_color, title, etc.)
+   */
+  async updateProject(
+    projectId: string,
+    updates: Partial<Pick<MotionProject, 'title' | 'scenes' | 'bg_color' | 'script'>>
+  ): Promise<{ success: boolean; project: MotionProject }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/project/${projectId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi cập nhật dự án');
+    return data;
+  },
+
+  /**
+   * Delete Project
+   */
+  async deleteProject(projectId: string): Promise<{ success: boolean }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/project/${projectId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi xóa dự án');
+    return data;
+  },
+
+  /**
+   * Enqueue MP4 video export job
+   */
+  async exportMP4(
+    projectId: string,
+    scenes?: MotionScene[]
+  ): Promise<{ success: boolean; job_id: string; message: string; mp4_url?: string; status?: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/export-mp4`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ project_id: projectId, scenes }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi xuất video MP4');
+    return data;
+  },
+
+  /**
+   * Check MP4 export job status
+   */
+  async checkExportStatus(
+    jobId: string
+  ): Promise<{ status: 'pending' | 'processing' | 'done' | 'failed'; mp4_url?: string; error?: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/export-status/${jobId}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) return { status: 'failed', error: data.detail };
     return data;
   },
 };

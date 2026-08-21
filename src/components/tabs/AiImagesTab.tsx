@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Image as ImageIcon,
   Sparkles,
@@ -13,353 +13,830 @@ import {
   Loader2,
   Sliders,
   X,
+  Edit3,
+  Scissors,
+  Copy,
+  Check,
+  CheckCircle2,
+  Eye,
+  RefreshCw,
+  Plus,
+  Compass,
+  FolderOpen,
+  Maximize2,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import {
   imageService,
-  ImageCategory,
+  ImageEndpoint,
+  AspectRatio,
   IMAGE_PROMPT_PRESETS,
+  INSPIRATION_CATEGORIES,
   ImagePromptPreset,
+  GenerateImageResult,
 } from '@/services/imageService';
+
+type MainTab = 'generate' | 'edit' | 'inspiration';
 
 export const AiImagesTab: React.FC = () => {
   const { isVietnamese, isDark, setActiveTab, t } = useApp();
   const { refreshSubscription } = useWordaiAuth();
 
-  // Mode: 'generate' | 'edit'
-  const [tabMode, setTabMode] = useState<'generate' | 'edit'>('generate');
+  // Mode: 'generate' | 'edit' | 'inspiration'
+  const [mainTab, setMainTab] = useState<MainTab>('generate');
 
-  // Generation Settings
-  const [category, setCategory] = useState<ImageCategory>('stylized');
-  const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1' | '4:3'>('1:1');
+  // ── Step 1: Generation Settings ──
+  const [category, setCategory] = useState<ImageEndpoint>('stylized');
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
+
+  // Sub-options
+  const [lighting, setLighting] = useState<string>('Cinematic');
+  const [cameraAngle, setCameraAngle] = useState<string>('Eye Level');
+  const [stylePreset, setStylePreset] = useState<'3D Render' | 'Anime' | 'Watercolor' | 'Oil Painting' | 'Flat Design' | 'Sticker Art'>('3D Render');
+  const [stickerMode, setStickerMode] = useState<boolean>(false);
+  const [logoStyle, setLogoStyle] = useState<'Modern' | 'Minimalist' | 'Vintage' | 'Luxury'>('Modern');
+  const [colorMood, setColorMood] = useState<'Vibrant' | 'Pastel' | 'Dark' | 'Light'>('Vibrant');
+  const [mockupPlacement, setMockupPlacement] = useState<'Tabletop' | 'Model Wearing' | 'Outdoor' | 'Studio Backdrop'>('Studio Backdrop');
+
+  // ── Step 2: Prompt & Launch ──
   const [prompt, setPrompt] = useState(
-    'Cute fluffy white fox mascot wearing pink hoodie with letter M, 3D Pixar character style, studio soft lighting, 8k resolution'
+    'Cute fluffy white fox mascot wearing cyan hoodie with letter M, 3D Pixar character style, soft studio rim lighting, vibrant 8k render'
   );
   const [negativePrompt, setNegativePrompt] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  // Edit Settings
+  // ── Editing States ──
   const [editImageUrl, setEditImageUrl] = useState('');
   const [editMode, setEditMode] = useState<'style-transfer' | 'object-edit' | 'inpainting'>('style-transfer');
   const [editPrompt, setEditPrompt] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
 
-  // Result Image & Lightbox
-  const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
+  // ── Inspiration Tab States ──
+  const [selectedInspirationCat, setSelectedInspirationCat] = useState(INSPIRATION_CATEGORIES[0].id);
+
+  // ── Generation Status & Timer ──
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Output Image & Lightbox ──
+  const [resultImage, setResultImage] = useState<GenerateImageResult | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
-  const CATEGORIES: { id: ImageCategory; label: string; icon: any }[] = [
-    { id: 'stylized', label: t('🎨 3D & Anime', '🎨 3D & Anime'), icon: Palette },
-    { id: 'photorealistic', label: t('📸 Chân Thực 8K', '📸 Photorealistic'), icon: Camera },
-    { id: 'logo', label: t('✨ Logo Vector', '✨ Vector Logo'), icon: Sparkles },
-    { id: 'background', label: t('🌌 Hình Nền', '🌌 Wallpaper'), icon: Layers },
-    { id: 'mockup', label: t('📱 Mockup UI', '📱 Product Mockup'), icon: ImageIcon },
+  useEffect(() => {
+    if (isGenerating) {
+      setElapsedTime(0);
+      timerRef.current = setInterval(() => setElapsedTime((p) => p + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isGenerating]);
+
+  // Categories config
+  const CATEGORIES: { id: ImageEndpoint; labelVi: string; labelEn: string; icon: any }[] = [
+    { id: 'stylized', labelVi: '🎨 3D & Anime', labelEn: '🎨 3D & Anime', icon: Palette },
+    { id: 'photorealistic', labelVi: '📸 Chân Thực 8K', labelEn: '📸 Photorealistic', icon: Camera },
+    { id: 'logo', labelVi: '✨ Logo Vector', labelEn: '✨ Vector Logo', icon: Sparkles },
+    { id: 'background', labelVi: '🌌 Wallpaper', labelEn: '🌌 Wallpaper', icon: Layers },
+    { id: 'mockup', labelVi: '📱 Mockup UI', labelEn: '📱 Mockup', icon: ImageIcon },
   ];
 
   const handleApplyPreset = (preset: ImagePromptPreset) => {
     setCategory(preset.category);
     setPrompt(preset.prompt);
+    setMainTab('generate');
   };
 
+  // ── Generate Image ──
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim()) {
+      alert(t('Vui lòng nhập mô tả hình ảnh', 'Please enter an image prompt'));
+      return;
+    }
+
     setIsGenerating(true);
+    setResultImage(null);
+
     try {
-      const res = await imageService.generateImage({
-        prompt: prompt.trim(),
-        category,
-        aspect_ratio: aspectRatio,
-        negative_prompt: negativePrompt.trim() || undefined,
-      });
-      setResultImageUrl(res.image_url);
+      let res: GenerateImageResult;
+
+      if (category === 'photorealistic') {
+        res = await imageService.generatePhotorealistic({
+          prompt: prompt.trim(),
+          lighting,
+          camera_angle: cameraAngle,
+          aspect_ratio: aspectRatio,
+          negative_prompt: negativePrompt.trim() || undefined,
+        });
+      } else if (category === 'stylized') {
+        res = await imageService.generateStylized({
+          prompt: prompt.trim(),
+          style_preset: stylePreset,
+          sticker_mode: stickerMode,
+          aspect_ratio: aspectRatio,
+          negative_prompt: negativePrompt.trim() || undefined,
+        });
+      } else if (category === 'logo') {
+        res = await imageService.generateLogo({
+          brand_name: prompt.trim(),
+          industry: 'Technology',
+          style: logoStyle,
+          aspect_ratio: aspectRatio,
+        });
+      } else if (category === 'background') {
+        res = await imageService.generateBackground({
+          theme: prompt.trim(),
+          color_mood: colorMood,
+          aspect_ratio: aspectRatio,
+        });
+      } else if (category === 'mockup') {
+        res = await imageService.generateMockup({
+          scene_description: prompt.trim(),
+          placement_type: mockupPlacement,
+          aspect_ratio: aspectRatio,
+        });
+      } else {
+        res = await imageService.generateImage({
+          prompt: prompt.trim(),
+          category,
+          aspect_ratio: aspectRatio,
+          negative_prompt: negativePrompt.trim() || undefined,
+        });
+      }
+
+      setResultImage(res);
       await refreshSubscription();
     } catch (err: any) {
-      alert(err.message || t('Lỗi tạo hình ảnh', 'Failed to generate image'));
+      alert(err.message || t('Lỗi tạo hình ảnh AI', 'Failed to generate image'));
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // ── Edit Image ──
   const handleEdit = async () => {
-    if (!editImageUrl.trim() || !editPrompt.trim()) return;
-    setIsEditing(true);
+    if (!editImageUrl.trim() || !editPrompt.trim()) {
+      alert(t('Vui lòng nhập URL ảnh và yêu cầu chỉnh sửa', 'Please enter image URL and prompt'));
+      return;
+    }
+
+    setIsGenerating(true);
+    setResultImage(null);
+
     try {
       const res = await imageService.editImage({
         image_url: editImageUrl.trim(),
         prompt: editPrompt.trim(),
         edit_mode: editMode,
+        aspect_ratio: aspectRatio,
       });
-      setResultImageUrl(res.image_url);
+
+      setResultImage({
+        image_url: res.image_url,
+        file_id: res.file_id,
+        prompt_used: editPrompt.trim(),
+        aspect_ratio: aspectRatio,
+      });
       await refreshSubscription();
     } catch (err: any) {
-      alert(err.message || t('Lỗi chỉnh sửa ảnh', 'Failed to edit image'));
+      alert(err.message || t('Lỗi chỉnh sửa hình ảnh', 'Failed to edit image'));
     } finally {
-      setIsEditing(false);
+      setIsGenerating(false);
     }
   };
 
-  const handleNativeShare = async () => {
-    if (!resultImageUrl) return;
-    if (typeof window !== 'undefined') {
-      try {
-        const cap = (window as any).Capacitor;
-        if (cap && cap.isNativePlatform && cap.isNativePlatform()) {
-          const { Share } = await import('@capacitor/share');
-          await Share.share({
-            title: 'WynMotion AI Artwork',
-            text: prompt,
-            url: resultImageUrl,
-            dialogTitle: 'Chia sẻ hình ảnh AI',
-          });
-          return;
-        }
-      } catch (_) {}
+  // ── Download Image ──
+  const handleDownload = async () => {
+    if (!resultImage?.image_url) return;
+    try {
+      const response = await fetch(resultImage.image_url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `WynMotion_${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(resultImage.image_url, '_blank');
     }
-    if (navigator.share) {
-      navigator.share({ title: 'WynMotion AI Artwork', url: resultImageUrl }).catch(() => {});
-    } else {
-      window.open(resultImageUrl, '_blank');
-    }
+  };
+
+  // ── Copy Prompt ──
+  const handleCopyPrompt = () => {
+    if (!prompt) return;
+    navigator.clipboard.writeText(prompt);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   return (
-    <div className={`w-full max-w-xl mx-auto p-4 sm:p-6 space-y-5 transition-colors duration-200 ${
-      isDark ? 'text-slate-100' : 'text-slate-900'
-    }`}>
-      {/* TOP SEGMENTED SWITCHER: Generate vs Edit */}
-      <div className={`p-1 rounded-2xl flex items-center shadow-inner border ${
-        isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/70 border-slate-300/60'
-      }`}>
+    <div
+      className={`w-full max-w-xl mx-auto px-4 py-5 space-y-6 transition-colors duration-200 ${
+        isDark ? 'text-slate-100' : 'text-slate-900'
+      }`}
+    >
+      {/* ─── MAIN TAB SWITCHER ─── */}
+      <div
+        className={`p-1.5 rounded-3xl border flex items-center gap-1 shadow-sm ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        }`}
+      >
         <button
           type="button"
-          onClick={() => setTabMode('generate')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-            tabMode === 'generate'
-              ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 shadow-md font-black'
-              : 'text-slate-400 hover:text-slate-700'
+          onClick={() => setMainTab('generate')}
+          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+            mainTab === 'generate'
+              ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md'
+              : isDark
+              ? 'text-slate-400 hover:text-white'
+              : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Sparkles className="h-4 w-4" />
-          <span>{t('Tạo Ảnh Mới (Generate)', 'AI Generate')}</span>
+          <Palette className="w-4 h-4" />
+          <span>{t('Tạo Ảnh Mới', 'Generate')}</span>
         </button>
+
         <button
           type="button"
-          onClick={() => setTabMode('edit')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-            tabMode === 'edit'
-              ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 shadow-md font-black'
-              : 'text-slate-400 hover:text-slate-700'
+          onClick={() => setMainTab('edit')}
+          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+            mainTab === 'edit'
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md'
+              : isDark
+              ? 'text-slate-400 hover:text-white'
+              : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Wand2 className="h-4 w-4" />
-          <span>{t('Chỉnh Sửa AI (Edit)', 'AI Edit')}</span>
+          <Scissors className="w-4 h-4" />
+          <span>{t('Chỉnh Sửa', 'Edit')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('inspiration')}
+          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+            mainTab === 'inspiration'
+              ? 'bg-gradient-to-r from-purple-400 to-violet-600 text-white shadow-md'
+              : isDark
+              ? 'text-slate-400 hover:text-white'
+              : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Compass className="w-4 h-4" />
+          <span>{t('Cảm Hứng', 'Ideas')}</span>
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* MODE A: AI GENERATE */}
-      {/* ========================================================================= */}
-      {tabMode === 'generate' && (
-        <div className="space-y-5 animate-in fade-in-50 duration-150">
-          {/* 1. Category Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORIES.map((cat) => {
-              const isSelected = category === cat.id;
-              return (
+      {/* ═══════════════════════════════════════════════════════════
+          MODE 1: GENERATION STUDIO (Settings First)
+      ═══════════════════════════════════════════════════════════ */}
+      {mainTab === 'generate' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          {/* ─── STEP 1: CẤU HÌNH & THỂ LOẠI (SETTINGS FIRST) ─── */}
+          <div
+            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center">
+                  1
+                </span>
+                <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {t('Thể Loại & Tỷ Lệ Khung Hình', 'Style & Aspect Ratio')}
+                </h3>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
+                Imagen 3.0 HD
+              </span>
+            </div>
+
+            {/* 1.1: Category Pills */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                {t('1. Thể Loại Hình Ảnh', '1. Image Category')}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  const isSelected = category === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategory(cat.id)}
+                      className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
+                        isSelected
+                          ? 'bg-amber-500/15 border-amber-400 text-amber-300 ring-1 ring-amber-400/40 shadow-sm'
+                          : isDark
+                          ? 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white'
+                          : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 ${isSelected ? 'text-amber-400' : ''}`} />
+                      <span className="text-[11px] font-bold">
+                        {isVietnamese ? cat.labelVi : cat.labelEn}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 1.2: Aspect Ratio Pills */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                {t('2. Tỷ Lệ Khung Hình', '2. Aspect Ratio')}
+              </label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setAspectRatio(r)}
+                    className={`py-2 rounded-xl text-xs font-black border text-center transition-all ${
+                      aspectRatio === r
+                        ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
+                        : isDark
+                        ? 'bg-slate-800 border-slate-700 text-slate-400'
+                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 1.3: Category-Specific Options */}
+            {category === 'photorealistic' && (
+              <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-800/40">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400">
+                    {t('Ánh sáng', 'Lighting')}
+                  </label>
+                  <select
+                    value={lighting}
+                    onChange={(e) => setLighting(e.target.value)}
+                    className={`w-full px-3 py-2 rounded-xl text-xs border ${
+                      isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    {['Cinematic', 'Natural', 'Studio', 'Golden Hour'].map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400">
+                    {t('Góc chụp', 'Camera Angle')}
+                  </label>
+                  <select
+                    value={cameraAngle}
+                    onChange={(e) => setCameraAngle(e.target.value)}
+                    className={`w-full px-3 py-2 rounded-xl text-xs border ${
+                      isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    {['Eye Level', 'Wide Angle', 'Macro', 'Drone View'].map((a) => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {category === 'stylized' && (
+              <div className="space-y-2 pt-2 border-t border-slate-800/40">
+                <label className="text-[10px] font-bold text-slate-400">
+                  {t('Phong cách hội họa', 'Style Preset')}
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    '3D Render',
+                    'Anime',
+                    'Watercolor',
+                    'Oil Painting',
+                    'Flat Design',
+                    'Sticker Art',
+                  ].map((st: any) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setStylePreset(st)}
+                      className={`py-1.5 px-2 rounded-xl text-[10px] font-bold border truncate transition-all ${
+                        stylePreset === st
+                          ? 'bg-amber-400 text-slate-950 border-amber-300'
+                          : isDark
+                          ? 'bg-slate-800 border-slate-700 text-slate-400'
+                          : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── STEP 2: MÔ TẢ PROMPT & TẠO ẢNH (TEXT & GENERATE) ─── */}
+          <div
+            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center">
+                  2
+                </span>
+                <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {t('Ý Tưởng & Prompt Tạo Ảnh', 'Prompt & Launch')}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCopyPrompt}
+                className="flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors"
+              >
+                {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{isCopied ? t('Đã copy', 'Copied') : t('Copy', 'Copy')}</span>
+              </button>
+            </div>
+
+            {/* Prompt Presets Pills */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400">
+                {t('Gợi ý prompt mẫu:', 'Prompt presets:')}
+              </label>
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2">
+                {IMAGE_PROMPT_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleApplyPreset(p)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all active:scale-95 ${
+                      isDark
+                        ? 'bg-slate-800/70 border-slate-700 text-slate-300 hover:text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {isVietnamese ? p.labelVi : p.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Prompt Textarea */}
+            <div className="space-y-1.5">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={4}
+                placeholder={t('Mô tả chi tiết hình ảnh bạn muốn AI tạo...', 'Describe the image you want AI to create...')}
+                className={`w-full px-4 py-3 rounded-2xl text-xs leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition-all ${
+                  isDark
+                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                }`}
+              />
+            </div>
+
+            {/* Advanced Negative Prompt Toggle */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="text-[10px] font-bold text-slate-400 flex items-center gap-1 hover:text-amber-400 transition-colors"
+              >
+                <Sliders className="w-3 h-3" />
+                <span>{t('Tùy chọn nâng cao (Negative Prompt)', 'Advanced (Negative Prompt)')}</span>
+              </button>
+
+              {showAdvanced && (
+                <input
+                  type="text"
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  placeholder={t('Loại trừ: blurry, low quality, distorted, extra fingers...', 'Exclude: blurry, low quality...')}
+                  className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:border-amber-400 ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200'
+                  }`}
+                />
+              )}
+            </div>
+
+            {/* Generate Action Button */}
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isGenerating || !prompt.trim()}
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>{t(`Đang vẽ ảnh AI (${elapsedTime}s)...`, `Generating image (${elapsedTime}s)...`)}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  <span>{t('Khởi Tạo Hình Ảnh AI Ngay 🚀', 'Generate AI Image 🚀')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          MODE 2: IMAGE EDITING STUDIO
+      ═══════════════════════════════════════════════════════════ */}
+      {mainTab === 'edit' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <div
+            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {t('Chỉnh Sửa & Biến Đổi Ảnh AI', 'AI Image Editing')}
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400">
+                Inpainting & Transfer
+              </span>
+            </div>
+
+            {/* Edit Mode Switcher */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'style-transfer' as const, labelVi: 'Chuyển Style', labelEn: 'Style Transfer' },
+                { id: 'object-edit' as const, labelVi: 'Sửa Đối Tượng', labelEn: 'Object Edit' },
+                { id: 'inpainting' as const, labelVi: 'Inpainting', labelEn: 'Inpainting' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setEditMode(m.id)}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                    editMode === m.id
+                      ? 'bg-cyan-400 text-slate-950 border-cyan-300 shadow-sm'
+                      : isDark
+                      ? 'bg-slate-800 border-slate-700 text-slate-400'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
+                  }`}
+                >
+                  {isVietnamese ? m.labelVi : m.labelEn}
+                </button>
+              ))}
+            </div>
+
+            {/* Image URL Input */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400">
+                {t('URL Hình ảnh gốc cần sửa:', 'Original Image URL:')}
+              </label>
+              <input
+                type="text"
+                value={editImageUrl}
+                onChange={(e) => setEditImageUrl(e.target.value)}
+                placeholder="https://... image url"
+                className={`w-full px-3 py-2.5 rounded-xl text-xs border focus:outline-none focus:border-cyan-400 ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'
+                }`}
+              />
+            </div>
+
+            {/* Edit Instruction Prompt */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400">
+                {t('Yêu cầu chỉnh sửa chi tiết:', 'Edit instruction prompt:')}
+              </label>
+              <textarea
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                rows={3}
+                placeholder={t('Ví dụ: Chuyển toàn bộ bối cảnh sang phong cách Cyberpunk về đêm...', 'e.g. Turn background into nighttime cyberpunk...')}
+                className={`w-full px-4 py-3 rounded-2xl text-xs leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition-all ${
+                  isDark
+                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                }`}
+              />
+            </div>
+
+            {/* Edit Action Button */}
+            <button
+              type="button"
+              onClick={handleEdit}
+              disabled={isGenerating || !editImageUrl.trim() || !editPrompt.trim()}
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>{t(`Đang xử lý ảnh (${elapsedTime}s)...`, `Editing image (${elapsedTime}s)...`)}</span>
+                </>
+              ) : (
+                <>
+                  <Scissors className="w-5 h-5" />
+                  <span>{t('Áp Dụng Chỉnh Sửa Ảnh 🚀', 'Apply Image Edit 🚀')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          MODE 3: INSPIRATION GALLERY & PRESETS
+      ═══════════════════════════════════════════════════════════ */}
+      {mainTab === 'inspiration' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <div
+            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {t('Thư Viện Cảm Hứng & Ý Tưởng Prompt', 'Inspiration & Prompt Ideas')}
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400">
+                Curated
+              </span>
+            </div>
+
+            {/* Inspiration Category Pills */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2">
+              {INSPIRATION_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => setCategory(cat.id)}
-                  className={`px-3.5 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all border ${
-                    isSelected
-                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm font-black'
+                  onClick={() => setSelectedInspirationCat(cat.id)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                    selectedInspirationCat === cat.id
+                      ? 'bg-purple-500 text-white border-purple-400 shadow-sm'
                       : isDark
-                      ? 'bg-slate-900 border-slate-800 text-slate-400'
-                      : 'bg-white border-slate-200 text-slate-600 shadow-sm'
+                      ? 'bg-slate-800 border-slate-700 text-slate-400'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
                   }`}
                 >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 2. Prompt Textarea */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
-              {t('Mô Tả Hình Ảnh (Prompt)', 'Image Prompt')}
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder={t('Nhập chi tiết về hình ảnh...', 'Describe your image in detail...')}
-              className={`w-full p-4 rounded-2xl border text-sm font-medium outline-none resize-none transition-colors ${
-                isDark
-                  ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400'
-                  : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
-              }`}
-            />
-          </div>
-
-          {/* 3. Aspect Ratio */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
-              {t('Tỉ Lệ Khung Hình', 'Aspect Ratio')}
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              {(['1:1', '16:9', '9:16', '4:3'] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setAspectRatio(r)}
-                  className={`p-2.5 rounded-xl border text-center font-bold text-xs transition-all ${
-                    aspectRatio === r
-                      ? 'bg-cyan-500/10 border-cyan-400 text-cyan-500 font-black'
-                      : isDark
-                      ? 'bg-slate-900 border-slate-800 text-slate-400'
-                      : 'bg-white border-slate-200 text-slate-600 shadow-sm'
-                  }`}
-                >
-                  {r}
+                  {isVietnamese ? cat.labelVi : cat.labelEn}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* 4. Prompt Presets */}
-          <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              {t('✨ Gợi Ý Mẫu Có Sẵn', '✨ Prompt Inspiration')}
-            </span>
-            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-              {IMAGE_PROMPT_PRESETS.map((p, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleApplyPreset(p)}
-                  className={`w-full p-3 rounded-2xl border text-left text-xs font-medium transition-all ${
-                    isDark
-                      ? 'bg-slate-900/60 border-slate-800/80 hover:border-cyan-400/40 text-slate-300'
-                      : 'bg-white border-slate-200 shadow-sm hover:border-cyan-400 text-slate-700'
+            {/* Presets Cards List */}
+            <div className="space-y-2.5">
+              {IMAGE_PROMPT_PRESETS.map((p) => (
+                <div
+                  key={p.id}
+                  className={`p-3.5 rounded-2xl border flex flex-col justify-between gap-2.5 transition-all ${
+                    isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-50 border-slate-200'
                   }`}
                 >
-                  <p className="font-extrabold text-cyan-500">{p.label}</p>
-                  <p className="text-slate-400 line-clamp-1 mt-0.5">{p.prompt}</p>
-                </button>
+                  <div>
+                    <div className="text-xs font-bold text-purple-400 mb-1">
+                      {isVietnamese ? p.labelVi : p.labelEn}
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-2">
+                      {p.prompt}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset(p)}
+                    className="self-end px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{t('Dùng Prompt Này', 'Use This Prompt')}</span>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
-
-          {/* Generate Button */}
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
-            className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>{t('Đang tạo tác phẩm 8K...', 'Rendering 8K artwork...')}</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-5 w-5" />
-                <span>{t('Tạo Hình Ảnh AI Ngay 🎨', 'Generate AI Image 🎨')}</span>
-              </>
-            )}
-          </button>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODE B: AI EDIT */}
-      {/* ========================================================================= */}
-      {tabMode === 'edit' && (
-        <div className="space-y-5 animate-in fade-in-50 duration-150">
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
-              {t('URL Hình Ảnh Gốc', 'Source Image URL')}
-            </label>
-            <input
-              type="text"
-              value={editImageUrl}
-              onChange={(e) => setEditImageUrl(e.target.value)}
-              placeholder="https://..."
-              className={`w-full p-4 rounded-2xl border text-sm font-medium outline-none transition-colors ${
-                isDark
-                  ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400'
-                  : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
-              }`}
-            />
-          </div>
+      {/* ═══════════════════════════════════════════════════════════
+          RESULT IMAGE CARD & ACTIONS
+      ═══════════════════════════════════════════════════════════ */}
+      {resultImage?.image_url && (
+        <div
+          className={`rounded-3xl p-5 border space-y-4 shadow-xl animate-in zoom-in-95 duration-200 ${
+            isDark
+              ? 'bg-gradient-to-br from-slate-900 to-[#1c1409] border-amber-500/40 shadow-amber-500/10'
+              : 'bg-gradient-to-br from-amber-50/50 to-white border-amber-300 shadow-amber-500/5'
+          }`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {t('Hình Ảnh Đã Hoàn Tất! 🎉', 'Image Ready! 🎉')}
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {resultImage.aspect_ratio || aspectRatio} · HD Resolution
+                </p>
+              </div>
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
-              {t('Mô Tả Chỉnh Sửa', 'Edit Instructions')}
-            </label>
-            <textarea
-              value={editPrompt}
-              onChange={(e) => setEditPrompt(e.target.value)}
-              rows={3}
-              placeholder={t('Ví dụ: Thêm kính râm cho nhân vật...', 'e.g. Add sunglasses...')}
-              className={`w-full p-4 rounded-2xl border text-sm font-medium outline-none resize-none transition-colors ${
-                isDark
-                  ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400'
-                  : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
-              }`}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleEdit}
-            disabled={isEditing || !editImageUrl.trim() || !editPrompt.trim()}
-            className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isEditing ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>{t('Đang biến hóa hình ảnh...', 'Editing artwork...')}</span>
-              </>
-            ) : (
-              <>
-                <Wand2 className="h-5 w-5" />
-                <span>{t('Chỉnh Sửa Hình Ảnh Ngay ✨', 'Edit AI Image ✨')}</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Result Box */}
-      {resultImageUrl && (
-        <div className={`p-4 rounded-3xl border space-y-3 animate-in fade-in ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-md'
-        }`}>
-          <div className="relative rounded-2xl overflow-hidden aspect-square border border-slate-800/40">
-            <img src={resultImageUrl} alt="Result" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex gap-2">
             <button
-              onClick={handleNativeShare}
-              className="flex-1 py-3 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
-            >
-              <Share2 className="w-4 h-4" />
-              <span>{t('Chia Sẻ', 'Share')}</span>
-            </button>
-            <a
-              href={resultImageUrl}
-              download="wynmotion_art.png"
-              className={`p-3 rounded-xl border flex items-center justify-center active:scale-95 transition-all ${
-                isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
-              }`}
+              type="button"
+              onClick={handleDownload}
+              className="p-2 rounded-xl bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors"
+              title={t('Tải về', 'Download')}
             >
               <Download className="w-4 h-4" />
-            </a>
+            </button>
+          </div>
+
+          {/* Image Display */}
+          <div className="relative rounded-2xl overflow-hidden bg-black/40 border border-slate-700/50 group">
+            <img
+              src={resultImage.image_url}
+              alt={resultImage.prompt_used || 'Generated Art'}
+              className="w-full h-auto max-h-[50vh] object-contain mx-auto"
+            />
+            {/* Zoom / Fullscreen Button */}
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(true)}
+              className="absolute bottom-3 right-3 p-2 rounded-xl bg-black/60 backdrop-blur-md text-white opacity-90 group-hover:opacity-100 transition-opacity"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Action Row */}
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/40">
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{t('Tải Ảnh HD Về Máy', 'Download HD')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('library')}
+              className={`py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
+                isDark
+                  ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  : 'border-slate-200 bg-white text-slate-700 shadow-sm'
+              }`}
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t('Xem Trong Thư Viện', 'Open in Library')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── FULLSCREEN LIGHTBOX MODAL ─── */}
+      {isLightboxOpen && resultImage?.image_url && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative max-w-2xl w-full flex flex-col items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(false)}
+              className="absolute -top-12 right-0 p-2 rounded-full bg-slate-800 text-white hover:bg-slate-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={resultImage.image_url}
+              alt="Fullscreen Art"
+              className="max-h-[80vh] w-auto object-contain rounded-2xl shadow-2xl"
+            />
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="px-6 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>{t('Tải Ảnh Về Máy', 'Download Image')}</span>
+            </button>
           </div>
         </div>
       )}

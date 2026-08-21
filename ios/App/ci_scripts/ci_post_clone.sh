@@ -1,6 +1,7 @@
 #!/bin/bash
 # ios/App/ci_scripts/ci_post_clone.sh
 # Automated Xcode Cloud pre-build hook for WynMotion AI
+# Resolves GoogleSignIn dependency for CapacitorFirebaseAuthentication
 
 set -e
 
@@ -39,11 +40,23 @@ npm run build
 echo "⚙️ Syncing Capacitor iOS platform..."
 npx cap sync ios
 
+echo "⚙️ Patching CapacitorFirebaseAuthentication podspec..."
+node scripts/patch-podspec.js
+
+echo "⚙️ Linking GoogleService-Info.plist to Xcode project resources..."
+node scripts/patch-xcode-resources.js
+
 echo "⚙️ Disabling Xcode User Script Sandboxing..."
 node scripts/patch-xcode-sandboxing.js
 
-echo "⚙️ Installing Pods in ios/App..."
+echo "⚙️ Configuring capacitor.config.json packageClassList..."
+node -e "const fs=require('fs');const p='ios/App/App/capacitor.config.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.packageClassList=Array.from(new Set([...(j.packageClassList||[]),'CapacitorFirebaseAuthentication.FirebaseAuthenticationPlugin']));fs.writeFileSync(p,JSON.stringify(j,null,'\t')+'\n');"
+
+echo "⚙️ Updating Podfile to use CapacitorFirebaseAuthentication/Google subspec..."
 cd ios/App
+node -e "const fs=require('fs');const p='Podfile';fs.writeFileSync(p,fs.readFileSync(p,'utf8').replace(\"pod 'CapacitorFirebaseAuthentication'\", \"pod 'CapacitorFirebaseAuthentication/Google'\"),'utf8');"
+
+echo "⚙️ Installing Pods in ios/App..."
 pod install --repo-update
 
 echo "✅ Xcode Cloud pre-build hook completed successfully!"

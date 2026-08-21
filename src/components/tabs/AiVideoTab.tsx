@@ -61,6 +61,7 @@ import { ProfileSidePanel } from '@/components/navigation/ProfileSidePanel';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { DualVoiceSelectorModal } from '@/components/video/DualVoiceSelectorModal';
 import { DialogueScriptEditor } from '@/components/video/DialogueScriptEditor';
+import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStudio';
 
 // ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
 
@@ -169,6 +170,26 @@ export const AUDIO_READING_STYLES = [
 export const AiVideoTab: React.FC = () => {
   const { isVietnamese, isDark, setIsStudioOpen, t, setActiveTab } = useApp();
   const { user } = useWordaiAuth();
+
+  // ── Mobile Editor Project ──
+  const [activeEditorProject, setActiveEditorProject] = useState<MotionProject | null>(null);
+
+  const openProjectInEditor = async (projectOrId: MotionProject | string) => {
+    if (typeof projectOrId === 'string') {
+      try {
+        const res = await wynmotionService.getProject(projectOrId);
+        if (res.success && res.project) {
+          setActiveEditorProject(res.project);
+          setIsStudioOpen(true);
+        }
+      } catch (err) {
+        console.warn('Could not load project for editor:', err);
+      }
+    } else {
+      setActiveEditorProject(projectOrId);
+      setIsStudioOpen(true);
+    }
+  };
 
   // Navigation mode: 'home' (CapCut Hub) vs 'studio' (Creation Flow)
   const [viewMode, setViewMode] = useState<'home' | 'studio'>('home');
@@ -287,6 +308,15 @@ export const AiVideoTab: React.FC = () => {
       if (cached) {
         setRecentProjects(JSON.parse(cached));
       }
+
+      // Check if navigated here from Library with a specific projectId to open
+      try {
+        const pendingProjectId = sessionStorage.getItem('wynmotion_open_project_id');
+        if (pendingProjectId) {
+          sessionStorage.removeItem('wynmotion_open_project_id');
+          openProjectInEditor(pendingProjectId);
+        }
+      } catch {}
     } catch {}
 
     wynmotionService
@@ -300,6 +330,16 @@ export const AiVideoTab: React.FC = () => {
         }
       })
       .catch(() => {});
+
+    // Listen for open-project events dispatched from Library tab
+    const handleOpenProjectEvent = (e: Event) => {
+      const { projectId } = (e as CustomEvent).detail || {};
+      if (projectId) openProjectInEditor(projectId);
+    };
+    window.addEventListener('wynmotion:open-project', handleOpenProjectEvent);
+    return () => {
+      window.removeEventListener('wynmotion:open-project', handleOpenProjectEvent);
+    };
   }, []);
 
   // ── Auto-save Draft to LocalStorage ──
@@ -378,11 +418,12 @@ export const AiVideoTab: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const SAMPLE_RECENT_ITEMS = [
-    { id: '0815-01', title: 'Quang hợp cây xanh', duration: '32s', bg: 'from-slate-900 to-slate-800' },
-    { id: '0815-02', title: 'Hội thoại quán Cafe 3D', duration: '45s', bg: 'from-cyan-950 to-slate-900' },
-    { id: '0707-01', title: 'Định luật Newton F=ma', duration: '60s', bg: 'from-indigo-950 to-slate-900' },
-    { id: '0704-01', title: 'Hội thoại phỏng vấn xin việc', duration: '50s', bg: 'from-purple-950 to-slate-900' },
+  // Sample items shown when no real projects loaded yet (placeholders – click does nothing)
+  const SAMPLE_RECENT_ITEMS: any[] = [
+    { project_id: '', id: '0815-01', title: isVietnamese ? 'Quang hợp cây xanh' : 'Photosynthesis Cycle', duration_sec: 32 },
+    { project_id: '', id: '0815-02', title: isVietnamese ? 'Hội thoại quán Cafe 3D' : 'Cafe Dialogue 3D', duration_sec: 45 },
+    { project_id: '', id: '0707-01', title: isVietnamese ? 'Định luật Newton F=ma' : "Newton's Law F=ma", duration_sec: 60 },
+    { project_id: '', id: '0704-01', title: isVietnamese ? 'Phỏng vấn xin việc' : 'Job Interview Scene', duration_sec: 50 },
   ];
 
   // Dynamic Prompt Suggestions based on selected style
@@ -636,6 +677,19 @@ export const AiVideoTab: React.FC = () => {
 
   const estimatedPoints = calculateProjectPoints(visualStyle, audioDurationSec);
 
+  // ── EARLY RETURN: Mobile Video Editor Studio ──
+  if (activeEditorProject) {
+    return (
+      <MobileVideoEditorStudio
+        project={activeEditorProject}
+        onBack={() => {
+          setActiveEditorProject(null);
+          setIsStudioOpen(false);
+        }}
+      />
+    );
+  }
+
   // =========================================================================
   // VIEW MODE A: CAPCUT-STYLE HOME HUB
   // =========================================================================
@@ -727,26 +781,71 @@ export const AiVideoTab: React.FC = () => {
             </div>
 
             <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
-              {(recentProjects.length > 0 ? recentProjects : SAMPLE_RECENT_ITEMS).map((item: any) => {
+              {(recentProjects.length > 0 ? recentProjects : SAMPLE_RECENT_ITEMS).map((item: any, idx: number) => {
                 const coverImg = item.scenes?.[0]?.image_url || item.thumbnail_url;
+                const projectId: string = item.project_id || item.id || '';
+                const isSample = !item.project_id; // mock placeholder — click shows alert
+                const displayTitle: string = item.title || item.prompt?.slice(0, 36) || t('Dự Án WynMotion', 'WynMotion Project');
+                const displayDuration: string = item.duration_sec
+                  ? `${Math.round(item.duration_sec)}s`
+                  : item.duration || '';
+                const sceneCount: number = item.scenes?.length || 0;
+                const styleLabel: string = item.visual_style
+                  ? item.visual_style.replace(/_/g, ' ')
+                  : '';
+
                 return (
                   <div
-                    key={item.id || item.project_id}
-                    onClick={() => setActiveTab('library')}
-                    style={coverImg ? { backgroundImage: `url(${coverImg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-                    className="flex-shrink-0 w-32 h-36 rounded-2xl p-3 bg-black text-white border border-slate-800/80 cursor-pointer active:scale-95 transition-all flex flex-col justify-end relative overflow-hidden shadow-sm"
+                    key={projectId || idx}
+                    onClick={() => {
+                      if (isSample) return; // ignore placeholder cards
+                      openProjectInEditor(item as MotionProject);
+                    }}
+                    style={
+                      coverImg
+                        ? {
+                            backgroundImage: `url(${coverImg})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }
+                        : undefined
+                    }
+                    className={`flex-shrink-0 w-32 h-36 rounded-2xl p-3 bg-black text-white border border-slate-800/80 flex flex-col justify-end relative overflow-hidden shadow-sm transition-all ${
+                      isSample
+                        ? 'opacity-50 cursor-default'
+                        : 'cursor-pointer active:scale-95 hover:border-cyan-500/50'
+                    }`}
                   >
-                    {/* Dark gradient overlay for clear text readability */}
+                    {/* Dark gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
-                    
+
+                    {/* Style badge (top-left) */}
+                    {styleLabel && (
+                      <div className="absolute top-2 left-2 right-2 flex">
+                        <span className="px-1.5 py-0.5 rounded-md bg-black/60 text-[8px] font-bold text-cyan-300 uppercase tracking-wide truncate">
+                          {styleLabel}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="relative z-10">
-                      <h4 className="text-[11px] font-medium text-white leading-snug line-clamp-2">{item.title}</h4>
-                      <span className="text-[9px] text-slate-400 font-normal mt-0.5 block">{item.duration || '30s'}</span>
+                      <h4 className="text-[11px] font-semibold text-white leading-snug line-clamp-2">
+                        {displayTitle}
+                      </h4>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {displayDuration && (
+                          <span className="text-[9px] text-slate-400">{displayDuration}</span>
+                        )}
+                        {sceneCount > 0 && (
+                          <span className="text-[9px] text-slate-500">· {sceneCount} scenes</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
+
           </div>
 
           {/* 6 AI Animation Styles in 2 categories (Clean text, Monochrome icons, No tags) */}
@@ -1641,30 +1740,102 @@ export const AiVideoTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Final Launch Button */}
-            <button
-              type="button"
-              onClick={handleLaunchProject}
-              disabled={isCreatingProject}
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isCreatingProject ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>
-                    {creationStage === 'scripting' && t('Đang chia phân cảnh...', 'Partitioning scenes...')}
-                    {creationStage === 'drawing' && t('Đang tạo hoạt họa vector...', 'Generating vector animations...')}
-                    {creationStage === 'syncing' && t('Đang đồng bộ Whisper...', 'Syncing timeline...')}
-                    {creationStage === 'done' && t('Hoàn tất!', 'Completed!')}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5" />
-                  <span>{t('Khởi Tạo Video Hoạt Họa Ngay 🚀', 'Launch AI Animation 🚀')}</span>
-                </>
-              )}
-            </button>
+            {/* ── DONE STATE: Success banner + Open Editor CTA ── */}
+            {createdProject ? (
+              <div className="space-y-3 animate-in fade-in duration-300">
+                {/* Success Banner */}
+                <div
+                  className={`rounded-3xl border overflow-hidden ${
+                    isDark
+                      ? 'bg-gradient-to-br from-cyan-950/60 to-slate-900 border-cyan-500/30'
+                      : 'bg-gradient-to-br from-cyan-50 to-white border-cyan-300'
+                  }`}
+                >
+                  {/* Thumbnail strip */}
+                  {createdProject.scenes?.[0] && (createdProject.scenes[0] as any).image_url && (
+                    <div className="w-full h-28 overflow-hidden">
+                      <img
+                        src={(createdProject.scenes[0] as any).image_url}
+                        alt={createdProject.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-emerald-400/20 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <div>
+                        <div className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          {t('Video hoạt họa đã sẵn sàng! 🎉', 'Animation ready! 🎉')}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {createdProject.scenes?.length || 0} scenes ·{' '}
+                          {Math.round(createdProject.duration_sec || 0)}s · {createdProject.visual_style?.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Open Editor CTA */}
+                    <button
+                      type="button"
+                      onClick={() => openProjectInEditor(createdProject)}
+                      className="w-full h-12 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all"
+                    >
+                      <Film className="h-4 w-4" />
+                      <span>{t('Mở Trình Biên Tập Ngay ✨', 'Open Video Editor ✨')}</span>
+                    </button>
+
+                    {/* Secondary: create new */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreatedProject(null);
+                        setCreationStage('idle');
+                        setWizardStep('1');
+                        setViewMode('home');
+                        setIsStudioOpen(false);
+                      }}
+                      className={`w-full h-10 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+                        isDark
+                          ? 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>{t('Tạo Video Mới Khác', 'Create Another Video')}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Final Launch Button */
+              <button
+                type="button"
+                onClick={handleLaunchProject}
+                disabled={isCreatingProject}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isCreatingProject ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>
+                      {creationStage === 'scripting' && t('Đang chia phân cảnh...', 'Partitioning scenes...')}
+                      {creationStage === 'drawing' && t('Đang tạo hoạt họa vector...', 'Generating vector animations...')}
+                      {creationStage === 'syncing' && t('Đang đồng bộ Whisper...', 'Syncing timeline...')}
+                      {creationStage === 'done' && t('Hoàn tất!', 'Completed!')}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-5 w-5" />
+                    <span>{t('Khởi Tạo Video Hoạt Họa Ngay 🚀', 'Launch AI Animation 🚀')}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
 

@@ -10,7 +10,18 @@ import { AiImagesTab } from '@/components/tabs/AiImagesTab';
 import { LibraryTab } from '@/components/tabs/LibraryTab';
 
 export default function WynMotionMobileApp() {
-  const { activeTab, isDark, isStudioOpen } = useApp();
+  const { activeTab, isDark, isStudioOpen, setActiveTab } = useApp();
+
+  const handleOpenProjectFromLibrary = (projectId: string) => {
+    // Dispatch event so AiVideoTab can listen and open MobileVideoEditorStudio
+    try {
+      sessionStorage.setItem('wynmotion_open_project_id', projectId);
+    } catch {}
+    window.dispatchEvent(
+      new CustomEvent('wynmotion:open-project', { detail: { projectId } })
+    );
+    setActiveTab('video');
+  };
 
   return (
     <div
@@ -31,7 +42,9 @@ export default function WynMotionMobileApp() {
           {activeTab === 'video' && <AiVideoTab />}
           {activeTab === 'audio' && <AiAudioTab />}
           {activeTab === 'images' && <AiImagesTab />}
-          {activeTab === 'library' && <LibraryTab />}
+          {activeTab === 'library' && (
+            <LibraryTab onOpenProject={handleOpenProjectFromLibrary} />
+          )}
         </div>
       </main>
 
