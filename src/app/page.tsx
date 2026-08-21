@@ -14,16 +14,20 @@ export default function WynMotionMobileApp() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col antialiased transition-colors duration-200 ${
+      className={`h-full w-full flex flex-col antialiased transition-colors duration-200 overflow-hidden ${
         isDark ? 'bg-[#080B10] text-slate-100' : 'bg-[#FAFAFC] text-slate-900'
       }`}
     >
       {/* 1. iOS App Header — only shown on Audio, Images, Library tabs when not in full studio mode */}
       {!isStudioOpen && activeTab !== 'video' && <AppHeader />}
 
-      {/* 2. Active Tab Content with Smooth Transition */}
-      <main className={`flex-1 overflow-y-auto ${isStudioOpen ? 'pb-0' : 'pb-24'}`}>
-        <div key={activeTab} className="animate-in fade-in-50 duration-200 h-full">
+      {/* 2. Active Tab Content with Contained Smooth Scrolling */}
+      <main
+        className={`flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch ${
+          isStudioOpen ? 'pb-0' : 'pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+4.75rem)]'
+        }`}
+      >
+        <div key={activeTab} className="animate-in fade-in-50 duration-200">
           {activeTab === 'video' && <AiVideoTab />}
           {activeTab === 'audio' && <AiAudioTab />}
           {activeTab === 'images' && <AiImagesTab />}
@@ -31,7 +35,7 @@ export default function WynMotionMobileApp() {
         </div>
       </main>
 
-      {/* 3. iOS Bottom Navigation Bar (Hidden when inside Full-Screen Creation Studio) */}
+      {/* 3. iOS Bottom Navigation Bar — Rock-Solid Pinned at Bottom */}
       {!isStudioOpen && <MobileBottomNav />}
     </div>
   );

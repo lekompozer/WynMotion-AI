@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bell, Crown, Sparkles, User as UserIcon, ChevronRight } from 'lucide-react';
+import { Bell, Crown, User as UserIcon, ChevronRight } from 'lucide-react';
 
 interface HeroBackgroundProps {
   children?: React.ReactNode;
@@ -23,40 +23,37 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   userDisplayName,
 }) => {
   return (
-    <div className={`relative w-full overflow-hidden min-h-[310px] ${className}`}>
-      {/* 1. Fresh, Fast-Paced Gemini Mesh Background (Sky-Blue + Coral-Pink) */}
-      <div className="absolute inset-0 z-0 bg-[#060913]">
-        {/* Animated glowing mesh gradient */}
+    <div className={`relative w-full overflow-hidden min-h-[300px] ${className}`}>
+      {/* 1. Fresh, Radiant Sky-Blue with Coral-Pink in Bottom-Right 1/4 */}
+      <div className="absolute inset-0 z-0 bg-[#07132B]">
+        {/* Dynamic bright glowing mesh */}
         <div
-          className="absolute inset-0 opacity-95 animate-pulse"
+          className="absolute inset-0 opacity-100 animate-pulse"
           style={{
-            animationDuration: '3s',
+            animationDuration: '3.2s',
             background: `
-              radial-gradient(circle at 80% 20%, rgba(255, 45, 85, 0.65) 0%, transparent 55%),
-              radial-gradient(circle at 15% 30%, rgba(56, 189, 248, 0.75) 0%, transparent 60%),
-              radial-gradient(circle at 50% 70%, rgba(168, 85, 247, 0.5) 0%, transparent 65%),
-              linear-gradient(180deg, #070D1E 0%, #0F172A 50%, #080B10 100%)
+              radial-gradient(circle at 18% 22%, rgba(56, 189, 248, 0.95) 0%, rgba(14, 165, 233, 0.6) 45%, transparent 70%),
+              radial-gradient(circle at 60% 30%, rgba(125, 211, 252, 0.75) 0%, transparent 60%),
+              radial-gradient(circle at 90% 85%, rgba(255, 45, 85, 0.75) 0%, rgba(244, 63, 94, 0.4) 40%, transparent 65%),
+              linear-gradient(180deg, #0A1E42 0%, #0E2E66 45%, #0B1E3F 75%, transparent 100%)
             `,
           }}
         />
 
-        {/* Dynamic bright energy spots */}
+        {/* Ambient bright light spheres */}
         <div
-          className="absolute -top-10 -left-10 w-80 h-80 rounded-full bg-sky-400/40 blur-2xl animate-pulse pointer-events-none"
-          style={{ animationDuration: '2.2s' }}
+          className="absolute -top-12 -left-12 w-88 h-88 rounded-full bg-sky-300/40 blur-3xl animate-pulse pointer-events-none"
+          style={{ animationDuration: '2.5s' }}
         />
+        {/* Coral-pink strictly in the bottom-right 1/4 */}
         <div
-          className="absolute top-2 -right-10 w-80 h-80 rounded-full bg-[#FF2D55]/40 blur-2xl animate-pulse pointer-events-none"
-          style={{ animationDuration: '2.6s', animationDelay: '0.5s' }}
-        />
-        <div
-          className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full bg-cyan-300/25 blur-3xl animate-pulse pointer-events-none"
-          style={{ animationDuration: '3s' }}
+          className="absolute -bottom-8 -right-8 w-64 h-64 rounded-full bg-[#FF2D55]/35 blur-2xl animate-pulse pointer-events-none"
+          style={{ animationDuration: '2.8s', animationDelay: '0.6s' }}
         />
       </div>
 
-      {/* 2. Top Bar (Pushed up to 10px below notch edge) */}
-      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] pb-14 px-4">
+      {/* 2. Top Header Content (Pushed up snugly to 10px below notch edge) */}
+      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] pb-12 px-4">
         {/* Top Header Row */}
         <div className="flex items-center justify-between gap-2 mb-2">
           {/* Left: Upgrade Pill with Bright Crisp White Background */}

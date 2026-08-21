@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
   },
   cordova: {
     preferences: {
@@ -29,8 +29,8 @@ const config: CapacitorConfig = {
       resize: 'none',
     },
     StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#FFFFFF',
+      overlaysWebView: true,
+      style: 'LIGHT',
     },
   } as any,
 };

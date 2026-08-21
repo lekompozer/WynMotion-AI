@@ -15,16 +15,21 @@
   --sab: env(safe-area-inset-bottom, 0px);
 }
 
-/* ── Base typography — Mobile-first, readable sizes ── */
+/* ── Base typography & iOS Native Viewport Lock ── */
 html {
-  /* 16px base — matches iOS system font scale */
   font-size: 16px;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
   background-color: var(--bg-main);
   color: var(--text-main);
-  /* SF Pro Display → SF Pro Text → System stack (matches iOS native feel) */
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -34,8 +39,6 @@ html, body {
   -webkit-tap-highlight-color: transparent;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
-  /* Slightly larger line-height for better mobile readability */
   line-height: 1.5;
 }
 
@@ -59,44 +62,13 @@ html, body {
   button { font-size: 0.9375rem; font-weight: 600; }
 }
 
-/* iOS momentum scroll */
-* {
-  -webkit-overflow-scrolling: touch;
+/* ── Hide scrollbar for Chrome, Safari and Opera ── */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 9999px;
-}
-
-/* ── Custom utilities ── */
-.glass-card {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-.glass-coral {
-  background: linear-gradient(135deg, rgba(255, 45, 85, 0.08) 0%, rgba(255, 94, 133, 0.04) 100%);
-  border: 1.5px solid rgba(255, 45, 85, 0.3);
-}
-
-/* ── Hide scrollbar but keep scrolling ── */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ── Mobile tap state ── */
-@media (hover: none) {
-  button:active, a:active { opacity: 0.75; }
+/* ── Hide scrollbar for IE, Edge and Firefox ── */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

@@ -641,7 +641,7 @@ export const AiVideoTab: React.FC = () => {
   // =========================================================================
   if (viewMode === 'home') {
     return (
-      <div className={`pb-12 transition-colors duration-200 ${isDark ? 'bg-[#080B10]' : 'bg-[#FAFAFC]'}`}>
+      <div className={`pb-2 transition-colors duration-200 ${isDark ? 'bg-[#080B10]' : 'bg-[#FAFAFC]'}`}>
         <HeroBackground
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenUpgrade={() => setIsProfileOpen(true)}
@@ -650,24 +650,21 @@ export const AiVideoTab: React.FC = () => {
         <div className="max-w-xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
           {/* Action Cards: New Video (Larger flex-[1.35]) & Templates (flex-1) */}
           <div className="flex gap-3 items-stretch">
-            {/* New Video Button */}
+            {/* New Video Button (CapCut style with white overlay text) */}
             <button
               onClick={() => handleStartStudio('whiteboard_stream_hand')}
-              className={`flex-[1.35] group relative overflow-hidden rounded-3xl p-5 shadow-xl active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
-                isDark
-                  ? 'bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 text-white shadow-cyan-500/20'
-                  : 'bg-white/95 backdrop-blur-md border border-slate-200 text-slate-900 shadow-slate-200/70 hover:border-slate-300'
-              }`}
+              className="flex-[1.35] group relative overflow-hidden rounded-3xl p-5 shadow-xl active:scale-[0.98] transition-all flex flex-col justify-between h-38 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white shadow-slate-900/25 border border-slate-700/50"
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                isDark ? 'bg-white/20 backdrop-blur-md' : 'bg-slate-100 text-slate-950'
-              }`}>
-                <Plus className={`w-6 h-6 stroke-[2.5] ${isDark ? 'text-white' : 'text-slate-950'}`} />
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/15 backdrop-blur-md">
+                <Plus className="w-6 h-6 stroke-[2.5] text-white" />
               </div>
-              <div className="text-left">
-                <div className="text-base font-black tracking-tight">{t('Tạo Video Mới', 'New Project')}</div>
-                <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-white/80' : 'text-slate-500'}`}>
-                  {t('Luồng 4 bước chuẩn AI', '4-Step AI Studio')}
+              <div className="text-left text-white">
+                <div className="text-[11px] font-normal text-white/80 tracking-wide">
+                  {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
+                </div>
+                <div className="text-base font-bold text-white tracking-tight mt-0.5 flex items-center gap-1">
+                  <span>{t('Bắt đầu', 'Get started')}</span>
+                  <span className="font-extrabold">&gt;</span>
                 </div>
               </div>
             </button>
@@ -876,8 +873,8 @@ export const AiVideoTab: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 
-                <label className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  isVietnamese ? 'Minh Họa & Vẽ Tay' : 'Illustrative'
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  {isVietnamese ? 'Minh Họa & Vẽ Tay' : 'Illustrative'}
                 </label>
               </div>
               <div className="grid grid-cols-3 gap-2.5">
@@ -898,9 +895,10 @@ export const AiVideoTab: React.FC = () => {
                       <div className="text-slate-900 dark:text-white my-1">
                         <Icon size={36} />
                       </div>
-                      <div>
-                        <div className={`text-xs font-black leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{st.title}</div>
-                        
+                      <div className="w-full">
+                        <div className={`text-[11px] font-normal leading-tight whitespace-pre-line text-center ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          {st.title}
+                        </div>
                       </div>
                     </button>
                   );
@@ -912,8 +910,8 @@ export const AiVideoTab: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 
-                <label className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  isVietnamese ? 'Chuyển Động & Diễn Giải' : 'Motion & Explainer'
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  {isVietnamese ? 'Chuyển Động & Diễn Giải' : 'Motion & Explainer'}
                 </label>
               </div>
               <div className="grid grid-cols-3 gap-2.5">
@@ -937,9 +935,10 @@ export const AiVideoTab: React.FC = () => {
                       <div className="text-slate-900 dark:text-white my-1">
                         <Icon size={36} />
                       </div>
-                      <div>
-                        <div className={`text-xs font-black leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{st.title}</div>
-                        
+                      <div className="w-full">
+                        <div className={`text-[11px] font-normal leading-tight whitespace-pre-line text-center ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          {st.title}
+                        </div>
                       </div>
                     </button>
                   );
