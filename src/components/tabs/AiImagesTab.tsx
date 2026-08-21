@@ -11,9 +11,6 @@ import {
   Download,
   Share2,
   Loader2,
-  Film,
-  ZoomIn,
-  CheckCircle2,
   Sliders,
   X,
 } from 'lucide-react';
@@ -27,7 +24,7 @@ import {
 } from '@/services/imageService';
 
 export const AiImagesTab: React.FC = () => {
-  const { isVietnamese, setActiveTab, t } = useApp();
+  const { isVietnamese, isDark, setActiveTab, t } = useApp();
   const { refreshSubscription } = useWordaiAuth();
 
   // Mode: 'generate' | 'edit'
@@ -120,7 +117,6 @@ export const AiImagesTab: React.FC = () => {
         }
       } catch (_) {}
     }
-    // Web fallback
     if (navigator.share) {
       navigator.share({ title: 'WynMotion AI Artwork', url: resultImageUrl }).catch(() => {});
     } else {
@@ -129,31 +125,35 @@ export const AiImagesTab: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto p-4 sm:p-6 space-y-4">
+    <div className={`w-full max-w-xl mx-auto p-4 sm:p-6 space-y-5 transition-colors duration-200 ${
+      isDark ? 'text-slate-100' : 'text-slate-900'
+    }`}>
       {/* TOP SEGMENTED SWITCHER: Generate vs Edit */}
-      <div className="bg-slate-200/70 p-1 rounded-2xl flex items-center shadow-inner">
+      <div className={`p-1 rounded-2xl flex items-center shadow-inner border ${
+        isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/70 border-slate-300/60'
+      }`}>
         <button
           type="button"
           onClick={() => setTabMode('generate')}
-          className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
             tabMode === 'generate'
-              ? 'bg-white text-[#FF2D55] shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 shadow-md font-black'
+              : 'text-slate-400 hover:text-slate-700'
           }`}
         >
-          <Sparkles className="h-3.5 w-3.5" />
+          <Sparkles className="h-4 w-4" />
           <span>{t('Tạo Ảnh Mới (Generate)', 'AI Generate')}</span>
         </button>
         <button
           type="button"
           onClick={() => setTabMode('edit')}
-          className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
             tabMode === 'edit'
-              ? 'bg-white text-[#FF2D55] shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 shadow-md font-black'
+              : 'text-slate-400 hover:text-slate-700'
           }`}
         >
-          <Wand2 className="h-3.5 w-3.5" />
+          <Wand2 className="h-4 w-4" />
           <span>{t('Chỉnh Sửa AI (Edit)', 'AI Edit')}</span>
         </button>
       </div>
@@ -162,45 +162,65 @@ export const AiImagesTab: React.FC = () => {
       {/* MODE A: AI GENERATE */}
       {/* ========================================================================= */}
       {tabMode === 'generate' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
+        <div className="space-y-5 animate-in fade-in-50 duration-150">
           {/* 1. Category Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
               const isSelected = category === cat.id;
               return (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => setCategory(cat.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all border ${
                     isSelected
-                      ? 'bg-[#FF2D55] text-white shadow-xs'
-                      : 'bg-white text-slate-600 border border-slate-200'
+                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm font-black'
+                      : isDark
+                      ? 'bg-slate-900 border-slate-800 text-slate-400'
+                      : 'bg-white border-slate-200 text-slate-600 shadow-sm'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span>{cat.label}</span>
+                  {cat.label}
                 </button>
               );
             })}
           </div>
 
-          {/* 2. Aspect Ratio Selector */}
-          <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700">
+          {/* 2. Prompt Textarea */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
+              {t('Mô Tả Hình Ảnh (Prompt)', 'Image Prompt')}
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={3}
+              placeholder={t('Nhập chi tiết về hình ảnh...', 'Describe your image in detail...')}
+              className={`w-full p-4 rounded-2xl border text-sm font-medium outline-none resize-none transition-colors ${
+                isDark
+                  ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400'
+                  : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
+              }`}
+            />
+          </div>
+
+          {/* 3. Aspect Ratio */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
               {t('Tỉ Lệ Khung Hình', 'Aspect Ratio')}
-            </span>
-            <div className="flex items-center gap-1">
+            </label>
+            <div className="grid grid-cols-4 gap-2">
               {(['1:1', '16:9', '9:16', '4:3'] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setAspectRatio(r)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
+                  className={`p-2.5 rounded-xl border text-center font-bold text-xs transition-all ${
                     aspectRatio === r
-                      ? 'bg-[#FF2D55] text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-cyan-500/10 border-cyan-400 text-cyan-500 font-black'
+                      : isDark
+                      ? 'bg-slate-900 border-slate-800 text-slate-400'
+                      : 'bg-white border-slate-200 text-slate-600 shadow-sm'
                   }`}
                 >
                   {r}
@@ -209,78 +229,46 @@ export const AiImagesTab: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Prompt Presets Carousel */}
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase">
-              {t('Gợi Ý Prompt Sáng Tạo (1 Chạm)', 'Creative Prompt Presets')}
-            </label>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {IMAGE_PROMPT_PRESETS.map((preset) => (
+          {/* 4. Prompt Presets */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              {t('✨ Gợi Ý Mẫu Có Sẵn', '✨ Prompt Inspiration')}
+            </span>
+            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+              {IMAGE_PROMPT_PRESETS.map((p, idx) => (
                 <button
-                  key={preset.id}
+                  key={idx}
                   type="button"
-                  onClick={() => handleApplyPreset(preset)}
-                  className="px-3 py-1.5 rounded-2xl bg-white border border-slate-200 hover:border-rose-300 text-slate-800 text-xs font-bold whitespace-nowrap shadow-2xs active:scale-95 transition-all"
+                  onClick={() => handleApplyPreset(p)}
+                  className={`w-full p-3 rounded-2xl border text-left text-xs font-medium transition-all ${
+                    isDark
+                      ? 'bg-slate-900/60 border-slate-800/80 hover:border-cyan-400/40 text-slate-300'
+                      : 'bg-white border-slate-200 shadow-sm hover:border-cyan-400 text-slate-700'
+                  }`}
                 >
-                  {preset.label}
+                  <p className="font-extrabold text-cyan-500">{p.label}</p>
+                  <p className="text-slate-400 line-clamp-1 mt-0.5">{p.prompt}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 4. Prompt Input Box */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-2">
-            <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
-              {t('Mô Tả Hình Ảnh (Prompt)', 'Image Prompt')}
-            </label>
-            <textarea
-              rows={3}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Detailed description of subject, lighting, style..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 outline-none focus:border-[#FF2D55] leading-relaxed resize-none"
-            />
-
-            {/* Advanced toggle */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-[11px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1"
-              >
-                <Sliders className="h-3 w-3" />
-                <span>{t('Tùy chọn nâng cao (Negative Prompt)', 'Advanced Settings')}</span>
-              </button>
-              {showAdvanced && (
-                <div className="mt-2 animate-in fade-in duration-150">
-                  <input
-                    type="text"
-                    value={negativePrompt}
-                    onChange={(e) => setNegativePrompt(e.target.value)}
-                    placeholder="blurry, bad anatomy, low quality, watermark..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 5. Generate Button */}
+          {/* Generate Button */}
           <button
             type="button"
-            disabled={isGenerating || !prompt.trim()}
             onClick={handleGenerate}
-            className="w-full py-3.5 rounded-2xl bg-[#FF2D55] hover:bg-[#E11D48] disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-rose-500/25 active:scale-98 transition-all flex items-center justify-center gap-2"
+            disabled={isGenerating || !prompt.trim()}
+            className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{t('Đang Sinh Hình Ảnh AI 8K...', 'Rendering AI Image...')}</span>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>{t('Đang tạo tác phẩm 8K...', 'Rendering 8K artwork...')}</span>
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" />
-                <span>{t('Tạo Hình Ảnh AI Ngay (2 Điểm)', 'Generate AI Image (2 Pts)')}</span>
+                <Sparkles className="h-5 w-5" />
+                <span>{t('Tạo Hình Ảnh AI Ngay 🎨', 'Generate AI Image 🎨')}</span>
               </>
             )}
           </button>
@@ -288,154 +276,91 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODE B: AI IMAGE EDIT */}
+      {/* MODE B: AI EDIT */}
       {/* ========================================================================= */}
       {tabMode === 'edit' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
-          {/* Edit Mode Tabs */}
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: 'style-transfer', label: t('Biến Đổi Phong Cách', 'Style Transfer') },
-              { id: 'object-edit', label: t('Đổi Vật Thể', 'Object Edit') },
-              { id: 'inpainting', label: t('Xóa Chi Tiết', 'Inpainting') },
-            ].map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setEditMode(m.id as any)}
-                className={`py-2 rounded-xl text-[11px] font-extrabold transition-all ${
-                  editMode === m.id
-                    ? 'bg-[#FF2D55] text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
+        <div className="space-y-5 animate-in fade-in-50 duration-150">
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
+              {t('URL Hình Ảnh Gốc', 'Source Image URL')}
+            </label>
+            <input
+              type="text"
+              value={editImageUrl}
+              onChange={(e) => setEditImageUrl(e.target.value)}
+              placeholder="https://..."
+              className={`w-full p-4 rounded-2xl border text-sm font-medium outline-none transition-colors ${
+                isDark
+                  ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400'
+                  : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
+              }`}
+            />
           </div>
 
-          <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                {t('URL Hình Ảnh Gốc', 'Source Image URL')}
-              </label>
-              <input
-                type="text"
-                value={editImageUrl}
-                onChange={(e) => setEditImageUrl(e.target.value)}
-                placeholder="https://... image url"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:border-[#FF2D55]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                {t('Yêu Cầu Chỉnh Sửa (Prompt)', 'Edit Instructions Prompt')}
-              </label>
-              <textarea
-                rows={3}
-                value={editPrompt}
-                onChange={(e) => setEditPrompt(e.target.value)}
-                placeholder={t('Mô tả thay đổi mong muốn...', 'Describe the changes...')}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 outline-none focus:border-[#FF2D55] resize-none"
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
+              {t('Mô Tả Chỉnh Sửa', 'Edit Instructions')}
+            </label>
+            <textarea
+              value={editPrompt}
+              onChange={(e) => setEditPrompt(e.target.value)}
+              rows={3}
+              placeholder={t('Ví dụ: Thêm kính râm cho nhân vật...', 'e.g. Add sunglasses...')}
+              className={`w-full p-4 rounded-2xl border text-sm font-medium outline-none resize-none transition-colors ${
+                isDark
+                  ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400'
+                  : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
+              }`}
+            />
           </div>
 
           <button
             type="button"
-            disabled={isEditing || !editImageUrl.trim() || !editPrompt.trim()}
             onClick={handleEdit}
-            className="w-full py-3.5 rounded-2xl bg-[#FF2D55] hover:bg-[#E11D48] disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-rose-500/25 active:scale-98 transition-all flex items-center justify-center gap-2"
+            disabled={isEditing || !editImageUrl.trim() || !editPrompt.trim()}
+            className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isEditing ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{t('Đang Chỉnh Sửa...', 'Processing Edit...')}</span>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>{t('Đang biến hóa hình ảnh...', 'Editing artwork...')}</span>
               </>
             ) : (
               <>
-                <Wand2 className="h-4 w-4" />
-                <span>{t('Thực Hiện Chỉnh Sửa (2 Điểm)', 'Apply AI Edit (2 Pts)')}</span>
+                <Wand2 className="h-5 w-5" />
+                <span>{t('Chỉnh Sửa Hình Ảnh Ngay ✨', 'Edit AI Image ✨')}</span>
               </>
             )}
           </button>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* RESULT IMAGE CARD */}
-      {/* ========================================================================= */}
+      {/* Result Box */}
       {resultImageUrl && (
-        <div className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-rose-200/80 shadow-lg shadow-rose-500/5 space-y-3 animate-in zoom-in-95 duration-200">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-[#FF2D55]" />
-              <span>{t('Kết Quả Hình Ảnh AI', 'AI Generated Artwork')}</span>
-            </h4>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handleNativeShare}
-                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-2xs"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-              <a
-                href={resultImageUrl}
-                download="wynmotion-art.jpg"
-                target="_blank"
-                rel="noreferrer"
-                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-2xs"
-              >
-                <Download className="h-4 w-4" />
-              </a>
-            </div>
+        <div className={`p-4 rounded-3xl border space-y-3 animate-in fade-in ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+        }`}>
+          <div className="relative rounded-2xl overflow-hidden aspect-square border border-slate-800/40">
+            <img src={resultImageUrl} alt="Result" className="w-full h-full object-cover" />
           </div>
-
-          {/* Image Display */}
-          <div
-            onClick={() => setIsLightboxOpen(true)}
-            className="relative rounded-2xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 aspect-square max-h-[340px] flex items-center justify-center"
-          >
-            <img
-              src={resultImageUrl}
-              alt="Generated AI Art"
-              className="w-full h-full object-contain group-hover:scale-102 transition-transform duration-300"
-            />
-            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm flex items-center gap-1 opacity-80 group-hover:opacity-100">
-              <ZoomIn className="h-3 w-3" />
-              <span>{t('Phóng to', 'Zoom')}</span>
-            </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleNativeShare}
+              className="flex-1 py-3 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>{t('Chia Sẻ', 'Share')}</span>
+            </button>
+            <a
+              href={resultImageUrl}
+              download="wynmotion_art.png"
+              className={`p-3 rounded-xl border flex items-center justify-center active:scale-95 transition-all ${
+                isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
+              }`}
+            >
+              <Download className="w-4 h-4" />
+            </a>
           </div>
-
-          {/* Action: Use image in WynMotion Video Scene */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('video')}
-            className="w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-[#FF2D55] font-black text-xs flex items-center justify-center gap-1.5 transition-colors border border-rose-200"
-          >
-            <Film className="h-4 w-4" />
-            <span>{t('🎬 Đưa Vào Video Hoạt Họa WynMotion', 'Use in WynMotion Video Scene')}</span>
-          </button>
-        </div>
-      )}
-
-      {/* FULLSCREEN LIGHTBOX MODAL */}
-      {isLightboxOpen && resultImageUrl && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <button
-            type="button"
-            onClick={() => setIsLightboxOpen(false)}
-            className="absolute top-6 right-6 p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-          <img
-            src={resultImageUrl}
-            alt="Fullscreen view"
-            className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
-          />
         </div>
       )}
     </div>
