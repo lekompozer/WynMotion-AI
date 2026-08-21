@@ -5,8 +5,6 @@ import { Bell, Crown, Sparkles, User as UserIcon, ChevronRight } from 'lucide-re
 
 interface HeroBackgroundProps {
   children?: React.ReactNode;
-  variant?: 'gemini-mesh' | 'blue-gradient' | 'dark-video';
-  videoSrc?: string;
   className?: string;
   onOpenUpgrade?: () => void;
   onOpenNotifications?: () => void;
@@ -17,8 +15,6 @@ interface HeroBackgroundProps {
 
 export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   children,
-  variant = 'gemini-mesh',
-  videoSrc,
   className = '',
   onOpenUpgrade,
   onOpenNotifications,
@@ -27,50 +23,46 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   userDisplayName,
 }) => {
   return (
-    <div className={`relative w-full overflow-hidden ${className}`}>
-      {/* 1. Gemini Flowing Mesh Gradient Background (Full Bleed over Notch) */}
-      {videoSrc ? (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-60"
-            src={videoSrc}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-transparent" />
-        </div>
-      ) : (
-        <div className="absolute inset-0 z-0 bg-[#070B14]">
-          {/* Multi-color mesh gradient: Gemini Cyan & Magenta/Purple */}
-          <div
-            className="absolute inset-0 opacity-90 transition-opacity duration-1000"
-            style={{
-              background: `
-                radial-gradient(circle at 85% 15%, rgba(236, 72, 153, 0.45) 0%, transparent 50%),
-                radial-gradient(circle at 15% 20%, rgba(6, 182, 212, 0.55) 0%, transparent 55%),
-                radial-gradient(circle at 50% 60%, rgba(99, 102, 241, 0.4) 0%, transparent 65%),
-                linear-gradient(180deg, #0A1128 0%, #101B3B 40%, #0D162F 75%, transparent 100%)
-              `,
-            }}
-          />
+    <div className={`relative w-full overflow-hidden min-h-[310px] ${className}`}>
+      {/* 1. Fresh, Fast-Paced Gemini Mesh Background (Sky-Blue + Coral-Pink) */}
+      <div className="absolute inset-0 z-0 bg-[#060913]">
+        {/* Animated glowing mesh gradient */}
+        <div
+          className="absolute inset-0 opacity-95 animate-pulse"
+          style={{
+            animationDuration: '3s',
+            background: `
+              radial-gradient(circle at 80% 20%, rgba(255, 45, 85, 0.65) 0%, transparent 55%),
+              radial-gradient(circle at 15% 30%, rgba(56, 189, 248, 0.75) 0%, transparent 60%),
+              radial-gradient(circle at 50% 70%, rgba(168, 85, 247, 0.5) 0%, transparent 65%),
+              linear-gradient(180deg, #070D1E 0%, #0F172A 50%, #080B10 100%)
+            `,
+          }}
+        />
 
-          {/* Animated Gemini energy spheres */}
-          <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-cyan-400/30 blur-3xl animate-pulse pointer-events-none" />
-          <div className="absolute top-4 -right-16 w-80 h-80 rounded-full bg-fuchsia-500/25 blur-3xl animate-pulse delay-1000 pointer-events-none" />
-          <div className="absolute top-1/3 left-1/4 w-72 h-72 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
-        </div>
-      )}
+        {/* Dynamic bright energy spots */}
+        <div
+          className="absolute -top-10 -left-10 w-80 h-80 rounded-full bg-sky-400/40 blur-2xl animate-pulse pointer-events-none"
+          style={{ animationDuration: '2.2s' }}
+        />
+        <div
+          className="absolute top-2 -right-10 w-80 h-80 rounded-full bg-[#FF2D55]/40 blur-2xl animate-pulse pointer-events-none"
+          style={{ animationDuration: '2.6s', animationDelay: '0.5s' }}
+        />
+        <div
+          className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full bg-cyan-300/25 blur-3xl animate-pulse pointer-events-none"
+          style={{ animationDuration: '3s' }}
+        />
+      </div>
 
-      {/* 2. Top Bar & Header Content with Safe Area Padding */}
-      <div className="relative z-10 w-full pt-[max(env(safe-area-inset-top),3.25rem)] pb-10 px-4">
+      {/* 2. Top Bar (Pushed up to 10px below notch edge) */}
+      <div className="relative z-10 w-full pt-[calc(env(safe-area-inset-top,44px)+10px)] pb-14 px-4">
         {/* Top Header Row */}
         <div className="flex items-center justify-between gap-2 mb-2">
-          {/* Left: Upgrade Pill with Crisp White Background */}
+          {/* Left: Upgrade Pill with Bright Crisp White Background */}
           <button
             onClick={onOpenUpgrade}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-slate-950 font-black text-xs shadow-lg shadow-black/10 active:scale-95 transition-all border border-white/80"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-slate-950 font-bold text-xs shadow-lg shadow-black/20 active:scale-95 transition-all border border-white/90"
           >
             <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
             <span className="truncate">
@@ -82,17 +74,17 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={onOpenNotifications}
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all backdrop-blur-md border border-white/20 text-white flex items-center justify-center relative shadow-sm"
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all backdrop-blur-md border border-white/25 text-white flex items-center justify-center relative shadow-sm"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FF2D55] ring-2 ring-slate-900" />
             </button>
 
             <button
               onClick={onOpenProfile}
-              className="flex items-center gap-1 pl-1 pr-1.5 py-1 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all backdrop-blur-md border border-white/20 text-white shadow-sm"
+              className="flex items-center gap-1 pl-1 pr-1.5 py-1 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all backdrop-blur-md border border-white/25 text-white shadow-sm"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-400 to-fuchsia-500 border border-white/60 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-400 to-[#FF2D55] border border-white/70 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {userAvatarUrl ? (
                   <img
                     src={userAvatarUrl}
@@ -100,10 +92,10 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <UserIcon className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                  <UserIcon className="w-3.5 h-3.5 text-white stroke-[2.5]" />
                 )}
               </div>
-              <ChevronRight className="w-3.5 h-3.5 text-cyan-200" />
+              <ChevronRight className="w-3.5 h-3.5 text-sky-200" />
             </button>
           </div>
         </div>
