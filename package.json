@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "ios:sync": "export LANG=en_US.UTF-8 && export LC_ALL=en_US.UTF-8 && npm run build && npx cap sync ios && node scripts/patch-podspec.js && node -e \"const fs=require('fs');const p='ios/App/App/capacitor.config.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.packageClassList=Array.from(new Set([...(j.packageClassList||[]),'CapacitorFirebaseAuthentication.FirebaseAuthenticationPlugin']));fs.writeFileSync(p,JSON.stringify(j,null,'\t')+'\\n');\" && sed -i '' \"s|pod 'CapacitorFirebaseAuthentication'|pod 'CapacitorFirebaseAuthentication/Google'|\" ios/App/Podfile && node scripts/patch-xcode-sandboxing.js && cd ios/App && pod install --repo-update",
+    "ios:sync": "export LANG=en_US.UTF-8 && export LC_ALL=en_US.UTF-8 && npm run build && npx cap sync ios && node scripts/patch-podspec.js && node -e \"const fs=require('fs');const p='ios/App/App/capacitor.config.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.packageClassList=Array.from(new Set([...(j.packageClassList||[]),'CapacitorFirebaseAuthentication.FirebaseAuthenticationPlugin']));fs.writeFileSync(p,JSON.stringify(j,null,'\t')+'\\n');\" && sed -i '' \"s|pod 'CapacitorFirebaseAuthentication'|pod 'CapacitorFirebaseAuthentication/Google'|\" ios/App/Podfile && node scripts/patch-xcode-sandboxing.js && node scripts/patch-xcode-resources.js && cd ios/App && pod install --repo-update",
     "ios:open": "npx cap open ios"
   },
   "dependencies": {
