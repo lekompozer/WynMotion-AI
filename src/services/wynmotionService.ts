@@ -18,10 +18,24 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
       headers['Authorization'] = `Bearer ${token}`;
     }
   } catch (err) {
-    // Guest / unauthenticated fallback
+    // Guest fallback
   }
   return headers;
 }
+
+export type MotionVisualStyle =
+  | 'whiteboard_stream_hand'
+  | 'handdrawn_fast_doodle'
+  | 'character_animation'
+  | 'apple_modern_motion'
+  | 'dialogue_scene'
+  | 'science_explainer';
+
+export type CharacterSubtype =
+  | 'full_character'
+  | 'stickman'
+  | 'pixar_3d'
+  | 'cartoon_2d';
 
 export interface SceneAction {
   action_type: string;
@@ -57,6 +71,20 @@ export interface MotionScene {
   end_time_sec?: number;
 }
 
+export interface DialogueTurn {
+  id: string;
+  speaker: 'A' | 'B';
+  text: string;
+}
+
+export interface DialogueSpeakerConfig {
+  name: string;
+  gender: 'male' | 'female';
+  voice_engine: 'wynai' | 'gemini';
+  voice_name: string;
+  language_code: string;
+}
+
 export interface MotionProject {
   project_id: string;
   title: string;
@@ -65,8 +93,9 @@ export interface MotionProject {
   audio_url?: string;
   duration_sec: number;
   aspect_ratio: '16:9' | '9:16' | '1:1';
-  visual_style: 'handdrawn_fast_doodle' | 'whiteboard_stream_hand' | 'apple_modern_motion' | 'character_animation';
-  character_subtype?: 'full_character' | 'stickman';
+  visual_style: MotionVisualStyle;
+  character_subtype?: CharacterSubtype;
+  science_domain?: 'math' | 'physics' | 'chemistry' | 'biology' | 'cs';
   language_code: string;
   bg_color?: string;
   status: string;
@@ -76,9 +105,14 @@ export interface MotionProject {
   updated_at?: string;
 }
 
+export function calculateProjectPoints(style: MotionVisualStyle, durationSec: number = 60): number {
+  const ratePer60s = style === 'science_explainer' ? 30 : 20;
+  return Math.max(10, Math.ceil((durationSec / 60.0) * ratePer60s));
+}
+
 export const wynmotionService = {
   /**
-   * Generate Voiceover Script & Audio
+   * Generate Voiceover Script & Audio (Standard Styles)
    */
   async generateScriptAndAudio(params: {
     prompt: string;
@@ -108,6 +142,34 @@ export const wynmotionService = {
   },
 
   /**
+   * Generate Dialogue Script & Dual-Voice Stitched Audio (Dialogue Scene)
+   */
+  async generateDialogueAudio(params: {
+    prompt: string;
+    speaker_a: DialogueSpeakerConfig;
+    speaker_b: DialogueSpeakerConfig;
+    dialogue_turns?: DialogueTurn[];
+    scenario_preset?: string;
+    language_code?: string;
+  }): Promise<{
+    script: string;
+    audio_url: string;
+    duration_sec: number;
+    dialogue_turns: DialogueTurn[];
+    whisper_segments?: Array<{ start: number; end: number; text: string }>;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/generate-dialogue-audio`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo âm thanh hội thoại');
+    return data;
+  },
+
+  /**
    * Orchestrate Animation Scenes
    */
   async generateScenes(params: {
@@ -119,6 +181,11 @@ export const wynmotionService = {
     aspect_ratio?: string;
     visual_style?: string;
     character_subtype?: string;
+    science_domain?: string;
+    dialogue_speakers?: {
+      speaker_a: DialogueSpeakerConfig;
+      speaker_b: DialogueSpeakerConfig;
+    };
     language_code?: string;
     bg_color?: string;
   }): Promise<{
