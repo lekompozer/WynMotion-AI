@@ -27,31 +27,129 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
 
   return (
     <div className={`relative w-full overflow-hidden min-h-[410px] flex flex-col justify-between ${className}`}>
-      {/* 1. Fresh, Radiant Sky-Blue with Coral-Pink in Bottom-Right 1/4 */}
-      <div className="absolute inset-0 z-0 bg-[#07132B]">
-        {/* Dynamic bright glowing mesh */}
+      {/* Dynamic CSS for Liquid Fluid Color Morphing & Drifting (Apple Intelligence / Gemini Style) */}
+      <style jsx>{`
+        @keyframes liquidFlow1 {
+          0% {
+            transform: translate(0px, 0px) scale(1) rotate(0deg);
+          }
+          33% {
+            transform: translate(45px, 25px) scale(1.18) rotate(45deg);
+          }
+          66% {
+            transform: translate(-30px, 40px) scale(0.92) rotate(90deg);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1) rotate(0deg);
+          }
+        }
+
+        @keyframes liquidFlow2 {
+          0% {
+            transform: translate(0px, 0px) scale(1) rotate(0deg);
+          }
+          33% {
+            transform: translate(-40px, -25px) scale(1.22) rotate(-60deg);
+          }
+          66% {
+            transform: translate(35px, -30px) scale(0.9) rotate(-120deg);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1) rotate(0deg);
+          }
+        }
+
+        @keyframes liquidFlow3 {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          40% {
+            transform: translate(-45px, -35px) scale(1.25);
+          }
+          75% {
+            transform: translate(30px, -20px) scale(1.05);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+
+        @keyframes morphWarmColors {
+          0% {
+            background-color: #FF2D55; /* Neon Coral Pink */
+          }
+          35% {
+            background-color: #FF5E3A; /* Sunset Orange */
+          }
+          65% {
+            background-color: #FFAA00; /* Golden Amber */
+          }
+          85% {
+            background-color: #E02475; /* Vivid Magenta */
+          }
+          100% {
+            background-color: #FF2D55;
+          }
+        }
+
+        @keyframes morphCoolColors {
+          0% {
+            background-color: #0EA5E9; /* Sky Blue */
+          }
+          35% {
+            background-color: #38BDF8; /* Electric Cyan */
+          }
+          65% {
+            background-color: #6366F1; /* Royal Indigo */
+          }
+          85% {
+            background-color: #8B5CF6; /* Deep Violet */
+          }
+          100% {
+            background-color: #0EA5E9;
+          }
+        }
+
+        .liquid-blob-1 {
+          animation: liquidFlow1 10s ease-in-out infinite, morphCoolColors 14s ease-in-out infinite;
+        }
+
+        .liquid-blob-2 {
+          animation: liquidFlow2 12s ease-in-out infinite;
+        }
+
+        .liquid-blob-3 {
+          animation: liquidFlow3 9s ease-in-out infinite, morphWarmColors 12s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* 1. Deep Midnight Base with Fluid Liquid Glowing Blobs (No blinking/pulse, 100% smooth fluid drift) */}
+      <div className="absolute inset-0 z-0 bg-[#07132B] overflow-hidden pointer-events-none">
+        {/* Ambient base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0A2552] via-[#081B3D] to-[#061226]" />
+
+        {/* Liquid Blob 1: Cool Azure to Royal Indigo / Violet (Top-Left) */}
         <div
-          className="absolute inset-0 opacity-100 animate-pulse"
-          style={{
-            animationDuration: '3.2s',
-            background: `
-              radial-gradient(circle at 18% 22%, rgba(56, 189, 248, 0.98) 0%, rgba(14, 165, 233, 0.65) 45%, transparent 70%),
-              radial-gradient(circle at 60% 30%, rgba(125, 211, 252, 0.75) 0%, transparent 60%),
-              radial-gradient(circle at 90% 85%, rgba(255, 45, 85, 0.75) 0%, rgba(244, 63, 94, 0.4) 40%, transparent 65%),
-              linear-gradient(180deg, #0A1E42 0%, #0E2E66 45%, #0B1E3F 75%, transparent 100%)
-            `,
-          }}
+          className="liquid-blob-1 absolute -top-16 -left-16 w-96 h-96 rounded-full blur-[80px] opacity-90"
+          style={{ willChange: 'transform, background-color' }}
         />
 
-        {/* Ambient bright light spheres */}
+        {/* Liquid Blob 2: Vibrant Cyan / Sapphire (Center-Top) */}
         <div
-          className="absolute -top-12 -left-12 w-88 h-88 rounded-full bg-sky-300/40 blur-3xl animate-pulse pointer-events-none"
-          style={{ animationDuration: '2.5s' }}
+          className="liquid-blob-2 absolute top-4 left-1/4 w-80 h-80 rounded-full bg-cyan-400 blur-[85px] opacity-75"
+          style={{ willChange: 'transform' }}
         />
-        {/* Coral-pink strictly in the bottom-right 1/4 */}
+
+        {/* Liquid Blob 3: Coral Pink to Sunset Orange & Golden Amber (Bottom-Right) */}
         <div
-          className="absolute -bottom-8 -right-8 w-64 h-64 rounded-full bg-[#FF2D55]/35 blur-2xl animate-pulse pointer-events-none"
-          style={{ animationDuration: '2.8s', animationDelay: '0.6s' }}
+          className="liquid-blob-3 absolute -bottom-10 -right-10 w-84 h-84 rounded-full blur-[75px] opacity-85"
+          style={{ willChange: 'transform, background-color' }}
+        />
+
+        {/* Liquid Blob 4: Deep Violet Aura for richness (Bottom-Center) */}
+        <div
+          className="absolute bottom-6 left-1/3 w-72 h-72 rounded-full bg-indigo-600/60 blur-[90px] opacity-70 animate-pulse pointer-events-none"
+          style={{ animationDuration: '6s' }}
         />
       </div>
 
