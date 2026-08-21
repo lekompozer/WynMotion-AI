@@ -649,119 +649,56 @@ export const AiVideoTab: React.FC = () => {
       <div className={`min-h-screen pb-24 transition-colors duration-200 ${isDark ? 'bg-[#080B10]' : 'bg-[#F8FAFC]'}`}>
         <HeroBackground
           onOpenProfile={() => setIsProfileOpen(true)}
-          
+          onOpenUpgrade={() => setIsProfileOpen(true)}
         />
 
-        <div className="max-w-xl mx-auto px-4 -mt-6 relative z-10 space-y-7">
-          {/* Action Cards: New Video & Library */}
-          <div className="grid grid-cols-2 gap-3.5">
+        <div className="max-w-xl mx-auto px-4 -mt-4 relative z-10 space-y-6">
+          {/* Action Cards: New Video (Larger flex-[1.3]) & Templates (flex-1) */}
+          <div className="flex gap-3 items-stretch">
+            {/* New Video Button */}
             <button
               onClick={() => handleStartStudio('whiteboard_stream_hand')}
-              className="group relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 text-white shadow-xl shadow-cyan-500/20 active:scale-[0.98] transition-all flex flex-col justify-between h-36"
-            >
-              <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
-                <Plus className="w-6 h-6 text-white stroke-[2.5]" />
-              </div>
-              <div>
-                <div className="text-base font-black tracking-tight">{t('Tạo Video Mới', 'New Project')}</div>
-                <div className="text-xs text-white/80 font-medium mt-0.5">{t('Luồng 4 bước chuẩn AI', '4-Step Studio')}</div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('library')}
-              className={`group rounded-3xl p-5 border text-left shadow-sm active:scale-[0.98] transition-all flex flex-col justify-between h-36 ${
+              className={`flex-[1.3] group relative overflow-hidden rounded-3xl p-5 shadow-xl active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
                 isDark
-                  ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700 text-white'
-                  : 'bg-white border-slate-200/80 hover:border-slate-300 text-slate-900 shadow-slate-200/50'
+                  ? 'bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 text-white shadow-cyan-500/20'
+                  : 'bg-white/90 backdrop-blur-md border border-slate-200/80 text-slate-900 shadow-slate-200/60 hover:border-slate-300'
               }`}
             >
-              <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 flex items-center justify-center">
-                <LayoutGrid className="w-5 h-5 text-cyan-500" />
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                isDark ? 'bg-white/20 backdrop-blur-md' : 'bg-cyan-500/15 text-cyan-600'
+              }`}>
+                <Plus className={`w-6 h-6 stroke-[2.5] ${isDark ? 'text-white' : 'text-cyan-600'}`} />
+              </div>
+              <div className="text-left">
+                <div className="text-base font-black tracking-tight">{t('Tạo Video Mới', 'New Project')}</div>
+                <div className={`text-xs font-semibold mt-0.5 ${isDark ? 'text-white/80' : 'text-slate-500'}`}>
+                  {t('Luồng 4 bước chuẩn AI', '4-Step AI Studio')}
+                </div>
+              </div>
+            </button>
+
+            {/* Templates Button */}
+            <button
+              onClick={() => setActiveTab('library')}
+              className={`flex-1 group rounded-3xl p-5 border text-left shadow-sm active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
+                isDark
+                  ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700 text-white'
+                  : 'bg-white/90 backdrop-blur-md border border-slate-200/80 hover:border-slate-300 text-slate-900 shadow-slate-200/60'
+              }`}
+            >
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                isDark ? 'bg-slate-800 text-purple-400' : 'bg-purple-500/15 text-purple-600'
+              }`}>
+                <LayoutGrid className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-base font-black tracking-tight">{t('Thư Viện Cloud', 'Cloud Library')}</div>
-                <div className="text-xs text-slate-400 font-medium mt-0.5">{t('Xem & tải video đã tạo', 'Saved Projects')}</div>
+                <div className="text-base font-black tracking-tight">{t('Mẫu Dựng Sẵn', 'Templates')}</div>
+                <div className="text-xs text-slate-400 font-semibold mt-0.5">{t('Khám phá kho mẫu', 'Explore library')}</div>
               </div>
             </button>
           </div>
 
-          {/* 6 AI Animation Styles organized in 2 groups */}
-          <div className="space-y-6">
-            {/* Nhóm 1: Illustrative */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">✏️</span>
-                <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  {t('Minh Họa & Vẽ Tay (Illustrative)', 'Illustrative Styles')}
-                </h3>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5">
-                {ILLUSTRATIVE_STYLES.map((style) => {
-                  const Icon = style.icon;
-                  return (
-                    <button
-                      key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
-                      className={`p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-32 active:scale-95 group ${
-                        isDark
-                          ? 'bg-slate-900/80 border-slate-800/80 hover:border-cyan-500/50 hover:bg-slate-900'
-                          : 'bg-white border-slate-200 shadow-sm hover:border-cyan-500 hover:shadow-md'
-                      }`}
-                    >
-                      <div className="p-2.5 rounded-xl bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-colors">
-                        <Icon size={26} />
-                      </div>
-                      <div>
-                        <div className={`text-[11px] font-black leading-tight truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                          {style.title}
-                        </div>
-                        <span className="text-[9px] text-cyan-500 font-extrabold block mt-0.5">{style.tag}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Nhóm 2: Motion & Explainer */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🎬</span>
-                <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  {t('Chuyển Động & Bài Giảng Trực Quan (Motion & Explainer)', 'Motion & Explainer Styles')}
-                </h3>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5">
-                {MOTION_EXPLAINER_STYLES.map((style) => {
-                  const Icon = style.icon;
-                  return (
-                    <button
-                      key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
-                      className={`p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-32 active:scale-95 group ${
-                        isDark
-                          ? 'bg-slate-900/80 border-slate-800/80 hover:border-purple-500/50 hover:bg-slate-900'
-                          : 'bg-white border-slate-200 shadow-sm hover:border-purple-500 hover:shadow-md'
-                      }`}
-                    >
-                      <div className="p-2.5 rounded-xl bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors">
-                        <Icon size={26} />
-                      </div>
-                      <div>
-                        <div className={`text-[11px] font-black leading-tight truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                          {style.title}
-                        </div>
-                        <span className="text-[9px] text-purple-400 font-extrabold block mt-0.5">{style.tag}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Projects */}
+          {/* Recent Projects — Positioned directly below Big Buttons */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className={`text-sm font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -781,11 +718,11 @@ export const AiVideoTab: React.FC = () => {
                 <div
                   key={item.id || item.project_id}
                   onClick={() => setActiveTab('library')}
-                  className={`flex-shrink-0 w-36 rounded-3xl p-3.5 border cursor-pointer active:scale-95 transition-all flex flex-col justify-between h-40 ${
+                  className={`flex-shrink-0 w-36 rounded-3xl p-3 border cursor-pointer active:scale-95 transition-all flex flex-col justify-between h-38 ${
                     isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-sm'
                   }`}
                 >
-                  <div className="aspect-video rounded-2xl bg-slate-950 flex items-center justify-center border border-slate-800/60 overflow-hidden">
+                  <div className="aspect-video rounded-2xl bg-slate-950 flex items-center justify-center border border-slate-800/60 overflow-hidden relative group">
                     <Film className="w-5 h-5 text-cyan-500" />
                   </div>
                   <div>
@@ -794,6 +731,77 @@ export const AiVideoTab: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* 6 AI Animation Styles in 2 groups (Clean pure text, Big naked icons) */}
+          <div className="space-y-6">
+            {/* Nhóm 1: Illustrative */}
+            <div className="space-y-3">
+              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                {isVietnamese ? 'Minh Họa & Vẽ Tay' : 'Illustrative'}
+              </h3>
+              <div className="grid grid-cols-3 gap-2.5">
+                {ILLUSTRATIVE_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => handleStartStudio(style.id)}
+                      className={`p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-34 active:scale-95 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-slate-800/80 hover:border-cyan-500/50 hover:bg-slate-900'
+                          : 'bg-white border-slate-200 shadow-sm hover:border-cyan-500 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Big Naked Icon without colored box */}
+                      <div className="flex-1 flex items-center justify-center transition-transform group-hover:scale-110 duration-200">
+                        <Icon size={46} />
+                      </div>
+                      <div className="w-full">
+                        <div className={`text-[11px] font-black leading-tight truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                          {style.title}
+                        </div>
+                        <span className="text-[9px] text-cyan-500 font-extrabold block mt-0.5">{style.tag}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Nhóm 2: Motion & Explainer */}
+            <div className="space-y-3">
+              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                {isVietnamese ? 'Chuyển Động & Diễn Giải' : 'Motion & Explainer'}
+              </h3>
+              <div className="grid grid-cols-3 gap-2.5">
+                {MOTION_EXPLAINER_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => handleStartStudio(style.id)}
+                      className={`p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-34 active:scale-95 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-slate-800/80 hover:border-purple-500/50 hover:bg-slate-900'
+                          : 'bg-white border-slate-200 shadow-sm hover:border-purple-500 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Big Naked Icon without colored box */}
+                      <div className="flex-1 flex items-center justify-center transition-transform group-hover:scale-110 duration-200">
+                        <Icon size={46} />
+                      </div>
+                      <div className="w-full">
+                        <div className={`text-[11px] font-black leading-tight truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                          {style.title}
+                        </div>
+                        <span className="text-[9px] text-purple-400 font-extrabold block mt-0.5">{style.tag}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
