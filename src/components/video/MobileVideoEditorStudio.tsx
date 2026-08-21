@@ -1,21 +1,18 @@
 'use client';
 
 /**
- * MobileVideoEditorStudio.tsx — WynMotion-AI iOS App
+ * MobileVideoEditorStudio.tsx — WynMotion-AI iOS Studio
  *
- * Mobile-optimized Video Editor:
- * - Clean Header with only Project Title (no style badge) + 44px Notch Padding
- * - Floating Aspect Ratio Switcher (16:9 | 9:16 | 1:1) in Top-Right of Canvas Area
- * - Large Responsive Canvas Stage (Full-width for 16:9, max-height for 9:16 / 1:1)
- * - 2 Independent Configurable Text Layers (Zero Overlap):
- *   1. Layer 1: AI Scene Note Card (White handwritten card / summary_text) + Custom Y Position
- *   2. Layer 2: Whisper Voice Subtitle (Dark pill / voice_transcript) + Custom Y Position
- * - Audio Track & Language Bar directly below Scene Canvas / Timeline (EN / VI / Multi-language)
- * - Smart Proportional Audio-to-Animation Timeline Sync Button in Settings & Bar
- * - Large, high-contrast typography in all Bottom Sheets
+ * 100% Remotion-Engine Driven Studio with Exact Parity to wordai Web:
+ * - Powered by RemotionPlayerProvider (30fps frame-accurate rAF audio playhead)
+ * - DynamicAnimationComposition with exact mathematical spring physics & SVG ink extraction
+ * - Compact Top Header (Project Title only + 44px Notch Padding)
+ * - Compact Floating Aspect Ratio Dropdown (16:9 | 9:16 | 1:1) in Top-Right of Canvas Area
+ * - CapCut-style Multi-track Timeline with Audio language switcher (VI / EN) and Proportional Sync
+ * - Canvas Bottom Sheets for 2-Layer Text Isolation (White AI Card + Whisper Dark Pill)
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   Settings,
@@ -40,14 +37,16 @@ import {
   Type,
   Globe,
   Zap,
+  ChevronDown,
   AlignVerticalJustifyStart,
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
-  ChevronDown,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
-import { MobileDynamicSceneRenderer } from '@/components/video/MobileDynamicSceneRenderer';
+import { RemotionPlayerProvider, useRemotion, useCurrentFrame, useVideoConfig } from './RemotionEngine';
+import { DynamicAnimationComposition } from './DynamicAnimationComposition';
+import { DynamicSceneData } from './DynamicSceneRenderer';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -64,167 +63,116 @@ export type TextLangMode = 'vi' | 'en' | 'bilingual';
 export type TextPosition = 'top' | 'middle' | 'bottom';
 type BottomSheet = null | 'assets' | 'audio' | 'canvas';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
 function formatTimecode(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const ms = Math.floor((sec % 1) * 100);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
 }
 
-export function getSceneDuration(s: MotionScene): number {
+export function getSceneDuration(s: DynamicSceneData): number {
   if (s.duration_sec && s.duration_sec > 0) return s.duration_sec;
-  if ((s as any).duration && (s as any).duration > 0) return (s as any).duration;
-  if ((s as any).duration_frames && (s as any).duration_frames > 0) return (s as any).duration_frames / 30;
-  if (s.end_time_sec && s.start_time_sec !== undefined && s.end_time_sec > s.start_time_sec) {
-    return s.end_time_sec - s.start_time_sec;
+  if (s.duration_frames && s.duration_frames > 0) return s.duration_frames / 30;
+  if (s.end_sec && s.start_sec !== undefined && s.end_sec > s.start_sec) {
+    return s.end_sec - s.start_sec;
   }
   return 5;
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Studio Inner Component (Inside Remotion Context) ──────────────────────
 
-interface MobileVideoEditorStudioProps {
+interface StudioInnerProps {
   project: MotionProject;
+  initialScenes: DynamicSceneData[];
   onBack: () => void;
 }
 
-export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = ({
-  project,
-  onBack,
-}) => {
+const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBack }) => {
   const { isDark, isVietnamese, t } = useApp();
+  const {
+    frame,
+    fps,
+    durationInFrames,
+    isPlaying,
+    play,
+    pause,
+    togglePlay,
+    seekTo,
+    seekToSec,
+    aspectRatio,
+    setAspectRatio,
+    bgColor,
+    setBgColor,
+    volume,
+    setVolume,
+    audioSrc,
+    setAudioSrc,
+    setDurationInFrames,
+  } = useRemotion();
 
-  // ── Scenes State ──
-  const [scenes, setScenes] = useState<MotionScene[]>(
-    project.scenes && project.scenes.length > 0
-      ? project.scenes
-      : [
-          {
-            scene_id: 'scene_1',
-            order: 1,
-            title: project.title || 'Scene 1',
-            duration_sec: 5,
-            actions: [],
-            voice_transcript: project.prompt || 'WynMotion AI Scene',
-          },
-        ]
-  );
+  // Normalize initial scenes with start_frame and duration_frames
+  const [scenes, setScenes] = useState<DynamicSceneData[]>(() => {
+    let curFrame = 0;
+    return initialScenes.map((s, idx) => {
+      const durSec = getSceneDuration(s);
+      const durFrames = s.duration_frames || Math.round(durSec * 30);
+      const sf = s.start_frame !== undefined ? s.start_frame : curFrame;
+      curFrame = sf + durFrames;
+      return {
+        ...s,
+        scene_id: s.scene_id || `scene_${idx + 1}`,
+        start_frame: sf,
+        duration_frames: durFrames,
+        duration_sec: durSec,
+      };
+    });
+  });
+
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
-  const [bgColor, setBgColor] = useState(project.bg_color || '#FAF7EF');
-  const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>(
-    (project.aspect_ratio as any) || '16:9'
-  );
   const [showAspectDropdown, setShowAspectDropdown] = useState(false);
 
-  // ── Text Layers Control (2 Separate Layers) ──
-  const [showSceneCards, setShowSceneCards] = useState<boolean>(true); // Layer 1: White Note Card
-  const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(true); // Layer 2: Dark Whisper Pill
-  const [cardPosY, setCardPosY] = useState<TextPosition>('middle'); // Top / Middle / Bottom
-  const [subsPosY, setSubsPosY] = useState<TextPosition>('bottom'); // Bottom / Middle / Top
+  // 2-Layer Text Controls
+  const [showSceneCards, setShowSceneCards] = useState<boolean>(true);
+  const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(true);
+  const [cardPosY, setCardPosY] = useState<TextPosition>('middle');
+  const [subsPosY, setSubsPosY] = useState<TextPosition>('bottom');
   const [textLangMode, setTextLangMode] = useState<TextLangMode>('vi');
 
-  // ── Audio Tracks & Language Switching ──
-  const [activeAudioLang, setActiveAudioLang] = useState<'vi' | 'en' | 'default'>('vi');
-  const [activeAudioUrl, setActiveAudioUrl] = useState<string>(project.audio_url || '');
+  // Audio track switching & animation sync
+  const [activeAudioLang, setActiveAudioLang] = useState<'vi' | 'en'>('vi');
   const [isSyncingTimeline, setIsSyncingTimeline] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
-  // ── Playback ──
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTimeSec, setCurrentTimeSec] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const playbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // ── Sidebars / Bottom Sheets ──
+  // Sheets & Audio mixer
   const [isSettingsSheetOpen, setIsSettingsSheetOpen] = useState(false);
   const [activeBottomSheet, setActiveBottomSheet] = useState<BottomSheet>(null);
-
-  // ── Audio volumes ──
-  const [voiceVolume, setVoiceVolume] = useState(1.0);
   const [bgmVolume, setBgmVolume] = useState(0.3);
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement>(null);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Export ──
+  // Export state
   const [isExporting, setIsExporting] = useState(false);
-  const [exportJobId, setExportJobId] = useState<string | null>(null);
 
-  // ── Auto-save debounce ──
+  // Auto-save debounce
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const activeScene: MotionScene | null = scenes[activeSceneIndex] ?? null;
+  const totalDurationSec = durationInFrames / fps;
+  const currentTimeSec = frame / fps;
 
-  // Calculate cumulative duration
-  const totalDurationSec = Math.max(
-    5,
-    project.duration_sec || scenes.reduce((sum, s) => sum + getSceneDuration(s), 0)
-  );
-
-  // Relative time inside current active scene
-  let prevScenesElapsed = 0;
-  for (let i = 0; i < activeSceneIndex; i++) {
-    prevScenesElapsed += getSceneDuration(scenes[i]);
-  }
-  const currentSceneRelativeTime = Math.max(0, currentTimeSec - prevScenesElapsed);
-  const activeSceneDuration = activeScene ? getSceneDuration(activeScene) : 5;
-
-  // ── Playback timer loop (50ms interval) ──
+  // Active scene tracking based on frame
   useEffect(() => {
-    if (isPlaying) {
-      const intervalMs = 50;
-      const stepSec = intervalMs / 1000;
-
-      playbackTimerRef.current = setInterval(() => {
-        setCurrentTimeSec((prev) => {
-          const next = prev + stepSec;
-          if (next >= totalDurationSec) {
-            setIsPlaying(false);
-            return 0;
-          }
-          let elapsed = 0;
-          for (let i = 0; i < scenes.length; i++) {
-            const d = getSceneDuration(scenes[i]);
-            elapsed += d;
-            if (next < elapsed) {
-              setActiveSceneIndex(i);
-              break;
-            }
-          }
-          return next;
-        });
-      }, intervalMs);
-    } else {
-      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+    for (let i = 0; i < scenes.length; i++) {
+      const sf = scenes[i].start_frame || 0;
+      const df = scenes[i].duration_frames || 150;
+      if (frame >= sf && frame < sf + df) {
+        setActiveSceneIndex(i);
+        break;
+      }
     }
-    return () => {
-      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-    };
-  }, [isPlaying, totalDurationSec, scenes]);
+  }, [frame, scenes]);
 
-  // Sync audio element with playback state
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.currentTime = currentTimeSec;
-      audio.play().catch(() => {});
-    } else {
-      audio.pause();
-    }
-  }, [isPlaying]);
-
-  // ── Scene click (timeline) ──
-  const handleSceneClick = (index: number) => {
-    setActiveSceneIndex(index);
-    let elapsed = 0;
-    for (let i = 0; i < index; i++) elapsed += getSceneDuration(scenes[i]);
-    setCurrentTimeSec(elapsed);
-    if (audioRef.current) {
-      audioRef.current.currentTime = elapsed;
-    }
-  };
+  const activeScene: DynamicSceneData = scenes[activeSceneIndex] || scenes[0];
 
   // ── Sync Animation Timeline with Audio Length ──
   const syncAnimationWithAudio = (audioDuration: number, langLabel: string = 'Audio Track') => {
@@ -236,34 +184,36 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
     setIsSyncingTimeline(true);
     setSyncStatusMsg(t(`Đang đồng bộ animation theo ${langLabel}...`, `Syncing animation to ${langLabel}...`));
 
-    const baseDuration = scenes.reduce((acc, s) => acc + getSceneDuration(s), 0) || 10.0;
-    const scale = audioDuration / baseDuration;
+    const totalAudioFrames = Math.round(audioDuration * fps);
+    const baseFrames = scenes.reduce((acc, s) => acc + (s.duration_frames || 150), 0) || 300;
+    const scale = totalAudioFrames / baseFrames;
 
-    let curSec = 0.0;
-    const scaledScenes: MotionScene[] = scenes.map((s, idx) => {
-      const rawDur = getSceneDuration(s);
-      const scaledDur = rawDur * scale;
-      const start_time_sec = Number(curSec.toFixed(2));
-      const end_time_sec = idx === scenes.length - 1 ? Number(audioDuration.toFixed(2)) : Number((curSec + scaledDur).toFixed(2));
-      const duration_sec = idx === scenes.length - 1 ? Number((audioDuration - curSec).toFixed(2)) : Number(scaledDur.toFixed(2));
-      curSec += scaledDur;
+    let curFrame = 0;
+    const scaledScenes: DynamicSceneData[] = scenes.map((s, idx) => {
+      const rawFrames = s.duration_frames || 150;
+      const scaledF = Math.max(30, Math.round(rawFrames * scale));
+      const sf = curFrame;
+      const df = idx === scenes.length - 1 ? Math.max(30, totalAudioFrames - curFrame) : scaledF;
+      curFrame += df;
 
       return {
         ...s,
-        duration_sec,
-        start_time_sec,
-        end_time_sec,
+        start_frame: sf,
+        duration_frames: df,
+        duration_sec: Number((df / fps).toFixed(2)),
+        start_sec: Number((sf / fps).toFixed(2)),
+        end_sec: Number(((sf + df) / fps).toFixed(2)),
       };
     });
 
     setScenes(scaledScenes);
-    setCurrentTimeSec(0);
-    setActiveSceneIndex(0);
-    setIsPlaying(false);
+    setDurationInFrames?.(totalAudioFrames);
+    seekTo(0);
+    pause();
 
     wynmotionService
       .updateProject(project.project_id, {
-        scenes: scaledScenes,
+        scenes: scaledScenes as any,
         duration_sec: audioDuration,
       })
       .catch((err) => console.warn('Auto-save sync failed:', err));
@@ -284,7 +234,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       ? (project as any).audio_url_en || project.audio_url || ''
       : project.audio_url || '';
 
-    setActiveAudioUrl(targetUrl);
+    setAudioSrc?.(targetUrl);
 
     if (targetUrl) {
       const temp = new Audio(targetUrl);
@@ -298,7 +248,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
   // ── Update scene field with auto-save ──
   const updateScene = useCallback(
-    (sceneId: string | number, updates: Partial<MotionScene>) => {
+    (sceneId: string | number, updates: Partial<DynamicSceneData>) => {
       setScenes((prev) =>
         prev.map((s) => (s.scene_id === sceneId ? { ...s, ...updates } : s))
       );
@@ -308,7 +258,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           .updateProject(project.project_id, {
             scenes: scenes.map((s) =>
               s.scene_id === sceneId ? { ...s, ...updates } : s
-            ) as MotionScene[],
+            ) as any,
           })
           .catch((err) => console.warn('Auto-save failed:', err));
       }, 1200);
@@ -320,8 +270,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
   const handleExportMP4 = async () => {
     setIsExporting(true);
     try {
-      const res = await wynmotionService.exportMP4(project.project_id, scenes);
-      setExportJobId(res.job_id);
+      const res = await wynmotionService.exportMP4(project.project_id, scenes as any);
       if (res.mp4_url) {
         const a = document.createElement('a');
         a.href = res.mp4_url;
@@ -342,24 +291,12 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
     }
   };
 
-  const getSceneThumb = (s: MotionScene) => (s as any).image_url || null;
-
   return (
     <div
       className={`fixed inset-0 z-50 flex flex-col overflow-hidden transition-colors ${
         isDark ? 'bg-[#080B10] text-white' : 'bg-[#FAFAFC] text-slate-900'
       }`}
     >
-      {/* Hidden audio element for project audio playback */}
-      {activeAudioUrl && (
-        <audio
-          ref={audioRef}
-          src={activeAudioUrl}
-          preload="auto"
-          onEnded={() => setIsPlaying(false)}
-        />
-      )}
-
       {/* ═══════════════════════════════════════════════════════════
           1. COMPACT HEADER (Clean Title Only, 44px Notch Padding)
       ═══════════════════════════════════════════════════════════ */}
@@ -371,7 +308,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
         }`}
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
-        {/* Back Button */}
         <button
           type="button"
           onClick={onBack}
@@ -384,7 +320,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        {/* ONLY Project Title centered (no extra badges) */}
         <div className="flex flex-col items-center min-w-0 flex-1 mx-3">
           <h1
             className={`text-sm font-black truncate max-w-full tracking-tight ${
@@ -395,9 +330,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           </h1>
         </div>
 
-        {/* Right Actions */}
         <div className="flex items-center gap-2">
-          {/* Settings Button */}
           <button
             type="button"
             onClick={() => setIsSettingsSheetOpen(true)}
@@ -410,29 +343,22 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             <Settings className="w-5 h-5" />
           </button>
 
-          {/* Export MP4 Button */}
           <button
             type="button"
             onClick={handleExportMP4}
             disabled={isExporting}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 text-xs font-black shadow-md shadow-cyan-500/20 active:scale-95 transition-all disabled:opacity-50"
           >
-            {isExporting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5" />
-            )}
+            {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span>MP4</span>
           </button>
         </div>
       </header>
 
       {/* ═══════════════════════════════════════════════════════════
-          2. MAIN BODY: Large Canvas + Aspect Switcher + Controls + Audio Bar
+          2. MAIN BODY: Large Remotion Canvas Stage + Controls
       ═══════════════════════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-
-        {/* ── Sync Notification Toast ── */}
         {syncStatusMsg && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-2xl bg-cyan-500/90 text-slate-950 text-xs font-black shadow-xl backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
             <Zap className="w-4 h-4 fill-slate-950" />
@@ -440,10 +366,9 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           </div>
         )}
 
-        {/* ── Dynamic Canvas Stage (Full Height / Width responsive) ── */}
-        <div className="flex-1 flex items-center justify-center p-2 relative overflow-hidden">
-          
-          {/* Floating Compact Aspect Ratio Dropdown (Top-Right of Canvas Area) */}
+        {/* Dynamic Remotion Stage */}
+        <div className="flex-1 flex items-center justify-center p-2 relative overflow-hidden bg-[#07080E]">
+          {/* Floating Compact Aspect Ratio Dropdown */}
           <div className="absolute top-3 right-3 z-30">
             <button
               type="button"
@@ -456,10 +381,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
             {showAspectDropdown && (
               <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowAspectDropdown(false)}
-                />
+                <div className="fixed inset-0 z-40" onClick={() => setShowAspectDropdown(false)} />
                 <div className="absolute top-full right-0 mt-1.5 z-50 bg-[#121624]/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 min-w-[95px] animate-in fade-in zoom-in-95 duration-150">
                   {(['16:9', '9:16', '1:1'] as const).map((r) => (
                     <button
@@ -484,57 +406,43 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             )}
           </div>
 
-          {/* Canvas Box */}
+          {/* Video Stage Box */}
           <div
+            id="wynmotion-video-stage"
             className="relative shadow-2xl rounded-3xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all"
             style={{
               backgroundColor: bgColor,
               width: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? 'auto' : 'auto',
               maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '290px' : '380px',
               height: aspectRatio === '16:9' ? 'auto' : '100%',
-              aspectRatio:
-                aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
+              aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
               maxHeight: aspectRatio === '16:9' ? '54vh' : '52vh',
             }}
           >
-            {/* Dynamic Multi-Style Scene Renderer with 2 Separate Layers */}
-            {activeScene ? (
-              <MobileDynamicSceneRenderer
-                scene={activeScene}
-                visualStyle={project.visual_style || 'whiteboard_stream_hand'}
-                currentTimeSec={currentSceneRelativeTime}
-                totalSceneDurationSec={activeSceneDuration}
-                bgColor={bgColor}
-                aspectRatio={aspectRatio}
-                textLangMode={textLangMode}
-                showSceneCards={showSceneCards}
-                showWhisperSubs={showWhisperSubs}
-                cardPosY={cardPosY}
-                subsPosY={subsPosY}
-                onCardClick={() => setActiveBottomSheet('canvas')}
-                onSubsClick={() => setActiveBottomSheet('canvas')}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-4 text-center">
-                <Layers className="w-8 h-8 text-slate-400 opacity-40 mb-2" />
-                <p className="text-xs font-bold text-slate-400 opacity-60">Scene Preview</p>
-              </div>
-            )}
+            <DynamicAnimationComposition
+              scenes={scenes}
+              visualStyle={project.visual_style || 'whiteboard_stream_hand'}
+              showSceneCards={showSceneCards}
+              showWhisperSubs={showWhisperSubs}
+              cardPosY={cardPosY}
+              subsPosY={subsPosY}
+              onCardClick={() => setActiveBottomSheet('canvas')}
+              onSubsClick={() => setActiveBottomSheet('canvas')}
+            />
 
-            {/* Scene counter pill (top-left) */}
+            {/* Scene counter pill */}
             <div className="absolute top-3 left-3 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-black text-white z-20">
               {activeSceneIndex + 1} / {scenes.length}
             </div>
           </div>
         </div>
 
-        {/* ── Audio Language & Sync Bar (Below Scene Canvas) ── */}
+        {/* ── Audio Language & Sync Bar ── */}
         <div
           className={`flex-shrink-0 flex items-center justify-between px-4 py-2 border-t ${
             isDark ? 'border-slate-800/80 bg-[#0E111B]' : 'border-slate-100 bg-slate-50'
           }`}
         >
-          {/* Audio Language Switcher */}
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
               <Music className="w-3 h-3 text-cyan-400" />
@@ -566,27 +474,13 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             </div>
           </div>
 
-          {/* Sync Animation Button */}
           <button
             type="button"
-            onClick={() => {
-              if (audioRef.current && audioRef.current.duration && isFinite(audioRef.current.duration)) {
-                syncAnimationWithAudio(
-                  audioRef.current.duration,
-                  activeAudioLang === 'vi' ? '🇻🇳 Tiếng Việt' : '🇺🇸 English'
-                );
-              } else {
-                syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại');
-              }
-            }}
+            onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
             disabled={isSyncingTimeline}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-400 text-[10px] font-black hover:bg-cyan-500/25 active:scale-95 transition-all shadow-sm"
           >
-            {isSyncingTimeline ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Zap className="w-3 h-3 fill-cyan-400" />
-            )}
+            {isSyncingTimeline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 fill-cyan-400" />}
             <span>{t('Sync Animation', 'Sync Animation')}</span>
           </button>
         </div>
@@ -597,10 +491,13 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             isDark ? 'border-slate-800/80 bg-[#0F131C]' : 'border-slate-100 bg-white'
           }`}
         >
-          {/* Prev Scene */}
           <button
             type="button"
-            onClick={() => handleSceneClick(Math.max(0, activeSceneIndex - 1))}
+            onClick={() => {
+              const prevIdx = Math.max(0, activeSceneIndex - 1);
+              const sf = scenes[prevIdx]?.start_frame || 0;
+              seekTo(sf);
+            }}
             disabled={activeSceneIndex === 0}
             className={`p-2 rounded-2xl transition-all active:scale-90 disabled:opacity-30 ${
               isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
@@ -609,7 +506,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             <SkipBack className="w-5 h-5" />
           </button>
 
-          {/* Timecode & Progress bar */}
           <div className="flex flex-col items-center gap-1">
             <div className={`text-xs font-mono font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               {formatTimecode(currentTimeSec)} / {formatTimecode(totalDurationSec)}
@@ -624,29 +520,21 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             </div>
           </div>
 
-          {/* Play / Pause Button */}
+          <button
+            type="button"
+            onClick={togglePlay}
+            className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/25 active:scale-90 transition-all"
+          >
+            {isPlaying ? <Pause className="w-5 h-5 fill-slate-950" /> : <Play className="w-5 h-5 fill-slate-950 ml-0.5" />}
+          </button>
+
           <button
             type="button"
             onClick={() => {
-              if (currentTimeSec >= totalDurationSec) {
-                setCurrentTimeSec(0);
-                setActiveSceneIndex(0);
-              }
-              setIsPlaying((v) => !v);
+              const nextIdx = Math.min(scenes.length - 1, activeSceneIndex + 1);
+              const sf = scenes[nextIdx]?.start_frame || 0;
+              seekTo(sf);
             }}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/25 active:scale-90 transition-all"
-          >
-            {isPlaying ? (
-              <Pause className="w-5 h-5 fill-slate-950" />
-            ) : (
-              <Play className="w-5 h-5 fill-slate-950 ml-0.5" />
-            )}
-          </button>
-
-          {/* Next Scene */}
-          <button
-            type="button"
-            onClick={() => handleSceneClick(Math.min(scenes.length - 1, activeSceneIndex + 1))}
             disabled={activeSceneIndex === scenes.length - 1}
             className={`p-2 rounded-2xl transition-all active:scale-90 disabled:opacity-30 ${
               isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
@@ -665,13 +553,15 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-none">
             {scenes.map((s, idx) => {
               const isActive = idx === activeSceneIndex;
-              const thumb = getSceneThumb(s);
               const dur = getSceneDuration(s);
               return (
                 <button
                   key={s.scene_id || idx}
                   type="button"
-                  onClick={() => handleSceneClick(idx)}
+                  onClick={() => {
+                    const sf = s.start_frame || 0;
+                    seekTo(sf);
+                  }}
                   className={`flex-shrink-0 w-20 rounded-2xl border overflow-hidden transition-all active:scale-95 flex flex-col ${
                     isActive
                       ? 'border-cyan-400 shadow-md shadow-cyan-500/20 ring-2 ring-cyan-400/50'
@@ -684,8 +574,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                     className={`w-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}
                     style={{ aspectRatio: '16/9' }}
                   >
-                    {thumb ? (
-                      <img src={thumb} alt={s.title} className="w-full h-full object-cover" />
+                    {s.image_url ? (
+                      <img src={s.image_url} alt={s.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Layers className="w-3.5 h-3.5 text-slate-400" />
@@ -744,11 +634,11 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
-          3. BOTTOM SHEETS (2 Independent Text Layers Configuration)
+          3. BOTTOM SHEETS
       ═══════════════════════════════════════════════════════════ */}
       {activeBottomSheet && (
         <BottomSheetOverlay isDark={isDark} onClose={() => setActiveBottomSheet(null)}>
-          {/* ── ASSETS SHEET ── */}
+          {/* ASSETS SHEET */}
           {activeBottomSheet === 'assets' && (
             <div className="space-y-5">
               <SheetHeader
@@ -758,7 +648,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Upload image button */}
               <label
                 className={`flex items-center gap-2.5 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
                   isDark
@@ -779,24 +668,22 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                     const file = e.target.files?.[0];
                     if (file && activeScene) {
                       const url = URL.createObjectURL(file);
-                      updateScene(activeScene.scene_id, { image_url: url } as any);
+                      updateScene(activeScene.scene_id, { image_url: url });
                     }
                   }}
                 />
               </label>
 
-              {/* Scene list */}
               <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                 {scenes.map((s, idx) => {
                   const isActive = idx === activeSceneIndex;
-                  const thumb = getSceneThumb(s);
                   const dur = getSceneDuration(s);
                   return (
                     <button
                       key={s.scene_id || idx}
                       type="button"
                       onClick={() => {
-                        handleSceneClick(idx);
+                        seekTo(s.start_frame || 0);
                         setActiveBottomSheet(null);
                       }}
                       className={`w-full flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all active:scale-[0.98] ${
@@ -815,8 +702,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         }`}
                         style={{ aspectRatio: '16/9' }}
                       >
-                        {thumb ? (
-                          <img src={thumb} alt={s.title} className="w-full h-full object-cover" />
+                        {s.image_url ? (
+                          <img src={s.image_url} alt={s.title} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Layers className="w-4 h-4 text-slate-400" />
@@ -843,7 +730,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             </div>
           )}
 
-          {/* ── AUDIO SHEET ── */}
+          {/* AUDIO SHEET */}
           {activeBottomSheet === 'audio' && (
             <div className="space-y-6">
               <SheetHeader
@@ -852,71 +739,50 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Sync Audio Button inside Audio Sheet */}
               <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between">
                 <div>
                   <div className="text-xs font-black text-cyan-400">
-                    {t('⚡ Đồng Bộ Timeline Hoạt Họa Theo Audio', '⚡ Sync Animation Timeline to Audio')}
+                    {t('⚡ Đồng Bộ Animation Theo Audio', '⚡ Sync Animation to Audio')}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-0.5">
-                    {t('Tự động chia tỉ lệ thời lượng các scene theo độ dài file giọng đọc', 'Automatically scale scenes duration to narration')}
+                    {t('Chia tỉ lệ phân cảnh tự động khớp thời lượng giọng đọc', 'Automatically scale scenes to narration duration')}
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (audioRef.current && audioRef.current.duration && isFinite(audioRef.current.duration)) {
-                      syncAnimationWithAudio(audioRef.current.duration, 'Audio Track');
-                    } else {
-                      syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại');
-                    }
-                  }}
+                  onClick={() => syncAnimationWithAudio(totalDurationSec, 'Audio Track')}
                   className="px-3.5 py-2 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs shadow-md active:scale-95 transition-all flex-shrink-0"
                 >
                   {t('Đồng Bộ Ngay', 'Sync Now')}
                 </button>
               </div>
 
-              {/* Voice volume */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label
-                    className={`text-sm font-bold flex items-center gap-2 ${
-                      isDark ? 'text-slate-200' : 'text-slate-800'
-                    }`}
-                  >
+                  <label className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                     <Volume2 className="w-4 h-4 text-cyan-400" />
                     <span>{t('Giọng Đọc AI (Voice Narration)', 'AI Narration Volume')}</span>
                   </label>
-                  <span className="text-sm font-black text-cyan-400">
-                    {Math.round(voiceVolume * 100)}%
-                  </span>
+                  <span className="text-sm font-black text-cyan-400">{Math.round(volume * 100)}%</span>
                 </div>
                 <input
                   type="range"
                   min={0}
                   max={1}
                   step={0.05}
-                  value={voiceVolume}
-                  onChange={(e) => setVoiceVolume(parseFloat(e.target.value))}
+                  value={volume}
+                  onChange={(e) => setVolume(parseFloat(e.target.value))}
                   className="w-full accent-cyan-400 h-2 rounded-lg"
                 />
               </div>
 
-              {/* BGM volume */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label
-                    className={`text-sm font-bold flex items-center gap-2 ${
-                      isDark ? 'text-slate-200' : 'text-slate-800'
-                    }`}
-                  >
+                  <label className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                     <Music className="w-4 h-4 text-purple-400" />
                     <span>{t('Nhạc Nền (BGM Volume)', 'Background Music Volume')}</span>
                   </label>
-                  <span className="text-sm font-black text-purple-400">
-                    {Math.round(bgmVolume * 100)}%
-                  </span>
+                  <span className="text-sm font-black text-purple-400">{Math.round(bgmVolume * 100)}%</span>
                 </div>
                 <input
                   type="range"
@@ -928,36 +794,10 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                   className="w-full accent-purple-400 h-2 rounded-lg"
                 />
               </div>
-
-              {/* BGM file upload */}
-              <label
-                className={`flex items-center gap-2.5 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
-                  isDark
-                    ? 'border-slate-700 hover:border-purple-400 bg-slate-800/40'
-                    : 'border-slate-300 hover:border-purple-400 bg-slate-50'
-                }`}
-              >
-                <Upload className="w-5 h-5 text-purple-400" />
-                <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                  {customBgmFile
-                    ? `✓ ${customBgmFile}`
-                    : t('+ Tải File Nhạc Nền MP3/WAV Lên', '+ Upload Custom BGM Track (MP3/WAV)')}
-                </span>
-                <input
-                  ref={bgmFileInputRef}
-                  type="file"
-                  accept="audio/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setCustomBgmFile(file.name);
-                  }}
-                />
-              </label>
             </div>
           )}
 
-          {/* ── CANVAS & 2-LAYER TEXT SETTINGS SHEET ── */}
+          {/* CANVAS & 2-LAYER TEXT SETTINGS SHEET */}
           {activeBottomSheet === 'canvas' && (
             <div className="space-y-6">
               <SheetHeader
@@ -966,7 +806,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Background Color themes */}
               <div className="space-y-3">
                 <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
                   {t('1. Màu Nền Canvas', '1. Canvas Background')}
@@ -985,49 +824,14 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                           : 'border-slate-200 bg-white text-slate-600'
                       }`}
                     >
-                      <span
-                        className="w-5 h-5 rounded-full border border-black/20 flex-shrink-0 shadow-sm"
-                        style={{ backgroundColor: theme.color }}
-                      />
+                      <span className="w-5 h-5 rounded-full border border-black/20 flex-shrink-0 shadow-sm" style={{ backgroundColor: theme.color }} />
                       <span className="truncate">{theme.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Text / Subtitle Language Mode */}
-              <div className="space-y-3 pt-3 border-t border-slate-800/80">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-cyan-400" />
-                  <span>{t('2. Ngôn Ngữ Hiển Thị Text', '2. Text Display Language')}</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {[
-                    { id: 'vi' as TextLangMode, label: '🇻🇳 Tiếng Việt' },
-                    { id: 'en' as TextLangMode, label: '🇺🇸 English' },
-                    { id: 'bilingual' as TextLangMode, label: '⚡ Song Ngữ' },
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setTextLangMode(m.id)}
-                      className={`py-3 rounded-2xl border text-xs font-black transition-all ${
-                        textLangMode === m.id
-                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-2 ring-cyan-500/40 shadow-sm'
-                          : isDark
-                          ? 'border-slate-800 bg-slate-900 text-slate-400'
-                          : 'border-slate-200 bg-white text-slate-600'
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ─────────────────────────────────────────────────────────────
-                  LAYER 1: AI SCENE NOTE CARD (Khung Trắng Tóm Tắt AI)
-              ───────────────────────────────────────────────────────────── */}
+              {/* LAYER 1: AI SCENE NOTE CARD */}
               <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1037,18 +841,15 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         {t('Lớp 1: Thẻ Tóm Tắt AI (White Card)', 'Layer 1: AI Scene Note Card (White Card)')}
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        {t('Khung trắng font viết tay tóm tắt nội dung chính phân cảnh', 'Handwritten white card summarizing the scene')}
+                        {t('Khung trắng font viết tay tóm tắt nội dung chính', 'Handwritten white card summarizing the scene')}
                       </span>
                     </div>
                   </div>
-                  {/* Toggle On/Off */}
                   <button
                     type="button"
                     onClick={() => setShowSceneCards((v) => !v)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
-                      showSceneCards
-                        ? 'bg-cyan-400 text-slate-950 shadow-md'
-                        : 'bg-slate-800 text-slate-400'
+                      showSceneCards ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
                     }`}
                   >
                     {showSceneCards ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -1058,7 +859,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
                 {showSceneCards && (
                   <>
-                    {/* Position Y Selector */}
                     <div className="space-y-1.5 pt-2">
                       <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
                         <span>{t('Vị trí hiển thị Thẻ Trắng:', 'White Card Position:')}</span>
@@ -1090,7 +890,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                       </div>
                     </div>
 
-                    {/* Edit summary_text for active scene */}
                     {activeScene && (
                       <div className="space-y-2 pt-2">
                         <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
@@ -1098,12 +897,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                           <span>{t(`Sửa Tóm Tắt AI (Scene ${activeSceneIndex + 1})`, `Edit AI Summary (Scene ${activeSceneIndex + 1})`)}</span>
                         </div>
                         <textarea
-                          value={activeScene.summary_text || (activeScene as any).voice_transcript || ''}
-                          onChange={(e) =>
-                            updateScene(activeScene.scene_id, {
-                              summary_text: e.target.value,
-                            } as any)
-                          }
+                          value={activeScene.summary_text || activeScene.voice_transcript || ''}
+                          onChange={(e) => updateScene(activeScene.scene_id, { summary_text: e.target.value })}
                           rows={2}
                           className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
                           placeholder={t('Nhập tóm tắt phân cảnh viết tay...', 'Enter scene summary...')}
@@ -1114,9 +909,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 )}
               </div>
 
-              {/* ─────────────────────────────────────────────────────────────
-                  LAYER 2: WHISPER VOICE SUBTITLES (Khung Xám Đen Giọng Đọc)
-              ───────────────────────────────────────────────────────────── */}
+              {/* LAYER 2: WHISPER VOICE SUBTITLES */}
               <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1130,14 +923,11 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                       </span>
                     </div>
                   </div>
-                  {/* Toggle On/Off */}
                   <button
                     type="button"
                     onClick={() => setShowWhisperSubs((v) => !v)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
-                      showWhisperSubs
-                        ? 'bg-cyan-400 text-slate-950 shadow-md'
-                        : 'bg-slate-800 text-slate-400'
+                      showWhisperSubs ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
                     }`}
                   >
                     {showWhisperSubs ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -1147,7 +937,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
                 {showWhisperSubs && (
                   <>
-                    {/* Position Y Selector */}
                     <div className="space-y-1.5 pt-2">
                       <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
                         <span>{t('Vị trí hiển thị Phụ Đề Giọng Đọc:', 'Voice Subtitles Position:')}</span>
@@ -1155,7 +944,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         {[
-                          { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới (Đáy)' },
+                          { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
                           { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
                           { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
                         ].map((pos) => {
@@ -1179,7 +968,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                       </div>
                     </div>
 
-                    {/* Edit voice_transcript for active scene */}
                     {activeScene && (
                       <div className="space-y-2 pt-2">
                         <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
@@ -1187,12 +975,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                           <span>{t(`Sửa Lời Thoại / Phụ Đề Whisper (Scene ${activeSceneIndex + 1})`, `Edit Voice Transcript (Scene ${activeSceneIndex + 1})`)}</span>
                         </div>
                         <textarea
-                          value={(activeScene as any).voice_transcript || activeScene.summary_text || ''}
-                          onChange={(e) =>
-                            updateScene(activeScene.scene_id, {
-                              voice_transcript: e.target.value,
-                            } as any)
-                          }
+                          value={activeScene.voice_transcript || activeScene.summary_text || ''}
+                          onChange={(e) => updateScene(activeScene.scene_id, { voice_transcript: e.target.value })}
                           rows={3}
                           className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
                           placeholder={t('Nhập lời thoại phụ đề đọc theo audio...', 'Enter voice transcription...')}
@@ -1207,15 +991,10 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
         </BottomSheetOverlay>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════
-          4. SETTINGS ACTION SHEET (Header Action Sheet)
-      ═══════════════════════════════════════════════════════════ */}
+      {/* SETTINGS ACTION SHEET */}
       {isSettingsSheetOpen && (
         <div className="fixed inset-0 z-50 flex items-end">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsSettingsSheetOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsSettingsSheetOpen(false)} />
           <div
             className={`relative z-10 w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] ${
               isDark ? 'bg-[#121624] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
@@ -1234,33 +1013,6 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
               </button>
             </div>
 
-            {/* Sync Animation Feature in Settings */}
-            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-black text-cyan-400">
-                  {t('⚡ Đồng Bộ Animation Theo Audio', '⚡ Sync Animation to Audio')}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">
-                  {t('Khớp toàn bộ các scene theo độ dài file giọng đọc', 'Fit all scenes to narration audio duration')}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (audioRef.current && audioRef.current.duration && isFinite(audioRef.current.duration)) {
-                    syncAnimationWithAudio(audioRef.current.duration, 'Audio Track');
-                  } else {
-                    syncAnimationWithAudio(totalDurationSec, 'Timeline');
-                  }
-                  setIsSettingsSheetOpen(false);
-                }}
-                className="px-3.5 py-2 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs shadow-md active:scale-95 transition-all flex-shrink-0"
-              >
-                {t('Đồng Bộ', 'Sync')}
-              </button>
-            </div>
-
-            {/* Project info card */}
             <div
               className={`p-4 rounded-2xl text-xs space-y-2 border ${
                 isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
@@ -1280,45 +1032,46 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold">{t('Thời Lượng', 'Total Duration')}</span>
-                <span className="font-bold">{Math.round(totalDurationSec)}s</span>
+                <span className="font-bold">{Math.round(totalDurationSec)}s ({durationInFrames} frames)</span>
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="space-y-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  wynmotionService
-                    .getProject(project.project_id)
-                    .then((res) => {
-                      if (res.project?.scenes) setScenes(res.project.scenes);
-                    })
-                    .catch(() => {});
-                  setIsSettingsSheetOpen(false);
-                }}
-                className={`w-full py-3.5 rounded-2xl border text-sm font-black flex items-center justify-center gap-2 transition-all ${
-                  isDark
-                    ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
-                    : 'border-slate-200 bg-white text-slate-800'
-                }`}
-              >
-                <RefreshCw className="w-4 h-4 text-cyan-400" />
-                <span>{t('Tải Lại Dữ Liệu Dự Án', 'Reload Project Data')}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsSettingsSheetOpen(false)}
-                className="w-full py-3.5 rounded-2xl bg-cyan-400 text-slate-950 font-black text-sm transition-all shadow-md"
-              >
-                <span>{t('Đóng Cài Đặt', 'Close Settings')}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsSettingsSheetOpen(false)}
+              className="w-full py-3.5 rounded-2xl bg-cyan-400 text-slate-950 font-black text-sm transition-all shadow-md"
+            >
+              <span>{t('Đóng Cài Đặt', 'Close Settings')}</span>
+            </button>
           </div>
         </div>
       )}
     </div>
+  );
+};
+
+// ─── Main Root Studio Component Wrapped in RemotionPlayerProvider ─────────
+
+interface MobileVideoEditorStudioProps {
+  project: MotionProject;
+  onBack: () => void;
+}
+
+export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = ({ project, onBack }) => {
+  const scenes = project.scenes && project.scenes.length > 0 ? (project.scenes as any) : [];
+  const totalDuration = project.duration_sec || scenes.reduce((acc: number, s: any) => acc + getSceneDuration(s), 0) || 10;
+  const initialFrames = Math.round(totalDuration * 30);
+
+  return (
+    <RemotionPlayerProvider
+      fps={30}
+      durationInFrames={initialFrames}
+      audioSrc={project.audio_url || ''}
+      initialBgColor={project.bg_color || '#FAF7EF'}
+      initialAspectRatio={((project.aspect_ratio as any) || '16:9') as any}
+    >
+      <StudioInner project={project} initialScenes={scenes} onBack={onBack} />
+    </RemotionPlayerProvider>
   );
 };
 
