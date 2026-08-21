@@ -35,6 +35,7 @@ import {
   RefreshCw,
   Share2,
   Download,
+  Search,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -48,6 +49,114 @@ import {
 } from '@/components/video/MotionStyleIcons';
 import { ProfileSidePanel } from '@/components/navigation/ProfileSidePanel';
 import { LoginModal } from '@/components/auth/LoginModal';
+
+// ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
+
+export const AUDIO_STUDIO_LANGUAGES = [
+  { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
+  { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
+  { code: 'zh', name: '中文 (Mandarin)', flag: '🇨🇳' },
+  { code: 'kr', name: '한국어', flag: '🇰🇷' },
+  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'ms', name: 'Melayu', flag: '🇲🇾' },
+  { code: 'id', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'th', name: 'ภาษาไทย', flag: '🇹🇭' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'pt-BR', name: 'Português (Brasil)', flag: '🇧🇷' },
+  { code: 'hi', name: 'हिन्दी (Hindi)', flag: '🇮🇳' },
+  { code: 'bn', name: 'বাংলা (Bengali)', flag: '🇧🇩' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+];
+
+export const VIENEU_NORTHERN_VOICES = [
+  { code: 'Phạm Tuyên', name: 'Phạm Tuyên (♂️ Nam Bắc · Tự nhiên)', tag: 'Phổ biến nhất' },
+  { code: 'Minh Đức', name: 'Minh Đức (♂️ Nam Bắc · Tin tức)', tag: 'Sư phạm' },
+  { code: 'Thanh Bình', name: 'Thanh Bình (♂️ Nam Bắc · Kể chuyện)', tag: 'Kể chuyện' },
+  { code: 'Trúc Ly', name: 'Trúc Ly (♀️ Nữ Bắc · Tự nhiên)', tag: 'Tự nhiên' },
+  { code: 'Đoan Trang', name: 'Đoan Trang (♀️ Nữ Bắc · Tự nhiên)', tag: 'Nhẹ nhàng' },
+  { code: 'Ngọc Linh', name: 'Ngọc Linh (♀️ Nữ Bắc · Kể chuyện)', tag: 'Truyền cảm' },
+  { code: 'Mai Anh', name: 'Mai Anh (♀️ Nữ Bắc · Tin tức)', tag: 'Thời sự' },
+];
+
+export const VIENEU_CENTRAL_VOICES = [
+  { code: 'Quang Sơn', name: 'Quang Sơn (♂️ Nam Trung · Tự nhiên)', tag: 'Miền Trung' },
+  { code: 'Ngọc Trân', name: 'Ngọc Trân (♀️ Nữ Trung · Tự nhiên)', tag: 'Miền Trung' },
+];
+
+export const VIENEU_SOUTHERN_VOICES = [
+  { code: 'Xuân Vĩnh', name: 'Xuân Vĩnh (♂️ Nam Nam · Tự nhiên)', tag: 'Miền Nam' },
+  { code: 'Thái Sơn', name: 'Thái Sơn (♂️ Nam Nam · Kể chuyện)', tag: 'Kể chuyện' },
+  { code: 'Minh Triết', name: 'Minh Triết (♂️ Nam Nam · Tin tức)', tag: 'Thời sự' },
+  { code: 'Thục Đoan', name: 'Thục Đoan (♀️ Nữ Nam · Kể chuyện)', tag: 'Truyền cảm' },
+  { code: 'Thùy Dung', name: 'Thùy Dung (♀️ Nữ Nam · Tin tức)', tag: 'Tin tức' },
+];
+
+export const KOKORO_FEMALE_VOICES = [
+  { code: 'af_bella', name: 'Bella (US Female 🇺🇸)', tag: 'Top Pick' },
+  { code: 'af_nicole', name: 'Nicole (US Female 🇺🇸)', tag: 'Clear' },
+  { code: 'af_sarah', name: 'Sarah (US Female 🇺🇸)', tag: 'Natural' },
+  { code: 'af_sky', name: 'Sky (US Female 🇺🇸)', tag: 'Youth' },
+  { code: 'bf_isabella', name: 'Isabella (UK Female 🇬🇧)', tag: 'Academic' },
+  { code: 'bf_emma', name: 'Emma (UK Female 🇬🇧)', tag: 'British' },
+  { code: 'jf_alpha', name: 'Alpha (Japanese Female 🇯🇵)', tag: 'Japanese' },
+  { code: 'zf_xiaobei', name: 'Xiaobei (Chinese Female 🇨🇳)', tag: 'Mandarin' },
+  { code: 'ef_dora', name: 'Dora (Spanish Female 🇪🇸)', tag: 'Spanish' },
+  { code: 'ff_siwis', name: 'Siwis (French Female 🇫🇷)', tag: 'French' },
+  { code: 'hf_alpha', name: 'Alpha (Hindi Female 🇮🇳)', tag: 'Hindi' },
+  { code: 'pf_dora', name: 'Dora (Portuguese Female 🇧🇷)', tag: 'Portuguese' },
+];
+
+export const KOKORO_MALE_VOICES = [
+  { code: 'am_adam', name: 'Adam (US Male 🇺🇸)', tag: 'Standard' },
+  { code: 'am_michael', name: 'Michael (US Male 🇺🇸)', tag: 'Deep' },
+  { code: 'bm_george', name: 'George (UK Male 🇬🇧)', tag: 'Story' },
+  { code: 'bm_lewis', name: 'Lewis (UK Male 🇬🇧)', tag: 'British' },
+];
+
+export const GEMINI_MALE_VOICES = [
+  { code: 'Puck', name: 'Puck (Male ♂️ · Energetic)', tag: 'Expressive' },
+  { code: 'Charon', name: 'Charon (Male ♂️ · Deep)', tag: 'Deep' },
+  { code: 'Fenrir', name: 'Fenrir (Male ♂️ · Dramatic)', tag: 'Story' },
+  { code: 'Orus', name: 'Orus (Male ♂️ · Professional)', tag: 'Teacher' },
+  { code: 'Enceladus', name: 'Enceladus (Male ♂️ · Soft)', tag: 'Soft' },
+  { code: 'Iapetus', name: 'Iapetus (Male ♂️ · Narrative)', tag: 'Narrative' },
+  { code: 'Alnilam', name: 'Alnilam (Male ♂️ · Natural)', tag: 'Natural' },
+  { code: 'Gacrux', name: 'Gacrux (Male ♂️ · Crisp)', tag: 'Crisp' },
+];
+
+export const GEMINI_FEMALE_VOICES = [
+  { code: 'Kore', name: 'Kore (Female ♀️ · Warm)', tag: 'Top Female' },
+  { code: 'Leda', name: 'Leda (Female ♀️ · Elegant)', tag: 'Elegant' },
+  { code: 'Aoede', name: 'Aoede (Female ♀️ · Melodic)', tag: 'Melodic' },
+  { code: 'Callirrhoe', name: 'Callirrhoe (Female ♀️ · Calm)', tag: 'Calm' },
+  { code: 'Autonoe', name: 'Autonoe (Female ♀️ · Bright)', tag: 'Teacher' },
+  { code: 'Despina', name: 'Despina (Female ♀️ · Soft)', tag: 'Soft' },
+  { code: 'Achernar', name: 'Achernar (Female ♀️ · Clear)', tag: 'Clear' },
+  { code: 'Pulcherrima', name: 'Pulcherrima (Female ♀️ · Expressive)', tag: 'Expressive' },
+  { code: 'Vindemiatrix', name: 'Vindemiatrix (Female ♀️ · Formal)', tag: 'News' },
+];
+
+export const KOKORO_DEFAULT_VOICE_MAP: Record<string, string> = {
+  'en-US': 'af_bella',
+  'en-GB': 'bf_isabella',
+  'zh': 'zf_xiaobei',
+  'ja': 'jf_alpha',
+  'es': 'ef_dora',
+  'fr': 'ff_siwis',
+  'hi': 'hf_alpha',
+  'pt-BR': 'pf_dora',
+  'kr': 'af_bella',
+  'ko': 'af_bella',
+  'vi': 'Phạm Tuyên',
+};
+
+export const AUDIO_READING_STYLES = [
+  { code: 'tu_nhien', nameVi: '🗣️ Tự nhiên / Đàm thoại', nameEn: '🗣️ Natural / Conversational' },
+  { code: 'tin_tuc', nameVi: '📰 Đọc bản tin / Thời sự', nameEn: '📰 News / Formal' },
+  { code: 'doc_truyen', nameVi: '📖 Kể chuyện / Sách nói', nameEn: '📖 Storytelling / Audiobook' },
+];
 
 export const AiVideoTab: React.FC = () => {
   const { isVietnamese, t, setActiveTab } = useApp();
@@ -75,24 +184,25 @@ export const AiVideoTab: React.FC = () => {
       : 'Simulate the photosynthesis process of green plants and the role of sunlight',
   );
 
-  // Step 3: Audio Tab ('generate' vs 'upload')
-  const [audioSourceTab, setAudioSourceTab] = useState<'generate' | 'upload'>('generate');
+  // Step 3: Audio Source Tab ('agent' vs 'upload')
+  const [audioMode, setAudioMode] = useState<'agent' | 'upload'>('agent');
 
   // Step 3.1: Voice Setup
   const [selectedLang, setSelectedLang] = useState(isVietnamese ? 'vi' : 'en-US');
   const [voiceModel, setVoiceModel] = useState<'wynai' | 'gemini'>('wynai');
   const [selectedVoiceName, setSelectedVoiceName] = useState(isVietnamese ? 'Phạm Tuyên' : 'af_bella');
-  const [readingStyle, setReadingStyle] = useState<'academic' | 'natural' | 'expressive' | 'storytelling'>('academic');
+  const [readingStyle, setReadingStyle] = useState('tu_nhien');
+  const [vietnameseRegion, setVietnameseRegion] = useState<'all' | 'north' | 'central' | 'south'>('all');
 
   // Step 3.2: Script & Audience Context
   const [targetAudience, setTargetAudience] = useState<'kids' | 'teen' | 'adult'>('teen');
   const [scriptStyle, setScriptStyle] = useState<'explainer' | 'storytelling' | 'humorous' | 'scientific'>('explainer');
-  const [scriptLength, setScriptLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [maxChars, setMaxChars] = useState<number>(500); // 500 | 750 | 1100
   const [scriptMode, setScriptMode] = useState<'ai_auto' | 'custom'>('ai_auto');
-  const [customScriptText, setCustomScriptText] = useState('');
-  const [generatedScript, setGeneratedScript] = useState('');
+  const [customNarrationText, setCustomNarrationText] = useState('');
+  const [scriptText, setScriptText] = useState('');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [audioDurationSec, setAudioDurationSec] = useState<number>(35);
+  const [audioDurationSec, setAudioDurationSec] = useState<number>(30);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isPlayingAudioPreview, setIsPlayingAudioPreview] = useState(false);
 
@@ -129,27 +239,50 @@ export const AiVideoTab: React.FC = () => {
   ];
 
   const PROMPT_SUGGESTIONS = [
-    t('🌱 Chu trình quang hợp của cây xanh và hấp thụ CO2', '🌱 Photosynthesis cycle of green plants and CO2 absorption'),
-    t('🤖 Trí tuệ nhân tạo (AI) hoạt động và học tập như thế nào?', '🤖 How Artificial Intelligence (AI) works & learns step-by-step'),
-    t('📐 Định lý Pytago trong hình học và ứng dụng thực tế', '📐 Pythagorean theorem in geometry and practical real-life applications'),
-    t('📜 Tóm tắt chiến dịch Điện Biên Phủ lịch sử 1954', '📜 Summary of historic Dien Bien Phu campaign in 1954'),
+    t('🌱 Mô phỏng chu trình quang hợp của cây xanh trong tự nhiên', '🌱 Simulate the photosynthesis process of green plants in nature'),
+    t('🤖 Giải thích nguyên lý hoạt động của Trí tuệ nhân tạo (AI)', '🤖 Explain how Artificial Intelligence (AI) works step by step'),
+    t('📈 Giới thiệu tính năng vượt trội của nền tảng phần mềm mới với đồ thị 3D', '📈 Introduce cutting-edge software features with 3D charts'),
+    t('🚀 Câu chuyện truyền cảm hứng của chú robot nhỏ vượt qua thử thách', '🚀 Inspiring journey of a little robot overcoming obstacles'),
   ];
 
-  const VIETNAMESE_VOICES = [
-    { id: 'Phạm Tuyên', name: 'Thầy Tuyên', desc: 'Nam sư phạm · Ấm áp · Giảng bài chuẩn', tag: 'Phổ biến nhất' },
-    { id: 'Mai Phương', name: 'Cô Phương', desc: 'Nữ truyền cảm · Nhẹ nhàng · Rõ ràng', tag: 'Sư phạm' },
-    { id: 'Bảo Nhi', name: 'Bé Bảo Nhi', desc: 'Giọng bé gái · Vui tươi · Dành cho tiểu học', tag: 'Thiếu nhi' },
-    { id: 'Quang Anh', name: 'Quang Anh', desc: 'Nam sôi nổi · Năng động · Khám phá', tag: 'Hào hứng' },
-  ];
+  // Auto-switch default voice when language or model changes (Same as Web)
+  const handleLangChange = (langCode: string) => {
+    setSelectedLang(langCode);
+    if (voiceModel === 'wynai') {
+      if (langCode === 'vi') {
+        setSelectedVoiceName('Phạm Tuyên');
+      } else {
+        setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[langCode] || 'af_bella');
+      }
+    }
+  };
 
-  const ENGLISH_VOICES = [
-    { id: 'af_bella', name: 'Bella (US)', desc: 'Female · Clear & Engaging teacher', tag: 'Top Pick' },
-    { id: 'am_adam', name: 'Adam (US)', desc: 'Male · Natural & Deep explainer', tag: 'Standard' },
-    { id: 'bf_isabella', name: 'Isabella (UK)', desc: 'British Female · Articulate & Polite', tag: 'Academic' },
-    { id: 'bm_george', name: 'George (UK)', desc: 'British Male · Professional documentary', tag: 'Story' },
-  ];
+  const handleModelChange = (model: 'wynai' | 'gemini') => {
+    setVoiceModel(model);
+    if (model === 'wynai') {
+      if (selectedLang === 'vi') {
+        setSelectedVoiceName('Phạm Tuyên');
+      } else {
+        setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[selectedLang] || 'af_bella');
+      }
+    } else {
+      setSelectedVoiceName('Puck');
+    }
+  };
 
-  const currentVoices = selectedLang === 'vi' ? VIETNAMESE_VOICES : ENGLISH_VOICES;
+  // Filter available voices based on model and language
+  const getDisplayVoiceList = () => {
+    if (voiceModel === 'gemini') {
+      return [...GEMINI_MALE_VOICES, ...GEMINI_FEMALE_VOICES];
+    }
+    if (selectedLang === 'vi') {
+      if (vietnameseRegion === 'north') return VIENEU_NORTHERN_VOICES;
+      if (vietnameseRegion === 'central') return VIENEU_CENTRAL_VOICES;
+      if (vietnameseRegion === 'south') return VIENEU_SOUTHERN_VOICES;
+      return [...VIENEU_NORTHERN_VOICES, ...VIENEU_CENTRAL_VOICES, ...VIENEU_SOUTHERN_VOICES];
+    }
+    return [...KOKORO_FEMALE_VOICES, ...KOKORO_MALE_VOICES];
+  };
 
   const handleStartStudio = (initialStyle?: 'whiteboard_stream_hand' | 'handdrawn_fast_doodle' | 'apple_modern_motion' | 'character_animation') => {
     if (initialStyle) {
@@ -180,24 +313,24 @@ export const AiVideoTab: React.FC = () => {
     setIsPlayingAudioPreview(false);
 
     try {
-      const maxCharCount = scriptLength === 'short' ? 350 : scriptLength === 'medium' ? 650 : 1200;
       const res = await wynmotionService.generateScriptAndAudio({
         prompt,
-        script: scriptMode === 'custom' && customScriptText.trim() ? customScriptText.trim() : undefined,
+        script: scriptMode === 'custom' && customNarrationText.trim() ? customNarrationText.trim() : undefined,
         language_code: selectedLang,
         target_audience: targetAudience,
         script_style: scriptStyle,
-        max_chars: maxCharCount,
+        max_chars: maxChars,
         voice_engine: voiceModel,
         voice_name: selectedVoiceName,
         reading_style: readingStyle,
       });
 
-      setGeneratedScript(res.script);
-      setAudioUrl(res.audio_url);
-      setAudioDurationSec(res.duration_sec || (scriptLength === 'short' ? 25 : scriptLength === 'medium' ? 45 : 90));
+      const targetAudioUrl = res.audio_url || (res as any).file_url || (res as any).public_url;
+      setScriptText(res.script || customNarrationText || prompt);
+      setAudioUrl(targetAudioUrl);
+      setAudioDurationSec(res.duration_sec || (maxChars === 500 ? 30 : maxChars === 750 ? 60 : 120));
     } catch (err: any) {
-      alert(err.message || 'Lỗi tạo giọng đọc AI');
+      alert(err.message || (isVietnamese ? 'Lỗi tạo giọng đọc AI' : 'Failed to generate AI voice'));
     } finally {
       setIsGeneratingAudio(false);
     }
@@ -206,10 +339,20 @@ export const AiVideoTab: React.FC = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      alert(isVietnamese ? 'File quá lớn (tối đa 20MB)' : 'File too large (max 20MB)');
+      return;
+    }
     setUploadedFileName(file.name);
     const objectUrl = URL.createObjectURL(file);
     setAudioUrl(objectUrl);
-    setAudioDurationSec(40);
+    setScriptText(customNarrationText.trim() || file.name);
+
+    const audio = new Audio();
+    audio.src = objectUrl;
+    audio.onloadedmetadata = () => {
+      setAudioDurationSec(Math.round(audio.duration));
+    };
   };
 
   const handleCreateVideo = async () => {
@@ -220,12 +363,13 @@ export const AiVideoTab: React.FC = () => {
       setTimeout(() => setCreationStage('drawing'), 1800);
       setTimeout(() => setCreationStage('syncing'), 3800);
 
-      const finalScript = scriptMode === 'custom' && customScriptText.trim() 
-        ? customScriptText 
-        : generatedScript || prompt;
+      const finalScript = scriptMode === 'custom' && customNarrationText.trim()
+        ? customNarrationText
+        : scriptText || prompt;
+      const targetBg = visualStyle === 'whiteboard_stream_hand' ? '#F5EBD7' : '#FAF7EF';
 
       const res = await wynmotionService.generateScenes({
-        title: prompt.slice(0, 40),
+        title: `WynMotion - ${prompt.slice(0, 30)}`,
         prompt,
         script: finalScript,
         audio_url: audioUrl || undefined,
@@ -234,12 +378,15 @@ export const AiVideoTab: React.FC = () => {
         visual_style: visualStyle,
         character_subtype: visualStyle === 'character_animation' ? characterSubtype : undefined,
         language_code: selectedLang,
+        bg_color: targetBg,
       });
 
-      setCreatedProject(res.project);
-      setCreationStage('done');
+      if (res.success && res.project) {
+        setCreatedProject(res.project);
+        setCreationStage('done');
+      }
     } catch (err: any) {
-      alert(err.message || 'Lỗi tạo video phân cảnh AI');
+      alert(err.message || (isVietnamese ? 'Không thể khởi tạo dự án WynMotion' : 'Failed to create WynMotion project'));
       setIsCreatingProject(false);
       setCreationStage('idle');
     }
@@ -251,7 +398,7 @@ export const AiVideoTab: React.FC = () => {
   if (viewMode === 'home') {
     return (
       <div className="min-h-screen bg-[#080B10] text-white pb-12 select-none">
-        {/* Hidden Audio Player for Preview */}
+        {/* Hidden Audio Player */}
         <audio
           ref={audioPlayerRef}
           onEnded={() => setIsPlayingAudioPreview(false)}
@@ -305,9 +452,7 @@ export const AiVideoTab: React.FC = () => {
 
           {/* Card 2: Templates */}
           <button
-            onClick={() => {
-              handleStartStudio('whiteboard_stream_hand');
-            }}
+            onClick={() => handleStartStudio('whiteboard_stream_hand')}
             className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl p-5 shadow-xl border border-slate-700/60 hover:border-pink-500/50 active:scale-[0.98] transition-all flex flex-col justify-between min-h-[140px] text-left"
           >
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white shadow-md shadow-pink-500/30 group-hover:scale-105 transition-transform">
@@ -381,7 +526,7 @@ export const AiVideoTab: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. Four Supported Motion Styles (4 Square Grid with Handcrafted Vector Icons) */}
+        {/* 4. Four Supported Motion Styles */}
         <div className="mt-8 px-4">
           <div className="flex items-center justify-between mb-3.5">
             <h3 className="font-bold text-base text-white flex items-center gap-2">
@@ -466,7 +611,6 @@ export const AiVideoTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Profile Side Panel & Login Modal */}
         <ProfileSidePanel isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
       </div>
@@ -474,11 +618,11 @@ export const AiVideoTab: React.FC = () => {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 2. FULL-SCREEN IMMERSIVE CREATION STUDIO FLOW (Gemini App Big Style)
+  // 2. FULL-SCREEN CREATION STUDIO (100% Web Parity & Gemini Big Mobile UI)
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 bg-[#070A0F] text-slate-100 flex flex-col select-none overflow-hidden">
-      {/* Hidden Audio Player for Preview */}
+      {/* Hidden Audio Player */}
       <audio
         ref={audioPlayerRef}
         onEnded={() => setIsPlayingAudioPreview(false)}
@@ -492,7 +636,7 @@ export const AiVideoTab: React.FC = () => {
         className="hidden"
       />
 
-      {/* ── Top Bar (Back, Progress, Close) ── */}
+      {/* ── Top Bar ── */}
       <header className="pt-12 pb-3 px-5 bg-slate-950/90 border-b border-slate-850 backdrop-blur-xl flex items-center justify-between">
         <button
           onClick={() => {
@@ -510,8 +654,8 @@ export const AiVideoTab: React.FC = () => {
         {/* Step Indicator Pill */}
         <div className="flex flex-col items-center">
           <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-300">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-xs font-extrabold uppercase tracking-wider text-cyan-300">
               {wizardStep === '1' && (isVietnamese ? 'Bước 1/4: Chọn Phong cách' : 'Step 1/4: Visual Style')}
               {wizardStep === '2' && (isVietnamese ? 'Bước 2/4: Ý tưởng Video' : 'Step 2/4: Video Prompt')}
               {wizardStep === '3.1' && (isVietnamese ? 'Bước 3.1/4: Giọng đọc AI' : 'Step 3.1/4: Voice Setup')}
@@ -661,7 +805,7 @@ export const AiVideoTab: React.FC = () => {
               </button>
             </div>
 
-            {/* Mascot Sub-type Picker if Mascot is chosen */}
+            {/* Mascot Subtype Picker */}
             {visualStyle === 'character_animation' && (
               <div className="p-4 rounded-3xl bg-slate-900/90 border border-purple-800/40 space-y-2">
                 <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">
@@ -715,8 +859,8 @@ export const AiVideoTab: React.FC = () => {
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={isVietnamese ? 'Ví dụ: Giải thích định luật vạn vật hấp dẫn của Newton...' : 'e.g. Explain Newton\'s law of universal gravitation...'}
-                className="w-full min-h-[160px] p-5 rounded-3xl bg-slate-900/90 border-2 border-slate-800 focus:border-indigo-500 text-white text-lg font-medium outline-none resize-none placeholder:text-slate-500 shadow-inner"
+                placeholder={isVietnamese ? 'Ví dụ: Mô phỏng chu trình quang hợp của cây xanh...' : 'e.g. Simulate photosynthesis cycle in green plants...'}
+                className="w-full min-h-[160px] p-5 rounded-3xl bg-slate-900/90 border-2 border-slate-800 focus:border-cyan-400 text-white text-lg font-medium outline-none resize-none placeholder:text-slate-500 shadow-inner"
               />
               <div className="absolute bottom-3.5 right-4 text-xs font-semibold text-slate-500">
                 {prompt.length} ký tự
@@ -733,7 +877,7 @@ export const AiVideoTab: React.FC = () => {
                   <button
                     key={idx}
                     onClick={() => setPrompt(s.replace(/^[^\s]+\s/, ''))}
-                    className="w-full p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-850 text-left text-sm font-medium text-slate-300 hover:text-white transition-all flex items-center justify-between"
+                    className="w-full p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 hover:border-cyan-400/50 hover:bg-slate-850 text-left text-sm font-medium text-slate-300 hover:text-white transition-all flex items-center justify-between"
                   >
                     <span>{s}</span>
                     <Plus className="w-4 h-4 text-slate-500 flex-shrink-0" />
@@ -745,7 +889,7 @@ export const AiVideoTab: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 3.1: GIỌNG ĐỌC AI & NGÔN NGỮ (Tách Sub-step 1) */}
+        {/* STEP 3.1: GIỌNG ĐỌC AI & 15 NGÔN NGỮ CHUẨN WEB (Tách Sub-step 1) */}
         {/* ========================================================================= */}
         {wizardStep === '3.1' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
@@ -761,10 +905,10 @@ export const AiVideoTab: React.FC = () => {
             {/* Two Big Source Tabs: Tạo mới vs Tải lên */}
             <div className="grid grid-cols-2 gap-3 p-1.5 rounded-3xl bg-slate-900 border border-slate-800">
               <button
-                onClick={() => setAudioSourceTab('generate')}
+                onClick={() => setAudioMode('agent')}
                 className={`py-3.5 px-4 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all ${
-                  audioSourceTab === 'generate'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                  audioMode === 'agent'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -773,10 +917,10 @@ export const AiVideoTab: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setAudioSourceTab('upload')}
+                onClick={() => setAudioMode('upload')}
                 className={`py-3.5 px-4 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all ${
-                  audioSourceTab === 'upload'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                  audioMode === 'upload'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -785,112 +929,139 @@ export const AiVideoTab: React.FC = () => {
               </button>
             </div>
 
-            {/* TAB A: TẠO MỚI AUDIO */}
-            {audioSourceTab === 'generate' && (
-              <div className="space-y-5">
-                {/* 1. Ngôn ngữ (Language Chips) */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {isVietnamese ? '1. Ngôn ngữ đọc' : '1. Spoken Language'}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      onClick={() => {
-                        setSelectedLang('vi');
-                        setSelectedVoiceName('Phạm Tuyên');
-                      }}
-                      className={`py-3.5 px-4 rounded-2xl text-sm font-bold flex items-center justify-between transition-all ${
-                        selectedLang === 'vi'
-                          ? 'bg-indigo-600/30 border-2 border-indigo-500 text-white'
-                          : 'bg-slate-900 border-2 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <span>🇻🇳 Tiếng Việt (VN)</span>
-                      {selectedLang === 'vi' && <Check className="w-4 h-4 text-indigo-400" />}
-                    </button>
+            {/* TAB A: TẠO MỚI AUDIO (AGENT) */}
+            {audioMode === 'agent' && (
+              <div className="space-y-6">
+                {/* 1. Ngôn ngữ (Hỗ trợ full 15 ngôn ngữ như trên Web) */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{isVietnamese ? '1. Ngôn ngữ thuyết minh' : '1. Spoken Language'}</span>
+                    </label>
+                    <span className="text-[11px] font-bold text-cyan-400">15 quốc gia</span>
+                  </div>
 
-                    <button
-                      onClick={() => {
-                        setSelectedLang('en-US');
-                        setSelectedVoiceName('af_bella');
-                      }}
-                      className={`py-3.5 px-4 rounded-2xl text-sm font-bold flex items-center justify-between transition-all ${
-                        selectedLang === 'en-US'
-                          ? 'bg-indigo-600/30 border-2 border-indigo-500 text-white'
-                          : 'bg-slate-900 border-2 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <span>🇺🇸 English (US)</span>
-                      {selectedLang === 'en-US' && <Check className="w-4 h-4 text-indigo-400" />}
-                    </button>
+                  {/* Horizontal Scroll Language Badges */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-5 px-5">
+                    {AUDIO_STUDIO_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => handleLangChange(lang.code)}
+                        className={`flex-shrink-0 py-2.5 px-3.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all border ${
+                          selectedLang === lang.code
+                            ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-950/50'
+                            : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-base">{lang.flag}</span>
+                        <span>{lang.name}</span>
+                        {selectedLang === lang.code && <Check className="w-3 h-3 text-cyan-400 stroke-[3]" />}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 {/* 2. Model AI Engine */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {isVietnamese ? '2. Bộ công nghệ AI' : '2. Voice AI Engine'}
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-purple-400" />
+                    <span>{isVietnamese ? '2. Bộ công nghệ AI' : '2. Voice AI Engine'}</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
-                      onClick={() => setVoiceModel('wynai')}
-                      className={`py-3 px-3.5 rounded-2xl text-xs font-bold text-left transition-all ${
+                      onClick={() => handleModelChange('wynai')}
+                      className={`p-3.5 rounded-2xl text-left border-2 transition-all ${
                         voiceModel === 'wynai'
-                          ? 'bg-indigo-600/30 border-2 border-indigo-500 text-white'
-                          : 'bg-slate-900 border-2 border-slate-800 text-slate-400'
+                          ? 'bg-cyan-950/40 border-cyan-400 text-white shadow-lg shadow-cyan-950/50'
+                          : 'bg-slate-900 border-slate-800 text-slate-400'
                       }`}
                     >
-                      <div className="font-extrabold text-white">WynAI Ultra-HD</div>
-                      <div className="text-[10px] text-indigo-300 mt-0.5">48kHz Studio âm trầm</div>
+                      <div className="font-extrabold text-sm text-white">WynAI Ultra-HD</div>
+                      <div className="text-[11px] text-cyan-300 mt-0.5">VieNeu-TTS & Kokoro 48kHz</div>
                     </button>
 
                     <button
-                      onClick={() => setVoiceModel('gemini')}
-                      className={`py-3 px-3.5 rounded-2xl text-xs font-bold text-left transition-all ${
+                      onClick={() => handleModelChange('gemini')}
+                      className={`p-3.5 rounded-2xl text-left border-2 transition-all ${
                         voiceModel === 'gemini'
-                          ? 'bg-indigo-600/30 border-2 border-indigo-500 text-white'
-                          : 'bg-slate-900 border-2 border-slate-800 text-slate-400'
+                          ? 'bg-purple-950/40 border-purple-400 text-white shadow-lg shadow-purple-950/50'
+                          : 'bg-slate-900 border-slate-800 text-slate-400'
                       }`}
                     >
-                      <div className="font-extrabold text-white">Gemini Expressive</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">Đa sắc thái biểu cảm</div>
+                      <div className="font-extrabold text-sm text-white">Google Gemini Audio</div>
+                      <div className="text-[11px] text-purple-300 mt-0.5">Đa sắc thái biểu cảm cao</div>
                     </button>
                   </div>
                 </div>
 
-                {/* 3. Danh sách Giọng đọc (Voice Persona Cards) */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {isVietnamese ? '3. Chọn giọng đọc yêu thích' : '3. Select Voice Persona'}
-                  </label>
-                  <div className="space-y-2.5">
-                    {currentVoices.map((v) => (
+                {/* 3. Danh sách Giọng đọc (Region filter nếu là Tiếng Việt) */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{isVietnamese ? '3. Chọn giọng đọc yêu thích' : '3. Select Voice Persona'}</span>
+                    </label>
+                    <span className="text-[11px] text-slate-500 font-semibold">{getDisplayVoiceList().length} giọng</span>
+                  </div>
+
+                  {/* Vùng miền nếu là Tiếng Việt */}
+                  {selectedLang === 'vi' && voiceModel === 'wynai' && (
+                    <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-900 rounded-2xl border border-slate-800">
+                      {[
+                        { id: 'all', label: 'Tất cả' },
+                        { id: 'north', label: 'Miền Bắc' },
+                        { id: 'central', label: 'Miền Trung' },
+                        { id: 'south', label: 'Miền Nam' },
+                      ].map((reg) => (
+                        <button
+                          key={reg.id}
+                          onClick={() => setVietnameseRegion(reg.id as any)}
+                          className={`py-1.5 text-xs font-bold rounded-xl transition-all ${
+                            vietnameseRegion === reg.id
+                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {reg.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Lưới danh sách giọng đọc (Scrollable list) */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {getDisplayVoiceList().map((v: any) => (
                       <div
-                        key={v.id}
-                        onClick={() => setSelectedVoiceName(v.id)}
-                        className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
-                          selectedVoiceName === v.id
-                            ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-950/50'
-                            : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                        key={v.code}
+                        onClick={() => setSelectedVoiceName(v.code)}
+                        className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between active:scale-[0.99] ${
+                          selectedVoiceName === v.code
+                            ? 'bg-cyan-950/50 border-cyan-400 shadow-md shadow-cyan-950/60'
+                            : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-indigo-400">
+                          <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-cyan-400 flex-shrink-0">
                             <Volume2 className="w-5 h-5" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <h4 className="font-extrabold text-sm text-white">{v.name}</h4>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-900/60 text-indigo-300 border border-indigo-700/40">
-                                {v.tag}
-                              </span>
+                              {v.tag && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-800/40">
+                                  {v.tag}
+                                </span>
+                              )}
                             </div>
-                            <p className="text-xs text-slate-400 mt-0.5">{v.desc}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {voiceModel === 'wynai' ? '48kHz Ultra-HD Studio' : 'Gemini Expressive'}
+                            </p>
                           </div>
                         </div>
 
-                        {selectedVoiceName === v.id && (
-                          <div className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center">
+                        {selectedVoiceName === v.code && (
+                          <div className="w-6 h-6 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center flex-shrink-0">
                             <Check className="w-3.5 h-3.5 stroke-[3]" />
                           </div>
                         )}
@@ -899,28 +1070,25 @@ export const AiVideoTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4. Phong cách đọc (Tone) */}
+                {/* 4. Phong cách đọc chuẩn Web (AUDIO_READING_STYLES) */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {isVietnamese ? '4. Sắc thái giọng đọc' : '4. Reading Tone'}
+                    {isVietnamese ? '4. Phong cách thể hiện' : '4. Reading Style'}
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'academic', label: '🎓 Sư phạm / Chuẩn mực' },
-                      { id: 'natural', label: '🌿 Tự nhiên / Gần gũi' },
-                      { id: 'expressive', label: '🔥 Hào hứng / Sinh động' },
-                      { id: 'storytelling', label: '📖 Kể chuyện / Truyền cảm' },
-                    ].map((tone) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {AUDIO_READING_STYLES.map((st) => (
                       <button
-                        key={tone.id}
-                        onClick={() => setReadingStyle(tone.id as any)}
-                        className={`py-3 px-3 rounded-2xl text-xs font-bold transition-all ${
-                          readingStyle === tone.id
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-900 text-slate-300 border border-slate-800'
+                        key={st.code}
+                        onClick={() => setReadingStyle(st.code)}
+                        className={`p-3 rounded-2xl text-center border-2 transition-all ${
+                          readingStyle === st.code
+                            ? 'bg-cyan-950/50 border-cyan-400 text-white'
+                            : 'bg-slate-900 border-slate-800 text-slate-400'
                         }`}
                       >
-                        {tone.label}
+                        <div className="text-xs font-extrabold text-white">
+                          {isVietnamese ? st.nameVi : st.nameEn}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -929,9 +1097,9 @@ export const AiVideoTab: React.FC = () => {
             )}
 
             {/* TAB B: TẢI LÊN AUDIO */}
-            {audioSourceTab === 'upload' && (
+            {audioMode === 'upload' && (
               <div className="p-6 rounded-3xl bg-slate-900 border-2 border-dashed border-slate-700 text-center space-y-4">
-                <div className="w-16 h-16 rounded-3xl bg-indigo-950/60 border border-indigo-800/40 text-indigo-400 flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 rounded-3xl bg-cyan-950/60 border border-cyan-800/40 text-cyan-400 flex items-center justify-center mx-auto">
                   <Upload className="w-8 h-8" />
                 </div>
                 <div>
@@ -939,12 +1107,12 @@ export const AiVideoTab: React.FC = () => {
                     {uploadedFileName || (isVietnamese ? 'Chọn file âm thanh (.mp3, .wav, .m4a)' : 'Choose audio file')}
                   </h4>
                   <p className="text-xs text-slate-400 mt-1">
-                    {isVietnamese ? 'Hỗ trợ tải lên bài giảng thu âm sẵn' : 'Upload pre-recorded voiceover'}
+                    {isVietnamese ? 'Hỗ trợ tải lên bài giảng thu âm sẵn (tối đa 20MB)' : 'Upload pre-recorded voiceover (max 20MB)'}
                   </p>
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="py-3 px-6 rounded-2xl bg-indigo-600 text-white font-extrabold text-sm shadow-lg shadow-indigo-500/25 active:scale-95 transition-all"
+                  className="py-3 px-6 rounded-2xl bg-cyan-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/25 active:scale-95 transition-all"
                 >
                   {isVietnamese ? 'Chọn file từ máy' : 'Browse Files'}
                 </button>
@@ -954,7 +1122,7 @@ export const AiVideoTab: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 3.2: KỊCH BẢN & ĐỐI TƯỢNG (Tách Sub-step 2) */}
+        {/* STEP 3.2: KỊCH BẢN & ĐỐI TƯỢNG (Chuẩn 100% Web) */}
         {/* ========================================================================= */}
         {wizardStep === '3.2' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
@@ -967,10 +1135,11 @@ export const AiVideoTab: React.FC = () => {
               </p>
             </div>
 
-            {/* 1. Đối tượng người xem (Target Audience) */}
+            {/* 1. Đối tượng người xem (Target Audience: kids, teen, adult) */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {isVietnamese ? '1. Đối tượng người xem' : '1. Target Audience'}
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                <span>{isVietnamese ? '1. Đối tượng người xem' : '1. Target Audience'}</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
@@ -981,13 +1150,13 @@ export const AiVideoTab: React.FC = () => {
                   <button
                     key={aud.id}
                     onClick={() => setTargetAudience(aud.id as any)}
-                    className={`p-3 rounded-2xl text-center border-2 transition-all ${
+                    className={`p-3.5 rounded-2xl text-center border-2 transition-all ${
                       targetAudience === aud.id
-                        ? 'bg-indigo-950/60 border-indigo-500 text-white'
+                        ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-md'
                         : 'bg-slate-900 border-slate-800 text-slate-400'
                     }`}
                   >
-                    <div className="text-lg">{aud.emoji}</div>
+                    <div className="text-xl">{aud.emoji}</div>
                     <div className="text-xs font-extrabold text-white mt-1">{aud.label}</div>
                     <div className="text-[10px] text-slate-400">{aud.desc}</div>
                   </button>
@@ -995,10 +1164,11 @@ export const AiVideoTab: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Văn phong kịch bản (Script Style) */}
+            {/* 2. Văn phong bài giảng (Script Style: explainer, storytelling, humorous, scientific) */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {isVietnamese ? '2. Văn phong bài giảng' : '2. Script Style'}
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-purple-400" />
+                <span>{isVietnamese ? '2. Văn phong bài giảng' : '2. Script Style'}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -1010,9 +1180,9 @@ export const AiVideoTab: React.FC = () => {
                   <button
                     key={st.id}
                     onClick={() => setScriptStyle(st.id as any)}
-                    className={`py-3 px-3 rounded-2xl text-xs font-bold transition-all ${
+                    className={`py-3.5 px-3 rounded-2xl text-xs font-bold transition-all ${
                       scriptStyle === st.id
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold shadow-md'
                         : 'bg-slate-900 text-slate-300 border border-slate-800'
                     }`}
                   >
@@ -1022,34 +1192,35 @@ export const AiVideoTab: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. Độ dài kịch bản */}
+            {/* 3. Độ dài kịch bản (Exact Web 3 Options: 500 - 750 - 1100 chars) */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {isVietnamese ? '3. Thời lượng video dự kiến' : '3. Expected Duration'}
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isVietnamese ? '3. Thời lượng video dự kiến' : '3. Expected Duration'}</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'short', label: '~30 giây', desc: 'Ngắn gọn' },
-                  { id: 'medium', label: '~60 giây', desc: 'Chuẩn bài giảng' },
-                  { id: 'long', label: '~2 phút', desc: 'Chi tiết sâu' },
+                  { chars: 500, label: '~30 giây', desc: '500 ký tự' },
+                  { chars: 750, label: '~60 giây', desc: '750 ký tự' },
+                  { chars: 1100, label: '~2 phút', desc: '1100 ký tự' },
                 ].map((len) => (
                   <button
-                    key={len.id}
-                    onClick={() => setScriptLength(len.id as any)}
+                    key={len.chars}
+                    onClick={() => setMaxChars(len.chars)}
                     className={`p-3 rounded-2xl text-center border-2 transition-all ${
-                      scriptLength === len.id
-                        ? 'bg-indigo-950/60 border-indigo-500 text-white'
+                      maxChars === len.chars
+                        ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-md'
                         : 'bg-slate-900 border-slate-800 text-slate-400'
                     }`}
                   >
                     <div className="text-xs font-extrabold text-white">{len.label}</div>
-                    <div className="text-[10px] text-indigo-300">{len.desc}</div>
+                    <div className="text-[10px] text-cyan-300 font-semibold mt-0.5">{len.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 4. Tự viết Script hay để AI viết */}
+            {/* 4. Tùy chọn Kịch bản (AI Tự Soạn vs Tự Nhập) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -1058,16 +1229,16 @@ export const AiVideoTab: React.FC = () => {
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
                   <button
                     onClick={() => setScriptMode('ai_auto')}
-                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${
-                      scriptMode === 'ai_auto' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+                    className={`text-[11px] font-bold px-3 py-1 rounded-lg ${
+                      scriptMode === 'ai_auto' ? 'bg-cyan-500 text-slate-950 font-black' : 'text-slate-400'
                     }`}
                   >
                     AI Tự viết
                   </button>
                   <button
                     onClick={() => setScriptMode('custom')}
-                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${
-                      scriptMode === 'custom' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+                    className={`text-[11px] font-bold px-3 py-1 rounded-lg ${
+                      scriptMode === 'custom' ? 'bg-cyan-500 text-slate-950 font-black' : 'text-slate-400'
                     }`}
                   >
                     Tự nhập
@@ -1077,14 +1248,14 @@ export const AiVideoTab: React.FC = () => {
 
               {scriptMode === 'custom' ? (
                 <textarea
-                  value={customScriptText}
-                  onChange={(e) => setCustomScriptText(e.target.value)}
+                  value={customNarrationText}
+                  onChange={(e) => setCustomNarrationText(e.target.value)}
                   placeholder={isVietnamese ? 'Dán hoặc gõ kịch bản lời thoại của bạn vào đây...' : 'Paste or type custom narration script here...'}
-                  className="w-full min-h-[120px] p-4 rounded-2xl bg-slate-900 border border-slate-800 text-white text-sm outline-none resize-none focus:border-indigo-500"
+                  className="w-full min-h-[120px] p-4 rounded-2xl bg-slate-900 border border-slate-800 text-white text-sm outline-none resize-none focus:border-cyan-400"
                 />
               ) : (
                 <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 leading-relaxed">
-                  {generatedScript || (
+                  {scriptText || (
                     <span className="text-slate-500 italic">
                       {isVietnamese
                         ? 'AI sẽ tự động soạn kịch bản chi tiết dựa theo chủ đề ở Bước 2.'
@@ -1098,16 +1269,16 @@ export const AiVideoTab: React.FC = () => {
               <button
                 onClick={handleGenerateAudio}
                 disabled={isGeneratingAudio}
-                className="w-full py-4 rounded-2xl bg-slate-900 border-2 border-indigo-500/80 hover:bg-indigo-950/30 text-indigo-300 font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                className="w-full py-4.5 rounded-2xl bg-slate-900 border-2 border-cyan-400/80 hover:bg-cyan-950/30 text-cyan-300 font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
               >
                 {isGeneratingAudio ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                    <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
                     <span>{isVietnamese ? 'Đang tạo lời thoại AI...' : 'Generating AI Voice...'}</span>
                   </>
                 ) : (
                   <>
-                    <Wand2 className="w-5 h-5 text-indigo-400" />
+                    <Wand2 className="w-5 h-5 text-cyan-400" />
                     <span>{isVietnamese ? 'Tạo & Nghe thử Giọng đọc AI 🔊' : 'Generate & Preview Voiceover 🔊'}</span>
                   </>
                 )}
@@ -1115,11 +1286,11 @@ export const AiVideoTab: React.FC = () => {
 
               {/* Audio Preview Bar if generated */}
               {audioUrl && (
-                <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-800/40 flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-800/40 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={handleTogglePlayAudio}
-                      className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-all"
+                      className="w-11 h-11 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center shadow-md active:scale-95 transition-all"
                     >
                       {isPlayingAudioPreview ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
                     </button>
@@ -1127,7 +1298,7 @@ export const AiVideoTab: React.FC = () => {
                       <div className="text-xs font-bold text-white">
                         {isVietnamese ? 'Đã tạo giọng đọc thành công' : 'Audio generated'}
                       </div>
-                      <div className="text-[11px] text-indigo-300">~{audioDurationSec}s · {selectedVoiceName}</div>
+                      <div className="text-[11px] text-cyan-300 font-medium">~{audioDurationSec}s · {selectedVoiceName}</div>
                     </div>
                   </div>
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
@@ -1158,7 +1329,7 @@ export const AiVideoTab: React.FC = () => {
                 onClick={() => setAspectRatio('16:9')}
                 className={`p-4 rounded-3xl text-center border-2 transition-all flex flex-col items-center justify-between min-h-[140px] ${
                   aspectRatio === '16:9'
-                    ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-xl shadow-indigo-950/50'
+                    ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-xl shadow-cyan-950/50'
                     : 'bg-slate-900 border-slate-800 text-slate-400'
                 }`}
               >
@@ -1176,7 +1347,7 @@ export const AiVideoTab: React.FC = () => {
                 onClick={() => setAspectRatio('9:16')}
                 className={`p-4 rounded-3xl text-center border-2 transition-all flex flex-col items-center justify-between min-h-[140px] ${
                   aspectRatio === '9:16'
-                    ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-xl shadow-indigo-950/50'
+                    ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-xl shadow-cyan-950/50'
                     : 'bg-slate-900 border-slate-800 text-slate-400'
                 }`}
               >
@@ -1194,7 +1365,7 @@ export const AiVideoTab: React.FC = () => {
                 onClick={() => setAspectRatio('1:1')}
                 className={`p-4 rounded-3xl text-center border-2 transition-all flex flex-col items-center justify-between min-h-[140px] ${
                   aspectRatio === '1:1'
-                    ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-xl shadow-indigo-950/50'
+                    ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-xl shadow-cyan-950/50'
                     : 'bg-slate-900 border-slate-800 text-slate-400'
                 }`}
               >
@@ -1220,7 +1391,7 @@ export const AiVideoTab: React.FC = () => {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800">
                   <span className="text-slate-400">Giọng đọc:</span>
-                  <span className="font-bold text-indigo-300">{selectedVoiceName} ({selectedLang})</span>
+                  <span className="font-bold text-cyan-300">{selectedVoiceName} ({selectedLang})</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800">
                   <span className="text-slate-400">Thời lượng dự kiến:</span>
@@ -1235,8 +1406,8 @@ export const AiVideoTab: React.FC = () => {
 
             {/* Generation Progress Overlay */}
             {isCreatingProject && (
-              <div className="p-6 rounded-3xl bg-indigo-950/70 border border-indigo-800/80 text-center space-y-4 animate-in fade-in">
-                <Loader2 className="w-10 h-10 text-indigo-400 animate-spin mx-auto" />
+              <div className="p-6 rounded-3xl bg-cyan-950/70 border border-cyan-800/80 text-center space-y-4 animate-in fade-in">
+                <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto" />
                 <div>
                   <h4 className="font-extrabold text-lg text-white">
                     {creationStage === 'scripting' && (isVietnamese ? 'AI đang phân tích kịch bản...' : 'Analyzing script...')}
@@ -1244,7 +1415,7 @@ export const AiVideoTab: React.FC = () => {
                     {creationStage === 'syncing' && (isVietnamese ? 'Đồng bộ chuyển động âm thanh...' : 'Syncing motion with audio...')}
                     {creationStage === 'done' && (isVietnamese ? 'Hoàn thành video thành công!' : 'Video created successfully!')}
                   </h4>
-                  <p className="text-xs text-indigo-300 mt-1">
+                  <p className="text-xs text-cyan-300 mt-1">
                     {isVietnamese ? 'Hệ thống đang xuất video độ phân giải cao' : 'Rendering high-resolution animation'}
                   </p>
                 </div>
@@ -1260,10 +1431,10 @@ export const AiVideoTab: React.FC = () => {
           {wizardStep === '1' && (
             <button
               onClick={() => setWizardStep('2')}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-lg shadow-xl shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <span>{isVietnamese ? 'Tiếp tục: Nhập Ý tưởng' : 'Continue: Enter Idea'}</span>
-              <ArrowRight className="w-6 h-6" />
+              <ArrowRight className="w-6 h-6 stroke-[3]" />
             </button>
           )}
 
@@ -1271,36 +1442,36 @@ export const AiVideoTab: React.FC = () => {
             <button
               onClick={() => setWizardStep('3.1')}
               disabled={!prompt.trim()}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 disabled:opacity-50 text-white font-extrabold text-lg shadow-xl shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 disabled:opacity-50 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <span>{isVietnamese ? 'Tiếp tục: Chọn Giọng đọc' : 'Continue: Voice Setup'}</span>
-              <ArrowRight className="w-6 h-6" />
+              <ArrowRight className="w-6 h-6 stroke-[3]" />
             </button>
           )}
 
           {wizardStep === '3.1' && (
             <button
               onClick={() => {
-                if (audioSourceTab === 'upload') {
+                if (audioMode === 'upload') {
                   setWizardStep('4');
                 } else {
                   setWizardStep('3.2');
                 }
               }}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-lg shadow-xl shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <span>{isVietnamese ? 'Tiếp tục: Kịch bản & Đối tượng' : 'Continue: Script & Audience'}</span>
-              <ArrowRight className="w-6 h-6" />
+              <ArrowRight className="w-6 h-6 stroke-[3]" />
             </button>
           )}
 
           {wizardStep === '3.2' && (
             <button
               onClick={() => setWizardStep('4')}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-lg shadow-xl shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <span>{isVietnamese ? 'Tiếp tục: Tỷ lệ & Khởi tạo' : 'Continue: Ratio & Launch'}</span>
-              <ArrowRight className="w-6 h-6" />
+              <ArrowRight className="w-6 h-6 stroke-[3]" />
             </button>
           )}
 
@@ -1308,16 +1479,16 @@ export const AiVideoTab: React.FC = () => {
             <button
               onClick={handleCreateVideo}
               disabled={isCreatingProject}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 disabled:opacity-50 text-white font-extrabold text-lg shadow-xl shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 disabled:opacity-50 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               {isCreatingProject ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-950" />
                   <span>{isVietnamese ? 'Đang tạo phân cảnh AI...' : 'Creating Motion Video...'}</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-6 h-6 text-yellow-300 fill-current" />
+                  <Sparkles className="w-6 h-6 text-slate-950 fill-current" />
                   <span>{isVietnamese ? 'Tạo Video Hoạt Họa AI Ngay ✨' : 'Generate AI Video Now ✨'}</span>
                 </>
               )}
