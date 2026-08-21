@@ -37,3 +37,6 @@ ios/App/Pods/
 ios/App/Podfile.lock
 ios/App/build/
 ios/App/DerivedData/
+
+# Local Documentation
+docs/
