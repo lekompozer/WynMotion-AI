@@ -17,8 +17,11 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   deleteUser,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
 } from 'firebase/auth';
 import { wordaiAuth, wordaiGoogleProvider } from '@/lib/wordai-firebase';
+import { linkAppleAccount } from '@/services/appleAuthService';
 
 export interface UserSubscription {
   points_balance: number;
@@ -45,6 +48,15 @@ interface WordaiAuthContextType {
   refreshSubscription: () => Promise<void>;
 }
 
+const isCapacitorNative = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const cap = (window as any).Capacitor;
+  const byMethod = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+  const byPlatform = !!(cap && typeof cap.getPlatform === 'function' && cap.getPlatform() !== 'web');
+  const byProtocol = window.location.protocol === 'capacitor:';
+  return byMethod || byPlatform || byProtocol;
+};
+
 const WordaiAuthContext = createContext<WordaiAuthContextType | undefined>(undefined);
 
 export function mapFirebaseAuthError(code: string): string {
@@ -59,8 +71,9 @@ export function mapFirebaseAuthError(code: string): string {
     'auth/network-request-failed': 'Lỗi kết nối mạng. Kiểm tra internet.',
     'auth/user-disabled': 'Tài khoản này đã bị vô hiệu hóa.',
     'auth/operation-not-allowed': 'Phương thức đăng nhập này chưa được bật trên server.',
+    'auth/popup-blocked': 'Trình duyệt chặn mở cửa sổ đăng nhập.',
   };
-  return messages[code] || `Lỗi đăng nhập (${code})`;
+  return messages[code] || `Lỗi xác thực (${code})`;
 }
 
 export function WordaiAuthProvider({ children }: { children: ReactNode }) {
@@ -93,15 +106,17 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     getRedirectResult(wordaiAuth)
       .then((res) => {
         if (res?.user) {
+          console.log('[WynMotion Auth] getRedirectResult user:', res.user.email);
           setUser(res.user);
           fetchUserSubscription(res.user);
         }
       })
       .catch((err) => {
-        console.warn('Redirect sign-in error:', err);
+        console.warn('⚠️ getRedirectResult failed:', err);
       });
 
     const unsubscribe = onAuthStateChanged(wordaiAuth, (currentUser) => {
+      console.log('[WynMotion Auth] onAuthStateChanged:', currentUser?.email || 'null');
       setUser(currentUser);
       setIsInitialized(true);
       if (currentUser) {
@@ -117,17 +132,84 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     return await user.getIdToken(true);
   };
 
+  /**
+   * Google Sign-In with Native iOS SDK on Capacitor + Web fallback
+   */
   const signIn = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
+
+    console.log('[WynMotion Auth] 🔐 signIn triggered. isCapacitorNative:', isCapacitorNative());
+
+    // ── Capacitor iOS / Android Native Flow ──
+    if (isCapacitorNative()) {
+      try {
+        console.log('[WynMotion Auth] Loading @capacitor-firebase/authentication...');
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+
+        console.log('[WynMotion Auth] Calling native FirebaseAuthentication.signInWithGoogle()...');
+        const NATIVE_TIMEOUT_MS = 45_000;
+        const result = await Promise.race([
+          FirebaseAuthentication.signInWithGoogle(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('NATIVE_SIGNIN_TIMEOUT')), NATIVE_TIMEOUT_MS),
+          ),
+        ]);
+
+        console.log('[WynMotion Auth] Native Google result:', JSON.stringify(result));
+
+        if (!result.credential?.idToken) {
+          throw new Error('Không nhận được idToken từ Google Native Auth');
+        }
+
+        const credential = GoogleAuthProvider.credential(
+          result.credential.idToken,
+          result.credential.accessToken ?? undefined,
+        );
+
+        console.log('[WynMotion Auth] Calling signInWithCredential on JS Firebase...');
+        const fbResult = await signInWithCredential(wordaiAuth, credential);
+        console.log('[WynMotion Auth] ✅ Google Native sign-in success:', fbResult.user.email);
+
+        setUser(fbResult.user);
+        await fetchUserSubscription(fbResult.user);
+        setIsLoading(false);
+        return true;
+      } catch (capErr: any) {
+        console.error('[WynMotion Auth] ❌ Native Google Sign-In failed:', capErr);
+        const msg = capErr?.message || capErr?.localizedMessage || String(capErr);
+
+        if (msg.includes('cancel') || msg.includes('Cancel') || msg.includes('cancelled')) {
+          console.log('[WynMotion Auth] User cancelled Google Sign-in');
+        } else if (msg.includes('NATIVE_SIGNIN_TIMEOUT')) {
+          alert('Đăng nhập Google bị gián đoạn (hết thời gian chờ). Vui lòng thử lại.');
+        } else {
+          alert(
+            `Đăng nhập Google thất bại trên iOS.\n\n` +
+              `Chi tiết lỗi: ${msg}\n\n` +
+              `Kiểm tra: GoogleService-Info.plist và URL Types REVERSED_CLIENT_ID trong Xcode.`,
+          );
+        }
+        setIsLoading(false);
+        return false;
+      }
+    }
+
+    // ── Web Fallback Flow ──
     try {
+      console.log('[WynMotion Auth] Web path: using signInWithPopup');
       const res = await signInWithPopup(wordaiAuth, wordaiGoogleProvider);
       setUser(res.user);
       await fetchUserSubscription(res.user);
+      setIsLoading(false);
       return true;
     } catch (err: any) {
-      // Fallback to redirect if popup is blocked
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+      console.error('[WynMotion Auth] Web Google Sign-In error:', err);
+      if (
+        err.code === 'auth/popup-blocked' ||
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request'
+      ) {
         try {
           await signInWithRedirect(wordaiAuth, wordaiGoogleProvider);
           return true;
@@ -135,17 +217,78 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
           setError(mapFirebaseAuthError(rErr.code || ''));
         }
       } else {
-        setError(mapFirebaseAuthError(err.code || ''));
+        const errorText = mapFirebaseAuthError(err.code || '');
+        setError(errorText);
+        alert(`Lỗi đăng nhập Google: ${errorText} (${err.message})`);
       }
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
+  /**
+   * Apple Sign-In with Native iOS AuthenticationServices on Capacitor + Web fallback
+   */
   const signInWithApple = async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
+
+    console.log('[WynMotion Auth] 🍎 signInWithApple triggered. isCapacitorNative:', isCapacitorNative());
+
+    // ── Capacitor iOS Native Flow ──
+    if (isCapacitorNative()) {
+      try {
+        console.log('[WynMotion Auth] Loading @capacitor-firebase/authentication for Apple...');
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+
+        console.log('[WynMotion Auth] Calling native FirebaseAuthentication.signInWithApple()...');
+        const result = await FirebaseAuthentication.signInWithApple();
+        console.log('[WynMotion Auth] Native Apple result:', JSON.stringify(result));
+
+        const appleIdToken = result?.credential?.idToken || (result?.credential as any)?.identityToken || '';
+        const appleAuthCode = result?.credential?.authorizationCode ?? '';
+        const appleNonce = result?.credential?.nonce ?? '';
+        const appleEmail = result?.user?.email || (result as any)?.additionalUserInfo?.profile?.email || '';
+
+        if (!appleIdToken) {
+          throw new Error('Không nhận được Apple identityToken');
+        }
+
+        const provider = new OAuthProvider('apple.com');
+        const firebaseCred = provider.credential({
+          idToken: appleIdToken,
+          rawNonce: appleNonce || undefined,
+        });
+
+        console.log('[WynMotion Auth] Syncing Apple credential with JS Firebase...');
+        const fbResult = await signInWithCredential(wordaiAuth, firebaseCred);
+        console.log('[WynMotion Auth] ✅ Apple Native sign-in success:', fbResult.user.email);
+
+        setUser(fbResult.user);
+        await fetchUserSubscription(fbResult.user);
+
+        // Fire-and-forget backend link
+        linkAppleAccount(appleIdToken, appleAuthCode || undefined)
+          .then((r) => console.log('🍎 Backend Apple Link OK:', r))
+          .catch((e) => console.warn('🍎 Backend Apple Link warning:', e?.message));
+
+        setIsLoading(false);
+        return;
+      } catch (capErr: any) {
+        console.error('[WynMotion Auth] ❌ Native Apple Sign-In failed:', capErr);
+        const msg = capErr?.message || capErr?.localizedMessage || String(capErr);
+
+        if (msg.includes('cancel') || msg.includes('Cancel') || msg.includes('cancelled') || msg.includes('1001')) {
+          console.log('[WynMotion Auth] User cancelled Apple Sign-in');
+        } else {
+          alert(`Đăng nhập Apple thất bại: ${msg}`);
+        }
+        setIsLoading(false);
+        throw capErr;
+      }
+    }
+
+    // ── Web Fallback Flow ──
     try {
       const provider = new OAuthProvider('apple.com');
       provider.addScope('email');
@@ -153,11 +296,14 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
       const res = await signInWithPopup(wordaiAuth, provider);
       setUser(res.user);
       await fetchUserSubscription(res.user);
-    } catch (err: any) {
-      setError(mapFirebaseAuthError(err.code || ''));
-      throw err;
-    } finally {
       setIsLoading(false);
+    } catch (err: any) {
+      console.error('[WynMotion Auth] Web Apple Sign-In error:', err);
+      const errorText = mapFirebaseAuthError(err.code || '');
+      setError(errorText);
+      alert(`Lỗi đăng nhập Apple: ${errorText} (${err.message})`);
+      setIsLoading(false);
+      throw err;
     }
   };
 
@@ -187,7 +333,6 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
       }
       if (res.user) {
         await sendEmailVerification(res.user);
-        // Sign out immediately so user must verify email before full login
         await firebaseSignOut(wordaiAuth);
       }
     } catch (err: any) {
@@ -251,8 +396,12 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     await deleteUser(wordaiAuth.currentUser);
     setUser(null);
     setUserSubscription({ points_balance: 100 });
-    try { localStorage.clear(); } catch {}
-    try { sessionStorage.clear(); } catch {}
+    try {
+      localStorage.clear();
+    } catch {}
+    try {
+      sessionStorage.clear();
+    } catch {}
   };
 
   return (
