@@ -10,6 +10,11 @@ interface AppContextType {
   isVietnamese: boolean;
   setIsVietnamese: (val: boolean) => void;
   toggleLanguage: () => void;
+  isDark: boolean;
+  setIsDark: (val: boolean) => void;
+  toggleTheme: () => void;
+  isStudioOpen: boolean;
+  setIsStudioOpen: (val: boolean) => void;
   credits: number;
   setCredits: React.Dispatch<React.SetStateAction<number>>;
   t: (vi: string, en: string) => string;
@@ -20,14 +25,28 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<WynMotionTab>('video');
   const [isVietnamese, setIsVietnamese] = useState(true);
+  const [isDark, setIsDark] = useState(true); // Default to Dark Theme for WynMotion
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [credits, setCredits] = useState(100);
 
-  // Load language preference
+  // Load language & theme preference
   useEffect(() => {
     try {
       const savedLang = localStorage.getItem('wynmotion_lang');
       if (savedLang) {
         setIsVietnamese(savedLang === 'vi');
+      }
+
+      const savedTheme = localStorage.getItem('wynmotion_theme');
+      if (savedTheme !== null) {
+        const dark = savedTheme === 'dark';
+        setIsDark(dark);
+        if (dark) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } else {
+        // Default to dark mode for WynMotion CapCut style
+        setIsDark(true);
+        document.documentElement.classList.add('dark');
       }
     } catch {}
   }, []);
@@ -37,6 +56,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const next = !prev;
       try {
         localStorage.setItem('wynmotion_lang', next ? 'vi' : 'en');
+      } catch {}
+      return next;
+    });
+  };
+
+  const toggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('wynmotion_theme', next ? 'dark' : 'light');
+        if (next) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
       } catch {}
       return next;
     });
@@ -52,6 +83,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isVietnamese,
         setIsVietnamese,
         toggleLanguage,
+        isDark,
+        setIsDark,
+        toggleTheme,
+        isStudioOpen,
+        setIsStudioOpen,
         credits,
         setCredits,
         t,

@@ -35,7 +35,6 @@ import {
   RefreshCw,
   Share2,
   Download,
-  Search,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -159,7 +158,7 @@ export const AUDIO_READING_STYLES = [
 ];
 
 export const AiVideoTab: React.FC = () => {
-  const { isVietnamese, t, setActiveTab } = useApp();
+  const { isVietnamese, isDark, setIsStudioOpen, t, setActiveTab } = useApp();
   const { user } = useWordaiAuth();
 
   // Navigation mode: 'home' (CapCut Hub) vs 'studio' (Full-screen Immersive Creation Flow)
@@ -173,7 +172,7 @@ export const AiVideoTab: React.FC = () => {
 
   // Step 1: Visual Style
   const [visualStyle, setVisualStyle] = useState<
-    'whiteboard_stream_hand' | 'handdrawn_fast_doodle' | 'apple_modern_motion' | 'character_animation'
+    'whiteboard_stream_hand' | 'handdrawn_fast_doodle' | 'apple_modern_motion' | 'character_animation' | null
   >('whiteboard_stream_hand');
   const [characterSubtype, setCharacterSubtype] = useState<'full_character' | 'stickman'>('full_character');
 
@@ -290,6 +289,14 @@ export const AiVideoTab: React.FC = () => {
     }
     setWizardStep('1');
     setViewMode('studio');
+    setIsStudioOpen(true); // Hide external bottom navigation bar
+  };
+
+  const handleExitStudio = () => {
+    if (confirm(isVietnamese ? 'Bạn có chắc muốn thoát về trang chủ?' : 'Exit back to home?')) {
+      setViewMode('home');
+      setIsStudioOpen(false); // Restore bottom navigation bar
+    }
   };
 
   const handleTogglePlayAudio = () => {
@@ -375,7 +382,7 @@ export const AiVideoTab: React.FC = () => {
         audio_url: audioUrl || undefined,
         duration_sec: audioDurationSec,
         aspect_ratio: aspectRatio,
-        visual_style: visualStyle,
+        visual_style: visualStyle || 'whiteboard_stream_hand',
         character_subtype: visualStyle === 'character_animation' ? characterSubtype : undefined,
         language_code: selectedLang,
         bg_color: targetBg,
@@ -621,7 +628,7 @@ export const AiVideoTab: React.FC = () => {
   // 2. FULL-SCREEN CREATION STUDIO (100% Web Parity & Gemini Big Mobile UI)
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 bg-[#070A0F] text-slate-100 flex flex-col select-none overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-[#070A0F] text-slate-100 flex flex-col select-none overflow-hidden">
       {/* Hidden Audio Player */}
       <audio
         ref={audioPlayerRef}
@@ -637,10 +644,10 @@ export const AiVideoTab: React.FC = () => {
       />
 
       {/* ── Top Bar ── */}
-      <header className="pt-12 pb-3 px-5 bg-slate-950/90 border-b border-slate-850 backdrop-blur-xl flex items-center justify-between">
+      <header className="pt-12 pb-3 px-5 bg-slate-950/95 border-b border-slate-850 backdrop-blur-xl flex items-center justify-between">
         <button
           onClick={() => {
-            if (wizardStep === '1') setViewMode('home');
+            if (wizardStep === '1') handleExitStudio();
             else if (wizardStep === '2') setWizardStep('1');
             else if (wizardStep === '3.1') setWizardStep('2');
             else if (wizardStep === '3.2') setWizardStep('3.1');
@@ -666,11 +673,7 @@ export const AiVideoTab: React.FC = () => {
         </div>
 
         <button
-          onClick={() => {
-            if (confirm(isVietnamese ? 'Bạn có chắc muốn thoát về trang chủ?' : 'Exit back to home?')) {
-              setViewMode('home');
-            }
-          }}
+          onClick={handleExitStudio}
           className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white active:scale-95 transition-all"
         >
           <X className="w-6 h-6" />
@@ -908,7 +911,7 @@ export const AiVideoTab: React.FC = () => {
                 onClick={() => setAudioMode('agent')}
                 className={`py-3.5 px-4 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all ${
                   audioMode === 'agent'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25 font-black'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -920,7 +923,7 @@ export const AiVideoTab: React.FC = () => {
                 onClick={() => setAudioMode('upload')}
                 className={`py-3.5 px-4 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all ${
                   audioMode === 'upload'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25 font-black'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -1019,7 +1022,7 @@ export const AiVideoTab: React.FC = () => {
                           onClick={() => setVietnameseRegion(reg.id as any)}
                           className={`py-1.5 text-xs font-bold rounded-xl transition-all ${
                             vietnameseRegion === reg.id
-                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                              ? 'bg-cyan-500 text-slate-950 font-black shadow-sm'
                               : 'text-slate-400 hover:text-white'
                           }`}
                         >
@@ -1425,74 +1428,148 @@ export const AiVideoTab: React.FC = () => {
         )}
       </main>
 
-      {/* ── Fixed Bottom Action Bar (Gemini App Huge Button Style) ── */}
+      {/* ── Fixed Bottom Action Bar with 2 Buttons (Back & Next) and conditional lighting ── */}
       <footer className="p-5 pb-9 bg-slate-950/95 border-t border-slate-850 backdrop-blur-xl">
         <div className="max-w-lg mx-auto w-full">
+          {/* STEP 1 FOOTER */}
           {wizardStep === '1' && (
-            <button
-              onClick={() => setWizardStep('2')}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <span>{isVietnamese ? 'Tiếp tục: Nhập Ý tưởng' : 'Continue: Enter Idea'}</span>
-              <ArrowRight className="w-6 h-6 stroke-[3]" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleExitStudio}
+                className="w-28 h-15 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{isVietnamese ? 'Trang chủ' : 'Home'}</span>
+              </button>
+
+              <button
+                onClick={() => setWizardStep('2')}
+                disabled={!visualStyle}
+                className={`flex-1 h-15 py-4.5 rounded-2xl text-slate-950 font-black text-base shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
+                  visualStyle
+                    ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 shadow-cyan-500/25 cursor-pointer'
+                    : 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
+                }`}
+              >
+                <span>{isVietnamese ? 'Tiếp tục: Nhập Ý tưởng' : 'Continue: Enter Idea'}</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
+            </div>
           )}
 
+          {/* STEP 2 FOOTER */}
           {wizardStep === '2' && (
-            <button
-              onClick={() => setWizardStep('3.1')}
-              disabled={!prompt.trim()}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 disabled:opacity-50 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <span>{isVietnamese ? 'Tiếp tục: Chọn Giọng đọc' : 'Continue: Voice Setup'}</span>
-              <ArrowRight className="w-6 h-6 stroke-[3]" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setWizardStep('1')}
+                className="w-28 h-15 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{isVietnamese ? 'Quay lại' : 'Back'}</span>
+              </button>
+
+              <button
+                onClick={() => setWizardStep('3.1')}
+                disabled={!prompt.trim()}
+                className={`flex-1 h-15 py-4.5 rounded-2xl text-slate-950 font-black text-base shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
+                  prompt.trim()
+                    ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 shadow-cyan-500/25 cursor-pointer'
+                    : 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
+                }`}
+              >
+                <span>{isVietnamese ? 'Tiếp tục: Chọn Giọng đọc' : 'Continue: Voice Setup'}</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
+            </div>
           )}
 
+          {/* STEP 3.1 FOOTER */}
           {wizardStep === '3.1' && (
-            <button
-              onClick={() => {
-                if (audioMode === 'upload') {
-                  setWizardStep('4');
-                } else {
-                  setWizardStep('3.2');
-                }
-              }}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <span>{isVietnamese ? 'Tiếp tục: Kịch bản & Đối tượng' : 'Continue: Script & Audience'}</span>
-              <ArrowRight className="w-6 h-6 stroke-[3]" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setWizardStep('2')}
+                className="w-28 h-15 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{isVietnamese ? 'Quay lại' : 'Back'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (audioMode === 'upload') {
+                    setWizardStep('4');
+                  } else {
+                    setWizardStep('3.2');
+                  }
+                }}
+                disabled={audioMode === 'agent' && !selectedVoiceName}
+                className={`flex-1 h-15 py-4.5 rounded-2xl text-slate-950 font-black text-base shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
+                  (audioMode === 'agent' && selectedVoiceName) || audioMode === 'upload'
+                    ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 shadow-cyan-500/25 cursor-pointer'
+                    : 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
+                }`}
+              >
+                <span>{isVietnamese ? 'Tiếp tục: Kịch bản' : 'Continue: Script'}</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
+            </div>
           )}
 
+          {/* STEP 3.2 FOOTER */}
           {wizardStep === '3.2' && (
-            <button
-              onClick={() => setWizardStep('4')}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <span>{isVietnamese ? 'Tiếp tục: Tỷ lệ & Khởi tạo' : 'Continue: Ratio & Launch'}</span>
-              <ArrowRight className="w-6 h-6 stroke-[3]" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setWizardStep('3.1')}
+                className="w-28 h-15 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{isVietnamese ? 'Quay lại' : 'Back'}</span>
+              </button>
+
+              <button
+                onClick={() => setWizardStep('4')}
+                disabled={scriptMode === 'custom' && !customNarrationText.trim()}
+                className={`flex-1 h-15 py-4.5 rounded-2xl text-slate-950 font-black text-base shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
+                  scriptMode === 'ai_auto' || (scriptMode === 'custom' && customNarrationText.trim())
+                    ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 shadow-cyan-500/25 cursor-pointer'
+                    : 'bg-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
+                }`}
+              >
+                <span>{isVietnamese ? 'Tiếp tục: Tỷ lệ & Tạo' : 'Continue: Ratio & Launch'}</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
+            </div>
           )}
 
+          {/* STEP 4 FOOTER */}
           {wizardStep === '4' && (
-            <button
-              onClick={handleCreateVideo}
-              disabled={isCreatingProject}
-              className="w-full h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 disabled:opacity-50 text-slate-950 font-black text-lg shadow-xl shadow-cyan-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              {isCreatingProject ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-950" />
-                  <span>{isVietnamese ? 'Đang tạo phân cảnh AI...' : 'Creating Motion Video...'}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-6 h-6 text-slate-950 fill-current" />
-                  <span>{isVietnamese ? 'Tạo Video Hoạt Họa AI Ngay ✨' : 'Generate AI Video Now ✨'}</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => (audioMode === 'upload' ? setWizardStep('3.1') : setWizardStep('3.2'))}
+                className="w-28 h-15 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{isVietnamese ? 'Quay lại' : 'Back'}</span>
+              </button>
+
+              <button
+                onClick={handleCreateVideo}
+                disabled={isCreatingProject}
+                className="flex-1 h-15 py-4.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 disabled:opacity-50 text-slate-950 font-black text-base shadow-xl shadow-cyan-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isCreatingProject ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin text-slate-950" />
+                    <span>{isVietnamese ? 'Đang tạo phân cảnh AI...' : 'Creating Motion Video...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-6 h-6 text-slate-950 fill-current" />
+                    <span>{isVietnamese ? 'Tạo Video Hoạt Họa AI Ngay ✨' : 'Generate AI Video Now ✨'}</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
       </footer>

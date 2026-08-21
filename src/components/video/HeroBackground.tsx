@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bell, Crown, Sparkles, User as UserIcon } from 'lucide-react';
+import { Bell, Crown, Sparkles, User as UserIcon, ChevronRight } from 'lucide-react';
 
 interface HeroBackgroundProps {
   children?: React.ReactNode;
@@ -78,7 +78,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
             </span>
           </button>
 
-          {/* Right: Notifications & Profile Avatar */}
+          {/* Right: Notifications & Profile Avatar with Chevron indicator */}
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenNotifications}
@@ -90,17 +90,20 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
 
             <button
               onClick={onOpenProfile}
-              className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-400 border border-white/40 flex items-center justify-center overflow-hidden active:scale-95 transition-all shadow-md"
+              className="flex items-center gap-1 pl-1 pr-1.5 py-1 rounded-full bg-white/10 hover:bg-white/15 active:scale-95 transition-all backdrop-blur-md border border-white/20 text-white shadow-sm"
             >
-              {userAvatarUrl ? (
-                <img
-                  src={userAvatarUrl}
-                  alt={userDisplayName || 'User'}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <UserIcon className="w-4 h-4 text-white" />
-              )}
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 border border-white/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {userAvatarUrl ? (
+                  <img
+                    src={userAvatarUrl}
+                    alt={userDisplayName || 'User'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                )}
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-cyan-300" />
             </button>
           </div>
         </div>
