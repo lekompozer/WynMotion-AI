@@ -43,7 +43,19 @@ export default function WynMotionMobileApp() {
           {activeTab === 'audio' && <AiAudioTab />}
           {activeTab === 'images' && <AiImagesTab />}
           {activeTab === 'library' && (
-            <LibraryTab onOpenProject={handleOpenProjectFromLibrary} />
+            <LibraryTab
+              onOpenProject={handleOpenProjectFromLibrary}
+              onUseAudioInVideo={(audioUrl, audioName) => {
+                try {
+                  sessionStorage.setItem('wynmotion_use_audio_url', audioUrl);
+                  sessionStorage.setItem('wynmotion_use_audio_name', audioName);
+                } catch {}
+                window.dispatchEvent(
+                  new CustomEvent('wynmotion:use-audio', { detail: { audioUrl, audioName } })
+                );
+                setActiveTab('video');
+              }}
+            />
           )}
         </div>
       </main>

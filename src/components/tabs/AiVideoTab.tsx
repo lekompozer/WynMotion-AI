@@ -337,8 +337,29 @@ export const AiVideoTab: React.FC = () => {
       if (projectId) openProjectInEditor(projectId);
     };
     window.addEventListener('wynmotion:open-project', handleOpenProjectEvent);
+
+    // Listen for use-audio events dispatched from Library tab
+    const handleUseAudioEvent = (e: Event) => {
+      const { audioUrl: url, audioName: name } = (e as CustomEvent).detail || {};
+      if (url) {
+        setAudioUrl(url);
+        setUploadedFileName(name || 'Library Audio');
+        if (name && !prompt) {
+          setPrompt(name.replace(/\.[^/.]+$/, ''));
+        }
+        const temp = new Audio(url);
+        temp.addEventListener('loadedmetadata', () => {
+          if (temp.duration && isFinite(temp.duration)) {
+            setAudioDurationSec(temp.duration);
+          }
+        });
+      }
+    };
+    window.addEventListener('wynmotion:use-audio', handleUseAudioEvent);
+
     return () => {
       window.removeEventListener('wynmotion:open-project', handleOpenProjectEvent);
+      window.removeEventListener('wynmotion:use-audio', handleUseAudioEvent);
     };
   }, []);
 
