@@ -14,11 +14,11 @@ export default function WynMotionMobileApp() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col antialiased">
-      {/* 1. iOS App Header (Safe-area adapted) */}
-      <AppHeader />
+      {/* 1. iOS App Header — only shown on Audio, Images, Library tabs. Video tab has its own CapCut Hero top bar */}
+      {activeTab !== 'video' && <AppHeader />}
 
       {/* 2. Active Tab Content with Smooth Transition */}
-      <main className="flex-1 pb-24 pt-2 overflow-y-auto">
+      <main className="flex-1 pb-24 overflow-y-auto">
         <div key={activeTab} className="animate-in fade-in-50 duration-200">
           {activeTab === 'video' && <AiVideoTab />}
           {activeTab === 'audio' && <AiAudioTab />}
