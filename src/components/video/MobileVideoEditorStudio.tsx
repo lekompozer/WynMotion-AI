@@ -6,7 +6,8 @@
  * Mobile-optimized Video Editor:
  * - 44px Safe-area Notch / Dynamic Island Header Padding
  * - Complete 6-style dynamic rendering via MobileDynamicSceneRenderer
- * - Full parity with web editor layout & algorithms
+ * - Robust Playback Timer with Per-Scene Relative Progress
+ * - Audio playback synchronization
  * - Large, beautiful, high-contrast typography matching Video Creation Modals
  * - Bottom Sheet from below: Assets | Audio & BGM | Canvas+Script Settings
  * - AI Assistant Left Slide-over Drawer (WynRise AI)
@@ -28,21 +29,17 @@ import {
   X,
   Eye,
   EyeOff,
-  ChevronDown,
   Upload,
   Loader2,
   RefreshCw,
   Check,
   Layers,
   Volume2,
-  VolumeX,
   Edit3,
   Type,
   Globe,
   Send,
   Mic,
-  Maximize2,
-  Film,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
@@ -70,6 +67,16 @@ function formatTimecode(sec: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
+export function getSceneDuration(s: MotionScene): number {
+  if (s.duration_sec && s.duration_sec > 0) return s.duration_sec;
+  if ((s as any).duration && (s as any).duration > 0) return (s as any).duration;
+  if ((s as any).duration_frames && (s as any).duration_frames > 0) return (s as any).duration_frames / 30;
+  if (s.end_time_sec && s.start_time_sec !== undefined && s.end_time_sec > s.start_time_sec) {
+    return s.end_time_sec - s.start_time_sec;
+  }
+  return 5; // Default 5 seconds per scene
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 interface MobileVideoEditorStudioProps {
@@ -84,7 +91,20 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
   const { isDark, isVietnamese, t } = useApp();
 
   // ── Scenes State ──
-  const [scenes, setScenes] = useState<MotionScene[]>(project.scenes || []);
+  const [scenes, setScenes] = useState<MotionScene[]>(
+    project.scenes && project.scenes.length > 0
+      ? project.scenes
+      : [
+          {
+            scene_id: 'scene_1',
+            order: 1,
+            title: project.title || 'Scene 1',
+            duration_sec: 5,
+            actions: [],
+            voice_transcript: project.prompt || 'WynMotion AI Scene',
+          },
+        ]
+  );
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
   const [bgColor, setBgColor] = useState(project.bg_color || '#FAF7EF');
   const [aspectRatio, setAspectRatio] = useState(project.aspect_ratio || '16:9');
@@ -121,22 +141,39 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeScene: MotionScene | null = scenes[activeSceneIndex] ?? null;
-  const totalDurationSec = scenes.reduce((sum, s) => sum + (s.duration_sec || 0), 0);
 
-  // ── Playback timer ──
+  // Calculate cumulative duration
+  const totalDurationSec = Math.max(
+    5,
+    project.duration_sec || scenes.reduce((sum, s) => sum + getSceneDuration(s), 0)
+  );
+
+  // Calculate relative time inside current active scene
+  let prevScenesElapsed = 0;
+  for (let i = 0; i < activeSceneIndex; i++) {
+    prevScenesElapsed += getSceneDuration(scenes[i]);
+  }
+  const currentSceneRelativeTime = Math.max(0, currentTimeSec - prevScenesElapsed);
+  const activeSceneDuration = activeScene ? getSceneDuration(activeScene) : 5;
+
+  // ── Playback timer loop ──
   useEffect(() => {
     if (isPlaying) {
+      const intervalMs = 50;
+      const stepSec = intervalMs / 1000; // 0.05s
+
       playbackTimerRef.current = setInterval(() => {
         setCurrentTimeSec((prev) => {
-          const next = prev + 0.1;
+          const next = prev + stepSec;
           if (next >= totalDurationSec) {
             setIsPlaying(false);
             return 0;
           }
-          // Auto-advance active scene
+          // Auto-advance active scene index
           let elapsed = 0;
           for (let i = 0; i < scenes.length; i++) {
-            elapsed += scenes[i].duration_sec || 0;
+            const d = getSceneDuration(scenes[i]);
+            elapsed += d;
             if (next < elapsed) {
               setActiveSceneIndex(i);
               break;
@@ -144,7 +181,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           }
           return next;
         });
-      }, 100);
+      }, intervalMs);
     } else {
       if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
     }
@@ -153,12 +190,27 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
     };
   }, [isPlaying, totalDurationSec, scenes]);
 
+  // Sync audio tag with playback state
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.currentTime = currentTimeSec;
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying]);
+
   // ── Scene click (timeline) ──
   const handleSceneClick = (index: number) => {
     setActiveSceneIndex(index);
     let elapsed = 0;
-    for (let i = 0; i < index; i++) elapsed += scenes[i].duration_sec || 0;
+    for (let i = 0; i < index; i++) elapsed += getSceneDuration(scenes[i]);
     setCurrentTimeSec(elapsed);
+    if (audioRef.current) {
+      audioRef.current.currentTime = elapsed;
+    }
   };
 
   // ── Update scene field with auto-save ──
@@ -215,17 +267,28 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
         isDark ? 'bg-[#080B10] text-white' : 'bg-[#FAFAFC] text-slate-900'
       }`}
     >
+      {/* Hidden audio element for project audio sync */}
+      {project.audio_url && (
+        <audio
+          ref={audioRef}
+          src={project.audio_url}
+          preload="auto"
+          onEnded={() => setIsPlaying(false)}
+        />
+      )}
+
       {/* ═══════════════════════════════════════════════════════════
           1. COMPACT HEADER (Pushed down 44px for iPhone Notch / Dynamic Island)
       ═══════════════════════════════════════════════════════════ */}
       <header
-        className={`flex-shrink-0 flex items-center justify-between px-4 pb-2.5 pt-[max(env(safe-area-inset-top,44px),44px)] border-b z-30 transition-colors ${
+        className={`flex-shrink-0 flex items-center justify-between px-4 pb-3 border-b z-30 transition-colors ${
           isDark
             ? 'border-slate-800/80 bg-[#0F131C]/95 backdrop-blur-md'
             : 'border-slate-200 bg-white/95 backdrop-blur-md shadow-sm'
         }`}
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
-        {/* Back */}
+        {/* Back Button */}
         <button
           type="button"
           onClick={onBack}
@@ -238,7 +301,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        {/* Title */}
+        {/* Title & Metadata */}
         <div className="flex flex-col items-center min-w-0 flex-1 mx-2">
           <h1
             className={`text-sm font-black truncate max-w-full tracking-tight ${
@@ -257,7 +320,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
-          {/* Settings button */}
+          {/* Settings Button */}
           <button
             type="button"
             onClick={() => setIsSettingsSheetOpen(true)}
@@ -270,7 +333,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             <Settings className="w-5 h-5" />
           </button>
 
-          {/* Export MP4 */}
+          {/* Export MP4 Button */}
           <button
             type="button"
             onClick={handleExportMP4}
@@ -319,8 +382,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
               <MobileDynamicSceneRenderer
                 scene={activeScene}
                 visualStyle={project.visual_style || 'whiteboard_stream_hand'}
-                currentTimeSec={currentTimeSec}
-                totalSceneDurationSec={activeScene.duration_sec || 5}
+                currentTimeSec={currentSceneRelativeTime}
+                totalSceneDurationSec={activeSceneDuration}
                 bgColor={bgColor}
                 aspectRatio={aspectRatio}
                 textLangMode={textLangMode}
@@ -373,10 +436,16 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             </div>
           </div>
 
-          {/* Play / Pause Toggle */}
+          {/* Play / Pause Toggle Button */}
           <button
             type="button"
-            onClick={() => setIsPlaying((v) => !v)}
+            onClick={() => {
+              if (currentTimeSec >= totalDurationSec) {
+                setCurrentTimeSec(0);
+                setActiveSceneIndex(0);
+              }
+              setIsPlaying((v) => !v);
+            }}
             className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/25 active:scale-90 transition-all"
           >
             {isPlaying ? (
@@ -409,6 +478,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
             {scenes.map((s, idx) => {
               const isActive = idx === activeSceneIndex;
               const thumb = getSceneThumb(s);
+              const dur = getSceneDuration(s);
               return (
                 <button
                   key={s.scene_id || idx}
@@ -440,7 +510,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                         isActive ? 'text-cyan-400' : isDark ? 'text-slate-300' : 'text-slate-700'
                       }`}
                     >
-                      S{idx + 1}: {Math.round(s.duration_sec || 0)}s
+                      S{idx + 1}: {Math.round(dur)}s
                     </span>
                   </div>
                 </button>
@@ -532,6 +602,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                 {scenes.map((s, idx) => {
                   const isActive = idx === activeSceneIndex;
                   const thumb = getSceneThumb(s);
+                  const dur = getSceneDuration(s);
                   return (
                     <button
                       key={s.scene_id || idx}
@@ -573,7 +644,7 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
                           Scene {idx + 1}: {s.title}
                         </div>
                         <div className="text-xs text-slate-400 mt-0.5">
-                          {Math.round(s.duration_sec || 0)}s duration
+                          {Math.round(dur)}s duration
                         </div>
                       </div>
                       {isActive && <Check className="w-5 h-5 text-cyan-400 flex-shrink-0" />}
@@ -894,9 +965,10 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
           >
             {/* Header pushed down for notch */}
             <div
-              className={`flex items-center justify-between px-4 pb-3 pt-[max(env(safe-area-inset-top,44px),44px)] border-b flex-shrink-0 ${
+              className={`flex items-center justify-between px-4 pb-3 border-b flex-shrink-0 ${
                 isDark ? 'border-slate-800 bg-[#121624]' : 'border-slate-100 bg-white'
               }`}
+              style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
