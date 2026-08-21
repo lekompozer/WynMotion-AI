@@ -8,29 +8,43 @@ if (!fs.existsSync(podspecPath)) {
   process.exit(0);
 }
 
-let content = fs.readFileSync(podspecPath, 'utf8');
+const patchedPodspec = `require 'json'
 
-// Check if it's already patched
-if (!content.includes("lite.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'") || !content.includes("google.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'")) {
-  console.log('🔧 Patching CapacitorFirebaseAuthentication.podspec to associate source_files with subspecs...');
-  
-  // 1. Remove the root s.source_files declaration if present
-  content = content.replace(/s\.source_files\s*=\s*'ios\/Plugin\/\*\*\/\*\.\{swift,h,m,c,cc,mm,cpp\}'\n?/g, "");
+package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
-  // 2. Add source_files inside Lite subspec
-  content = content.replace(
-    /s\.subspec\s+'Lite'\s+do\s+\|lite\|\n([\s\S]*?)end/g,
-    "s.subspec 'Lite' do |lite|\n    # Default subspec that does not contain optional third party dependencies.\n    lite.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'\n  end"
-  );
+Pod::Spec.new do |s|
+  s.name = 'CapacitorFirebaseAuthentication'
+  s.version = package['version']
+  s.summary = package['description']
+  s.license = package['license']
+  s.homepage = package['repository']['url']
+  s.author = package['author']
+  s.source = { :git => package['repository']['url'], :tag => s.version.to_s }
+  s.ios.deployment_target  = '14.0'
+  s.dependency 'Capacitor'
+  s.dependency 'FirebaseAuth', '~> 11.7.0'
+  s.swift_version = '5.1'
+  s.static_framework = true
+  s.default_subspec = 'Lite'
 
-  // 3. Add source_files inside Google subspec
-  content = content.replace(
-    /s\.subspec\s+'Google'\s+do\s+\|google\|\n([\s\S]*?)end/g,
-    "s.subspec 'Google' do |google|\n    google.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'\n    google.xcconfig = { 'OTHER_SWIFT_FLAGS' => '$(inherited) -DRGCFA_INCLUDE_GOOGLE' }\n    google.dependency 'GoogleSignIn', '~> 7.1.0'\n  end"
-  );
+  s.subspec 'Lite' do |lite|
+    # Default subspec that does not contain optional third party dependencies.
+    lite.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'
+  end
 
-  fs.writeFileSync(podspecPath, content, 'utf8');
-  console.log('✅ CapacitorFirebaseAuthentication.podspec patched successfully!');
-} else {
-  console.log('⏭️ CapacitorFirebaseAuthentication.podspec is already patched.');
-}
+  s.subspec 'Google' do |google|
+    google.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'
+    google.xcconfig = { 'OTHER_SWIFT_FLAGS' => '$(inherited) -DRGCFA_INCLUDE_GOOGLE' }
+    google.dependency 'GoogleSignIn', '~> 7.1.0'
+  end
+
+  s.subspec 'Facebook' do |facebook|
+    facebook.xcconfig = { 'OTHER_SWIFT_FLAGS' => '$(inherited) -DRGCFA_INCLUDE_FACEBOOK' }
+    facebook.dependency 'FBSDKCoreKit', '18.0.0'
+    facebook.dependency 'FBSDKLoginKit', '18.0.0'
+  end
+end
+`;
+
+fs.writeFileSync(podspecPath, patchedPodspec, 'utf8');
+console.log('✅ CapacitorFirebaseAuthentication.podspec cleanly patched with Google subspec!');
