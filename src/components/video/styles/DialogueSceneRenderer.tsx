@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useCurrentFrame, useVideoConfig, spring } from '../RemotionEngine';
+import { useCurrentFrame, useVideoConfig, spring, interpolate } from '../RemotionEngine';
 import { DynamicSceneData } from '../DynamicSceneRenderer';
 
 export interface StyleRendererProps {
@@ -16,20 +16,16 @@ export interface StyleRendererProps {
 
 export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
   scene,
-  showSceneCards = true,
-  showWhisperSubs = true,
-  onCardClick,
-  onSubsClick,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
   const isPortrait = height > width || height === 1920;
+  const isSquare = width === height;
   const duration = scene.duration_frames || (scene.duration_sec ? Math.round(scene.duration_sec * fps) : 150);
-  const displaySummary = scene.summary_text || scene.voice_transcript || scene.title || 'Nội dung phân cảnh';
-  const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'Đối Thoại';
+  const displaySummary = scene.summary_text || scene.voice_transcript || scene.title || 'Dialogue';
 
-  // 1. Parse dialogue lines from transcript or summary
+  // 1. Parse dialogue turns from transcript
   const rawTranscript = scene.voice_transcript || displaySummary || '';
   const dialogueLines: Array<{ speaker: 'A' | 'B'; name: string; text: string }> = [];
 
@@ -75,305 +71,147 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
   const activeLine = dialogueLines[lineIndex] || dialogueLines[0];
   const isSpeakerA = activeLine.speaker === 'A';
 
-  const bubbleSpring = spring({
-    frame: frame % Math.max(1, Math.floor(duration / totalLines)),
+  // Spring animation for speech bubble entrance
+  const lineFrameDuration = Math.max(1, Math.floor(duration / totalLines));
+  const currentLineLocalFrame = frame % lineFrameDuration;
+  const bubbleScale = spring({
+    frame: currentLineLocalFrame,
     fps,
-    config: { damping: 14, stiffness: 150 },
+    config: { damping: 12, stiffness: 180 },
   });
 
-  const floatOffset = Math.sin((frame / fps) * 2 * Math.PI * 0.4) * 5;
+  // Subtle breathing Ken Burns zoom for background
+  const kenBurns = interpolate(frame, [0, duration], [1.0, 1.03], {
+    extrapolateRight: 'clamp',
+  });
 
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
-        backgroundColor: '#0B0F19',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        fontFamily: "system-ui, -apple-system, 'SF Pro Display', 'Inter', sans-serif",
-        overflow: 'hidden',
+        backgroundColor: '#0F172A',
         position: 'relative',
+        overflow: 'hidden',
         userSelect: 'none',
-        color: '#FFFFFF',
-        padding: isPortrait ? '16px 12px 14px' : '20px 24px 16px',
-        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      {/* Ambient Studio Lighting */}
+      {/* 1. FULL-BLEED SCENE BACKDROP IMAGE (1 Single Continuous Illustration) */}
+      {scene.image_url ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            zIndex: 1,
+          }}
+        >
+          <img
+            src={scene.image_url}
+            alt={scene.title || 'Dialogue Scene'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transform: `scale(${kenBurns})`,
+              transformOrigin: 'center center',
+              transition: 'transform 0.1s linear',
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: '#1E293B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1,
+          }}
+        >
+          <span style={{ fontSize: 40 }}>🎭</span>
+        </div>
+      )}
+
+      {/* 2. UNIFIED COMIC SPEECH BUBBLE OVERLAY */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage:
-            'radial-gradient(circle at 20% 30%, rgba(6, 182, 212, 0.18) 0%, transparent 50%), radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.18) 0%, transparent 50%)',
-          pointerEvents: 'none',
-          zIndex: 1,
-        }}
-      />
-
-      {/* TOP BAR: Scene Title & Dialogue Mode Badge */}
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           zIndex: 20,
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 20,
-            padding: isPortrait ? '4px 12px' : '6px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          }}
-        >
-          <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#06B6D4', boxShadow: '0 0 8px #06B6D4' }} />
-          <span style={{ fontSize: isPortrait ? 11 : 12, fontWeight: 800, color: '#F1F5F9' }}>
-            {scene.title || primaryKeyword}
-          </span>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: 'rgba(168, 85, 247, 0.15)',
-            border: '1px solid rgba(168, 85, 247, 0.4)',
-            borderRadius: 20,
-            padding: isPortrait ? '3px 10px' : '4px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <span style={{ fontSize: isPortrait ? 10 : 11, fontWeight: 800, color: '#C084FC' }}>
-            💬 Dialogue Scene
-          </span>
-        </div>
-      </div>
-
-      {/* MIDDLE: 1 High-Quality AI Scene Backdrop Illustration Image */}
-      <div
-        style={{
-          flex: 1,
-          width: '100%',
-          maxHeight: isPortrait ? '52%' : '58%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          zIndex: 10,
-          transform: `translateY(${floatOffset}px)`,
-          margin: isPortrait ? '8px 0' : '10px 0',
-        }}
-      >
-        {scene.image_url ? (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              borderRadius: isPortrait ? 20 : 24,
-              overflow: 'hidden',
-              border: '1.5px solid rgba(255, 255, 255, 0.18)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.2)',
-              position: 'relative',
-              backgroundColor: '#1E293B',
-            }}
-          >
-            <img
-              src={scene.image_url}
-              alt={scene.title}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'linear-gradient(to top, rgba(11, 15, 25, 0.6) 0%, transparent 60%)',
-              }}
-            />
-          </div>
-        ) : (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              borderRadius: 20,
-              backgroundColor: 'rgba(30, 41, 59, 0.5)',
-              border: '1.5px dashed rgba(255, 255, 255, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 32 }}>🎭</span>
-            <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>{displaySummary}</span>
-          </div>
-        )}
-      </div>
-
-      {/* BOTTOM: Dynamic Speech Bubble & Dual Speaker Avatars */}
-      <div
-        style={{
-          width: '100%',
+          pointerEvents: 'none',
+          padding: isPortrait ? '24px 16px' : isSquare ? '28px 24px' : '36px 48px',
           display: 'flex',
           flexDirection: 'column',
-          gap: isPortrait ? 8 : 10,
-          zIndex: 30,
-          flexShrink: 0,
+          justifyContent: isPortrait ? 'flex-end' : 'center',
+          alignItems: isSpeakerA ? 'flex-start' : 'flex-end',
+          boxSizing: 'border-box',
         }}
       >
-        {/* Active Speech Bubble */}
         <div
           style={{
-            width: '100%',
-            transform: `scale(${Math.max(0, bubbleSpring)})`,
+            maxWidth: isPortrait ? '85%' : '52%',
+            transform: `scale(${Math.max(0, bubbleScale)})`,
             transformOrigin: isSpeakerA ? 'bottom left' : 'bottom right',
-            backgroundColor: isSpeakerA ? 'rgba(8, 51, 68, 0.92)' : 'rgba(59, 7, 100, 0.92)',
-            backdropFilter: 'blur(20px)',
-            border: isSpeakerA ? '1.5px solid rgba(6, 182, 212, 0.6)' : '1.5px solid rgba(168, 85, 247, 0.6)',
-            borderRadius: isPortrait ? 18 : 20,
-            padding: isPortrait ? '10px 14px' : '12px 18px',
-            boxShadow: isSpeakerA
-              ? '0 12px 30px rgba(6, 182, 212, 0.25)'
-              : '0 12px 30px rgba(168, 85, 247, 0.25)',
+            backgroundColor: '#FFFFFF',
+            borderRadius: isPortrait ? 20 : 24,
+            padding: isPortrait ? '14px 18px' : '18px 26px',
+            boxShadow:
+              '0 16px 36px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+            border: '2.5px solid #0F172A',
             position: 'relative',
+            marginBottom: isPortrait ? 24 : 0,
+            marginTop: isPortrait ? 0 : 40,
+            transition: 'all 0.15s ease-out',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 13 }}>{isSpeakerA ? '👩' : '👨'}</span>
-            <span
-              style={{
-                fontSize: isPortrait ? 11 : 12,
-                fontWeight: 900,
-                color: isSpeakerA ? '#22D3EE' : '#D8B4FE',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}
-            >
-              {activeLine.name}
-            </span>
-          </div>
+          {/* Comic Tail */}
           <div
             style={{
-              fontSize: isPortrait ? 13 : 15,
-              fontWeight: 700,
-              color: '#FFFFFF',
+              position: 'absolute',
+              bottom: -14,
+              [isSpeakerA ? 'left' : 'right']: isPortrait ? 24 : 36,
+              width: 0,
+              height: 0,
+              borderLeft: '12px solid transparent',
+              borderRight: '12px solid transparent',
+              borderTop: '14px solid #0F172A',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: -11,
+              [isSpeakerA ? 'left' : 'right']: isPortrait ? 25 : 37,
+              width: 0,
+              height: 0,
+              borderLeft: '11px solid transparent',
+              borderRight: '11px solid transparent',
+              borderTop: '13px solid #FFFFFF',
+            }}
+          />
+
+          {/* Dialogue Text */}
+          <div
+            style={{
+              fontSize: isPortrait ? 17 : isSquare ? 20 : 22,
+              fontWeight: 800,
+              color: '#0F172A',
               lineHeight: 1.35,
+              fontFamily:
+                "system-ui, -apple-system, 'SF Pro Rounded', 'Nunito', 'Segoe UI', sans-serif",
+              letterSpacing: -0.3,
+              wordBreak: 'break-word',
             }}
           >
-            "{activeLine.text}"
-          </div>
-        </div>
-
-        {/* Dual Character Avatar Controls */}
-        <div
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-          }}
-        >
-          {/* Speaker A */}
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: isPortrait ? '6px 10px' : '8px 14px',
-              borderRadius: 16,
-              backgroundColor: isSpeakerA ? 'rgba(6, 182, 212, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-              border: isSpeakerA ? '1.5px solid #06B6D4' : '1px solid rgba(255, 255, 255, 0.08)',
-              boxShadow: isSpeakerA ? '0 0 16px rgba(6, 182, 212, 0.4)' : 'none',
-              transform: `scale(${isSpeakerA ? 1.03 : 0.97})`,
-              opacity: isSpeakerA ? 1 : 0.6,
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div
-              style={{
-                width: isPortrait ? 28 : 34,
-                height: isPortrait ? 28 : 34,
-                borderRadius: '50%',
-                backgroundColor: '#0891B2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: isPortrait ? 14 : 18,
-                boxShadow: isSpeakerA ? '0 0 10px #06B6D4' : 'none',
-              }}
-            >
-              👩
-            </div>
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontSize: isPortrait ? 11 : 12, fontWeight: 900, color: '#FFFFFF', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                {dialogueLines.find((l) => l.speaker === 'A')?.name || 'Nhân vật A'}
-              </div>
-              <div style={{ fontSize: 9, color: '#67E8F9', fontWeight: 700 }}>
-                {isSpeakerA ? '🎙️ Đang nói...' : 'Lắng nghe'}
-              </div>
-            </div>
-          </div>
-
-          {/* Speaker B */}
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: 8,
-              padding: isPortrait ? '6px 10px' : '8px 14px',
-              borderRadius: 16,
-              backgroundColor: !isSpeakerA ? 'rgba(168, 85, 247, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-              border: !isSpeakerA ? '1.5px solid #A855F7' : '1px solid rgba(255, 255, 255, 0.08)',
-              boxShadow: !isSpeakerA ? '0 0 16px rgba(168, 85, 247, 0.4)' : 'none',
-              transform: `scale(${!isSpeakerA ? 1.03 : 0.97})`,
-              opacity: !isSpeakerA ? 1 : 0.6,
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div style={{ textAlign: 'right', overflow: 'hidden' }}>
-              <div style={{ fontSize: isPortrait ? 11 : 12, fontWeight: 900, color: '#FFFFFF', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                {dialogueLines.find((l) => l.speaker === 'B')?.name || 'Nhân vật B'}
-              </div>
-              <div style={{ fontSize: 9, color: '#C084FC', fontWeight: 700 }}>
-                {!isSpeakerA ? '🎙️ Đang nói...' : 'Lắng nghe'}
-              </div>
-            </div>
-            <div
-              style={{
-                width: isPortrait ? 28 : 34,
-                height: isPortrait ? 28 : 34,
-                borderRadius: '50%',
-                backgroundColor: '#9333EA',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: isPortrait ? 14 : 18,
-                boxShadow: !isSpeakerA ? '0 0 10px #A855F7' : 'none',
-              }}
-            >
-              👨
-            </div>
+            {activeLine.text}
           </div>
         </div>
       </div>
