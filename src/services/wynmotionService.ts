@@ -155,6 +155,10 @@ export const wynmotionService = {
     dialogue_turns?: DialogueTurn[];
     scenario_preset?: string;
     language_code?: string;
+    max_chars?: number;
+    target_audience?: string;
+    script_style?: string;
+    llm_engine?: string;
   }): Promise<{
     script: string;
     audio_url: string;

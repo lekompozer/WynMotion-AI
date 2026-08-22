@@ -606,7 +606,11 @@ export const AiVideoTab: React.FC = () => {
           speaker_a: speakerA,
           speaker_b: speakerB,
           dialogue_turns: scriptMode === 'custom' ? dialogueTurns : undefined,
-          language_code: speakerA.language_code || 'en-US',
+          language_code: speakerA.language_code || selectedLang || 'en-US',
+          max_chars: maxChars,
+          target_audience: targetAudience,
+          script_style: scriptStyle,
+          llm_engine: 'deepseek',
         });
         const targetAudioUrl = res.audio_url || (res as any).file_url || (res as any).public_url;
         setScriptText(res.script);
