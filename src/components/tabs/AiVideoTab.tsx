@@ -447,30 +447,78 @@ export const AiVideoTab: React.FC = () => {
     { project_id: '', id: '0704-01', title: isVietnamese ? 'Phỏng vấn xin việc' : 'Job Interview Scene', duration_sec: 50 },
   ];
 
-  // Dynamic Prompt Suggestions based on selected style
+  // Dynamic Prompt Suggestions tailored for each of the 6 visual styles
   const getPromptSuggestions = () => {
-    if (visualStyle === 'dialogue_scene') {
-      return [
-        t('☕ Hội thoại gọi món & trò chuyện tại quán cà phê', '☕ Ordering espresso & chatting in a cozy coffee shop'),
-        t('💼 Phỏng vấn xin việc vị trí Marketing Manager', '💼 Job Interview for Marketing Manager position'),
-        t('✈️ Hỏi đường & check-in tại sân bay quốc tế', '✈️ Asking for directions & checking in at airport'),
-        t('🎓 Thảo luận bài tập nhóm về Trí tuệ nhân tạo', '🎓 Classroom group discussion about Artificial Intelligence'),
-      ];
+    switch (visualStyle) {
+      case 'whiteboard_stream_hand':
+        return [
+          t('🧠 Sơ đồ tư duy 5 bước xây dựng kỷ luật bản thân & làm chủ thời gian', '🧠 5-step mindmap for building self-discipline & mastering time management'),
+          t('💰 6 chiếc hũ tài chính cá nhân giúp quản lý tiền bạc thông minh', '💰 The 6-Jar money management system for smart personal finance'),
+          t('📚 Tóm tắt trực quan quy trình bán hàng 7 bước từ tiếp cận đến chốt đơn', '📚 Visual summary of the 7-step sales funnel from prospecting to closing'),
+          t('🌱 Mô phỏng chu trình quang hợp & tuần hoàn nước trong tự nhiên', '🌱 Visual whiteboard walkthrough of photosynthesis & water cycle in nature'),
+        ];
+      case 'handdrawn_fast_doodle':
+        return [
+          t('☕ Thói quen buổi sáng 15 phút giúp khởi đầu ngày mới tràn đầy năng lượng', '☕ 15-minute mindful morning routine to kickstart a productive day'),
+          t('📖 Hành trình vượt qua nỗi sợ thất bại của một nhà sáng lập khởi nghiệp', '📖 An inspiring journey of a startup founder overcoming the fear of failure'),
+          t('🌿 4 nguyên tắc sống tối giản (Minimalism) để tâm trí luôn an yên', '🌿 4 principles of minimalism for a peaceful and clutter-free mind'),
+          t('🎨 Câu chuyện đằng sau sự ra đời của những bức danh họa thế giới', '🎨 The story behind the creation of world-famous master paintings'),
+        ];
+      case 'apple_modern_motion':
+        return [
+          t('⚡ Giới thiệu tính năng AI Agent tự động hóa quy trình làm việc với đồ thị 3D', '⚡ Introducing Autonomous AI Agents workflow automation with 3D UI cards'),
+          t('📊 Báo cáo tăng trưởng doanh thu SaaS Q3 với bảng điều khiển trực quan', '📊 SaaS Q3 revenue growth report with interactive dashboard analytics'),
+          t('🔒 Kiến trúc bảo mật đám mây Zero-Trust & cơ chế mã hóa đầu cuối', '🔒 Zero-Trust cloud security architecture & end-to-end encryption mechanics'),
+          t('🚀 Pitching sản phẩm công nghệ FinTech mới đến các nhà đầu tư mạo hiểm', '🚀 High-impact investor pitch for a next-gen FinTech mobile application'),
+        ];
+      case 'dialogue_scene':
+        return [
+          t('☕ Hội thoại đối đáp gọi món & làm quen bạn mới tại quán cà phê', '☕ Conversational ordering & making new friends at a cozy coffee shop'),
+          t('💼 Buổi phỏng vấn xin việc vị trí Senior Product Manager tại công ty công nghệ', '💼 Job interview roleplay for Senior Product Manager at a tech company'),
+          t('✈️ Tình huống hỏi đường, đổi vé & check-in tại sân bay quốc tế', '✈️ Airport roleplay: asking for directions, rebooking & flight check-in'),
+          t('🎓 Tranh luận giữa 2 chuyên gia về tương lai của Generative AI và con người', '🎓 Expert podcast debate: The future of Generative AI vs human workforce'),
+        ];
+      case 'science_explainer':
+        return [
+          t('🚀 Định luật II Newton (F = ma) và bài toán chuyển động ném vật trong không gian', "🚀 Newton's Second Law (F = ma) and projectile motion trajectory vectors"),
+          t('🧬 Cấu trúc xoắn kép DNA và cơ chế phiên mã, nhân đôi tế bào sinh học', '🧬 DNA double helix structure and cellular transcription replication mechanics'),
+          t('📐 Chứng minh Định lý Pytago (a² + b² = c²) bằng mô hình hình học động', '📐 Geometric visual proof of the Pythagorean Theorem (a² + b² = c²)'),
+          t('⚗️ Quá trình hình thành liên kết cộng hóa trị phân tử nước (2H₂ + O₂ → 2H₂O)', '⚗️ Covalent bond formation in water molecules (2H₂ + O₂ → 2H₂O)'),
+        ];
+      case 'character_animation':
+        return [
+          t('🦊 Chú cáo WynMotion hướng dẫn 3 bí quyết học từ vựng tiếng Anh nhớ lâu', '🦊 WynMotion Fox Mascot presents 3 secrets to supercharge English vocabulary retention'),
+          t('🏃 Anh chàng Người Que khám phá 7 kỳ quan thế giới qua lăng kính hài hước', '🏃 Stickman humorous adventures exploring the 7 wonders of the world'),
+          t('🌟 Chú robot nhỏ dũng cảm vượt qua thử thách để tìm thấy viên pin năng lượng mặt trời', '🌟 A brave little robot overcoming obstacles to discover clean solar energy'),
+          t('🦸‍♂️ Biệt đội siêu nhân nhí giải cứu khu rừng xanh khỏi ô nhiễm môi trường', '🦸‍♂️ Superhero kids mascot team rescuing the green forest from pollution'),
+        ];
+      default:
+        return [
+          t('🌱 Mô phỏng chu trình quang hợp của cây xanh trong tự nhiên', '🌱 Simulate the photosynthesis process of green plants in nature'),
+          t('🤖 Giải thích nguyên lý hoạt động của Trí tuệ nhân tạo (AI)', '🤖 Explain how Artificial Intelligence (AI) works step by step'),
+          t('📈 Giới thiệu tính năng vượt trội của nền tảng phần mềm mới với đồ thị 3D', '📈 Introduce cutting-edge software features with 3D charts'),
+          t('🚀 Câu chuyện truyền cảm hứng của chú robot nhỏ vượt qua thử thách', '🚀 Inspiring journey of a little robot overcoming obstacles'),
+        ];
     }
-    if (visualStyle === 'science_explainer') {
-      return [
-        t('🚀 Định luật II Newton (F = ma) và chuyển động ném vật', "🚀 Newton's Second Law (F = ma) and projectile motion vectors"),
-        t('📐 Chứng minh Định lý Pytago (a² + b² = c²) bằng hình học động', '📐 Geometric visual proof of Pythagorean Theorem (a² + b² = c²)'),
-        t('⚗️ Quá trình hình thành liên kết cộng hóa trị phân tử nước H₂O', '⚗️ Covalent bond formation in water molecule (2H₂ + O₂ → 2H₂O)'),
-        t('🧬 Cấu trúc xoắn kép DNA và cơ chế nhân đôi tế bào', '🧬 DNA double helix structure and cellular replication mechanics'),
-      ];
+  };
+
+  const getPromptPlaceholder = () => {
+    switch (visualStyle) {
+      case 'whiteboard_stream_hand':
+        return t('Ví dụ: Sơ đồ tư duy 5 bước quản lý thời gian hiệu quả, phác thảo từng mục trên bảng trắng...', 'E.g., 5-step time management mindmap sketched out on a whiteboard...');
+      case 'handdrawn_fast_doodle':
+        return t('Ví dụ: Câu chuyện thói quen buổi sáng 15 phút vẽ phác chì loang màu nước nhẹ nhàng...', 'E.g., A mindful 15-minute morning routine told through watercolor sketches...');
+      case 'apple_modern_motion':
+        return t('Ví dụ: Giới thiệu tính năng AI Agent mới với các thẻ kính mờ glassmorphism và biểu đồ 3D...', 'E.g., Introducing new AI Agent features with frosted glass cards & 3D charts...');
+      case 'dialogue_scene':
+        return t('Ví dụ: Hội thoại phỏng vấn xin việc giữa Nhà tuyển dụng và Ứng viên tại quán cà phê...', 'E.g., Job interview dialogue between recruiter and candidate at a coffee shop...');
+      case 'science_explainer':
+        return t('Ví dụ: Giải thích Định luật II Newton (F = ma) kèm công thức và vector chuyển động STEM...', 'E.g., Explaining Newton\'s Second Law (F = ma) with formulas and STEM vectors...');
+      case 'character_animation':
+        return t('Ví dụ: Chú cáo WynMotion / Người Que hướng dẫn mẹo học tiếng Anh siêu tốc...', 'E.g., WynMotion Fox mascot or Stickman presenting rapid language learning tips...');
+      default:
+        return t('Nhập chủ đề chi tiết...', 'Enter detailed topic...');
     }
-    return [
-      t('🌱 Mô phỏng chu trình quang hợp của cây xanh trong tự nhiên', '🌱 Simulate the photosynthesis process of green plants in nature'),
-      t('🤖 Giải thích nguyên lý hoạt động của Trí tuệ nhân tạo (AI)', '🤖 Explain how Artificial Intelligence (AI) works step by step'),
-      t('📈 Giới thiệu tính năng vượt trội của nền tảng phần mềm mới với đồ thị 3D', '📈 Introduce cutting-edge software features with 3D charts'),
-      t('🚀 Câu chuyện truyền cảm hứng của chú robot nhỏ vượt qua thử thách', '🚀 Inspiring journey of a little robot overcoming obstacles'),
-    ];
   };
 
   const handleLangChange = (langCode: string) => {
@@ -1195,7 +1243,7 @@ export const AiVideoTab: React.FC = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={5}
-                placeholder={t('Nhập chủ đề chi tiết...', 'Enter detailed topic...')}
+                placeholder={getPromptPlaceholder()}
                 className={`w-full p-4 rounded-3xl border text-base font-semibold outline-none resize-none transition-colors ${
                   isDark ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400' : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
                 }`}
