@@ -136,6 +136,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(true);
   const [cardPosY, setCardPosY] = useState<TextPosition>('middle');
   const [subsPosY, setSubsPosY] = useState<TextPosition>('bottom');
+  const [swapSpeakers, setSwapSpeakers] = useState<boolean>(false);
   const [textLangMode, setTextLangMode] = useState<TextLangMode>('vi');
 
   // Audio track switching & animation sync
@@ -426,6 +427,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
               showWhisperSubs={showWhisperSubs}
               cardPosY={cardPosY}
               subsPosY={subsPosY}
+              swapSpeakers={swapSpeakers}
               onCardClick={() => setActiveBottomSheet('canvas')}
               onSubsClick={() => setActiveBottomSheet('canvas')}
             />
@@ -927,6 +929,26 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                             })}
                           </div>
                         </div>
+
+                        {(project.visual_style as string) === 'dialogue_scene' && (
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setSwapSpeakers((prev) => !prev)}
+                              className={`w-full py-2.5 px-3 rounded-2xl border text-xs font-black flex items-center justify-center gap-2 transition-all ${
+                                swapSpeakers
+                                  ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                  : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                              }`}
+                            >
+                              <span>🔄</span>
+                              <span>{t('Đổi Bên Nhân Vật (Trái ⇋ Phải)', 'Swap Character Sides (Left ⇋ Right)')}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
+                                {swapSpeakers ? t('Đã Đổi', 'Swapped') : t('Mặc Định', 'Default')}
+                              </span>
+                            </button>
+                          </div>
+                        )}
 
                         {activeScene && (
                           <div className="space-y-2 pt-2">

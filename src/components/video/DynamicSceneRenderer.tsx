@@ -36,6 +36,7 @@ export interface DynamicSceneData {
   code?: string;
   duration_sec?: number;
   dialogue_turns?: any[];
+  spatial_layout?: any;
   annotation?: {
     canvas?: { width: number; height: number };
     elements?: Array<{
@@ -57,6 +58,7 @@ export interface DynamicSceneRendererProps {
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';
   subsPosY?: 'top' | 'middle' | 'bottom';
+  swapSpeakers?: boolean;
   onCardClick?: () => void;
   onSubsClick?: () => void;
 }
@@ -111,16 +113,18 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   showWhisperSubs = true,
   cardPosY = 'middle',
   subsPosY = 'bottom',
+  swapSpeakers = false,
   onCardClick,
   onSubsClick,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const { bgColor, aspectRatio } = useRemotion();
+  const { fps, durationInFrames, width, height } = useVideoConfig();
+  const { bgColor } = useRemotion();
 
-  const duration = scene.duration_frames || (scene.duration_sec ? Math.round(scene.duration_sec * fps) : 150);
-  const isPortrait = aspectRatio === '9:16';
-  const isSquare = aspectRatio === '1:1';
+  const isPortrait = height > width || height === 1920;
+  const isSquare = width === height;
+  const duration = scene.duration_frames || durationInFrames || 150;
+
   const vbWidth = isPortrait ? 1080 : isSquare ? 1080 : 1920;
   const vbHeight = isPortrait ? 1920 : isSquare ? 1080 : 1080;
 
@@ -133,7 +137,24 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'WynMotion AI';
   const secondaryKeywords = scene.highlight_keywords?.slice(1, 4) || [];
 
-  // 1. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE
+  // 1. Check Modular Style Pipeline Renderer Registry first (e.g. dialogue_scene, apple_modern, science_explainer)
+  const ModularRenderer = getModularStyleRenderer(visualStyle);
+  if (ModularRenderer) {
+    return (
+      <ModularRenderer
+        scene={scene}
+        showSceneCards={showSceneCards}
+        showWhisperSubs={showWhisperSubs}
+        cardPosY={cardPosY}
+        subsPosY={subsPosY}
+        swapSpeakers={swapSpeakers}
+        onCardClick={onCardClick}
+        onSubsClick={onSubsClick}
+      />
+    );
+  }
+
+  // 2. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE
   const EvaluatedComponent = useMemo(() => {
     if (scene.code) {
       return evaluateDynamicSceneCode(scene.code, {
@@ -149,22 +170,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
 
   if (EvaluatedComponent) {
     return <EvaluatedComponent />;
-  }
-
-  // Check Modular Style Pipeline Renderer Registry
-  const ModularRenderer = getModularStyleRenderer(visualStyle);
-  if (ModularRenderer) {
-    return (
-      <ModularRenderer
-        scene={scene}
-        showSceneCards={showSceneCards}
-        showWhisperSubs={showWhisperSubs}
-        cardPosY={cardPosY}
-        subsPosY={subsPosY}
-        onCardClick={onCardClick}
-        onSubsClick={onSubsClick}
-      />
-    );
   }
 
   // Position styles for 2 Layers

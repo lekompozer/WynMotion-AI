@@ -19,6 +19,7 @@ interface DynamicAnimationCompositionProps {
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';
   subsPosY?: 'top' | 'middle' | 'bottom';
+  swapSpeakers?: boolean;
   onCardClick?: () => void;
   onSubsClick?: () => void;
 }
@@ -30,6 +31,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   showWhisperSubs = true,
   cardPosY = 'middle',
   subsPosY = 'bottom',
+  swapSpeakers = false,
   onCardClick,
   onSubsClick,
 }) => {
@@ -51,40 +53,37 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
           fontWeight: 700,
         }}
       >
-        Chưa có Scene nào được nạp...
+        No scenes available
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        flex: 1,
-        width: '100%',
-        height: '100%',
-        backgroundColor: bgColor || (visualStyle === 'vector_motion' || visualStyle === 'apple_modern_motion' || visualStyle === 'tech_ui' ? '#090A10' : '#FDFBF7'),
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {scenes.map((scene) => (
-        <Sequence
-          key={scene.scene_id}
-          from={scene.start_frame || 0}
-          durationInFrames={scene.duration_frames || 150}
-        >
-          <DynamicSceneRenderer
-            scene={scene}
-            visualStyle={visualStyle}
-            showSceneCards={showSceneCards}
-            showWhisperSubs={showWhisperSubs}
-            cardPosY={cardPosY}
-            subsPosY={subsPosY}
-            onCardClick={onCardClick}
-            onSubsClick={onSubsClick}
-          />
-        </Sequence>
-      ))}
-    </div>
+    <>
+      {scenes.map((scene, index) => {
+        const from = scene.start_frame || 0;
+        const durationInFrames = scene.duration_frames || 150;
+
+        return (
+          <Sequence
+            key={scene.scene_id || index}
+            from={from}
+            durationInFrames={durationInFrames}
+          >
+            <DynamicSceneRenderer
+              scene={scene}
+              visualStyle={visualStyle}
+              showSceneCards={showSceneCards}
+              showWhisperSubs={showWhisperSubs}
+              cardPosY={cardPosY}
+              subsPosY={subsPosY}
+              swapSpeakers={swapSpeakers}
+              onCardClick={onCardClick}
+              onSubsClick={onSubsClick}
+            />
+          </Sequence>
+        );
+      })}
+    </>
   );
 };
