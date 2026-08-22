@@ -85,6 +85,17 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
     extrapolateRight: 'clamp',
   });
 
+  // Typewriter streaming text animation synced with line duration
+  const fullText = activeLine.text;
+  const textTypingProgress = Math.min(
+    1,
+    Math.max(0, (currentLineLocalFrame - 4) / Math.max(1, lineFrameDuration * 0.82))
+  );
+  const revealedCharCount = Math.floor(textTypingProgress * fullText.length);
+  const revealedText = fullText.slice(0, revealedCharCount);
+  const unrevealedText = fullText.slice(revealedCharCount);
+  const isTyping = textTypingProgress < 1 && revealedCharCount > 0;
+
   return (
     <div
       style={{
@@ -198,7 +209,7 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
             }}
           />
 
-          {/* Dialogue Text */}
+          {/* Dialogue Text with Live Streaming Typewriter Animation */}
           <div
             style={{
               fontSize: isPortrait ? 17 : isSquare ? 20 : 22,
@@ -211,7 +222,22 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
               wordBreak: 'break-word',
             }}
           >
-            {activeLine.text}
+            <span>{revealedText}</span>
+            {isTyping && (
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 2.5,
+                  height: '0.9em',
+                  backgroundColor: '#0284C7',
+                  marginLeft: 2,
+                  verticalAlign: 'middle',
+                  opacity: frame % 8 < 5 ? 1 : 0,
+                }}
+              />
+            )}
+            {/* Invisible ghost text prevents bubble jitter/resizing */}
+            <span style={{ opacity: 0 }}>{unrevealedText}</span>
           </div>
         </div>
       </div>
