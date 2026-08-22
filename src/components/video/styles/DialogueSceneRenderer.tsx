@@ -222,6 +222,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
           <img
             src={scene.image_url}
             alt={scene.title || 'Dialogue Scene'}
+            draggable={false}
             style={{
               width: '100%',
               height: '100%',
@@ -229,6 +230,10 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
               transform: `scale(${kenBurns})`,
               transformOrigin: 'center center',
               transition: 'transform 0.1s linear',
+              pointerEvents: 'none',
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
             }}
           />
         </div>

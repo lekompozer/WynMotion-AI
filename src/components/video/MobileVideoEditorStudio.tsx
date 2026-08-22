@@ -166,19 +166,11 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const videoStageRef = useRef<HTMLDivElement>(null);
   const [isDraggingBubble, setIsDraggingBubble] = useState(false);
 
-  const handleBubblePointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation();
-    try {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch (err) {}
-    setIsDraggingBubble(true);
-  };
-
-  const handleBubblePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingBubble || !videoStageRef.current || !activeScene) return;
+  const calculateTopPctFromClientY = (clientY: number) => {
+    if (!videoStageRef.current || !activeScene) return;
     const rect = videoStageRef.current.getBoundingClientRect();
     if (rect.height <= 0) return;
-    const relativeY = e.clientY - rect.top;
+    const relativeY = clientY - rect.top;
     const pct = Math.max(10, Math.min(78, Math.round((relativeY / rect.height) * 100)));
     updateScene(activeScene.scene_id, {
       bubble_custom_layout: {
@@ -188,6 +180,19 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     });
   };
 
+  const handleBubblePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (err) {}
+    setIsDraggingBubble(true);
+  };
+
+  const handleBubblePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingBubble) return;
+    calculateTopPctFromClientY(e.clientY);
+  };
+
   const handleBubblePointerUp = (e: React.PointerEvent) => {
     if (isDraggingBubble) {
       setIsDraggingBubble(false);
@@ -195,6 +200,27 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
       } catch (err) {}
     }
+  };
+
+  // Native iOS Touch Handlers for 100% responsiveness on Safari/Capacitor
+  const handleBubbleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsDraggingBubble(true);
+    if (e.touches[0]) {
+      calculateTopPctFromClientY(e.touches[0].clientY);
+    }
+  };
+
+  const handleBubbleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (e.touches[0]) {
+      calculateTopPctFromClientY(e.touches[0].clientY);
+    }
+  };
+
+  const handleBubbleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsDraggingBubble(false);
   };
 
   const totalDurationSec = durationInFrames / fps;
@@ -498,21 +524,31 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             {/* Interactive Direct Touch/Mouse Drag-to-Move for Dialogue Bubbles */}
             {(project.visual_style as string) === 'dialogue_scene' && activeScene && (
               <div
-                className={`absolute left-1/2 -translate-x-1/2 z-30 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
+                className={`absolute left-1/2 z-40 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
                   isDraggingBubble
-                    ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/50 shadow-2xl bg-cyan-400/10'
-                    : 'hover:ring-1 hover:ring-cyan-400/40'
+                    ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/50 shadow-2xl bg-cyan-400/15'
+                    : 'hover:ring-1 hover:ring-cyan-400/40 active:ring-2 active:ring-cyan-400'
                 }`}
                 style={{
                   top: `${activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%`,
+                  left: '50%',
+                  transform: 'translate(-50%, -6px)',
                   width: `${activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%`,
-                  minHeight: '44px',
-                  height: '65px',
+                  minHeight: '60px',
+                  height: '85px',
+                  touchAction: 'none',
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
                 }}
                 onPointerDown={handleBubblePointerDown}
                 onPointerMove={handleBubblePointerMove}
                 onPointerUp={handleBubblePointerUp}
                 onPointerCancel={handleBubblePointerUp}
+                onTouchStart={handleBubbleTouchStart}
+                onTouchMove={handleBubbleTouchMove}
+                onTouchEnd={handleBubbleTouchEnd}
+                onTouchCancel={handleBubbleTouchEnd}
               />
             )}
 
