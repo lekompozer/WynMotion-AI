@@ -1644,15 +1644,91 @@ export const AiVideoTab: React.FC = () => {
         {wizardStep === '3.3' && (
           <div className="space-y-6 animate-in fade-in duration-150">
             {visualStyle === 'dialogue_scene' ? (
-              /* DIALOGUE SCRIPT EDITOR */
-              <DialogueScriptEditor
-                speakerA={speakerA}
-                speakerB={speakerB}
-                dialogueTurns={dialogueTurns}
-                onChangeTurns={setDialogueTurns}
-                onAiAutoWrite={handleAiAutoWriteDialogue}
-                isGeneratingAi={isGeneratingAudio}
-              />
+              /* DIALOGUE SCRIPT MODE SWITCHER & EDITOR */
+              <div className="space-y-4">
+                {/* Mode switch: AI Auto-Write vs Custom Lines */}
+                <div className={`p-1 rounded-2xl flex items-center border ${
+                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/70 border-slate-300/60'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setScriptMode('ai_auto')}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
+                      scriptMode === 'ai_auto'
+                        ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    ✨ {t('AI Tự Soạn & Ghép Giọng (Tự Động)', 'AI Auto Script & Stitch')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScriptMode('custom')}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
+                      scriptMode === 'custom'
+                        ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    ✏️ {t('Tự Soạn / Chỉnh Từng Câu', 'Custom Dialogue Lines')}
+                  </button>
+                </div>
+
+                {scriptMode === 'ai_auto' ? (
+                  <div className={`p-4 sm:p-5 rounded-3xl border space-y-3 ${
+                    isDark ? 'bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-slate-900/60 border-indigo-800/40' : 'bg-gradient-to-br from-indigo-50 via-purple-50 to-white border-indigo-200 shadow-sm'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-base">
+                        💬
+                      </div>
+                      <div>
+                        <div className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          {t('Chế độ AI Tự Động Phân Vai & Tạo Lời Thoại', 'AI Dual-Speaker Script Auto-Generator')}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {t('AI sẽ tự động sáng tạo 4-6 câu đối đáp tự nhiên bám sát chủ đề.', 'AI will naturally generate 4-6 alternating dialogue lines based on your topic.')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`p-3 rounded-2xl border space-y-2 text-xs ${
+                      isDark ? 'bg-black/30 border-white/5 text-slate-300' : 'bg-white/80 border-slate-200 text-slate-700'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-400">{t('Nhân vật A:', 'Speaker A:')}</span>
+                        <span className="font-extrabold text-cyan-400">
+                          {speakerA.gender === 'female' ? '👩 Nữ' : '👨 Nam'} · {speakerA.name} ({speakerA.voice_name})
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-400">{t('Nhân vật B:', 'Speaker B:')}</span>
+                        <span className="font-extrabold text-purple-400">
+                          {speakerB.gender === 'female' ? '👩 Nữ' : '👨 Nam'} · {speakerB.name} ({speakerB.voice_name})
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2 pt-1 border-t border-white/5">
+                        <span className="font-bold text-slate-400 flex-shrink-0">{t('Chủ đề:', 'Topic:')}</span>
+                        <span className="font-semibold text-right line-clamp-2">{prompt}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-indigo-400/90 font-medium flex items-center gap-1.5">
+                      <span>💡</span>
+                      <span>{t('Bấm nút bên dưới để AI viết kịch bản, thu âm từng vai và ghép thành audio hoàn chỉnh.', 'Click button below to generate dialogue lines, synthesize voices, and stitch.')}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <DialogueScriptEditor
+                    speakerA={speakerA}
+                    speakerB={speakerB}
+                    dialogueTurns={dialogueTurns}
+                    onChangeTurns={setDialogueTurns}
+                    onAiAutoWrite={handleAiAutoWriteDialogue}
+                    isGeneratingAi={isGeneratingAudio}
+                  />
+                )}
+              </div>
             ) : (
               /* STANDARD NARRATION SCRIPT */
               <div className="space-y-4">
