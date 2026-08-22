@@ -102,18 +102,20 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Handle redirect result if on mobile redirect flow
-    getRedirectResult(wordaiAuth)
-      .then((res) => {
-        if (res?.user) {
-          console.log('[WynMotion Auth] getRedirectResult user:', res.user.email);
-          setUser(res.user);
-          fetchUserSubscription(res.user);
-        }
-      })
-      .catch((err) => {
-        console.warn('⚠️ getRedirectResult failed:', err);
-      });
+    // Handle redirect result only on web browser flow (not native iOS)
+    if (!isCapacitorNative()) {
+      getRedirectResult(wordaiAuth)
+        .then((res) => {
+          if (res?.user) {
+            console.log('[WynMotion Auth] getRedirectResult user:', res.user.email);
+            setUser(res.user);
+            fetchUserSubscription(res.user);
+          }
+        })
+        .catch(() => {
+          // Silently ignore redirect result when not initiated
+        });
+    }
 
     const unsubscribe = onAuthStateChanged(wordaiAuth, (currentUser) => {
       console.log('[WynMotion Auth] onAuthStateChanged:', currentUser?.email || 'null');

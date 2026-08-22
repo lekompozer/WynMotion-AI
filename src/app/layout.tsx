@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi">
-      <body className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col antialiased selection:bg-rose-100 selection:text-rose-900">
+    <html lang="vi" suppressHydrationWarning>
+      <body suppressHydrationWarning className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col antialiased selection:bg-rose-100 selection:text-rose-900">
         <WordaiAuthProvider>
           <AppProvider>{children}</AppProvider>
         </WordaiAuthProvider>
