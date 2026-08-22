@@ -296,18 +296,27 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
-              {/* Top-pointing Comic Tail pointing towards speaker mouth/head */}
+              {/* Comic Tail pointing towards speaker head (Downwards when bubble is top/middle) */}
               <div
                 style={{
                   position: 'absolute',
-                  top: -13,
+                  ...(cardPosY === 'bottom'
+                    ? {
+                        top: -13,
+                        borderLeft: '11px solid transparent',
+                        borderRight: '11px solid transparent',
+                        borderBottom: `13px solid ${bubbleBg}`,
+                      }
+                    : {
+                        bottom: -13,
+                        borderLeft: '11px solid transparent',
+                        borderRight: '11px solid transparent',
+                        borderTop: `13px solid ${bubbleBg}`,
+                      }),
                   [isLeftTail ? 'left' : 'right']: isPortrait ? 28 : 42,
                   width: 0,
                   height: 0,
-                  borderLeft: '11px solid transparent',
-                  borderRight: '11px solid transparent',
-                  borderBottom: `13px solid ${bubbleBg}`,
-                  filter: 'drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.2))',
+                  filter: 'drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25))',
                 }}
               />
 
