@@ -73,6 +73,8 @@ export interface MotionScene {
   duration_sec?: number;
   start_time_sec?: number;
   end_time_sec?: number;
+  swap_speakers?: boolean;
+  bubble_custom_layout?: any;
 }
 
 export interface DialogueTurn {
@@ -307,6 +309,27 @@ export const wynmotionService = {
     });
     const data = await res.json();
     if (!res.ok) return { status: 'failed', error: data.detail };
+    return data;
+  },
+
+  /**
+   * Re-design / Re-generate Scene AI Image via Gemini Agent
+   */
+  async redesignSceneImage(params: {
+    project_id: string;
+    scene_id: number | string;
+    user_prompt?: string;
+    aspect_ratio?: '16:9' | '9:16' | '1:1';
+    character_subtype?: string;
+  }): Promise<{ success: boolean; image_url: string; prompt: string; message: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/redesign-scene-image`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tái tạo hình ảnh');
     return data;
   },
 };

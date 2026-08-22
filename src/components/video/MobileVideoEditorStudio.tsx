@@ -37,10 +37,12 @@ import {
   Type,
   Globe,
   Zap,
-  ChevronDown,
   AlignVerticalJustifyStart,
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
+  ChevronDown,
+  Sparkles,
+  Palette,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
@@ -154,9 +156,46 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+  const [isRedesigning, setIsRedesigning] = useState(false);
+  const [redesignPrompt, setRedesignPrompt] = useState('');
 
   // Auto-save debounce
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Video Stage Ref & Direct Drag-to-Move Bubble
+  const videoStageRef = useRef<HTMLDivElement>(null);
+  const [isDraggingBubble, setIsDraggingBubble] = useState(false);
+
+  const handleBubblePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (err) {}
+    setIsDraggingBubble(true);
+  };
+
+  const handleBubblePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingBubble || !videoStageRef.current || !activeScene) return;
+    const rect = videoStageRef.current.getBoundingClientRect();
+    if (rect.height <= 0) return;
+    const relativeY = e.clientY - rect.top;
+    const pct = Math.max(10, Math.min(78, Math.round((relativeY / rect.height) * 100)));
+    updateScene(activeScene.scene_id, {
+      bubble_custom_layout: {
+        ...(activeScene.bubble_custom_layout || {}),
+        customTopPct: pct,
+      },
+    });
+  };
+
+  const handleBubblePointerUp = (e: React.PointerEvent) => {
+    if (isDraggingBubble) {
+      setIsDraggingBubble(false);
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+  };
 
   const totalDurationSec = durationInFrames / fps;
   const currentTimeSec = frame / fps;
@@ -292,6 +331,29 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     }
   };
 
+  // ── Re-design / Re-generate Scene AI Image via Gemini Agent ──
+  const handleRedesignImage = async () => {
+    if (!activeScene) return;
+    setIsRedesigning(true);
+    try {
+      const res = await wynmotionService.redesignSceneImage({
+        project_id: project.project_id,
+        scene_id: activeScene.scene_id,
+        user_prompt: redesignPrompt.trim() || project.prompt,
+        aspect_ratio: aspectRatio,
+        character_subtype: (project as any).character_subtype,
+      });
+      if (res && res.image_url) {
+        updateScene(activeScene.scene_id, { image_url: res.image_url });
+        alert(t('🎨 Đã vẽ lại hình ảnh nhân vật thành công!', '🎨 Image successfully re-designed!'));
+      }
+    } catch (err: any) {
+      alert(err.message || t('Lỗi tạo lại hình ảnh', 'Failed to re-design image'));
+    } finally {
+      setIsRedesigning(false);
+    }
+  };
+
   return (
     <div
       className={`fixed inset-0 z-50 flex flex-col overflow-hidden transition-colors ${
@@ -409,8 +471,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
           {/* Video Stage Box */}
           <div
+            ref={videoStageRef}
             id="wynmotion-video-stage"
-            className="relative shadow-2xl rounded-3xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all"
+            className="relative shadow-2xl rounded-3xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all touch-none select-none"
             style={{
               backgroundColor: bgColor,
               width: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? 'auto' : 'auto',
@@ -431,6 +494,27 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
               onCardClick={() => setActiveBottomSheet('canvas')}
               onSubsClick={() => setActiveBottomSheet('canvas')}
             />
+
+            {/* Interactive Direct Touch/Mouse Drag-to-Move for Dialogue Bubbles */}
+            {(project.visual_style as string) === 'dialogue_scene' && activeScene && (
+              <div
+                className={`absolute left-1/2 -translate-x-1/2 z-30 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
+                  isDraggingBubble
+                    ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/50 shadow-2xl bg-cyan-400/10'
+                    : 'hover:ring-1 hover:ring-cyan-400/40'
+                }`}
+                style={{
+                  top: `${activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%`,
+                  width: `${activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%`,
+                  minHeight: '44px',
+                  height: '65px',
+                }}
+                onPointerDown={handleBubblePointerDown}
+                onPointerMove={handleBubblePointerMove}
+                onPointerUp={handleBubblePointerUp}
+                onPointerCancel={handleBubblePointerUp}
+              />
+            )}
 
             {/* Scene counter pill */}
             <div className="absolute top-3 left-3 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-black text-white z-20">
@@ -729,6 +813,50 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                   );
                 })}
               </div>
+
+              {/* RE-DESIGN SCENE IMAGE WITH AI AGENT */}
+              <div className="p-4 rounded-3xl bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-indigo-300 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                    {t('Tạo Lại Hình Ảnh Bằng AI Agent', 'Re-design Image with AI Agent')}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  {t(
+                    'Gemini Agent sẽ phân tích nhân vật A/B, trang phục và bối cảnh kịch bản để vẽ lại bức tranh 3D Pixar / Anime mới tràn viền chuẩn xác.',
+                    'Gemini Agent analyzes dialogue characters and generates a fresh 3D Pixar / Anime illustration.'
+                  )}
+                </p>
+                <textarea
+                  value={redesignPrompt}
+                  onChange={(e) => setRedesignPrompt(e.target.value)}
+                  rows={2}
+                  placeholder={t(
+                    'Gợi ý thêm về trang phục, bối cảnh, nét mặt (hoặc để trống)...',
+                    'Add hints for outfit, setting (optional)...'
+                  )}
+                  className="w-full px-3.5 py-2.5 rounded-2xl text-xs bg-slate-950/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 transition-all"
+                />
+                <button
+                  type="button"
+                  disabled={isRedesigning}
+                  onClick={handleRedesignImage}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {isRedesigning ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{t('Đang phân tích kịch bản & vẽ lại...', 'Analyzing & Generating...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>{t('🎨 Vẽ Lại Ảnh Ngay', '🎨 Re-design Image Now')}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
@@ -808,48 +936,193 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              <div className="space-y-3">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
-                  {t('1. Màu Nền Canvas', '1. Canvas Background')}
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {BG_THEMES.map((theme) => (
-                    <button
-                      key={theme.color}
-                      type="button"
-                      onClick={() => setBgColor(theme.color)}
-                      className={`flex items-center gap-2.5 p-3 rounded-2xl border text-xs font-bold transition-all ${
-                        bgColor === theme.color
-                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-2 ring-cyan-500/40 shadow-sm'
-                          : isDark
-                          ? 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
-                          : 'border-slate-200 bg-white text-slate-600'
-                      }`}
-                    >
-                      <span className="w-5 h-5 rounded-full border border-black/20 flex-shrink-0 shadow-sm" style={{ backgroundColor: theme.color }} />
-                      <span className="truncate">{theme.label}</span>
-                    </button>
-                  ))}
+              {/* 1. MÀU NỀN CANVAS (ẨN ĐỐI VỚI DIALOGUE SCENE DO HÌNH ẢNH TRÀN VIỀN 100%) */}
+              {(project?.visual_style as string) !== 'dialogue_scene' && (
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
+                    {t('1. Màu Nền Canvas', '1. Canvas Background')}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {BG_THEMES.map((theme) => (
+                      <button
+                        key={theme.color}
+                        type="button"
+                        onClick={() => setBgColor(theme.color)}
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl border text-xs font-bold transition-all ${
+                          bgColor === theme.color
+                            ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 ring-2 ring-cyan-500/40 shadow-sm'
+                            : isDark
+                            ? 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                            : 'border-slate-200 bg-white text-slate-600'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded-full border border-black/20 flex-shrink-0 shadow-sm" style={{ backgroundColor: theme.color }} />
+                        <span className="truncate">{theme.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* DIALOGUE SCENE SCRIPT SETTINGS VS 2-LAYER TEXT SETTINGS */}
-              {project?.visual_style === 'dialogue_scene' ? (
-                <div className="space-y-4 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-sm" />
-                    <div>
-                      <span className="text-xs font-black text-white block">
-                        {t('Kịch Bản Hội Thoại (Dialogue Speech Bubbles)', 'Dialogue Speech Bubbles')}
+              {(project?.visual_style as string) === 'dialogue_scene' ? (
+                <div className="space-y-5 pt-2">
+                  {/* BUBBLE POSITION & GEOMETRY CONTROLS */}
+                  <div className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-sm" />
+                        <span className="text-xs font-black text-white">
+                          {t('Vị Trí & Kích Thước Bong Bóng', 'Speech Bubble Layout')}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSwapSpeakers((prev) => !prev)}
+                        className={`px-3 py-1.5 rounded-xl border text-[11px] font-black flex items-center gap-1.5 transition-all ${
+                          swapSpeakers
+                            ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-sm'
+                            : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        <span>🔄</span>
+                        <span>{swapSpeakers ? t('Đã Đổi Bên', 'Swapped') : t('Đổi Bên (Trái ⇋ Phải)', 'Swap Sides')}</span>
+                      </button>
+                    </div>
+
+                    {/* Presets */}
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {[
+                        { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
+                        { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
+                        { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
+                      ].map((pos) => {
+                        const PosIcon = pos.icon;
+                        return (
+                          <button
+                            key={pos.id}
+                            type="button"
+                            onClick={() => {
+                              setCardPosY(pos.id);
+                              if (activeScene) {
+                                updateScene(activeScene.scene_id, {
+                                  bubble_custom_layout: {
+                                    ...(activeScene.bubble_custom_layout || {}),
+                                    cardPosY: pos.id,
+                                    customTopPct: pos.id === 'top' ? 18 : pos.id === 'middle' ? 48 : 75,
+                                  },
+                                });
+                              }
+                            }}
+                            className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                              cardPosY === pos.id
+                                ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
+                                : 'border-slate-800 bg-slate-900 text-slate-400'
+                            }`}
+                          >
+                            <PosIcon className="w-3.5 h-3.5" />
+                            <span>{pos.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Sliders */}
+                    <div className="space-y-3 pt-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                          <span>{t('Vị trí dọc (Y %):', 'Vertical Position (Y %):')}</span>
+                          <span className="text-cyan-400 font-mono">
+                            {activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={12}
+                          max={75}
+                          step={1}
+                          value={activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            updateScene(activeScene.scene_id, {
+                              bubble_custom_layout: {
+                                ...(activeScene.bubble_custom_layout || {}),
+                                customTopPct: val,
+                              },
+                            });
+                          }}
+                          className="w-full accent-cyan-400 h-1.5 rounded-lg bg-slate-800"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                          <span>{t('Độ rộng bong bóng (Width %):', 'Bubble Width (%):')}</span>
+                          <span className="text-cyan-400 font-mono">
+                            {activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={60}
+                          max={94}
+                          step={1}
+                          value={activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            updateScene(activeScene.scene_id, {
+                              bubble_custom_layout: {
+                                ...(activeScene.bubble_custom_layout || {}),
+                                customWidthPct: val,
+                              },
+                            });
+                          }}
+                          className="w-full accent-cyan-400 h-1.5 rounded-lg bg-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Color Themes */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                      <span className="text-[11px] font-bold text-slate-300 block">
+                        {t('Tông Màu Bong Bóng Thoại:', 'Bubble Color Theme:')}
                       </span>
-                      <span className="text-[10px] text-slate-400">
-                        {t('Chạy chữ typewriter luân phiên 2 nhân vật theo giọng đọc', 'Typewriter speech bubbles alternating between speakers')}
-                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'Navy & Forest', bgA: '#132644', bgB: '#1E392A', textA: '#FFFFFF', textB: '#FFFFFF' },
+                          { label: 'Obsidian & Amber', bgA: '#18181B', bgB: '#78350F', textA: '#FFFFFF', textB: '#FEF3C7' },
+                          { label: 'Midnight & Indigo', bgA: '#0F172A', bgB: '#312E81', textA: '#FFFFFF', textB: '#E0E7FF' },
+                          { label: 'Pure Milk & Slate', bgA: '#F8FAFC', bgB: '#E2E8F0', textA: '#0F172A', textB: '#0F172A' },
+                        ].map((th) => (
+                          <button
+                            key={th.label}
+                            type="button"
+                            onClick={() => {
+                              if (activeScene) {
+                                updateScene(activeScene.scene_id, {
+                                  bubble_custom_layout: {
+                                    ...(activeScene.bubble_custom_layout || {}),
+                                    bgColorA: th.bgA,
+                                    bgColorB: th.bgB,
+                                    textColorA: th.textA,
+                                    textColorB: th.textB,
+                                  },
+                                });
+                              }
+                            }}
+                            className="p-2 rounded-xl border border-slate-800 bg-slate-950 flex items-center gap-2 text-[11px] font-bold text-slate-300 hover:border-cyan-400/50 transition-all"
+                          >
+                            <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{ backgroundColor: th.bgA }} />
+                            <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{ backgroundColor: th.bgB }} />
+                            <span className="truncate">{th.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   {activeScene && (
-                    <div className="space-y-2 pt-1">
+                    <div className="space-y-2 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
                       <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
                         <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
                         <span>{t('Chỉnh sửa Lời Thoại / Kịch bản:', 'Edit Dialogue Script:')}</span>

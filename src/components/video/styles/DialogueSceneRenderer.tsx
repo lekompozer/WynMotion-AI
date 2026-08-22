@@ -160,16 +160,29 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
   const activeSentence = sentenceTurns[activeSentenceIndex] || sentenceTurns[0];
   const isSpeakerA = activeSentence?.speaker === 'A';
 
-  // 3. Local frame inside current sentence for spring entrance
-  const sentenceStartFrame = Math.round((activeSentence?.startSec || 0) * fps);
-  const sentenceDurationFrames = Math.max(1, Math.round(((activeSentence?.endSec || 1) - (activeSentence?.startSec || 0)) * fps));
-  const sentenceLocalFrame = Math.max(0, frame - sentenceStartFrame);
+  // 3. Turn-level frame for single spring entrance per turn (Bubble stays completely stable across sentences in same turn)
+  const currentTurnSentences = useMemo(() => {
+    if (!activeSentence) return [];
+    return sentenceTurns.filter((s) => s.turnIndex === activeSentence.turnIndex);
+  }, [sentenceTurns, activeSentence]);
 
-  // Spring entrance pop
+  const turnStartSec = currentTurnSentences[0]?.startSec ?? activeSentence?.startSec ?? 0;
+  const turnStartFrame = Math.round(turnStartSec * fps);
+  const turnLocalFrame = Math.max(0, frame - turnStartFrame);
+
+  // Spring entrance pop happens ONLY once at the start of the speaker's turn
   const bubbleScale = spring({
-    frame: sentenceLocalFrame,
+    frame: turnLocalFrame,
     fps,
-    config: { damping: 15, stiffness: 200 },
+    config: { damping: 18, stiffness: 220 },
+  });
+
+  // Sentence-level subtle fade for smooth text transition without bubble movement
+  const sentenceStartFrame = Math.round((activeSentence?.startSec || 0) * fps);
+  const sentenceLocalFrame = Math.max(0, frame - sentenceStartFrame);
+  const textOpacity = interpolate(sentenceLocalFrame, [0, 3], [0.2, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
   });
 
   // Subtle Ken Burns zoom
@@ -177,16 +190,8 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
     extrapolateRight: 'clamp',
   });
 
-  // 4. Fast typewriter streaming text for active short sentence
+  // 4. Instant full sentence text display (Clean & elegant without character streaming)
   const fullText = activeSentence?.sentenceText || '';
-  const turnTypingProgress = Math.min(
-    1,
-    Math.max(0, (sentenceLocalFrame - 2) / Math.max(1, sentenceDurationFrames * 0.75))
-  );
-  const revealedCharCount = Math.floor(turnTypingProgress * fullText.length);
-  const revealedText = fullText.slice(0, revealedCharCount);
-  const unrevealedText = fullText.slice(revealedCharCount);
-  const isTyping = turnTypingProgress < 1 && revealedCharCount > 0;
 
   return (
     <div
@@ -247,20 +252,35 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
       {(() => {
         const isFlipped = swapSpeakers ?? (scene as any).swap_speakers ?? false;
         const effectiveIsA = isFlipped ? !isSpeakerA : isSpeakerA;
+        const customLayout = (scene as any).bubble_custom_layout || {};
 
-        // Speaker-specific Theme: Speaker on Left = Navy Blue, Speaker on Right = Forest Green
-        const bubbleBg = effectiveIsA ? '#132644' : '#1E392A';
-        const caretColor = effectiveIsA ? '#38BDF8' : '#4ADE80';
+        // Speaker-specific Theme
+        const defaultBgA = customLayout.bgColorA || '#132644';
+        const defaultBgB = customLayout.bgColorB || '#1E392A';
+        const defaultTextA = customLayout.textColorA || '#FFFFFF';
+        const defaultTextB = customLayout.textColorB || '#FFFFFF';
+
+        const bubbleBg = effectiveIsA ? defaultBgA : defaultBgB;
+        const textColor = effectiveIsA ? defaultTextA : defaultTextB;
         const isLeftTail = effectiveIsA;
 
-        const bubbleTop =
-          cardPosY === 'top'
-            ? isPortrait ? '18%' : '14%'
-            : cardPosY === 'bottom'
-            ? undefined
-            : isPortrait ? '48%' : '40%';
+        // Position & Sizing
+        const effectiveCardPos = customLayout.cardPosY || cardPosY || 'top';
+        let bubbleTop: string | undefined = undefined;
+        let bubbleBottom: string | undefined = undefined;
 
-        const bubbleBottom = cardPosY === 'bottom' ? (isPortrait ? '14%' : '10%') : undefined;
+        if (customLayout.customTopPct !== undefined) {
+          bubbleTop = `${customLayout.customTopPct}%`;
+        } else if (effectiveCardPos === 'top') {
+          bubbleTop = isPortrait ? '18%' : '14%';
+        } else if (effectiveCardPos === 'bottom') {
+          bubbleBottom = isPortrait ? '14%' : '10%';
+        } else {
+          // middle
+          bubbleTop = isPortrait ? '48%' : '40%';
+        }
+
+        const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : 60);
 
         return (
           <div
@@ -271,7 +291,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
               pointerEvents: 'none',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: cardPosY === 'bottom' ? 'flex-end' : 'flex-start',
+              justifyContent: effectiveCardPos === 'bottom' ? 'flex-end' : 'flex-start',
               alignItems: 'center',
               boxSizing: 'border-box',
               paddingTop: bubbleTop,
@@ -282,16 +302,16 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
           >
             <div
               style={{
-                width: isPortrait ? '82%' : '60%',
+                width: `${widthPct}%`,
                 maxWidth: isPortrait ? 440 : 680,
                 transform: `scale(${Math.max(0, bubbleScale)})`,
-                transformOrigin: isLeftTail ? 'top left' : 'top right',
+                transformOrigin: isLeftTail ? 'bottom left' : 'bottom right',
                 backgroundColor: bubbleBg,
                 borderRadius: isPortrait ? 22 : 26,
                 padding: isPortrait ? '13px 20px' : '16px 28px',
                 boxShadow:
                   '0 16px 36px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25)',
-                border: '2.5px solid rgba(255, 255, 255, 0.2)',
+                border: '2.5px solid rgba(255, 255, 255, 0.22)',
                 position: 'relative',
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
@@ -300,7 +320,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
               <div
                 style={{
                   position: 'absolute',
-                  ...(cardPosY === 'bottom'
+                  ...(effectiveCardPos === 'bottom'
                     ? {
                         top: -13,
                         borderLeft: '11px solid transparent',
@@ -320,14 +340,17 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
                 }}
               />
 
-              {/* Single Active Sentence (1-3 lines max, centered, elegant) */}
+              {/* Single Active Sentence (Full sentence displayed at once, elegant & crisp) */}
               <div
                 style={{
                   fontSize: isPortrait ? 17.5 : isSquare ? 19 : 21,
                   fontWeight: 700,
-                  color: '#FFFFFF',
+                  color: textColor,
                   lineHeight: 1.35,
                   textAlign: 'center',
+                  opacity: textOpacity,
+                  transform: `translateY(${interpolate(sentenceLocalFrame, [0, 3], [3, 0], { extrapolateRight: 'clamp' })}px)`,
+                  transition: 'color 0.2s ease',
                   fontFamily:
                     "system-ui, -apple-system, 'SF Pro Rounded', 'Nunito', 'Segoe UI', sans-serif",
                   letterSpacing: -0.2,
@@ -335,21 +358,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
                   textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
                 }}
               >
-                <span>{revealedText}</span>
-                {isTyping && (
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: 2.5,
-                      height: '0.9em',
-                      backgroundColor: caretColor,
-                      marginLeft: 3,
-                      verticalAlign: 'middle',
-                      opacity: frame % 8 < 5 ? 1 : 0,
-                    }}
-                  />
-                )}
-                <span style={{ opacity: 0 }}>{unrevealedText}</span>
+                <span>{fullText}</span>
               </div>
             </div>
           </div>

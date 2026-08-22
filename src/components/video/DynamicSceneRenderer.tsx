@@ -36,6 +36,8 @@ export interface DynamicSceneData {
   code?: string;
   duration_sec?: number;
   dialogue_turns?: any[];
+  swap_speakers?: boolean;
+  bubble_custom_layout?: any;
   spatial_layout?: any;
   annotation?: {
     canvas?: { width: number; height: number };
