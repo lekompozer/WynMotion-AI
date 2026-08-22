@@ -35,6 +35,7 @@ export interface DynamicSceneData {
   video_url?: string;
   code?: string;
   duration_sec?: number;
+  dialogue_turns?: any[];
   annotation?: {
     canvas?: { width: number; height: number };
     elements?: Array<{

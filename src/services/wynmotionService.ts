@@ -194,6 +194,7 @@ export const wynmotionService = {
       speaker_a: DialogueSpeakerConfig;
       speaker_b: DialogueSpeakerConfig;
     };
+    dialogue_turns?: any[];
     language_code?: string;
     bg_color?: string;
   }): Promise<{

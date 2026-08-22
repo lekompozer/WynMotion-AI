@@ -751,6 +751,7 @@ export const AiVideoTab: React.FC = () => {
         character_subtype: characterSubtype,
         science_domain: visualStyle === 'science_explainer' ? scienceDomain : undefined,
         dialogue_speakers: visualStyle === 'dialogue_scene' ? { speaker_a: speakerA, speaker_b: speakerB } : undefined,
+        dialogue_turns: visualStyle === 'dialogue_scene' && dialogueTurns.length > 0 ? dialogueTurns : undefined,
         language_code: visualStyle === 'dialogue_scene' ? speakerA.language_code : selectedLang,
       });
 
@@ -954,73 +955,97 @@ export const AiVideoTab: React.FC = () => {
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
-              {(recentProjects.length > 0 ? recentProjects : SAMPLE_RECENT_ITEMS).map((item: any, idx: number) => {
-                const coverImg = item.scenes?.[0]?.image_url || item.thumbnail_url;
-                const projectId: string = item.project_id || item.id || '';
-                const isSample = !item.project_id; // mock placeholder — click shows alert
-                const displayTitle: string = item.title || item.prompt?.slice(0, 36) || t('Dự Án WynMotion', 'WynMotion Project');
-                const displayDuration: string = item.duration_sec
-                  ? `${Math.round(item.duration_sec)}s`
-                  : item.duration || '';
-                const sceneCount: number = item.scenes?.length || 0;
-                const styleLabel: string = item.visual_style
-                  ? item.visual_style.replace(/_/g, ' ')
-                  : '';
-
-                return (
-                  <div
-                    key={projectId || idx}
-                    onClick={() => {
-                      if (isSample) return; // ignore placeholder cards
-                      openProjectInEditor(item as MotionProject);
-                    }}
-                    style={
-                      coverImg
-                        ? {
-                            backgroundImage: `url(${coverImg})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                          }
-                        : undefined
-                    }
-                    className={`flex-shrink-0 w-32 h-36 rounded-2xl p-3 bg-black text-white border border-slate-800/80 flex flex-col justify-end relative overflow-hidden shadow-sm transition-all ${
-                      isSample
-                        ? 'opacity-50 cursor-default'
-                        : 'cursor-pointer active:scale-95 hover:border-cyan-500/50'
-                    }`}
-                  >
-                    {/* Dark gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
-
-                    {/* Style badge (top-left) */}
-                    {styleLabel && (
-                      <div className="absolute top-2 left-2 right-2 flex">
-                        <span className="px-1.5 py-0.5 rounded-md bg-black/60 text-[8px] font-bold text-cyan-300 uppercase tracking-wide truncate">
-                          {styleLabel}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="relative z-10">
-                      <h4 className="text-[11px] font-semibold text-white leading-snug line-clamp-2">
-                        {displayTitle}
-                      </h4>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        {displayDuration && (
-                          <span className="text-[9px] text-slate-400">{displayDuration}</span>
-                        )}
-                        {sceneCount > 0 && (
-                          <span className="text-[9px] text-slate-500">· {sceneCount} scenes</span>
-                        )}
-                      </div>
+            {!user ? (
+              <div
+                onClick={() => setIsLoginModalOpen(true)}
+                className={`w-full p-4 rounded-3xl border cursor-pointer active:scale-[0.99] transition-all flex items-center justify-between gap-3 ${
+                  isDark
+                    ? 'bg-slate-900/80 backdrop-blur-md border-slate-800 hover:border-slate-700 text-slate-300'
+                    : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 shadow-sm'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center text-lg">
+                    🔐
+                  </div>
+                  <div>
+                    <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      {t('Đăng nhập để xem dự án gần đây', 'Sign in to view recent projects')}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      {t('Dự án của bạn sẽ được lưu riêng tư và an toàn', 'Your projects will be saved privately and securely')}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md flex-shrink-0">
+                  {t('Đăng nhập', 'Sign In')}
+                </span>
+              </div>
+            ) : recentProjects.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+                {recentProjects.map((item: any, idx: number) => {
+                  const coverImg = item.scenes?.[0]?.image_url || item.thumbnail_url;
+                  const projectId: string = item.project_id || item.id || '';
+                  const displayTitle: string = item.title || item.prompt?.slice(0, 36) || t('Dự Án WynMotion', 'WynMotion Project');
+                  const displayDuration: string = item.duration_sec
+                    ? `${Math.round(item.duration_sec)}s`
+                    : item.duration || '';
+                  const sceneCount: number = item.scenes?.length || 0;
+                  const styleLabel: string = item.visual_style
+                    ? item.visual_style.replace(/_/g, ' ')
+                    : '';
 
+                  return (
+                    <div
+                      key={projectId || idx}
+                      onClick={() => openProjectInEditor(item as MotionProject)}
+                      style={
+                        coverImg
+                          ? {
+                              backgroundImage: `url(${coverImg})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }
+                          : undefined
+                      }
+                      className="flex-shrink-0 w-32 h-36 rounded-2xl p-3 bg-black text-white border border-slate-800/80 flex flex-col justify-end relative overflow-hidden shadow-sm cursor-pointer active:scale-95 hover:border-cyan-500/50 transition-all"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
+
+                      {styleLabel && (
+                        <div className="absolute top-2 left-2 right-2 flex">
+                          <span className="px-1.5 py-0.5 rounded-md bg-black/60 text-[8px] font-bold text-cyan-300 uppercase tracking-wide truncate">
+                            {styleLabel}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="relative z-10">
+                        <h4 className="text-[11px] font-semibold text-white leading-snug line-clamp-2">
+                          {displayTitle}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {displayDuration && (
+                            <span className="text-[9px] text-slate-400">{displayDuration}</span>
+                          )}
+                          {sceneCount > 0 && (
+                            <span className="text-[9px] text-cyan-400">· {sceneCount} scenes</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                className={`p-5 text-center rounded-3xl border text-xs text-slate-400 ${
+                  isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                {t('Chưa có dự án nào gần đây', 'No recent projects yet')}
+              </div>
+            )}
           </div>
 
           {/* 6 AI Animation Styles in 2 categories (Clean text, Monochrome icons, No tags) */}

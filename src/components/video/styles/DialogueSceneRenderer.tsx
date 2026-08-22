@@ -35,6 +35,23 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({ scene }) =
 
   // 1. Parse dialogue turns and construct timing timeline
   const dialogueTurns: DialogueTurnItem[] = useMemo(() => {
+    // If scene already has structured dialogue_turns from backend/Step 3
+    if (scene.dialogue_turns && Array.isArray(scene.dialogue_turns) && scene.dialogue_turns.length > 0) {
+      const turnCount = scene.dialogue_turns.length;
+      const avgTurnDur = totalDurationSec / turnCount;
+      return scene.dialogue_turns.map((dt: any, idx: number) => {
+        const isA = dt.speaker === 'A' || dt.speaker === 'speaker_a' || idx % 2 === 0;
+        return {
+          id: dt.id || `turn-${idx}`,
+          speaker: (isA ? 'A' : 'B') as 'A' | 'B',
+          name: dt.name || (isA ? 'Nhân vật A' : 'Nhân vật B'),
+          text: dt.text || dt.content || '',
+          startSec: typeof dt.start_sec === 'number' ? dt.start_sec : idx * avgTurnDur,
+          endSec: typeof dt.end_sec === 'number' ? dt.end_sec : (idx + 1) * avgTurnDur,
+        };
+      });
+    }
+
     const rawTranscript = scene.voice_transcript || scene.summary_text || scene.title || '';
     const rawTurns: Array<{ speaker: 'A' | 'B'; name: string; text: string }> = [];
 

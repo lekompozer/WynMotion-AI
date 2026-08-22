@@ -831,161 +831,201 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 </div>
               </div>
 
-              {/* LAYER 1: AI SCENE NOTE CARD */}
-              <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
-                <div className="flex items-center justify-between">
+              {/* DIALOGUE SCENE SCRIPT SETTINGS VS 2-LAYER TEXT SETTINGS */}
+              {project?.visual_style === 'dialogue_scene' ? (
+                <div className="space-y-4 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-white border border-slate-400 shadow-sm" />
+                    <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-sm" />
                     <div>
                       <span className="text-xs font-black text-white block">
-                        {t('Lớp 1: Thẻ Tóm Tắt AI (White Card)', 'Layer 1: AI Scene Note Card (White Card)')}
+                        {t('Kịch Bản Hội Thoại (Dialogue Speech Bubbles)', 'Dialogue Speech Bubbles')}
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        {t('Khung trắng font viết tay tóm tắt nội dung chính', 'Handwritten white card summarizing the scene')}
+                        {t('Chạy chữ typewriter luân phiên 2 nhân vật theo giọng đọc', 'Typewriter speech bubbles alternating between speakers')}
                       </span>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowSceneCards((v) => !v)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
-                      showSceneCards ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {showSceneCards ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>{showSceneCards ? t('BẬT', 'ON') : t('TẮT', 'OFF')}</span>
-                  </button>
+
+                  {activeScene && (
+                    <div className="space-y-2 pt-1">
+                      <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                        <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>{t('Chỉnh sửa Lời Thoại / Kịch bản:', 'Edit Dialogue Script:')}</span>
+                      </div>
+                      <textarea
+                        value={activeScene.voice_transcript || activeScene.summary_text || ''}
+                        onChange={(e) =>
+                          updateScene(activeScene.scene_id, {
+                            voice_transcript: e.target.value,
+                            summary_text: e.target.value,
+                          })
+                        }
+                        rows={6}
+                        className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-mono"
+                        placeholder="[Nhân vật A]: Lời thoại...\n[Nhân vật B]: Lời thoại..."
+                      />
+                    </div>
+                  )}
                 </div>
-
-                {showSceneCards && (
-                  <>
-                    <div className="space-y-1.5 pt-2">
-                      <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                        <span>{t('Vị trí hiển thị Thẻ Trắng:', 'White Card Position:')}</span>
-                        <span className="text-cyan-400 capitalize">{cardPosY}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
-                          { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
-                          { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
-                        ].map((pos) => {
-                          const PosIcon = pos.icon;
-                          return (
-                            <button
-                              key={pos.id}
-                              type="button"
-                              onClick={() => setCardPosY(pos.id)}
-                              className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
-                                cardPosY === pos.id
-                                  ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                                  : 'border-slate-800 bg-slate-900 text-slate-400'
-                              }`}
-                            >
-                              <PosIcon className="w-3.5 h-3.5" />
-                              <span>{pos.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {activeScene && (
-                      <div className="space-y-2 pt-2">
-                        <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
-                          <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>{t(`Sửa Tóm Tắt AI (Scene ${activeSceneIndex + 1})`, `Edit AI Summary (Scene ${activeSceneIndex + 1})`)}</span>
+              ) : (
+                <>
+                  {/* LAYER 1: AI SCENE NOTE CARD */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-white border border-slate-400 shadow-sm" />
+                        <div>
+                          <span className="text-xs font-black text-white block">
+                            {t('Lớp 1: Thẻ Tóm Tắt AI (White Card)', 'Layer 1: AI Scene Note Card (White Card)')}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {t('Khung trắng font viết tay tóm tắt nội dung chính', 'Handwritten white card summarizing the scene')}
+                          </span>
                         </div>
-                        <textarea
-                          value={activeScene.summary_text || activeScene.voice_transcript || ''}
-                          onChange={(e) => updateScene(activeScene.scene_id, { summary_text: e.target.value })}
-                          rows={2}
-                          className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
-                          placeholder={t('Nhập tóm tắt phân cảnh viết tay...', 'Enter scene summary...')}
-                        />
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* LAYER 2: WHISPER VOICE SUBTITLES */}
-              <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-slate-900 border border-white/40 shadow-sm" />
-                    <div>
-                      <span className="text-xs font-black text-white block">
-                        {t('Lớp 2: Phụ Đề Whisper Giọng Đọc (Dark Pill)', 'Layer 2: Whisper Voice Subtitles (Dark Pill)')}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {t('Khung oval xám đen chạy theo lời đọc audio', 'Dark speech-aligned subtitle bar matching audio')}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSceneCards((v) => !v)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
+                          showSceneCards ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {showSceneCards ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        <span>{showSceneCards ? t('BẬT', 'ON') : t('TẮT', 'OFF')}</span>
+                      </button>
                     </div>
+
+                    {showSceneCards && (
+                      <>
+                        <div className="space-y-1.5 pt-2">
+                          <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                            <span>{t('Vị trí hiển thị Thẻ Trắng:', 'White Card Position:')}</span>
+                            <span className="text-cyan-400 capitalize">{cardPosY}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
+                              { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
+                              { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
+                            ].map((pos) => {
+                              const PosIcon = pos.icon;
+                              return (
+                                <button
+                                  key={pos.id}
+                                  type="button"
+                                  onClick={() => setCardPosY(pos.id)}
+                                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                    cardPosY === pos.id
+                                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
+                                      : 'border-slate-800 bg-slate-900 text-slate-400'
+                                  }`}
+                                >
+                                  <PosIcon className="w-3.5 h-3.5" />
+                                  <span>{pos.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {activeScene && (
+                          <div className="space-y-2 pt-2">
+                            <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                              <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{t(`Sửa Tóm Tắt AI (Scene ${activeSceneIndex + 1})`, `Edit AI Summary (Scene ${activeSceneIndex + 1})`)}</span>
+                            </div>
+                            <textarea
+                              value={activeScene.summary_text || activeScene.voice_transcript || ''}
+                              onChange={(e) => updateScene(activeScene.scene_id, { summary_text: e.target.value })}
+                              rows={2}
+                              className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
+                              placeholder={t('Nhập tóm tắt phân cảnh viết tay...', 'Enter scene summary...')}
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowWhisperSubs((v) => !v)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
-                      showWhisperSubs ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {showWhisperSubs ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>{showWhisperSubs ? t('BẬT', 'ON') : t('TẮT', 'OFF')}</span>
-                  </button>
-                </div>
 
-                {showWhisperSubs && (
-                  <>
-                    <div className="space-y-1.5 pt-2">
-                      <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                        <span>{t('Vị trí hiển thị Phụ Đề Giọng Đọc:', 'Voice Subtitles Position:')}</span>
-                        <span className="text-cyan-400 capitalize">{subsPosY}</span>
+                  {/* LAYER 2: WHISPER VOICE SUBTITLES */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-slate-900 border border-white/40 shadow-sm" />
+                        <div>
+                          <span className="text-xs font-black text-white block">
+                            {t('Lớp 2: Phụ Đề Whisper Giọng Đọc (Dark Pill)', 'Layer 2: Whisper Voice Subtitles (Dark Pill)')}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {t('Khung oval xám đen chạy theo lời đọc audio', 'Dark speech-aligned subtitle bar matching audio')}
+                          </span>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
-                          { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
-                          { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
-                        ].map((pos) => {
-                          const PosIcon = pos.icon;
-                          return (
-                            <button
-                              key={pos.id}
-                              type="button"
-                              onClick={() => setSubsPosY(pos.id)}
-                              className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
-                                subsPosY === pos.id
-                                  ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                                  : 'border-slate-800 bg-slate-900 text-slate-400'
-                              }`}
-                            >
-                              <PosIcon className="w-3.5 h-3.5" />
-                              <span>{pos.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowWhisperSubs((v) => !v)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
+                          showWhisperSubs ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {showWhisperSubs ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        <span>{showWhisperSubs ? t('BẬT', 'ON') : t('TẮT', 'OFF')}</span>
+                      </button>
                     </div>
 
-                    {activeScene && (
-                      <div className="space-y-2 pt-2">
-                        <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
-                          <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>{t(`Sửa Lời Thoại / Phụ Đề Whisper (Scene ${activeSceneIndex + 1})`, `Edit Voice Transcript (Scene ${activeSceneIndex + 1})`)}</span>
+                    {showWhisperSubs && (
+                      <>
+                        <div className="space-y-1.5 pt-2">
+                          <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                            <span>{t('Vị trí hiển thị Phụ Đề Giọng Đọc:', 'Voice Subtitles Position:')}</span>
+                            <span className="text-cyan-400 capitalize">{subsPosY}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
+                              { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
+                              { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
+                            ].map((pos) => {
+                              const PosIcon = pos.icon;
+                              return (
+                                <button
+                                  key={pos.id}
+                                  type="button"
+                                  onClick={() => setSubsPosY(pos.id)}
+                                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                    subsPosY === pos.id
+                                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
+                                      : 'border-slate-800 bg-slate-900 text-slate-400'
+                                  }`}
+                                >
+                                  <PosIcon className="w-3.5 h-3.5" />
+                                  <span>{pos.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <textarea
-                          value={activeScene.voice_transcript || activeScene.summary_text || ''}
-                          onChange={(e) => updateScene(activeScene.scene_id, { voice_transcript: e.target.value })}
-                          rows={3}
-                          className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
-                          placeholder={t('Nhập lời thoại phụ đề đọc theo audio...', 'Enter voice transcription...')}
-                        />
-                      </div>
+
+                        {activeScene && (
+                          <div className="space-y-2 pt-2">
+                            <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                              <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{t(`Sửa Lời Thoại / Phụ Đề Whisper (Scene ${activeSceneIndex + 1})`, `Edit Voice Transcript (Scene ${activeSceneIndex + 1})`)}</span>
+                            </div>
+                            <textarea
+                              value={activeScene.voice_transcript || activeScene.summary_text || ''}
+                              onChange={(e) => updateScene(activeScene.scene_id, { voice_transcript: e.target.value })}
+                              rows={3}
+                              className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-mono"
+                              placeholder={t('Nhập lời thoại hoặc phụ đề khớp giọng đọc...', 'Enter voice transcript or subtitle...')}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </BottomSheetOverlay>

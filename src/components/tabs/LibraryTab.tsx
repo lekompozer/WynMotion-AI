@@ -33,6 +33,9 @@ import {
   LibraryFile,
 } from '@/services/libraryService';
 
+import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
+import { LoginModal } from '@/components/auth/LoginModal';
+
 type AssetCategory = 'projects' | 'images' | 'videos' | 'audio';
 
 interface LibraryTabProps {
@@ -71,11 +74,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   onUseAudioInVideo,
 }) => {
   const { isVietnamese, isDark, t } = useApp();
+  const { user } = useWordaiAuth();
 
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('projects');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Data state
   const [projects, setProjects] = useState<MotionProject[]>([]);
@@ -88,25 +93,43 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Load data on mount and category change ──
+  // ── Load data on mount and user/category change ──
   useEffect(() => {
-    // Load recent projects from cache immediately
+    // Clear any stale legacy global cache
     try {
-      const cached = localStorage.getItem('wynmotion_cached_projects');
+      localStorage.removeItem('wynmotion_cached_projects');
+    } catch {}
+
+    if (!user) {
+      setProjects([]);
+      setRecentProjects([]);
+      setFiles([]);
+      return;
+    }
+
+    const cacheKey = `wynmotion_cached_projects_${user.uid}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const parsed: MotionProject[] = JSON.parse(cached);
+        setProjects(parsed);
         setRecentProjects(parsed.slice(0, 8));
       }
     } catch {}
-    loadCategoryData('projects');
-  }, []);
 
-  useEffect(() => {
     loadCategoryData(activeCategory);
-  }, [activeCategory]);
+  }, [user, activeCategory]);
 
   const loadCategoryData = useCallback(async (cat: AssetCategory) => {
+    if (!user) {
+      setProjects([]);
+      setRecentProjects([]);
+      setFiles([]);
+      return;
+    }
+
     setLoading(true);
+    const cacheKey = `wynmotion_cached_projects_${user.uid}`;
     try {
       if (cat === 'projects') {
         const res = await wynmotionService.listProjects(100);
@@ -114,19 +137,22 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           setProjects(res.projects);
           setRecentProjects(res.projects.slice(0, 8));
           try {
-            localStorage.setItem('wynmotion_cached_projects', JSON.stringify(res.projects));
+            localStorage.setItem(cacheKey, JSON.stringify(res.projects));
           } catch {}
+        } else {
+          setProjects([]);
+          setRecentProjects([]);
         }
       } else {
         const data = await listLibraryFiles(cat as any, undefined, 100, 0);
-        setFiles(data);
+        setFiles(data || []);
       }
     } catch (err) {
       console.error('Failed to load library:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // ── Search Filter ──
   const filteredProjects = projects.filter((p) => {
@@ -309,7 +335,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       </div>
 
       {/* ─── RECENT PROJECTS HORIZONTAL CAROUSEL ─── */}
-      {recentProjects.length > 0 && (
+      {user && recentProjects.length > 0 && (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
             <h3
@@ -389,7 +415,32 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       </div>
 
       {/* ─── CONTENT AREA ─── */}
-      {loading ? (
+      {!user ? (
+        <div className={`p-8 text-center rounded-3xl border space-y-4 my-4 ${
+          isDark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="w-14 h-14 rounded-3xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center text-2xl mx-auto shadow-inner">
+            🔐
+          </div>
+          <div className="space-y-1">
+            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {t('Vui lòng đăng nhập', 'Please sign in')}
+            </h3>
+            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+              {t(
+                'Đăng nhập để xem, lưu trữ và đồng bộ hóa tất cả dự án video AI và tài nguyên đám mây của bạn.',
+                'Sign in to access, manage, and sync all your AI video projects and cloud assets.'
+              )}
+            </p>
+          </div>
+          <button
+            onClick={() => setIsLoginModalOpen(true)}
+            className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-lg active:scale-95 transition-all"
+          >
+            {isVietnamese ? 'Đăng Nhập Ngay' : 'Sign In Now'}
+          </button>
+        </div>
+      ) : loading ? (
         <div className="flex flex-col items-center justify-center py-16 space-y-3">
           <Loader2 className="h-7 w-7 animate-spin text-cyan-400" />
           <p className="text-xs text-slate-400">
@@ -456,7 +507,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         )
       )}
 
-      {/* ─── FULL PREVIEW MODAL ─── */}
+      {/* File Preview Modal */}
       {previewFile && (
         <PreviewModal
           file={previewFile}
@@ -465,6 +516,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           onClose={() => setPreviewFile(null)}
         />
       )}
+
+      {/* Login Modal */}
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </div>
   );
 };
