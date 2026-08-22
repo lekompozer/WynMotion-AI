@@ -224,18 +224,18 @@ export const AiVideoTab: React.FC = () => {
 
   // Step 3.1: Dual Voice Setup for Dialogue Scene
   const [speakerA, setSpeakerA] = useState<DialogueSpeakerConfig>({
-    name: 'Sarah',
+    name: isVietnamese ? 'Trúc Ly' : 'Sarah',
     gender: 'female',
     voice_engine: 'wynai',
-    voice_name: 'af_bella',
-    language_code: 'en-US',
+    voice_name: isVietnamese ? 'Trúc Ly' : 'af_bella',
+    language_code: isVietnamese ? 'vi' : 'en-US',
   });
   const [speakerB, setSpeakerB] = useState<DialogueSpeakerConfig>({
-    name: 'Tom',
+    name: isVietnamese ? 'Phạm Tuyên' : 'Tom',
     gender: 'male',
     voice_engine: 'wynai',
-    voice_name: 'am_adam',
-    language_code: 'en-US',
+    voice_name: isVietnamese ? 'Phạm Tuyên' : 'am_adam',
+    language_code: isVietnamese ? 'vi' : 'en-US',
   });
   const [isDualVoiceModalOpen, setIsDualVoiceModalOpen] = useState(false);
   const [activeSpeakerModalRole, setActiveSpeakerModalRole] = useState<'A' | 'B'>('A');
@@ -526,9 +526,16 @@ export const AiVideoTab: React.FC = () => {
     if (voiceModel === 'wynai') {
       if (langCode === 'vi') {
         setSelectedVoiceName('Phạm Tuyên');
+        setSpeakerA((prev) => ({ ...prev, name: 'Trúc Ly', voice_name: 'Trúc Ly', voice_engine: 'wynai', language_code: 'vi' }));
+        setSpeakerB((prev) => ({ ...prev, name: 'Phạm Tuyên', voice_name: 'Phạm Tuyên', voice_engine: 'wynai', language_code: 'vi' }));
       } else {
         setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[langCode] || 'af_bella');
+        setSpeakerA((prev) => ({ ...prev, name: 'Sarah', voice_name: 'af_bella', voice_engine: 'wynai', language_code: langCode }));
+        setSpeakerB((prev) => ({ ...prev, name: 'Tom', voice_name: 'am_adam', voice_engine: 'wynai', language_code: langCode }));
       }
+    } else {
+      setSpeakerA((prev) => ({ ...prev, voice_name: 'Aoede', voice_engine: 'gemini', language_code: langCode }));
+      setSpeakerB((prev) => ({ ...prev, voice_name: 'Puck', voice_engine: 'gemini', language_code: langCode }));
     }
   };
 
@@ -537,11 +544,17 @@ export const AiVideoTab: React.FC = () => {
     if (model === 'wynai') {
       if (selectedLang === 'vi') {
         setSelectedVoiceName('Phạm Tuyên');
+        setSpeakerA((prev) => ({ ...prev, voice_name: 'Trúc Ly', voice_engine: 'wynai' }));
+        setSpeakerB((prev) => ({ ...prev, voice_name: 'Phạm Tuyên', voice_engine: 'wynai' }));
       } else {
         setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[selectedLang] || 'af_bella');
+        setSpeakerA((prev) => ({ ...prev, voice_name: 'af_bella', voice_engine: 'wynai' }));
+        setSpeakerB((prev) => ({ ...prev, voice_name: 'am_adam', voice_engine: 'wynai' }));
       }
     } else {
       setSelectedVoiceName('Puck');
+      setSpeakerA((prev) => ({ ...prev, voice_name: 'Aoede', voice_engine: 'gemini' }));
+      setSpeakerB((prev) => ({ ...prev, voice_name: 'Puck', voice_engine: 'gemini' }));
     }
   };
 
