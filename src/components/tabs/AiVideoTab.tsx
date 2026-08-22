@@ -196,6 +196,16 @@ export const AiVideoTab: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+  // ── Auth Toast Notification (hiển thị khi chưa đăng nhập) ──
+  const [authToast, setAuthToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: '',
+  });
+  const showAuthToast = (message: string) => {
+    setAuthToast({ visible: true, message });
+    setTimeout(() => setAuthToast({ visible: false, message: '' }), 3500);
+  };
+
   // Wizard Steps: 1 | 2 | 3.1 | 3.2 | 3.3 | 4
   type WizardStep = '1' | '2' | '3.1' | '3.2' | '3.3' | '4';
   const [wizardStep, setWizardStep] = useState<WizardStep>('1');
@@ -304,11 +314,6 @@ export const AiVideoTab: React.FC = () => {
         if (d.aspectRatio) setAspectRatio(d.aspectRatio);
       }
 
-      const cached = localStorage.getItem('wynmotion_cached_projects');
-      if (cached) {
-        setRecentProjects(JSON.parse(cached));
-      }
-
       // Check if navigated here from Library with a specific projectId to open
       try {
         const pendingProjectId = sessionStorage.getItem('wynmotion_open_project_id');
@@ -318,18 +323,6 @@ export const AiVideoTab: React.FC = () => {
         }
       } catch {}
     } catch {}
-
-    wynmotionService
-      .listProjects()
-      .then((res) => {
-        if (res.projects && res.projects.length > 0) {
-          setRecentProjects(res.projects);
-          try {
-            localStorage.setItem('wynmotion_cached_projects', JSON.stringify(res.projects));
-          } catch {}
-        }
-      })
-      .catch(() => {});
 
     // Listen for open-project events dispatched from Library tab
     const handleOpenProjectEvent = (e: Event) => {
@@ -362,6 +355,38 @@ export const AiVideoTab: React.FC = () => {
       window.removeEventListener('wynmotion:use-audio', handleUseAudioEvent);
     };
   }, []);
+
+  // ── User-scoped Recent Projects — re-fetch whenever user changes (login/logout) ──
+  useEffect(() => {
+    if (!user) {
+      // Chưa đăng nhập: xoá list → hiện sample placeholders
+      setRecentProjects([]);
+      return;
+    }
+
+    // Đăng nhập: load cache riêng theo uid trước, rồi fetch mới từ API
+    const cacheKey = `wynmotion_cached_projects_${user.uid}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) setRecentProjects(JSON.parse(cached));
+    } catch {}
+
+    wynmotionService
+      .listProjects()
+      .then((res) => {
+        if (res.projects && res.projects.length > 0) {
+          setRecentProjects(res.projects);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(res.projects));
+          } catch {}
+        } else {
+          // API trả rỗng (user mới) — clear stale cache
+          setRecentProjects([]);
+          try { localStorage.removeItem(cacheKey); } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [user]);
 
   // ── Auto-save Draft to LocalStorage ──
   useEffect(() => {
@@ -572,6 +597,17 @@ export const AiVideoTab: React.FC = () => {
   };
 
   const handleStartStudio = (initialStyle?: MotionVisualStyle) => {
+    // ✅ Auth gate: yêu cầu đăng nhập trước khi vào wizard
+    if (!user) {
+      showAuthToast(
+        isVietnamese
+          ? '🔐 Vui lòng đăng nhập để tạo video AI'
+          : '🔐 Please sign in to create AI videos',
+      );
+      setTimeout(() => setIsLoginModalOpen(true), 400);
+      return;
+    }
+
     if (initialStyle) {
       setVisualStyle(initialStyle);
       if (initialStyle === 'dialogue_scene') {
@@ -685,6 +721,18 @@ export const AiVideoTab: React.FC = () => {
 
   const handleLaunchProject = async () => {
     if (!prompt.trim()) return;
+
+    // ✅ Double-check auth tại thời điểm launch (token có thể đã hết hạn)
+    if (!user) {
+      showAuthToast(
+        isVietnamese
+          ? '🔐 Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại'
+          : '🔐 Session expired. Please sign in again',
+      );
+      setTimeout(() => setIsLoginModalOpen(true), 400);
+      return;
+    }
+
     setIsCreatingProject(true);
     setCreationStage('scripting');
 
@@ -708,11 +756,27 @@ export const AiVideoTab: React.FC = () => {
 
       if (res.project) {
         setCreatedProject(res.project);
-        setRecentProjects((prev) => [res.project, ...prev.filter((p) => p.project_id !== res.project.project_id)]);
+        // ✅ Update state + user-scoped cache
+        const updatedList = [res.project, ...recentProjects.filter((p) => p.project_id !== res.project.project_id)];
+        setRecentProjects(updatedList);
+        try {
+          localStorage.setItem(`wynmotion_cached_projects_${user.uid}`, JSON.stringify(updatedList));
+        } catch {}
       }
       setCreationStage('done');
     } catch (err: any) {
-      alert(err.message || (isVietnamese ? 'Lỗi tạo video hoạt họa' : 'Failed to generate animation video'));
+      // Nếu backend trả 401 → prompt login
+      const errMsg = err.message || '';
+      if (errMsg.includes('401') || errMsg.toLowerCase().includes('đăng nhập') || errMsg.toLowerCase().includes('sign in')) {
+        showAuthToast(
+          isVietnamese
+            ? '🔐 Vui lòng đăng nhập để tạo dự án video'
+            : '🔐 Please sign in to create video projects',
+        );
+        setTimeout(() => setIsLoginModalOpen(true), 400);
+      } else {
+        alert(errMsg || (isVietnamese ? 'Lỗi tạo video hoạt họa' : 'Failed to generate animation video'));
+      }
       setIsCreatingProject(false);
       setCreationStage('idle');
     }
@@ -782,6 +846,31 @@ export const AiVideoTab: React.FC = () => {
   if (viewMode === 'home') {
     return (
       <div className={`pb-2 transition-colors duration-200 ${isDark ? 'bg-[#080B10]' : 'bg-[#FAFAFC]'}`}>
+        {/* ── Auth Toast Notification — fixed bottom overlay ── */}
+        {authToast.visible && (
+          <div
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-xl border animate-[fadeInUp_0.3s_ease-out] max-w-[320px] w-[90vw]"
+            style={{
+              background: isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)',
+              borderColor: isDark ? 'rgba(99,179,237,0.3)' : 'rgba(59,130,246,0.25)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            }}
+          >
+            <span className="text-base flex-1 font-semibold leading-snug" style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}>
+              {authToast.message}
+            </span>
+            <button
+              onClick={() => {
+                setAuthToast({ visible: false, message: '' });
+                setIsLoginModalOpen(true);
+              }}
+              className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md active:scale-95 transition-all"
+            >
+              {isVietnamese ? 'Đăng nhập' : 'Sign In'}
+            </button>
+          </div>
+        )}
+
         <HeroBackground
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenUpgrade={() => setIsProfileOpen(true)}
@@ -1025,7 +1114,33 @@ export const AiVideoTab: React.FC = () => {
     <div className={`min-h-screen pb-28 pt-[max(env(safe-area-inset-top,44px),44px)] px-4 sm:px-6 transition-colors duration-200 ${
       isDark ? 'bg-[#080B10] text-slate-100' : 'bg-[#F8FAFC] text-slate-900'
     }`}>
+      {/* ── Auth Toast Notification — fixed bottom overlay ── */}
+      {authToast.visible && (
+        <div
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-xl border max-w-[320px] w-[90vw]"
+          style={{
+            background: isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)',
+            borderColor: isDark ? 'rgba(99,179,237,0.3)' : 'rgba(59,130,246,0.25)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}
+        >
+          <span className="text-base flex-1 font-semibold leading-snug" style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}>
+            {authToast.message}
+          </span>
+          <button
+            onClick={() => {
+              setAuthToast({ visible: false, message: '' });
+              setIsLoginModalOpen(true);
+            }}
+            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md active:scale-95 transition-all"
+          >
+            {isVietnamese ? 'Đăng nhập' : 'Sign In'}
+          </button>
+        </div>
+      )}
+
       {/* Hidden audio element for preview */}
+
       <audio
         ref={audioPlayerRef}
         onEnded={() => setIsPlayingAudioPreview(false)}
@@ -2052,6 +2167,10 @@ export const AiVideoTab: React.FC = () => {
           else setSpeakerB(cfg);
         }}
       />
+
+      {/* ── Login Modal — hiển thị khi user chưa đăng nhập ── */}
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </div>
   );
 };
+

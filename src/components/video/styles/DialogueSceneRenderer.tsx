@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from '../RemotionEngine';
 import { DynamicSceneData } from '../DynamicSceneRenderer';
 
@@ -14,87 +14,124 @@ export interface StyleRendererProps {
   onSubsClick?: () => void;
 }
 
-export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
-  scene,
-}) => {
+interface DialogueTurnItem {
+  id: string;
+  speaker: 'A' | 'B';
+  name: string;
+  text: string;
+  startSec: number;
+  endSec: number;
+}
+
+export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({ scene }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
   const isPortrait = height > width || height === 1920;
   const isSquare = width === height;
-  const duration = scene.duration_frames || (scene.duration_sec ? Math.round(scene.duration_sec * fps) : 150);
-  const displaySummary = scene.summary_text || scene.voice_transcript || scene.title || 'Dialogue';
+  const totalDurationSec = scene.duration_sec || (scene.duration_frames ? scene.duration_frames / fps : 30);
+  const totalFrames = scene.duration_frames || Math.round(totalDurationSec * fps);
+  const currentTimeSec = frame / fps;
 
-  // 1. Parse dialogue turns from transcript
-  const rawTranscript = scene.voice_transcript || displaySummary || '';
-  const dialogueLines: Array<{ speaker: 'A' | 'B'; name: string; text: string }> = [];
+  // 1. Parse dialogue turns and construct timing timeline
+  const dialogueTurns: DialogueTurnItem[] = useMemo(() => {
+    const rawTranscript = scene.voice_transcript || scene.summary_text || scene.title || '';
+    const rawTurns: Array<{ speaker: 'A' | 'B'; name: string; text: string }> = [];
 
-  const regex = /\[(.*?)\]\s*:\s*([^\[]+)/g;
-  let match;
-  while ((match = regex.exec(rawTranscript)) !== null) {
-    const spName = match[1].trim();
-    const spText = match[2].trim();
-    const isA =
-      spName.toLowerCase().includes('a') ||
-      spName.toLowerCase().includes('sarah') ||
-      spName.toLowerCase().includes('trúc') ||
-      dialogueLines.length % 2 === 0;
-    dialogueLines.push({
-      speaker: isA ? 'A' : 'B',
-      name: spName || (isA ? 'Nhân vật A' : 'Nhân vật B'),
-      text: spText,
-    });
-  }
-
-  if (dialogueLines.length === 0) {
-    const sentences = rawTranscript
-      .split(/(?<=[.?!])\s+|\n+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (sentences.length === 0) {
-      dialogueLines.push({ speaker: 'A', name: 'Nhân vật A', text: rawTranscript });
-    } else {
-      sentences.forEach((st, idx) => {
-        const isA = idx % 2 === 0;
-        dialogueLines.push({
-          speaker: isA ? 'A' : 'B',
-          name: isA ? 'Nhân vật A' : 'Nhân vật B',
-          text: st,
-        });
+    // Parse [Speaker]: text patterns
+    const regex = /\[(.*?)\]\s*:\s*([^\[]+)/g;
+    let match;
+    while ((match = regex.exec(rawTranscript)) !== null) {
+      const spName = match[1].trim();
+      const spText = match[2].trim();
+      const isA =
+        spName.toLowerCase().includes('a') ||
+        spName.toLowerCase().includes('sarah') ||
+        spName.toLowerCase().includes('trúc') ||
+        spName.toLowerCase().includes('bella') ||
+        rawTurns.length % 2 === 0;
+      rawTurns.push({
+        speaker: isA ? 'A' : 'B',
+        name: spName || (isA ? 'Nhân vật A' : 'Nhân vật B'),
+        text: spText,
       });
     }
-  }
 
-  const progress = Math.min(1, Math.max(0, frame / Math.max(1, duration)));
-  const totalLines = Math.max(1, dialogueLines.length);
-  const lineIndex = Math.min(totalLines - 1, Math.floor(progress * totalLines));
-  const activeLine = dialogueLines[lineIndex] || dialogueLines[0];
-  const isSpeakerA = activeLine.speaker === 'A';
+    if (rawTurns.length === 0) {
+      const sentences = rawTranscript
+        .split(/(?<=[.?!])\s+|\n+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (sentences.length === 0) {
+        rawTurns.push({ speaker: 'A', name: 'Nhân vật A', text: rawTranscript });
+      } else {
+        sentences.forEach((st, idx) => {
+          const isA = idx % 2 === 0;
+          rawTurns.push({
+            speaker: isA ? 'A' : 'B',
+            name: isA ? 'Nhân vật A' : 'Nhân vật B',
+            text: st,
+          });
+        });
+      }
+    }
 
-  // Spring animation for speech bubble entrance
-  const lineFrameDuration = Math.max(1, Math.floor(duration / totalLines));
-  const currentLineLocalFrame = frame % lineFrameDuration;
+    // Distribute time slices across turns matching totalDurationSec
+    const turnCount = Math.max(1, rawTurns.length);
+    const avgTurnDur = totalDurationSec / turnCount;
+
+    return rawTurns.map((turn, idx) => ({
+      id: `turn-${idx}`,
+      speaker: turn.speaker,
+      name: turn.name,
+      text: turn.text,
+      startSec: idx * avgTurnDur,
+      endSec: (idx + 1) * avgTurnDur,
+    }));
+  }, [scene.voice_transcript, scene.summary_text, scene.title, totalDurationSec]);
+
+  // 2. Identify active dialogue turn for the current second
+  const activeTurnIndex = useMemo(() => {
+    const idx = dialogueTurns.findIndex(
+      (t) => currentTimeSec >= t.startSec && currentTimeSec <= t.endSec
+    );
+    if (idx !== -1) return idx;
+    if (currentTimeSec > dialogueTurns[dialogueTurns.length - 1]?.endSec) {
+      return dialogueTurns.length - 1;
+    }
+    return 0;
+  }, [dialogueTurns, currentTimeSec]);
+
+  const activeTurn = dialogueTurns[activeTurnIndex] || dialogueTurns[0];
+  const isSpeakerA = activeTurn.speaker === 'A';
+
+  // 3. Local frame inside current turn for spring animation
+  const turnStartFrame = Math.round(activeTurn.startSec * fps);
+  const turnDurationFrames = Math.max(1, Math.round((activeTurn.endSec - activeTurn.startSec) * fps));
+  const turnLocalFrame = Math.max(0, frame - turnStartFrame);
+
+  // Spring entrance pop when turn starts
   const bubbleScale = spring({
-    frame: currentLineLocalFrame,
+    frame: turnLocalFrame,
     fps,
-    config: { damping: 12, stiffness: 180 },
+    config: { damping: 14, stiffness: 180 },
   });
 
   // Subtle breathing Ken Burns zoom for background
-  const kenBurns = interpolate(frame, [0, duration], [1.0, 1.03], {
+  const kenBurns = interpolate(frame, [0, totalFrames], [1.0, 1.03], {
     extrapolateRight: 'clamp',
   });
 
-  // Typewriter streaming text animation synced with line duration
-  const fullText = activeLine.text;
-  const textTypingProgress = Math.min(
+  // 4. Typewriter streaming text animation synced with speaking rate
+  const fullText = activeTurn.text;
+  const turnTypingProgress = Math.min(
     1,
-    Math.max(0, (currentLineLocalFrame - 4) / Math.max(1, lineFrameDuration * 0.82))
+    Math.max(0, (turnLocalFrame - 3) / Math.max(1, turnDurationFrames * 0.85))
   );
-  const revealedCharCount = Math.floor(textTypingProgress * fullText.length);
+  const revealedCharCount = Math.floor(turnTypingProgress * fullText.length);
   const revealedText = fullText.slice(0, revealedCharCount);
   const unrevealedText = fullText.slice(revealedCharCount);
-  const isTyping = textTypingProgress < 1 && revealedCharCount > 0;
+  const isTyping = turnTypingProgress < 1 && revealedCharCount > 0;
 
   return (
     <div
@@ -110,7 +147,7 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
         justifyContent: 'center',
       }}
     >
-      {/* 1. FULL-BLEED SCENE BACKDROP IMAGE (1 Single Continuous Illustration) */}
+      {/* 1. FULL-BLEED SCENE BACKDROP (1 Single Continuous Illustration) */}
       {scene.image_url ? (
         <div
           style={{
@@ -151,7 +188,7 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
         </div>
       )}
 
-      {/* 2. UNIFIED COMIC SPEECH BUBBLE OVERLAY */}
+      {/* 2. DYNAMIC ALTERNATING SPEECH BUBBLE (Left for Speaker A, Right for Speaker B) */}
       <div
         style={{
           position: 'absolute',
@@ -168,7 +205,7 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
       >
         <div
           style={{
-            maxWidth: isPortrait ? '85%' : '52%',
+            maxWidth: isPortrait ? '82%' : '50%',
             transform: `scale(${Math.max(0, bubbleScale)})`,
             transformOrigin: isSpeakerA ? 'bottom left' : 'bottom right',
             backgroundColor: '#FFFFFF',
@@ -178,12 +215,34 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
               '0 16px 36px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
             border: '2.5px solid #0F172A',
             position: 'relative',
-            marginBottom: isPortrait ? 24 : 0,
+            marginBottom: isPortrait ? 28 : 0,
             marginTop: isPortrait ? 0 : 40,
-            transition: 'all 0.15s ease-out',
+            marginLeft: isSpeakerA ? (isPortrait ? 8 : 24) : 0,
+            marginRight: !isSpeakerA ? (isPortrait ? 8 : 24) : 0,
+            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          {/* Comic Tail */}
+          {/* Speaker Badge */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 8px',
+              borderRadius: 8,
+              backgroundColor: isSpeakerA ? '#EFF6FF' : '#FFF1F2',
+              color: isSpeakerA ? '#1D4ED8' : '#BE123C',
+              fontSize: isPortrait ? 11 : 12,
+              fontWeight: 800,
+              marginBottom: 6,
+              border: `1px solid ${isSpeakerA ? '#BFDBFE' : '#FECDD3'}`,
+            }}
+          >
+            <span>{isSpeakerA ? '🗣️' : '💬'}</span>
+            <span>{activeTurn.name}</span>
+          </div>
+
+          {/* Comic Tail pointing down to speaker character */}
           <div
             style={{
               position: 'absolute',
@@ -212,13 +271,13 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
           {/* Dialogue Text with Live Streaming Typewriter Animation */}
           <div
             style={{
-              fontSize: isPortrait ? 17 : isSquare ? 20 : 22,
+              fontSize: isPortrait ? 16 : isSquare ? 19 : 21,
               fontWeight: 800,
               color: '#0F172A',
               lineHeight: 1.35,
               fontFamily:
                 "system-ui, -apple-system, 'SF Pro Rounded', 'Nunito', 'Segoe UI', sans-serif",
-              letterSpacing: -0.3,
+              letterSpacing: -0.2,
               wordBreak: 'break-word',
             }}
           >
@@ -229,7 +288,7 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
                   display: 'inline-block',
                   width: 2.5,
                   height: '0.9em',
-                  backgroundColor: '#0284C7',
+                  backgroundColor: isSpeakerA ? '#0284C7' : '#E11D48',
                   marginLeft: 2,
                   verticalAlign: 'middle',
                   opacity: frame % 8 < 5 ? 1 : 0,
@@ -244,3 +303,4 @@ export const DialogueSceneRenderer: React.FC<StyleRendererProps> = ({
     </div>
   );
 };
+

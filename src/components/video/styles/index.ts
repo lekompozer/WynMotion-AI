@@ -2,8 +2,16 @@
 
 import React from 'react';
 import { StyleRendererProps, DialogueSceneRenderer } from './DialogueSceneRenderer';
+import { AppleModernRenderer } from './AppleModernRenderer';
+import { ScienceExplainerRenderer } from './ScienceExplainerRenderer';
+import { CharacterMascotRenderer } from './CharacterMascotRenderer';
 
-export { DialogueSceneRenderer };
+export {
+  DialogueSceneRenderer,
+  AppleModernRenderer,
+  ScienceExplainerRenderer,
+  CharacterMascotRenderer,
+};
 export type { StyleRendererProps };
 
 /**
@@ -14,6 +22,14 @@ export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps
   dialogue_scene: DialogueSceneRenderer,
   conversation: DialogueSceneRenderer,
   podcast_dual: DialogueSceneRenderer,
+  apple_modern_motion: AppleModernRenderer,
+  tech_ui: AppleModernRenderer,
+  vector_motion: AppleModernRenderer,
+  science_explainer: ScienceExplainerRenderer,
+  stem_explainer: ScienceExplainerRenderer,
+  character_animation: CharacterMascotRenderer,
+  mascot_character: CharacterMascotRenderer,
+  stickman: CharacterMascotRenderer,
 };
 
 export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRendererProps> | null {
@@ -21,3 +37,4 @@ export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRen
   const key = visualStyle.toLowerCase();
   return MODULAR_STYLE_RENDERERS[key] || null;
 }
+
