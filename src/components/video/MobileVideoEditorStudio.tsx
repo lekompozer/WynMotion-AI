@@ -166,63 +166,6 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const videoStageRef = useRef<HTMLDivElement>(null);
   const [isDraggingBubble, setIsDraggingBubble] = useState(false);
 
-  const calculateTopPctFromClientY = (clientY: number) => {
-    if (!videoStageRef.current || !activeScene) return;
-    const rect = videoStageRef.current.getBoundingClientRect();
-    if (rect.height <= 0) return;
-    const relativeY = clientY - rect.top;
-    const pct = Math.max(10, Math.min(78, Math.round((relativeY / rect.height) * 100)));
-    updateScene(activeScene.scene_id, {
-      bubble_custom_layout: {
-        ...(activeScene.bubble_custom_layout || {}),
-        customTopPct: pct,
-      },
-    });
-  };
-
-  const handleBubblePointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation();
-    try {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch (err) {}
-    setIsDraggingBubble(true);
-  };
-
-  const handleBubblePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingBubble) return;
-    calculateTopPctFromClientY(e.clientY);
-  };
-
-  const handleBubblePointerUp = (e: React.PointerEvent) => {
-    if (isDraggingBubble) {
-      setIsDraggingBubble(false);
-      try {
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch (err) {}
-    }
-  };
-
-  // Native iOS Touch Handlers for 100% responsiveness on Safari/Capacitor
-  const handleBubbleTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    setIsDraggingBubble(true);
-    if (e.touches[0]) {
-      calculateTopPctFromClientY(e.touches[0].clientY);
-    }
-  };
-
-  const handleBubbleTouchMove = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    if (e.touches[0]) {
-      calculateTopPctFromClientY(e.touches[0].clientY);
-    }
-  };
-
-  const handleBubbleTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    setIsDraggingBubble(false);
-  };
-
   const totalDurationSec = durationInFrames / fps;
   const currentTimeSec = frame / fps;
 
@@ -239,6 +182,81 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   }, [frame, scenes]);
 
   const activeScene: DynamicSceneData = scenes[activeSceneIndex] || scenes[0];
+
+  // Active speaker identification at current frame
+  const activeSpeaker: 'A' | 'B' = useMemo(() => {
+    if (!activeScene) return 'A';
+    const turns = activeScene.dialogue_turns || [];
+    if (turns.length === 0) {
+      const text = activeScene.voice_transcript || activeScene.summary_text || '';
+      const lines = text.split('\n').filter((l) => l.trim());
+      if (lines.length === 0) return 'A';
+      const sceneDur = activeScene.duration_sec || 5;
+      const sceneLocalSec = Math.max(0, currentTimeSec - (activeScene.start_sec || 0));
+      const turnIdx = Math.min(lines.length - 1, Math.floor((sceneLocalSec / Math.max(0.5, sceneDur)) * lines.length));
+      return turnIdx % 2 === 0 ? 'A' : 'B';
+    }
+    const sceneDur = activeScene.duration_sec || 5;
+    const sceneLocalSec = Math.max(0, currentTimeSec - (activeScene.start_sec || 0));
+    const avgTurnDur = sceneDur / Math.max(1, turns.length);
+    const turnIdx = Math.min(turns.length - 1, Math.floor(sceneLocalSec / Math.max(0.5, avgTurnDur)));
+    return turns[turnIdx]?.speaker || (turnIdx % 2 === 0 ? 'A' : 'B');
+  }, [activeScene, currentTimeSec]);
+
+  // Update position for active character
+  const calculateTopPctFromClientY = (clientY: number) => {
+    if (!videoStageRef.current || !activeScene) return;
+    const rect = videoStageRef.current.getBoundingClientRect();
+    if (rect.height <= 0) return;
+    const relativeY = clientY - rect.top;
+    const pct = Math.max(10, Math.min(78, Math.round((relativeY / rect.height) * 100)));
+    const isA = activeSpeaker === 'A';
+    updateScene(activeScene.scene_id, {
+      bubble_custom_layout: {
+        ...(activeScene.bubble_custom_layout || {}),
+        [isA ? 'customTopPctA' : 'customTopPctB']: pct,
+        customTopPct: pct,
+      },
+    });
+  };
+
+  // Fluid window-level drag listeners (iOS Safari / Capacitor gold standard)
+  const startDragging = (initialClientY: number) => {
+    setIsDraggingBubble(true);
+    calculateTopPctFromClientY(initialClientY);
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches && e.touches[0]) {
+        calculateTopPctFromClientY(e.touches[0].clientY);
+      }
+    };
+
+    const onTouchEnd = () => {
+      setIsDraggingBubble(false);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      calculateTopPctFromClientY(e.clientY);
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingBubble(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
 
   // ── Sync Animation Timeline with Audio Length ──
   const syncAnimationWithAudio = (audioDuration: number, langLabel: string = 'Audio Track') => {
@@ -522,35 +540,51 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             />
 
             {/* Interactive Direct Touch/Mouse Drag-to-Move for Dialogue Bubbles */}
-            {(project.visual_style as string) === 'dialogue_scene' && activeScene && (
-              <div
-                className={`absolute left-1/2 z-40 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
-                  isDraggingBubble
-                    ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/50 shadow-2xl bg-cyan-400/15'
-                    : 'hover:ring-1 hover:ring-cyan-400/40 active:ring-2 active:ring-cyan-400'
-                }`}
-                style={{
-                  top: `${activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%`,
-                  left: '50%',
-                  transform: 'translate(-50%, -6px)',
-                  width: `${activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%`,
-                  minHeight: '60px',
-                  height: '85px',
-                  touchAction: 'none',
-                  WebkitTouchCallout: 'none',
-                  WebkitUserSelect: 'none',
-                  userSelect: 'none',
-                }}
-                onPointerDown={handleBubblePointerDown}
-                onPointerMove={handleBubblePointerMove}
-                onPointerUp={handleBubblePointerUp}
-                onPointerCancel={handleBubblePointerUp}
-                onTouchStart={handleBubbleTouchStart}
-                onTouchMove={handleBubbleTouchMove}
-                onTouchEnd={handleBubbleTouchEnd}
-                onTouchCancel={handleBubbleTouchEnd}
-              />
-            )}
+            {(project.visual_style as string) === 'dialogue_scene' && activeScene && (() => {
+              const speakerTop = activeSpeaker === 'A'
+                ? (activeScene?.bubble_custom_layout?.customTopPctA ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48))
+                : (activeScene?.bubble_custom_layout?.customTopPctB ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48));
+              return (
+                <div
+                  className={`absolute left-1/2 z-40 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
+                    isDraggingBubble
+                      ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/50 shadow-2xl bg-cyan-400/20'
+                      : 'hover:ring-1 hover:ring-cyan-400/40 active:ring-2 active:ring-cyan-400'
+                  }`}
+                  style={{
+                    top: `${speakerTop}%`,
+                    left: '50%',
+                    transform: 'translate(-50%, -6px)',
+                    width: `${activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%`,
+                    minHeight: '60px',
+                    height: '85px',
+                    touchAction: 'none',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none',
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    startDragging(e.clientY);
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    if (e.touches && e.touches[0]) {
+                      startDragging(e.touches[0].clientY);
+                    }
+                  }}
+                >
+                  {/* Subtle active indicator while dragging */}
+                  {isDraggingBubble && (
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-400 text-slate-950 shadow-lg flex items-center gap-1">
+                      <span>👤 {activeSpeaker === 'A' ? t('Nhân vật A', 'Speaker A') : t('Nhân vật B', 'Speaker B')}</span>
+                      <span>•</span>
+                      <span>{speakerTop}%</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Scene counter pill */}
             <div className="absolute top-3 left-3 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-black text-white z-20">
@@ -1063,13 +1097,17 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                       })}
                     </div>
 
-                    {/* Sliders */}
-                    <div className="space-y-3 pt-2">
-                      <div className="space-y-1">
+                    {/* Sliders for Character A and Character B */}
+                    <div className="space-y-3.5 pt-2">
+                      {/* Character A Position */}
+                      <div className="space-y-1 bg-slate-950/60 p-2.5 rounded-2xl border border-slate-800">
                         <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
-                          <span>{t('Vị trí dọc (Y %):', 'Vertical Position (Y %):')}</span>
+                          <span className="flex items-center gap-1 text-sky-400">
+                            <span>👤</span>
+                            <span>{t('Vị trí Nhân vật A (Bên Trái):', 'Speaker A Position (Left):')}</span>
+                          </span>
                           <span className="text-cyan-400 font-mono">
-                            {activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%
+                            {activeScene?.bubble_custom_layout?.customTopPctA ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%
                           </span>
                         </div>
                         <input
@@ -1077,20 +1115,51 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                           min={12}
                           max={75}
                           step={1}
-                          value={activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}
+                          value={activeScene?.bubble_custom_layout?.customTopPctA ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}
                           onChange={(e) => {
                             const val = parseInt(e.target.value);
                             updateScene(activeScene.scene_id, {
                               bubble_custom_layout: {
                                 ...(activeScene.bubble_custom_layout || {}),
-                                customTopPct: val,
+                                customTopPctA: val,
                               },
                             });
                           }}
-                          className="w-full accent-cyan-400 h-1.5 rounded-lg bg-slate-800"
+                          className="w-full accent-sky-400 h-1.5 rounded-lg bg-slate-800"
                         />
                       </div>
 
+                      {/* Character B Position */}
+                      <div className="space-y-1 bg-slate-950/60 p-2.5 rounded-2xl border border-slate-800">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                          <span className="flex items-center gap-1 text-emerald-400">
+                            <span>👤</span>
+                            <span>{t('Vị trí Nhân vật B (Bên Phải):', 'Speaker B Position (Right):')}</span>
+                          </span>
+                          <span className="text-emerald-400 font-mono">
+                            {activeScene?.bubble_custom_layout?.customTopPctB ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={12}
+                          max={75}
+                          step={1}
+                          value={activeScene?.bubble_custom_layout?.customTopPctB ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            updateScene(activeScene.scene_id, {
+                              bubble_custom_layout: {
+                                ...(activeScene.bubble_custom_layout || {}),
+                                customTopPctB: val,
+                              },
+                            });
+                          }}
+                          className="w-full accent-emerald-400 h-1.5 rounded-lg bg-slate-800"
+                        />
+                      </div>
+
+                      {/* Width */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
                           <span>{t('Độ rộng bong bóng (Width %):', 'Bubble Width (%):')}</span>

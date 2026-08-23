@@ -269,13 +269,17 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
         const textColor = effectiveIsA ? defaultTextA : defaultTextB;
         const isLeftTail = effectiveIsA;
 
-        // Position & Sizing
+        // Position & Sizing (Independent height for Character A vs Character B)
         const effectiveCardPos = customLayout.cardPosY || cardPosY || 'top';
         let bubbleTop: string | undefined = undefined;
         let bubbleBottom: string | undefined = undefined;
 
-        if (customLayout.customTopPct !== undefined) {
-          bubbleTop = `${customLayout.customTopPct}%`;
+        const speakerTopPct = effectiveIsA
+          ? (customLayout.customTopPctA ?? customLayout.customTopPct)
+          : (customLayout.customTopPctB ?? customLayout.customTopPct);
+
+        if (speakerTopPct !== undefined) {
+          bubbleTop = `${speakerTopPct}%`;
         } else if (effectiveCardPos === 'top') {
           bubbleTop = isPortrait ? '18%' : '14%';
         } else if (effectiveCardPos === 'bottom') {
