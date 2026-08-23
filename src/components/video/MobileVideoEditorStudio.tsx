@@ -51,6 +51,7 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
+import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
 import { RemotionPlayerProvider, useRemotion, useCurrentFrame, useVideoConfig } from './RemotionEngine';
 import { DynamicAnimationComposition } from './DynamicAnimationComposition';
 import { DynamicSceneData } from './DynamicSceneRenderer';
@@ -411,19 +412,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     [draftKey, swapSpeakers, aspectRatio]
   );
 
-  // ── Native Share / Save to Camera Roll Helper ──
+  // ── Native Share / Save to Camera Roll Helper (Local File:// with Save Video option) ──
   const triggerNativeShare = async (url: string) => {
-    try {
-      const { Share } = await import('@capacitor/share');
-      await Share.share({
-        title: project.title || 'WynMotion AI Video',
-        text: 'WynMotion AI Video',
-        url: url,
-        dialogTitle: 'Lưu hoặc chia sẻ video MP4',
-      });
-    } catch (shareErr) {
-      console.log('Share action skipped or fallback:', shareErr);
-    }
+    await saveAndShareMedia(url, `WynMotion_${project.project_id.slice(0, 8)}.mp4`);
   };
 
   // ── Export MP4 with Live Polling (every 5s, up to 5 mins) & Native Save Sheet ──

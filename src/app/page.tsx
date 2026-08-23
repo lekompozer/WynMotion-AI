@@ -8,6 +8,7 @@ import { AiVideoTab } from '@/components/tabs/AiVideoTab';
 import { AiAudioTab } from '@/components/tabs/AiAudioTab';
 import { AiImagesTab } from '@/components/tabs/AiImagesTab';
 import { LibraryTab } from '@/components/tabs/LibraryTab';
+import { AiNoticeModal } from '@/components/modals/AiNoticeModal';
 
 export default function WynMotionMobileApp() {
   const { activeTab, isDark, isStudioOpen, setActiveTab } = useApp();
@@ -29,6 +30,9 @@ export default function WynMotionMobileApp() {
         isDark ? 'bg-[#080B10] text-slate-100' : 'bg-[#FAFAFC] text-slate-900'
       }`}
     >
+      {/* 0. Apple-Compliant AI & Permissions Notice Modal */}
+      <AiNoticeModal />
+
       {/* 1. iOS App Header — only shown on Audio, Images, Library tabs when not in full studio mode */}
       {!isStudioOpen && activeTab !== 'video' && <AppHeader />}
 

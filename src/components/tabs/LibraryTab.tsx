@@ -35,6 +35,7 @@ import {
 
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { LoginModal } from '@/components/auth/LoginModal';
+import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
 
 type AssetCategory = 'projects' | 'images' | 'videos' | 'audio';
 
@@ -636,14 +637,14 @@ function ProjectCard({
           </button>
 
           {(p as any).mp4_url && (
-            <a
-              href={(p as any).mp4_url}
-              download={`WynMotion_${p.project_id.slice(0, 8)}.mp4`}
-              className="p-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors"
-              title={isVietnamese ? 'Tải Video MP4' : 'Download MP4'}
+            <button
+              type="button"
+              onClick={() => saveAndShareMedia((p as any).mp4_url, `WynMotion_${p.project_id.slice(0, 8)}.mp4`)}
+              className="p-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors active:scale-95"
+              title={isVietnamese ? 'Tải / Lưu Video MP4' : 'Save MP4'}
             >
               <Download className="h-3 w-3" />
-            </a>
+            </button>
           )}
 
           <button
@@ -842,7 +843,14 @@ function PreviewModal({
           {file.category === 'images' ? (
             <img src={file.file_url} alt={file.filename} className="max-h-[60vh] object-contain w-auto mx-auto" />
           ) : file.category === 'videos' ? (
-            <video src={file.file_url} controls autoPlay className="max-h-[60vh] w-full" />
+            <video
+              src={file.file_url}
+              controls
+              playsInline
+              preload="auto"
+              autoPlay
+              className="max-h-[60vh] w-full object-contain"
+            />
           ) : (
             <div className="p-8 text-center space-y-4 w-full">
               <div className="p-4 rounded-full bg-purple-500/20 text-purple-400 inline-block">
@@ -856,14 +864,14 @@ function PreviewModal({
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-slate-400">{formatFileSize(file.file_size)}</span>
-          <a
-            href={file.file_url}
-            download={file.filename}
-            className="px-4 py-2 rounded-xl bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:bg-cyan-300 transition-colors"
+          <button
+            type="button"
+            onClick={() => saveAndShareMedia(file.file_url, file.filename)}
+            className="px-4 py-2 rounded-xl bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:bg-cyan-300 active:scale-95 transition-all shadow-md"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>{isVietnamese ? 'Tải File Về' : 'Download'}</span>
-          </a>
+            <span>{isVietnamese ? 'Tải / Lưu File' : 'Save / Share File'}</span>
+          </button>
         </div>
       </div>
     </div>
