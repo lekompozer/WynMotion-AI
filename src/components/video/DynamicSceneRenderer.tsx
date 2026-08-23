@@ -72,11 +72,17 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
   try {
     if (!codeStr || typeof codeStr !== 'string') return null;
 
+    // 1. Strip imports and export defaults
     let cleanCode = codeStr
       .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
-      .replace(/export\s+const\s+Scene_\w+\s*:\s*React\.FC\s*=\s*\(\)\s*=>\s*\{/, 'function DynamicSceneComponent() {')
-      .replace(/export\s+default\s+\w+;?/g, '');
+      .replace(/export\s+default\s+\w+;?/g, '')
+      // Standardize export Scene_N declarations to function DynamicSceneComponent() {
+      .replace(/export\s+(?:const|var|let)\s+Scene_\w+(?:\s*:\s*React\.FC(?:<.*?>)?)?\s*=\s*(?:\([^)]*\)|props)?\s*=>\s*\{/, 'function DynamicSceneComponent() {')
+      .replace(/export\s+function\s+Scene_\w+\s*\([^)]*\)\s*\{/, 'function DynamicSceneComponent() {')
+      .replace(/(?:const|var|let)\s+Scene_\w+(?:\s*:\s*React\.FC(?:<.*?>)?)?\s*=\s*(?:\([^)]*\)|props)?\s*=>\s*\{/, 'function DynamicSceneComponent() {')
+      .replace(/function\s+Scene_\w+\s*\([^)]*\)\s*\{/, 'function DynamicSceneComponent() {');
 
+    // If it's a function or return block, wrap into executable body
     if (!cleanCode.includes('function DynamicSceneComponent') && !cleanCode.includes('return')) {
       return null;
     }
@@ -90,7 +96,14 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
       'useRemotion',
       `
       ${cleanCode}
-      return typeof DynamicSceneComponent !== 'undefined' ? DynamicSceneComponent : null;
+      if (typeof DynamicSceneComponent !== 'undefined') return DynamicSceneComponent;
+      for (let i = 1; i <= 20; i++) {
+        try {
+          const fn = eval('typeof Scene_' + i + ' !== "undefined" ? Scene_' + i + ' : null');
+          if (fn) return fn;
+        } catch (e) {}
+      }
+      return null;
       `
     );
 
