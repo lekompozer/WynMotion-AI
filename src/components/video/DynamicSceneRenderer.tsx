@@ -17,7 +17,7 @@
  * - Layer 2: Whisper Voice Subtitle (Dark pill / voice_transcript)
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useCurrentFrame, useVideoConfig, useRemotion, spring, interpolate } from './RemotionEngine';
 import { getModularStyleRenderer } from './styles';
 
@@ -75,14 +75,11 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
   try {
     if (!codeStr || typeof codeStr !== 'string') return null;
 
-    // 1. Strip imports and export keywords, and make root container/SVGs 100% fluid
+    // 1. Strip imports and export keywords
     let cleanCode = codeStr
       .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
       .replace(/export\s+default\s+\w+;?/g, '')
-      .replace(/export\s+/g, '')
-      .replace(/width:\s*['"]?(?:1920|1080|1280|720)(?:px)?['"]?/g, 'width: "100%"')
-      .replace(/height:\s*['"]?(?:1920|1080|1280|720)(?:px)?['"]?/g, 'height: "100%"')
-      .replace(/width=['"](?:1920|1080|1280|720)['"]\s+height=['"](?:1920|1080|1280|720)['"]/g, 'width="100%" height="100%" preserveAspectRatio="xMidYMid meet"');
+      .replace(/export\s+/g, '');
 
     // 2. Transpile TSX/JSX to executable JavaScript with React.createElement
     const transpiled = transform(cleanCode, {
@@ -146,6 +143,26 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   onCardClick,
   onSubsClick,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+    const updateSize = () => {
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setContainerSize({ w: rect.width, h: rect.height });
+        }
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
   const { bgColor } = useRemotion();
@@ -154,11 +171,16 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const isSquare = width === height;
   const duration = scene.duration_frames || durationInFrames || 150;
 
-  // Base Virtual Canvas Dimensions
+  // Base Virtual Canvas Dimensions (1080p HD Native Coordinates)
   const BASE_WIDTH = isPortrait ? 1080 : isSquare ? 1080 : 1920;
   const BASE_HEIGHT = isPortrait ? 1920 : isSquare ? 1080 : 1080;
   const vbWidth = BASE_WIDTH;
   const vbHeight = BASE_HEIGHT;
+
+  // Exact Uniform Scale Factor computed from actual physical container size on screen
+  const currentW = containerSize.w > 0 ? containerSize.w : width;
+  const currentH = containerSize.h > 0 ? containerSize.h : height;
+  const scale = Math.min(currentW / BASE_WIDTH, currentH / BASE_HEIGHT);
 
   const isAppleOrTech =
     visualStyle === 'apple_modern_motion' ||
@@ -206,6 +228,7 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     try {
       return (
         <div
+          ref={containerRef}
           style={{
             width: '100%',
             height: '100%',
@@ -219,9 +242,11 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         >
           <div
             style={{
-              width: '100%',
-              height: '100%',
-              position: 'relative',
+              width: BASE_WIDTH,
+              height: BASE_HEIGHT,
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center',
+              position: 'absolute',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
