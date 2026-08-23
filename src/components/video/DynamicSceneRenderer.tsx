@@ -75,11 +75,14 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
   try {
     if (!codeStr || typeof codeStr !== 'string') return null;
 
-    // 1. Strip imports and export keywords
+    // 1. Strip imports and export keywords, and make root container/SVGs 100% fluid
     let cleanCode = codeStr
       .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
       .replace(/export\s+default\s+\w+;?/g, '')
-      .replace(/export\s+/g, '');
+      .replace(/export\s+/g, '')
+      .replace(/width:\s*['"]?(?:1920|1080|1280|720)(?:px)?['"]?/g, 'width: "100%"')
+      .replace(/height:\s*['"]?(?:1920|1080|1280|720)(?:px)?['"]?/g, 'height: "100%"')
+      .replace(/width=['"](?:1920|1080|1280|720)['"]\s+height=['"](?:1920|1080|1280|720)['"]/g, 'width="100%" height="100%" preserveAspectRatio="xMidYMid meet"');
 
     // 2. Transpile TSX/JSX to executable JavaScript with React.createElement
     const transpiled = transform(cleanCode, {
@@ -157,9 +160,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const vbWidth = BASE_WIDTH;
   const vbHeight = BASE_HEIGHT;
 
-  // Exact Uniform Scale Factor to fit 100% inside current player viewport
-  const scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
-
   const isAppleOrTech =
     visualStyle === 'apple_modern_motion' ||
     visualStyle === 'tech_ui' ||
@@ -219,11 +219,9 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         >
           <div
             style={{
-              width: BASE_WIDTH,
-              height: BASE_HEIGHT,
-              transform: `scale(${scale})`,
-              transformOrigin: 'center center',
-              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              position: 'relative',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
