@@ -284,13 +284,22 @@ export const wynmotionService = {
    */
   async exportMP4(
     projectId: string,
-    scenes?: MotionScene[]
+    scenes?: MotionScene[],
+    options?: {
+      swap_speakers?: boolean;
+      aspect_ratio?: string;
+    }
   ): Promise<{ success: boolean; job_id: string; message: string; mp4_url?: string; status?: string }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/api/ai/motion/export-mp4`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ project_id: projectId, scenes }),
+      body: JSON.stringify({
+        project_id: projectId,
+        scenes,
+        swap_speakers: options?.swap_speakers,
+        aspect_ratio: options?.aspect_ratio,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi xuất video MP4');

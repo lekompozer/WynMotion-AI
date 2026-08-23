@@ -45,6 +45,7 @@ import {
   Palette,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
+import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
 import { RemotionPlayerProvider, useRemotion, useCurrentFrame, useVideoConfig } from './RemotionEngine';
 import { DynamicAnimationComposition } from './DynamicAnimationComposition';
@@ -91,6 +92,7 @@ interface StudioInnerProps {
 
 const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBack }) => {
   const { isDark, isVietnamese, t } = useApp();
+  const { userSubscription, refreshSubscription } = useWordaiAuth();
   const {
     frame,
     fps,
@@ -112,8 +114,24 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     setDurationInFrames,
   } = useRemotion();
 
-  // Normalize initial scenes with start_frame and duration_frames
+  // Local storage draft key for instant offline auto-save
+  const draftKey = `wynmotion_draft_${project.project_id}`;
+
+  // Normalize initial scenes with start_frame and duration_frames (load local draft if present)
   const [scenes, setScenes] = useState<DynamicSceneData[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(`wynmotion_draft_${project.project_id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.scenes) && parsed.scenes.length > 0) {
+            return parsed.scenes;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load local draft:', e);
+    }
     let curFrame = 0;
     return initialScenes.map((s, idx) => {
       const durSec = getSceneDuration(s);
@@ -138,7 +156,20 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(true);
   const [cardPosY, setCardPosY] = useState<TextPosition>('middle');
   const [subsPosY, setSubsPosY] = useState<TextPosition>('bottom');
-  const [swapSpeakers, setSwapSpeakers] = useState<boolean>(false);
+  const [swapSpeakers, setSwapSpeakers] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(`wynmotion_draft_${project.project_id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.swap_speakers === 'boolean') {
+            return parsed.swap_speakers;
+          }
+        }
+      }
+    } catch (e) {}
+    return (project as any).swap_speakers ?? false;
+  });
   const [textLangMode, setTextLangMode] = useState<TextLangMode>('vi');
 
   // Audio track switching & animation sync
@@ -158,9 +189,6 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const [isExporting, setIsExporting] = useState(false);
   const [isRedesigning, setIsRedesigning] = useState(false);
   const [redesignPrompt, setRedesignPrompt] = useState('');
-
-  // Auto-save debounce
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Video Stage Ref & Direct Drag-to-Move Bubble
   const videoStageRef = useRef<HTMLDivElement>(null);
@@ -333,36 +361,54 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     }
   };
 
-  // ── Update scene field with auto-save ──
+  // ── Update scene field with 0ms local auto-save (No backend DB writes while dragging) ──
   const updateScene = useCallback(
     (sceneId: string | number, updates: Partial<DynamicSceneData>) => {
-      setScenes((prev) =>
-        prev.map((s) => (s.scene_id === sceneId ? { ...s, ...updates } : s))
-      );
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        wynmotionService
-          .updateProject(project.project_id, {
-            scenes: scenes.map((s) =>
-              s.scene_id === sceneId ? { ...s, ...updates } : s
-            ) as any,
-          })
-          .catch((err) => console.warn('Auto-save failed:', err));
-      }, 1200);
+      setScenes((prev) => {
+        const next = prev.map((s) => (s.scene_id === sceneId ? { ...s, ...updates } : s));
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(
+              draftKey,
+              JSON.stringify({
+                scenes: next,
+                swap_speakers: swapSpeakers,
+                aspect_ratio: aspectRatio,
+                updated_at: new Date().toISOString(),
+              })
+            );
+          }
+        } catch (e) {
+          console.warn('LocalStorage save failed:', e);
+        }
+        return next;
+      });
     },
-    [project.project_id, scenes]
+    [draftKey, swapSpeakers, aspectRatio]
   );
 
   // ── Export MP4 ──
   const handleExportMP4 = async () => {
     setIsExporting(true);
     try {
-      const res = await wynmotionService.exportMP4(project.project_id, scenes as any);
+      const res = await wynmotionService.exportMP4(project.project_id, scenes as any, {
+        swap_speakers: swapSpeakers,
+        aspect_ratio: aspectRatio,
+      });
       if (res.mp4_url) {
-        const a = document.createElement('a');
-        a.href = res.mp4_url;
-        a.download = `WynMotion_${project.project_id.slice(0, 8)}.mp4`;
-        a.click();
+        try {
+          const { Share } = await import('@capacitor/share');
+          await Share.share({
+            title: project.title || 'WynMotion AI Video',
+            url: res.mp4_url,
+            dialogTitle: 'Lưu hoặc chia sẻ video MP4',
+          });
+        } catch {
+          const a = document.createElement('a');
+          a.href = res.mp4_url;
+          a.download = `WynMotion_${project.project_id.slice(0, 8)}.mp4`;
+          a.click();
+        }
       } else {
         alert(
           t(
@@ -392,7 +438,8 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       });
       if (res && res.image_url) {
         updateScene(activeScene.scene_id, { image_url: res.image_url });
-        alert(t('🎨 Đã vẽ lại hình ảnh nhân vật thành công!', '🎨 Image successfully re-designed!'));
+        await refreshSubscription?.();
+        alert(t('🎨 Đã vẽ lại hình ảnh nhân vật thành công (-3 điểm)!', '🎨 Image successfully re-designed (-3 points)!'));
       }
     } catch (err: any) {
       alert(err.message || t('Lỗi tạo lại hình ảnh', 'Failed to re-design image'));
@@ -912,11 +959,15 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                     <Sparkles className="w-4 h-4 text-indigo-400" />
                     {t('Tạo Lại Hình Ảnh Bằng AI Agent', 'Re-design Image with AI Agent')}
                   </span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-[10px] font-black text-amber-300 flex items-center gap-1">
+                    <span>💎</span>
+                    <span>3 {t('Điểm', 'Points')}</span>
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   {t(
-                    'Gemini Agent sẽ phân tích nhân vật A/B, trang phục và bối cảnh kịch bản để vẽ lại bức tranh 3D Pixar / Anime mới tràn viền chuẩn xác.',
-                    'Gemini Agent analyzes dialogue characters and generates a fresh 3D Pixar / Anime illustration.'
+                    'Gemini Agent sẽ phân tích nhân vật A/B, trang phục và bối cảnh kịch bản để vẽ lại bức tranh 3D Pixar / Anime mới tràn viền chuẩn xác (-3 điểm / lần).',
+                    'Gemini Agent analyzes dialogue characters and generates a fresh 3D Pixar / Anime illustration (-3 points / gen).'
                   )}
                 </p>
                 <textarea
@@ -944,6 +995,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                     <>
                       <RefreshCw className="w-3.5 h-3.5" />
                       <span>{t('🎨 Vẽ Lại Ảnh Ngay', '🎨 Re-design Image Now')}</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-black/30 text-[10px] font-black text-amber-300">
+                        💎 3 {t('Điểm', 'Pts')}
+                      </span>
                     </>
                   )}
                 </button>
