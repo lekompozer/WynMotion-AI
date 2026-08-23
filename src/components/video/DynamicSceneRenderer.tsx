@@ -154,6 +154,8 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   // Base Virtual Canvas Dimensions
   const BASE_WIDTH = isPortrait ? 1080 : isSquare ? 1080 : 1920;
   const BASE_HEIGHT = isPortrait ? 1920 : isSquare ? 1080 : 1080;
+  const vbWidth = BASE_WIDTH;
+  const vbHeight = BASE_HEIGHT;
 
   // Exact Uniform Scale Factor to fit 100% inside current player viewport
   const scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
