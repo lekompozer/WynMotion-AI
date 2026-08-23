@@ -151,8 +151,12 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const isSquare = width === height;
   const duration = scene.duration_frames || durationInFrames || 150;
 
-  const vbWidth = isPortrait ? 1080 : isSquare ? 1080 : 1920;
-  const vbHeight = isPortrait ? 1920 : isSquare ? 1080 : 1080;
+  // Base Virtual Canvas Dimensions
+  const BASE_WIDTH = isPortrait ? 1080 : isSquare ? 1080 : 1920;
+  const BASE_HEIGHT = isPortrait ? 1920 : isSquare ? 1080 : 1080;
+
+  // Exact Uniform Scale Factor to fit 100% inside current player viewport
+  const scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
 
   const isAppleOrTech =
     visualStyle === 'apple_modern_motion' ||
@@ -189,16 +193,15 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         interpolate,
         spring,
         useCurrentFrame: () => frame,
-        useVideoConfig: () => ({ fps, durationInFrames: duration, width: vbWidth, height: vbHeight }),
+        useVideoConfig: () => ({ fps, durationInFrames: duration, width: BASE_WIDTH, height: BASE_HEIGHT }),
         useRemotion: () => ({ bgColor: bgColor || '#060B18' }),
       });
     }
     return null;
-  }, [scene.code, frame, fps, duration, bgColor, vbWidth, vbHeight]);
+  }, [scene.code, frame, fps, duration, bgColor, BASE_WIDTH, BASE_HEIGHT]);
 
   if (EvaluatedComponent) {
     try {
-      const targetAspectRatio = isPortrait ? '9 / 16' : isSquare ? '1 / 1' : '16 / 9';
       return (
         <div
           style={{
@@ -214,17 +217,16 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         >
           <div
             style={{
-              width: '100%',
-              height: '100%',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              aspectRatio: targetAspectRatio,
-              position: 'relative',
-              overflow: 'hidden',
+              width: BASE_WIDTH,
+              height: BASE_HEIGHT,
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center',
+              position: 'absolute',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
             }}
           >
             <EvaluatedComponent />
