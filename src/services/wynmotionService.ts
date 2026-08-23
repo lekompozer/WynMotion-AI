@@ -311,7 +311,13 @@ export const wynmotionService = {
    */
   async checkExportStatus(
     jobId: string
-  ): Promise<{ status: 'pending' | 'processing' | 'done' | 'failed'; mp4_url?: string; error?: string }> {
+  ): Promise<{
+    status: 'pending' | 'processing' | 'queued' | 'done' | 'completed' | 'failed' | string;
+    progress?: number;
+    message?: string;
+    mp4_url?: string;
+    error?: string;
+  }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/api/ai/motion/export-status/${jobId}`, {
       headers,

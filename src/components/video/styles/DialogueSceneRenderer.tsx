@@ -284,7 +284,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
           : (customLayout.customPosYB ?? customLayout.customTopPctB ?? customLayout.customTopPct ?? defaultPosYB);
 
         const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : 48);
-        const dynamicFontSize = customLayout.fontSize || (isPortrait ? 17.5 : isSquare ? 19 : 21);
+        const dynamicFontSize = customLayout.fontSize || (isPortrait ? 14 : isSquare ? 15 : 16);
 
         return (
           <div

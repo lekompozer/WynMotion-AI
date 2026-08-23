@@ -43,6 +43,10 @@ import {
   ChevronDown,
   Sparkles,
   Palette,
+  Share2,
+  CheckCircle2,
+  AlertCircle,
+  Film,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -91,7 +95,7 @@ interface StudioInnerProps {
 }
 
 const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBack }) => {
-  const { isDark, isVietnamese, t } = useApp();
+  const { isDark, isVietnamese, t, setActiveTab, setIsStudioOpen } = useApp();
   const { userSubscription, refreshSubscription } = useWordaiAuth();
   const {
     frame,
@@ -185,10 +189,30 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const bgmFileInputRef = useRef<HTMLInputElement>(null);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Export state
+  // Export state & Progress polling modal
   const [isExporting, setIsExporting] = useState(false);
   const [isRedesigning, setIsRedesigning] = useState(false);
   const [redesignPrompt, setRedesignPrompt] = useState('');
+
+  const [exportModalState, setExportModalState] = useState<{
+    isOpen: boolean;
+    status: 'rendering' | 'completed' | 'failed';
+    progress: number;
+    message: string;
+    elapsedSec: number;
+    mp4Url?: string;
+    jobId?: string;
+  } | null>(null);
+
+  const exportIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const exportTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (exportIntervalRef.current) clearInterval(exportIntervalRef.current);
+      if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+    };
+  }, []);
 
   // Video Stage Ref & Direct Drag-to-Move Bubble
   const videoStageRef = useRef<HTMLDivElement>(null);
@@ -387,38 +411,129 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     [draftKey, swapSpeakers, aspectRatio]
   );
 
-  // ── Export MP4 ──
+  // ── Native Share / Save to Camera Roll Helper ──
+  const triggerNativeShare = async (url: string) => {
+    try {
+      const { Share } = await import('@capacitor/share');
+      await Share.share({
+        title: project.title || 'WynMotion AI Video',
+        text: 'WynMotion AI Video',
+        url: url,
+        dialogTitle: 'Lưu hoặc chia sẻ video MP4',
+      });
+    } catch (shareErr) {
+      console.log('Share action skipped or fallback:', shareErr);
+    }
+  };
+
+  // ── Export MP4 with Live Polling (every 5s, up to 5 mins) & Native Save Sheet ──
   const handleExportMP4 = async () => {
     setIsExporting(true);
+
+    if (exportIntervalRef.current) clearInterval(exportIntervalRef.current);
+    if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+
+    setExportModalState({
+      isOpen: true,
+      status: 'rendering',
+      progress: 8,
+      message: t('🎬 Đang khởi tạo tiến trình render video MP4 chất lượng cao...', 'Initializing high-quality MP4 video render...'),
+      elapsedSec: 0,
+    });
+
+    // 1-second elapsed time ticker (counts 1s to 300s)
+    let elapsed = 0;
+    exportTimerRef.current = setInterval(() => {
+      elapsed += 1;
+      setExportModalState((prev) => (prev ? { ...prev, elapsedSec: elapsed } : null));
+    }, 1000);
+
     try {
       const res = await wynmotionService.exportMP4(project.project_id, scenes as any, {
         swap_speakers: swapSpeakers,
         aspect_ratio: aspectRatio,
       });
-      if (res.mp4_url) {
-        try {
-          const { Share } = await import('@capacitor/share');
-          await Share.share({
-            title: project.title || 'WynMotion AI Video',
-            url: res.mp4_url,
-            dialogTitle: 'Lưu hoặc chia sẻ video MP4',
-          });
-        } catch {
-          const a = document.createElement('a');
-          a.href = res.mp4_url;
-          a.download = `WynMotion_${project.project_id.slice(0, 8)}.mp4`;
-          a.click();
-        }
-      } else {
-        alert(
-          t(
-            `🎬 Đang render video MP4 (job: ${res.job_id.slice(0, 8)}...). Vui lòng quay lại sau vài phút.`,
-            `🎬 Rendering MP4 (job: ${res.job_id.slice(0, 8)}...). Please check back in a few minutes.`
-          )
-        );
+
+      // Instant pre-rendered MP4 hit
+      if (res.mp4_url && res.status === 'completed') {
+        if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+        setExportModalState({
+          isOpen: true,
+          status: 'completed',
+          progress: 100,
+          message: t('🎉 Xuất video MP4 thành công!', '🎉 MP4 Export Completed!'),
+          elapsedSec: elapsed,
+          mp4Url: res.mp4_url,
+          jobId: res.job_id,
+        });
+        triggerNativeShare(res.mp4_url);
+        return;
       }
+
+      const jobId = res.job_id;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 attempts * 5s = 300s (5 mins)
+
+      exportIntervalRef.current = setInterval(async () => {
+        attempts += 1;
+        if (attempts > maxAttempts) {
+          if (exportIntervalRef.current) clearInterval(exportIntervalRef.current);
+          if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+          setExportModalState({
+            isOpen: true,
+            status: 'failed',
+            progress: 0,
+            message: t('⏱️ Quá thời gian 5 phút. Vui lòng kiểm tra lại trong Thư viện video sau ít phút.', 'Timeout after 5 mins. Please check Videos Library shortly.'),
+            elapsedSec: elapsed,
+          });
+          return;
+        }
+
+        try {
+          const statusRes = await wynmotionService.checkExportStatus(jobId);
+          if (statusRes.status === 'completed' || statusRes.status === 'done') {
+            if (exportIntervalRef.current) clearInterval(exportIntervalRef.current);
+            if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+            const finalUrl = statusRes.mp4_url || res.mp4_url;
+            setExportModalState({
+              isOpen: true,
+              status: 'completed',
+              progress: 100,
+              message: t('🎉 Xuất video MP4 thành công!', '🎉 MP4 Export Completed!'),
+              elapsedSec: elapsed,
+              mp4Url: finalUrl,
+              jobId: jobId,
+            });
+            if (finalUrl) triggerNativeShare(finalUrl);
+          } else if (statusRes.status === 'failed') {
+            if (exportIntervalRef.current) clearInterval(exportIntervalRef.current);
+            if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+            setExportModalState({
+              isOpen: true,
+              status: 'failed',
+              progress: 0,
+              message: (statusRes as any).error || (statusRes as any).message || t('❌ Render video thất bại', 'Video render failed'),
+              elapsedSec: elapsed,
+            });
+          } else {
+            // Processing
+            const prog = (statusRes as any).progress || Math.min(95, 10 + Math.round((attempts / 20) * 80));
+            const msg = (statusRes as any).message || t('✨ Đang ghép âm thanh, khung hình & phụ đề...', 'Rendering frames, subtitles & audio...');
+            setExportModalState((prev) => (prev ? { ...prev, progress: prog, message: msg } : null));
+          }
+        } catch (pollErr) {
+          console.warn('Poll status failed:', pollErr);
+        }
+      }, 5000);
     } catch (err: any) {
-      alert(err.message || t('❌ Xuất video thất bại', '❌ Export failed'));
+      if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+      setExportModalState({
+        isOpen: true,
+        status: 'failed',
+        progress: 0,
+        message: err.message || t('❌ Xuất video thất bại', '❌ Export failed'),
+        elapsedSec: elapsed,
+      });
     } finally {
       setIsExporting(false);
     }
@@ -1291,15 +1406,15 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                           <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
                             <span>{t('Cỡ chữ (Font Size):', 'Font Size:')}</span>
                             <span className="text-amber-400 font-mono">
-                              {activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 17.5 : 21)}px
+                              {activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 14 : 16)}px
                             </span>
                           </div>
                           <input
                             type="range"
-                            min={13}
-                            max={32}
+                            min={11}
+                            max={26}
                             step={0.5}
-                            value={activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 17.5 : 21)}
+                            value={activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 14 : 16)}
                             onChange={(e) => {
                               const val = parseFloat(e.target.value);
                               updateScene(activeScene.scene_id, {
@@ -1611,6 +1726,184 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             >
               <span>{t('Đóng Cài Đặt', 'Close Settings')}</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* EXPORT PROGRESS & NATIVE SAVE / SHARE MODAL */}
+      {exportModalState?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => {
+              if (exportModalState.status === 'completed' || exportModalState.status === 'failed') {
+                setExportModalState(null);
+              }
+            }}
+          />
+
+          <div
+            className={`relative z-10 w-full max-w-sm rounded-3xl p-6 shadow-2xl border animate-in zoom-in-95 duration-200 space-y-5 ${
+              isDark ? 'bg-gradient-to-b from-[#161d31] to-[#0d1222] border-slate-700/80 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {exportModalState.status === 'rendering' ? (
+                  <div className="p-2 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse">
+                    <Film className="w-5 h-5" />
+                  </div>
+                ) : exportModalState.status === 'completed' ? (
+                  <div className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                ) : (
+                  <div className="p-2 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-base font-black tracking-tight">
+                    {exportModalState.status === 'completed'
+                      ? t('🎉 Xuất Video Thành Công!', '🎉 Export Completed!')
+                      : exportModalState.status === 'failed'
+                      ? t('❌ Xuất Video Thất Bại', '❌ Export Failed')
+                      : t('🎬 Đang Render Video MP4...', '🎬 Rendering MP4 Video...')}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {exportModalState.status === 'rendering'
+                      ? `⏱️ ${Math.floor(exportModalState.elapsedSec / 60)
+                          .toString()
+                          .padStart(2, '0')}:${(exportModalState.elapsedSec % 60)
+                          .toString()
+                          .padStart(2, '0')} / 05:00`
+                      : t('Full HD 1080p • 30fps Audio Sync', 'Full HD 1080p • 30fps Audio Sync')}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setExportModalState(null)}
+                className="p-2 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Status Body */}
+            {exportModalState.status === 'rendering' && (
+              <div className="space-y-4">
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-cyan-400 flex items-center gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span className="line-clamp-1">{exportModalState.message}</span>
+                    </span>
+                    <span className="text-slate-300 font-mono">{exportModalState.progress}%</span>
+                  </div>
+                  <div className="w-full h-3 rounded-full bg-slate-900 border border-slate-800 overflow-hidden p-0.5">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 transition-all duration-500 shadow-lg"
+                      style={{ width: `${Math.max(5, exportModalState.progress)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-[11px] text-cyan-200/80 leading-relaxed">
+                  {t(
+                    '💡 Bạn có thể ẩn cửa sổ này để làm việc khác. Video sẽ tiếp tục render và tự động lưu vào mục Video Xuất trong Thư viện.',
+                    '💡 You can minimize this window. The video will finish in the background and save to your Videos Library.'
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setExportModalState(null)}
+                  className="w-full py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 font-bold text-xs transition-all border border-slate-700/60"
+                >
+                  {t('Ẩn Xuống Nền (Tiếp Tục Render)', 'Run in Background')}
+                </button>
+              </div>
+            )}
+
+            {exportModalState.status === 'completed' && exportModalState.mp4Url && (
+              <div className="space-y-4">
+                {/* Video Preview */}
+                <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-800 aspect-[9/16] max-h-56 mx-auto shadow-inner flex items-center justify-center">
+                  <video
+                    src={exportModalState.mp4Url}
+                    controls
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => triggerNativeShare(exportModalState.mp4Url!)}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>{t('📱 Lưu vào iPhone (Camera Roll) / Chia Sẻ', '📱 Save to iPhone / Share Video')}</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href={exportModalState.mp4Url}
+                      download={`WynMotion_${project.project_id.slice(0, 8)}.mp4`}
+                      className="py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-slate-700 text-center"
+                    >
+                      <Download className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{t('Tải MP4', 'Download')}</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExportModalState(null);
+                        setIsStudioOpen?.(false);
+                        setActiveTab?.('library');
+                      }}
+                      className="py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-slate-700"
+                    >
+                      <Folder className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{t('Mở Thư Viện', 'Open Library')}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {exportModalState.status === 'failed' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs leading-relaxed">
+                  {exportModalState.message}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExportModalState(null)}
+                    className="py-3 rounded-2xl bg-slate-800 text-slate-300 font-bold text-xs border border-slate-700"
+                  >
+                    {t('Đóng', 'Close')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportMP4}
+                    className="py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 text-white font-bold text-xs shadow-lg shadow-rose-500/20 flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>{t('Thử Lại', 'Retry')}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
