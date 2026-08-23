@@ -137,7 +137,7 @@ export const wynmotionService = {
     audio_id?: string;
   }> {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE_URL}/api/ai/motion/generate-audio`, {
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/generate-script-audio`, {
       method: 'POST',
       headers,
       body: JSON.stringify(params),
