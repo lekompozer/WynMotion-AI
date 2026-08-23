@@ -327,7 +327,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
             <div
               style={{
                 fontSize: dynamicFontSize,
-                fontWeight: 700,
+                fontWeight: 800,
                 color: textColor,
                 lineHeight: 1.35,
                 textAlign: 'center',
@@ -335,7 +335,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
                 transform: `translateY(${interpolate(sentenceLocalFrame, [0, 3], [3, 0], { extrapolateRight: 'clamp' })}px)`,
                 transition: 'color 0.2s ease',
                 fontFamily:
-                  "system-ui, -apple-system, 'SF Pro Rounded', 'Nunito', 'Segoe UI', sans-serif",
+                  "'Nunito', 'Plus Jakarta Sans', -apple-system, 'SF Pro Rounded', system-ui, sans-serif",
                 letterSpacing: -0.2,
                 wordBreak: 'break-word',
                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
