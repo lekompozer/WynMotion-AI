@@ -65,28 +65,29 @@ export interface DynamicSceneRendererProps {
   onSubsClick?: () => void;
 }
 
+import { transform } from 'sucrase';
+
 /**
  * Universal Dynamic Code Evaluator for AI-Generated Remotion Components
+ * Uses Sucrase for blazing fast in-browser JSX/TSX transpilation
  */
 function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>): React.FC | null {
   try {
     if (!codeStr || typeof codeStr !== 'string') return null;
 
-    // 1. Strip imports and export defaults
+    // 1. Strip imports and export keywords
     let cleanCode = codeStr
       .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
       .replace(/export\s+default\s+\w+;?/g, '')
-      // Standardize export Scene_N declarations to function DynamicSceneComponent() {
-      .replace(/export\s+(?:const|var|let)\s+Scene_\w+(?:\s*:\s*React\.FC(?:<.*?>)?)?\s*=\s*(?:\([^)]*\)|props)?\s*=>\s*\{/, 'function DynamicSceneComponent() {')
-      .replace(/export\s+function\s+Scene_\w+\s*\([^)]*\)\s*\{/, 'function DynamicSceneComponent() {')
-      .replace(/(?:const|var|let)\s+Scene_\w+(?:\s*:\s*React\.FC(?:<.*?>)?)?\s*=\s*(?:\([^)]*\)|props)?\s*=>\s*\{/, 'function DynamicSceneComponent() {')
-      .replace(/function\s+Scene_\w+\s*\([^)]*\)\s*\{/, 'function DynamicSceneComponent() {');
+      .replace(/export\s+/g, '');
 
-    // If it's a function or return block, wrap into executable body
-    if (!cleanCode.includes('function DynamicSceneComponent') && !cleanCode.includes('return')) {
-      return null;
-    }
+    // 2. Transpile TSX/JSX to executable JavaScript with React.createElement
+    const transpiled = transform(cleanCode, {
+      transforms: ['jsx', 'typescript'],
+      production: true,
+    }).code;
 
+    // 3. Execute and retrieve Scene component
     const runner = new Function(
       'React',
       'interpolate',
@@ -95,14 +96,18 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
       'useVideoConfig',
       'useRemotion',
       `
-      ${cleanCode}
+      ${transpiled}
+      if (typeof Scene_1 !== 'undefined') return Scene_1;
+      if (typeof Scene_2 !== 'undefined') return Scene_2;
+      if (typeof Scene_3 !== 'undefined') return Scene_3;
+      if (typeof Scene_4 !== 'undefined') return Scene_4;
+      if (typeof Scene_5 !== 'undefined') return Scene_5;
+      if (typeof Scene_6 !== 'undefined') return Scene_6;
+      if (typeof Scene_7 !== 'undefined') return Scene_7;
+      if (typeof Scene_8 !== 'undefined') return Scene_8;
+      if (typeof Scene_9 !== 'undefined') return Scene_9;
+      if (typeof Scene_10 !== 'undefined') return Scene_10;
       if (typeof DynamicSceneComponent !== 'undefined') return DynamicSceneComponent;
-      for (let i = 1; i <= 20; i++) {
-        try {
-          const fn = eval('typeof Scene_' + i + ' !== "undefined" ? Scene_' + i + ' : null');
-          if (fn) return fn;
-        } catch (e) {}
-      }
       return null;
       `
     );
