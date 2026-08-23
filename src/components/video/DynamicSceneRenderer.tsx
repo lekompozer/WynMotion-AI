@@ -152,7 +152,48 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'WynMotion AI';
   const secondaryKeywords = scene.highlight_keywords?.slice(1, 4) || [];
 
-  // 1. Check Modular Style Pipeline Renderer Registry first (e.g. dialogue_scene, apple_modern, science_explainer)
+  // 1. Dialogue scenes use dedicated avatar dialogue renderer
+  if (visualStyle === 'dialogue_scene') {
+    const ModularRenderer = getModularStyleRenderer(visualStyle);
+    if (ModularRenderer) {
+      return (
+        <ModularRenderer
+          scene={scene}
+          showSceneCards={showSceneCards}
+          showWhisperSubs={showWhisperSubs}
+          cardPosY={cardPosY}
+          subsPosY={subsPosY}
+          swapSpeakers={swapSpeakers}
+          onCardClick={onCardClick}
+          onSubsClick={onSubsClick}
+        />
+      );
+    }
+  }
+
+  // 2. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE FIRST
+  const EvaluatedComponent = useMemo(() => {
+    if (scene.code) {
+      return evaluateDynamicSceneCode(scene.code, {
+        interpolate,
+        spring,
+        useCurrentFrame: () => frame,
+        useVideoConfig: () => ({ fps, durationInFrames: duration, width: vbWidth, height: vbHeight }),
+        useRemotion: () => ({ bgColor: bgColor || '#060B18' }),
+      });
+    }
+    return null;
+  }, [scene.code, frame, fps, duration, bgColor, vbWidth, vbHeight]);
+
+  if (EvaluatedComponent) {
+    try {
+      return <EvaluatedComponent />;
+    } catch (e) {
+      console.warn('EvaluatedComponent render error:', e);
+    }
+  }
+
+  // 3. Fallback to Modular Style Pipeline Renderer Registry
   const ModularRenderer = getModularStyleRenderer(visualStyle);
   if (ModularRenderer) {
     return (
@@ -167,24 +208,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         onSubsClick={onSubsClick}
       />
     );
-  }
-
-  // 2. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE
-  const EvaluatedComponent = useMemo(() => {
-    if (scene.code) {
-      return evaluateDynamicSceneCode(scene.code, {
-        interpolate,
-        spring,
-        useCurrentFrame: () => frame,
-        useVideoConfig: () => ({ fps, durationInFrames: duration, width: vbWidth, height: vbHeight }),
-        useRemotion: () => ({ bgColor: bgColor || '#FAF7EF' }),
-      });
-    }
-    return null;
-  }, [scene.code, frame, fps, duration, bgColor, vbWidth, vbHeight]);
-
-  if (EvaluatedComponent) {
-    return <EvaluatedComponent />;
   }
 
   // Position styles for 2 Layers
