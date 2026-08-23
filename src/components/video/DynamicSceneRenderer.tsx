@@ -87,7 +87,7 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
       production: true,
     }).code;
 
-    // 3. Execute and retrieve Scene component with all standard React hooks and helpers in scope
+    // 3. Execute and retrieve Scene component with all standard React hooks in scope via var
     const runner = new Function(
       'React',
       'interpolate',
@@ -95,13 +95,13 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
       'useCurrentFrame',
       'useVideoConfig',
       'useRemotion',
-      'useMemo',
-      'useState',
-      'useEffect',
-      'useCallback',
-      'useRef',
       `
-      const { useMemo, useState, useEffect, useCallback, useRef } = React;
+      var useMemo = React.useMemo;
+      var useState = React.useState;
+      var useEffect = React.useEffect;
+      var useCallback = React.useCallback;
+      var useRef = React.useRef;
+      var useId = React.useId;
       ${transpiled}
       if (typeof Scene_1 !== 'undefined') return Scene_1;
       if (typeof Scene_2 !== 'undefined') return Scene_2;
@@ -124,12 +124,7 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
       context.spring,
       context.useCurrentFrame,
       context.useVideoConfig,
-      context.useRemotion,
-      React.useMemo,
-      React.useState,
-      React.useEffect,
-      React.useCallback,
-      React.useRef
+      context.useRemotion
     );
   } catch (err) {
     console.warn('Dynamic scene code evaluation fallback:', err);
