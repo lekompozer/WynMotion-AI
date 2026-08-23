@@ -198,7 +198,39 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
 
   if (EvaluatedComponent) {
     try {
-      return <EvaluatedComponent />;
+      const targetAspectRatio = isPortrait ? '9 / 16' : isSquare ? '1 / 1' : '16 / 9';
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: bgColor || '#060B18',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              aspectRatio: targetAspectRatio,
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <EvaluatedComponent />
+          </div>
+        </div>
+      );
     } catch (e) {
       console.warn('EvaluatedComponent render error:', e);
     }
