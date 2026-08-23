@@ -253,7 +253,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
         </div>
       )}
 
-      {/* 2. WIDE HORIZONTAL SPEECH BUBBLE (Listen & Learn Reference Standard) */}
+      {/* 2. 2D TAIL-ANCHORED SPEECH BUBBLE (Tail Tip Fixed to Character Head) */}
       {(() => {
         const isFlipped = swapSpeakers ?? (scene as any).swap_speakers ?? false;
         const effectiveIsA = isFlipped ? !isSpeakerA : isSpeakerA;
@@ -269,106 +269,79 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
         const textColor = effectiveIsA ? defaultTextA : defaultTextB;
         const isLeftTail = effectiveIsA;
 
-        // Position & Sizing (Independent height for Character A vs Character B)
-        const effectiveCardPos = customLayout.cardPosY || cardPosY || 'top';
-        let bubbleTop: string | undefined = undefined;
-        let bubbleBottom: string | undefined = undefined;
+        // 2D Anchor Positioning (Tail tip fixed point)
+        const defaultPosXA = isPortrait ? 36 : 28;
+        const defaultPosYA = isPortrait ? 30 : 34;
+        const defaultPosXB = isPortrait ? 64 : 72;
+        const defaultPosYB = isPortrait ? 30 : 34;
 
-        const speakerTopPct = effectiveIsA
-          ? (customLayout.customTopPctA ?? customLayout.customTopPct)
-          : (customLayout.customTopPctB ?? customLayout.customTopPct);
+        const posX = effectiveIsA
+          ? (customLayout.customPosXA ?? defaultPosXA)
+          : (customLayout.customPosXB ?? defaultPosXB);
 
-        if (speakerTopPct !== undefined) {
-          bubbleTop = `${speakerTopPct}%`;
-        } else if (effectiveCardPos === 'top') {
-          bubbleTop = isPortrait ? '18%' : '14%';
-        } else if (effectiveCardPos === 'bottom') {
-          bubbleBottom = isPortrait ? '14%' : '10%';
-        } else {
-          // middle
-          bubbleTop = isPortrait ? '48%' : '40%';
-        }
+        const posY = effectiveIsA
+          ? (customLayout.customPosYA ?? customLayout.customTopPctA ?? customLayout.customTopPct ?? defaultPosYA)
+          : (customLayout.customPosYB ?? customLayout.customTopPctB ?? customLayout.customTopPct ?? defaultPosYB);
 
-        const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : 60);
+        const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : 48);
+        const dynamicFontSize = customLayout.fontSize || (isPortrait ? 17.5 : isSquare ? 19 : 21);
 
         return (
           <div
             style={{
               position: 'absolute',
-              inset: 0,
+              top: `${posY}%`,
+              left: `${posX}%`,
+              width: `${widthPct}%`,
+              maxWidth: isPortrait ? 440 : 640,
+              // Anchor speech bubble at the tail tip (expands upwards so character is never covered)
+              transform: `translate(${isLeftTail ? -20 : -80}%, -100%) scale(${Math.max(0, bubbleScale)})`,
+              transformOrigin: isLeftTail ? 'bottom left' : 'bottom right',
+              backgroundColor: bubbleBg,
+              borderRadius: isPortrait ? 22 : 26,
+              padding: isPortrait ? '13px 20px' : '16px 26px',
+              boxShadow:
+                '0 18px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)',
+              border: '2.5px solid rgba(255, 255, 255, 0.24)',
               zIndex: 20,
               pointerEvents: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: effectiveCardPos === 'bottom' ? 'flex-end' : 'flex-start',
-              alignItems: 'center',
-              boxSizing: 'border-box',
-              paddingTop: bubbleTop,
-              paddingBottom: bubbleBottom,
-              paddingLeft: isPortrait ? 16 : 32,
-              paddingRight: isPortrait ? 16 : 32,
+              transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
+            {/* Comic Tail pointing down directly at character head */}
             <div
               style={{
-                width: `${widthPct}%`,
-                maxWidth: isPortrait ? 440 : 680,
-                transform: `scale(${Math.max(0, bubbleScale)})`,
-                transformOrigin: isLeftTail ? 'bottom left' : 'bottom right',
-                backgroundColor: bubbleBg,
-                borderRadius: isPortrait ? 22 : 26,
-                padding: isPortrait ? '13px 20px' : '16px 28px',
-                boxShadow:
-                  '0 16px 36px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25)',
-                border: '2.5px solid rgba(255, 255, 255, 0.22)',
-                position: 'relative',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'absolute',
+                bottom: -13,
+                [isLeftTail ? 'left' : 'right']: isPortrait ? 26 : 38,
+                width: 0,
+                height: 0,
+                borderLeft: '11px solid transparent',
+                borderRight: '11px solid transparent',
+                borderTop: `13px solid ${bubbleBg}`,
+                filter: 'drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3))',
+              }}
+            />
+
+            {/* Single Active Sentence (Full sentence displayed at once, elegant & crisp) */}
+            <div
+              style={{
+                fontSize: dynamicFontSize,
+                fontWeight: 700,
+                color: textColor,
+                lineHeight: 1.35,
+                textAlign: 'center',
+                opacity: textOpacity,
+                transform: `translateY(${interpolate(sentenceLocalFrame, [0, 3], [3, 0], { extrapolateRight: 'clamp' })}px)`,
+                transition: 'color 0.2s ease',
+                fontFamily:
+                  "system-ui, -apple-system, 'SF Pro Rounded', 'Nunito', 'Segoe UI', sans-serif",
+                letterSpacing: -0.2,
+                wordBreak: 'break-word',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
               }}
             >
-              {/* Comic Tail pointing towards speaker head (Downwards when bubble is top/middle) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  ...(effectiveCardPos === 'bottom'
-                    ? {
-                        top: -13,
-                        borderLeft: '11px solid transparent',
-                        borderRight: '11px solid transparent',
-                        borderBottom: `13px solid ${bubbleBg}`,
-                      }
-                    : {
-                        bottom: -13,
-                        borderLeft: '11px solid transparent',
-                        borderRight: '11px solid transparent',
-                        borderTop: `13px solid ${bubbleBg}`,
-                      }),
-                  [isLeftTail ? 'left' : 'right']: isPortrait ? 28 : 42,
-                  width: 0,
-                  height: 0,
-                  filter: 'drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25))',
-                }}
-              />
-
-              {/* Single Active Sentence (Full sentence displayed at once, elegant & crisp) */}
-              <div
-                style={{
-                  fontSize: isPortrait ? 17.5 : isSquare ? 19 : 21,
-                  fontWeight: 700,
-                  color: textColor,
-                  lineHeight: 1.35,
-                  textAlign: 'center',
-                  opacity: textOpacity,
-                  transform: `translateY(${interpolate(sentenceLocalFrame, [0, 3], [3, 0], { extrapolateRight: 'clamp' })}px)`,
-                  transition: 'color 0.2s ease',
-                  fontFamily:
-                    "system-ui, -apple-system, 'SF Pro Rounded', 'Nunito', 'Segoe UI', sans-serif",
-                  letterSpacing: -0.2,
-                  wordBreak: 'break-word',
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-                }}
-              >
-                <span>{fullText}</span>
-              </div>
+              <span>{fullText}</span>
             </div>
           </div>
         );

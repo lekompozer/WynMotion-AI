@@ -203,32 +203,35 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     return turns[turnIdx]?.speaker || (turnIdx % 2 === 0 ? 'A' : 'B');
   }, [activeScene, currentTimeSec]);
 
-  // Update position for active character
-  const calculateTopPctFromClientY = (clientY: number) => {
+  // Update 2D (X, Y) anchor position for active character
+  const calculatePosFromClientCoords = (clientX: number, clientY: number) => {
     if (!videoStageRef.current || !activeScene) return;
     const rect = videoStageRef.current.getBoundingClientRect();
-    if (rect.height <= 0) return;
+    if (rect.height <= 0 || rect.width <= 0) return;
+    const relativeX = clientX - rect.left;
     const relativeY = clientY - rect.top;
-    const pct = Math.max(10, Math.min(78, Math.round((relativeY / rect.height) * 100)));
+    const pctX = Math.max(10, Math.min(90, Math.round((relativeX / rect.width) * 100)));
+    const pctY = Math.max(8, Math.min(90, Math.round((relativeY / rect.height) * 100)));
     const isA = activeSpeaker === 'A';
     updateScene(activeScene.scene_id, {
       bubble_custom_layout: {
         ...(activeScene.bubble_custom_layout || {}),
-        [isA ? 'customTopPctA' : 'customTopPctB']: pct,
-        customTopPct: pct,
+        [isA ? 'customPosXA' : 'customPosXB']: pctX,
+        [isA ? 'customPosYA' : 'customPosYB']: pctY,
+        customTopPct: pctY,
       },
     });
   };
 
   // Fluid window-level drag listeners (iOS Safari / Capacitor gold standard)
-  const startDragging = (initialClientY: number) => {
+  const startDragging = (initialClientX: number, initialClientY: number) => {
     setIsDraggingBubble(true);
-    calculateTopPctFromClientY(initialClientY);
+    calculatePosFromClientCoords(initialClientX, initialClientY);
 
     const onTouchMove = (e: TouchEvent) => {
       e.preventDefault();
       if (e.touches && e.touches[0]) {
-        calculateTopPctFromClientY(e.touches[0].clientY);
+        calculatePosFromClientCoords(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
@@ -240,7 +243,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      calculateTopPctFromClientY(e.clientY);
+      calculatePosFromClientCoords(e.clientX, e.clientY);
     };
 
     const onPointerUp = () => {
@@ -541,21 +544,39 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
             {/* Interactive Direct Touch/Mouse Drag-to-Move for Dialogue Bubbles */}
             {(project.visual_style as string) === 'dialogue_scene' && activeScene && (() => {
-              const speakerTop = activeSpeaker === 'A'
-                ? (activeScene?.bubble_custom_layout?.customTopPctA ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48))
-                : (activeScene?.bubble_custom_layout?.customTopPctB ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48));
+              const isFlipped = swapSpeakers ?? (activeScene as any).swap_speakers ?? false;
+              const isLeftTail = isFlipped ? activeSpeaker !== 'A' : activeSpeaker === 'A';
+              const isPortrait = aspectRatio === '9:16';
+              const customLayout = (activeScene as any).bubble_custom_layout || {};
+
+              const defaultPosXA = isPortrait ? 36 : 28;
+              const defaultPosYA = isPortrait ? 30 : 34;
+              const defaultPosXB = isPortrait ? 64 : 72;
+              const defaultPosYB = isPortrait ? 30 : 34;
+
+              const posX = activeSpeaker === 'A'
+                ? (customLayout.customPosXA ?? defaultPosXA)
+                : (customLayout.customPosXB ?? defaultPosXB);
+
+              const posY = activeSpeaker === 'A'
+                ? (customLayout.customPosYA ?? customLayout.customTopPctA ?? customLayout.customTopPct ?? defaultPosYA)
+                : (customLayout.customPosYB ?? customLayout.customTopPctB ?? customLayout.customTopPct ?? defaultPosYB);
+
+              const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : 48);
+
               return (
                 <div
-                  className={`absolute left-1/2 z-40 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
+                  className={`absolute z-40 cursor-grab active:cursor-grabbing select-none transition-all touch-none rounded-3xl ${
                     isDraggingBubble
                       ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/50 shadow-2xl bg-cyan-400/20'
                       : 'hover:ring-1 hover:ring-cyan-400/40 active:ring-2 active:ring-cyan-400'
                   }`}
                   style={{
-                    top: `${speakerTop}%`,
-                    left: '50%',
-                    transform: 'translate(-50%, -6px)',
-                    width: `${activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%`,
+                    top: `${posY}%`,
+                    left: `${posX}%`,
+                    transform: `translate(${isLeftTail ? -20 : -80}%, -100%)`,
+                    width: `${widthPct}%`,
+                    maxWidth: isPortrait ? 440 : 640,
                     minHeight: '60px',
                     height: '85px',
                     touchAction: 'none',
@@ -565,21 +586,21 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                   }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    startDragging(e.clientY);
+                    startDragging(e.clientX, e.clientY);
                   }}
                   onTouchStart={(e) => {
                     e.stopPropagation();
                     if (e.touches && e.touches[0]) {
-                      startDragging(e.touches[0].clientY);
+                      startDragging(e.touches[0].clientX, e.touches[0].clientY);
                     }
                   }}
                 >
                   {/* Subtle active indicator while dragging */}
                   {isDraggingBubble && (
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-400 text-slate-950 shadow-lg flex items-center gap-1">
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-400 text-slate-950 shadow-lg flex items-center gap-1 whitespace-nowrap">
                       <span>👤 {activeSpeaker === 'A' ? t('Nhân vật A', 'Speaker A') : t('Nhân vật B', 'Speaker B')}</span>
                       <span>•</span>
-                      <span>{speakerTop}%</span>
+                      <span>X:{posX}% Y:{posY}%</span>
                     </div>
                   )}
                 </div>
@@ -1060,130 +1081,183 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                       </button>
                     </div>
 
-                    {/* Presets */}
-                    <div className="grid grid-cols-3 gap-2 pt-1">
-                      {[
-                        { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
-                        { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
-                        { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
-                      ].map((pos) => {
-                        const PosIcon = pos.icon;
-                        return (
-                          <button
-                            key={pos.id}
-                            type="button"
-                            onClick={() => {
-                              setCardPosY(pos.id);
-                              if (activeScene) {
-                                updateScene(activeScene.scene_id, {
-                                  bubble_custom_layout: {
-                                    ...(activeScene.bubble_custom_layout || {}),
-                                    cardPosY: pos.id,
-                                    customTopPct: pos.id === 'top' ? 18 : pos.id === 'middle' ? 48 : 75,
-                                  },
-                                });
-                              }
+                    {/* 2D Positioning Sliders for Character A and Character B */}
+                    <div className="space-y-3.5 pt-1">
+                      {/* Character A (Left Speaker) */}
+                      <div className="space-y-2 bg-slate-950/70 p-3 rounded-2xl border border-sky-500/30">
+                        <div className="text-[11px] font-black text-sky-400 flex items-center justify-between">
+                          <span>👤 {t('Nhân Vật A (Bên Trái)', 'Speaker A (Left)')}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            X: {activeScene?.bubble_custom_layout?.customPosXA ?? (aspectRatio === '9:16' ? 36 : 28)}% • Y: {activeScene?.bubble_custom_layout?.customPosYA ?? activeScene?.bubble_custom_layout?.customTopPctA ?? (aspectRatio === '9:16' ? 30 : 34)}%
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>{t('Vị trí Ngang (X %):', 'Horizontal (X %):')}</span>
+                            <span className="text-sky-300 font-mono">{activeScene?.bubble_custom_layout?.customPosXA ?? (aspectRatio === '9:16' ? 36 : 28)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={10}
+                            max={90}
+                            step={1}
+                            value={activeScene?.bubble_custom_layout?.customPosXA ?? (aspectRatio === '9:16' ? 36 : 28)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              updateScene(activeScene.scene_id, {
+                                bubble_custom_layout: {
+                                  ...(activeScene.bubble_custom_layout || {}),
+                                  customPosXA: val,
+                                },
+                              });
                             }}
-                            className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
-                              cardPosY === pos.id
-                                ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                                : 'border-slate-800 bg-slate-900 text-slate-400'
-                            }`}
-                          >
-                            <PosIcon className="w-3.5 h-3.5" />
-                            <span>{pos.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Sliders for Character A and Character B */}
-                    <div className="space-y-3.5 pt-2">
-                      {/* Character A Position */}
-                      <div className="space-y-1 bg-slate-950/60 p-2.5 rounded-2xl border border-slate-800">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
-                          <span className="flex items-center gap-1 text-sky-400">
-                            <span>👤</span>
-                            <span>{t('Vị trí Nhân vật A (Bên Trái):', 'Speaker A Position (Left):')}</span>
-                          </span>
-                          <span className="text-cyan-400 font-mono">
-                            {activeScene?.bubble_custom_layout?.customTopPctA ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%
-                          </span>
+                            className="w-full accent-sky-400 h-1.5 rounded-lg bg-slate-800"
+                          />
                         </div>
-                        <input
-                          type="range"
-                          min={12}
-                          max={75}
-                          step={1}
-                          value={activeScene?.bubble_custom_layout?.customTopPctA ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            updateScene(activeScene.scene_id, {
-                              bubble_custom_layout: {
-                                ...(activeScene.bubble_custom_layout || {}),
-                                customTopPctA: val,
-                              },
-                            });
-                          }}
-                          className="w-full accent-sky-400 h-1.5 rounded-lg bg-slate-800"
-                        />
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>{t('Vị trí Dọc (Y %):', 'Vertical (Y %):')}</span>
+                            <span className="text-sky-300 font-mono">{activeScene?.bubble_custom_layout?.customPosYA ?? activeScene?.bubble_custom_layout?.customTopPctA ?? (aspectRatio === '9:16' ? 30 : 34)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={8}
+                            max={90}
+                            step={1}
+                            value={activeScene?.bubble_custom_layout?.customPosYA ?? activeScene?.bubble_custom_layout?.customTopPctA ?? (aspectRatio === '9:16' ? 30 : 34)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              updateScene(activeScene.scene_id, {
+                                bubble_custom_layout: {
+                                  ...(activeScene.bubble_custom_layout || {}),
+                                  customPosYA: val,
+                                  customTopPctA: val,
+                                  customTopPct: val,
+                                },
+                              });
+                            }}
+                            className="w-full accent-sky-400 h-1.5 rounded-lg bg-slate-800"
+                          />
+                        </div>
                       </div>
 
-                      {/* Character B Position */}
-                      <div className="space-y-1 bg-slate-950/60 p-2.5 rounded-2xl border border-slate-800">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
-                          <span className="flex items-center gap-1 text-emerald-400">
-                            <span>👤</span>
-                            <span>{t('Vị trí Nhân vật B (Bên Phải):', 'Speaker B Position (Right):')}</span>
-                          </span>
-                          <span className="text-emerald-400 font-mono">
-                            {activeScene?.bubble_custom_layout?.customTopPctB ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}%
+                      {/* Character B (Right Speaker) */}
+                      <div className="space-y-2 bg-slate-950/70 p-3 rounded-2xl border border-emerald-500/30">
+                        <div className="text-[11px] font-black text-emerald-400 flex items-center justify-between">
+                          <span>👤 {t('Nhân Vật B (Bên Phải)', 'Speaker B (Right)')}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            X: {activeScene?.bubble_custom_layout?.customPosXB ?? (aspectRatio === '9:16' ? 64 : 72)}% • Y: {activeScene?.bubble_custom_layout?.customPosYB ?? activeScene?.bubble_custom_layout?.customTopPctB ?? (aspectRatio === '9:16' ? 30 : 34)}%
                           </span>
                         </div>
-                        <input
-                          type="range"
-                          min={12}
-                          max={75}
-                          step={1}
-                          value={activeScene?.bubble_custom_layout?.customTopPctB ?? activeScene?.bubble_custom_layout?.customTopPct ?? (cardPosY === 'top' ? 18 : cardPosY === 'bottom' ? 75 : 48)}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            updateScene(activeScene.scene_id, {
-                              bubble_custom_layout: {
-                                ...(activeScene.bubble_custom_layout || {}),
-                                customTopPctB: val,
-                              },
-                            });
-                          }}
-                          className="w-full accent-emerald-400 h-1.5 rounded-lg bg-slate-800"
-                        />
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>{t('Vị trí Ngang (X %):', 'Horizontal (X %):')}</span>
+                            <span className="text-emerald-300 font-mono">{activeScene?.bubble_custom_layout?.customPosXB ?? (aspectRatio === '9:16' ? 64 : 72)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={10}
+                            max={90}
+                            step={1}
+                            value={activeScene?.bubble_custom_layout?.customPosXB ?? (aspectRatio === '9:16' ? 64 : 72)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              updateScene(activeScene.scene_id, {
+                                bubble_custom_layout: {
+                                  ...(activeScene.bubble_custom_layout || {}),
+                                  customPosXB: val,
+                                },
+                              });
+                            }}
+                            className="w-full accent-emerald-400 h-1.5 rounded-lg bg-slate-800"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>{t('Vị trí Dọc (Y %):', 'Vertical (Y %):')}</span>
+                            <span className="text-emerald-300 font-mono">{activeScene?.bubble_custom_layout?.customPosYB ?? activeScene?.bubble_custom_layout?.customTopPctB ?? (aspectRatio === '9:16' ? 30 : 34)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={8}
+                            max={90}
+                            step={1}
+                            value={activeScene?.bubble_custom_layout?.customPosYB ?? activeScene?.bubble_custom_layout?.customTopPctB ?? (aspectRatio === '9:16' ? 30 : 34)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              updateScene(activeScene.scene_id, {
+                                bubble_custom_layout: {
+                                  ...(activeScene.bubble_custom_layout || {}),
+                                  customPosYB: val,
+                                  customTopPctB: val,
+                                  customTopPct: val,
+                                },
+                              });
+                            }}
+                            className="w-full accent-emerald-400 h-1.5 rounded-lg bg-slate-800"
+                          />
+                        </div>
                       </div>
 
-                      {/* Width */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
-                          <span>{t('Độ rộng bong bóng (Width %):', 'Bubble Width (%):')}</span>
-                          <span className="text-cyan-400 font-mono">
-                            {activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}%
-                          </span>
+                      {/* Bubble Width & Font Size Grid */}
+                      <div className="grid grid-cols-2 gap-2.5 pt-1">
+                        {/* Width */}
+                        <div className="space-y-1 bg-slate-950/50 p-2.5 rounded-2xl border border-slate-800">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
+                            <span>{t('Độ rộng bong bóng:', 'Bubble Width:')}</span>
+                            <span className="text-cyan-400 font-mono">
+                              {activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 48)}%
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={45}
+                            max={95}
+                            step={1}
+                            value={activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 48)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              updateScene(activeScene.scene_id, {
+                                bubble_custom_layout: {
+                                  ...(activeScene.bubble_custom_layout || {}),
+                                  customWidthPct: val,
+                                },
+                              });
+                            }}
+                            className="w-full accent-cyan-400 h-1.5 rounded-lg bg-slate-800"
+                          />
                         </div>
-                        <input
-                          type="range"
-                          min={60}
-                          max={94}
-                          step={1}
-                          value={activeScene?.bubble_custom_layout?.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 60)}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            updateScene(activeScene.scene_id, {
-                              bubble_custom_layout: {
-                                ...(activeScene.bubble_custom_layout || {}),
-                                customWidthPct: val,
-                              },
-                            });
-                          }}
-                          className="w-full accent-cyan-400 h-1.5 rounded-lg bg-slate-800"
-                        />
+
+                        {/* Font Size */}
+                        <div className="space-y-1 bg-slate-950/50 p-2.5 rounded-2xl border border-slate-800">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
+                            <span>{t('Cỡ chữ (Font Size):', 'Font Size:')}</span>
+                            <span className="text-amber-400 font-mono">
+                              {activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 17.5 : 21)}px
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={13}
+                            max={32}
+                            step={0.5}
+                            value={activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 17.5 : 21)}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              updateScene(activeScene.scene_id, {
+                                bubble_custom_layout: {
+                                  ...(activeScene.bubble_custom_layout || {}),
+                                  fontSize: val,
+                                },
+                              });
+                            }}
+                            className="w-full accent-amber-400 h-1.5 rounded-lg bg-slate-800"
+                          />
+                        </div>
                       </div>
                     </div>
 
