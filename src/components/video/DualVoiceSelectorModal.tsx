@@ -46,22 +46,26 @@ export const DualVoiceSelectorModal: React.FC<DualVoiceSelectorModalProps> = ({
   const handleLangChange = (langCode: string) => {
     setSelectedLang(langCode);
     if (voiceModel === 'wynai') {
-      if (langCode === 'vi') {
-        setSelectedVoiceName(gender === 'female' ? 'Trúc Ly' : 'Phạm Tuyên');
-      } else {
-        setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[langCode] || (gender === 'female' ? 'af_bella' : 'am_adam'));
-      }
+      const def = KOKORO_DEFAULT_VOICE_MAP[langCode] || { female: 'af_bella', male: 'am_adam' };
+      setSelectedVoiceName(gender === 'female' ? def.female : def.male);
+    }
+  };
+
+  const handleGenderChange = (newGender: 'male' | 'female') => {
+    setGender(newGender);
+    if (voiceModel === 'wynai') {
+      const def = KOKORO_DEFAULT_VOICE_MAP[selectedLang] || { female: 'af_bella', male: 'am_adam' };
+      setSelectedVoiceName(newGender === 'female' ? def.female : def.male);
+    } else {
+      setSelectedVoiceName(newGender === 'female' ? 'Kore' : 'Puck');
     }
   };
 
   const handleModelChange = (model: 'wynai' | 'gemini') => {
     setVoiceModel(model);
     if (model === 'wynai') {
-      if (selectedLang === 'vi') {
-        setSelectedVoiceName(gender === 'female' ? 'Trúc Ly' : 'Phạm Tuyên');
-      } else {
-        setSelectedVoiceName(gender === 'female' ? 'af_bella' : 'am_adam');
-      }
+      const def = KOKORO_DEFAULT_VOICE_MAP[selectedLang] || { female: 'af_bella', male: 'am_adam' };
+      setSelectedVoiceName(gender === 'female' ? def.female : def.male);
     } else {
       setSelectedVoiceName(gender === 'female' ? 'Kore' : 'Puck');
     }
@@ -78,7 +82,44 @@ export const DualVoiceSelectorModal: React.FC<DualVoiceSelectorModalProps> = ({
       if (vietnameseRegion === 'south') list = VIENEU_SOUTHERN_VOICES;
       return list;
     }
-    return gender === 'female' ? KOKORO_FEMALE_VOICES : KOKORO_MALE_VOICES;
+
+    const baseList = gender === 'female' ? KOKORO_FEMALE_VOICES : KOKORO_MALE_VOICES;
+    const l = (selectedLang || '').toLowerCase();
+    
+    // Filter voices matching the selected language prefix
+    if (l === 'zh' || l === 'cmn') {
+      const filtered = baseList.filter((v) => v.code.startsWith('z'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'ja') {
+      const filtered = baseList.filter((v) => v.code.startsWith('j'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'ko' || l === 'kr') {
+      const filtered = baseList.filter((v) => v.code.startsWith('k'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'en-gb') {
+      const filtered = baseList.filter((v) => v.code.startsWith('b'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'es') {
+      const filtered = baseList.filter((v) => v.code.startsWith('e'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'fr') {
+      const filtered = baseList.filter((v) => v.code.startsWith('f'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'it') {
+      const filtered = baseList.filter((v) => v.code.startsWith('i'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'pt-br') {
+      const filtered = baseList.filter((v) => v.code.startsWith('p'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'hi') {
+      const filtered = baseList.filter((v) => v.code.startsWith('h'));
+      if (filtered.length > 0) return filtered;
+    } else if (l === 'en-us' || l === 'en') {
+      const filtered = baseList.filter((v) => v.code.startsWith('a'));
+      if (filtered.length > 0) return filtered;
+    }
+
+    return baseList;
   };
 
   const handleApply = () => {
@@ -137,7 +178,7 @@ export const DualVoiceSelectorModal: React.FC<DualVoiceSelectorModalProps> = ({
             <div className="flex rounded-2xl border border-slate-700/50 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setGender('female')}
+                onClick={() => handleGenderChange('female')}
                 className={`px-3 py-2 text-xs font-black transition-all ${
                   gender === 'female' ? 'bg-pink-500 text-white' : 'bg-slate-800 text-slate-400'
                 }`}
@@ -146,7 +187,7 @@ export const DualVoiceSelectorModal: React.FC<DualVoiceSelectorModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setGender('male')}
+                onClick={() => handleGenderChange('male')}
                 className={`px-3 py-2 text-xs font-black transition-all ${
                   gender === 'male' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
                 }`}

@@ -107,25 +107,57 @@ export const VIENEU_SOUTHERN_VOICES = [
 ];
 
 export const KOKORO_FEMALE_VOICES = [
+  // US & UK English
   { code: 'af_bella', name: 'Bella', desc: 'US Female 🇺🇸 · Clear', tag: 'Top Pick' },
   { code: 'af_nicole', name: 'Nicole', desc: 'US Female 🇺🇸 · Studio', tag: 'Clear' },
   { code: 'af_sarah', name: 'Sarah', desc: 'US Female 🇺🇸 · Natural', tag: 'Natural' },
   { code: 'af_sky', name: 'Sky', desc: 'US Female 🇺🇸 · Youthful', tag: 'Youth' },
+  { code: 'af_heart', name: 'Heart', desc: 'US Female 🇺🇸 · Warm', tag: 'Expressive' },
   { code: 'bf_isabella', name: 'Isabella', desc: 'UK Female 🇬🇧 · Academic', tag: 'Academic' },
   { code: 'bf_emma', name: 'Emma', desc: 'UK Female 🇬🇧 · British', tag: 'British' },
-  { code: 'jf_alpha', name: 'Alpha', desc: 'Japanese Female 🇯🇵', tag: 'Japanese' },
-  { code: 'zf_xiaobei', name: 'Xiaobei', desc: 'Mandarin Female 🇨🇳', tag: 'Mandarin' },
-  { code: 'ef_dora', name: 'Dora', desc: 'Spanish Female 🇪🇸', tag: 'Spanish' },
-  { code: 'ff_siwis', name: 'Siwis', desc: 'French Female 🇫🇷', tag: 'French' },
-  { code: 'hf_alpha', name: 'Alpha', desc: 'Hindi Female 🇮🇳', tag: 'Hindi' },
-  { code: 'pf_dora', name: 'Dora', desc: 'Portuguese Female 🇧🇷', tag: 'Portuguese' },
+  // Mandarin Chinese 🇨🇳
+  { code: 'zf_xiaobei', name: 'Xiaobei (小北)', desc: 'Mandarin Female 🇨🇳 · Clear', tag: 'Top Pick' },
+  { code: 'zf_xiaoni', name: 'Xiaoni (小妮)', desc: 'Mandarin Female 🇨🇳 · Sweet', tag: 'Sweet' },
+  { code: 'zf_xiaoxiao', name: 'Xiaoxiao (小小)', desc: 'Mandarin Female 🇨🇳 · Natural', tag: 'Natural' },
+  { code: 'zf_yunjian', name: 'Yunjian (云间)', desc: 'Mandarin Female 🇨🇳 · Soft', tag: 'Soft' },
+  // Japanese 🇯🇵
+  { code: 'jf_alpha', name: 'Alpha (アルファ)', desc: 'Japanese Female 🇯🇵 · Standard', tag: 'Top Pick' },
+  { code: 'jf_gongitsune', name: 'Gongitsune (ごんぎつね)', desc: 'Japanese Female 🇯🇵 · Story', tag: 'Story' },
+  { code: 'jf_nezumi', name: 'Nezumi (ねずみ)', desc: 'Japanese Female 🇯🇵 · Sweet', tag: 'Sweet' },
+  { code: 'jf_tebukuro', name: 'Tebukuro (手袋)', desc: 'Japanese Female 🇯🇵 · Soft', tag: 'Soft' },
+  // Korean 🇰🇷
+  { code: 'kf_sarah', name: 'Sarah (세라)', desc: 'Korean Female 🇰🇷 · K-Style', tag: 'Top Pick' },
+  // European & Global
+  { code: 'ef_dora', name: 'Dora', desc: 'Spanish Female 🇪🇸 · Clear', tag: 'Spanish' },
+  { code: 'ff_siwis', name: 'Siwis', desc: 'French Female 🇫🇷 · Elegant', tag: 'French' },
+  { code: 'if_sara', name: 'Sara', desc: 'Italian Female 🇮🇹 · Expressive', tag: 'Italian' },
+  { code: 'pf_dora', name: 'Dora', desc: 'Portuguese Female 🇧🇷 · Natural', tag: 'Portuguese' },
+  { code: 'hf_alpha', name: 'Alpha', desc: 'Hindi Female 🇮🇳 · Standard', tag: 'Hindi' },
 ];
 
 export const KOKORO_MALE_VOICES = [
-  { code: 'am_adam', name: 'Adam', desc: 'US Male 🇺🇸 · Standard', tag: 'Standard' },
+  // US & UK English
+  { code: 'am_adam', name: 'Adam', desc: 'US Male 🇺🇸 · Standard', tag: 'Top Pick' },
   { code: 'am_michael', name: 'Michael', desc: 'US Male 🇺🇸 · Deep', tag: 'Deep' },
+  { code: 'am_echo', name: 'Echo', desc: 'US Male 🇺🇸 · Warm', tag: 'Warm' },
+  { code: 'am_eric', name: 'Eric', desc: 'US Male 🇺🇸 · Energetic', tag: 'Dynamic' },
+  { code: 'am_fenrir', name: 'Fenrir', desc: 'US Male 🇺🇸 · Dramatic', tag: 'Story' },
+  { code: 'am_liam', name: 'Liam', desc: 'US Male 🇺🇸 · Friendly', tag: 'Friendly' },
+  { code: 'am_onyx', name: 'Onyx', desc: 'US Male 🇺🇸 · Strong', tag: 'Strong' },
+  { code: 'am_puck', name: 'Puck', desc: 'US Male 🇺🇸 · Expressive', tag: 'Expressive' },
   { code: 'bm_george', name: 'George', desc: 'UK Male 🇬🇧 · Narrative', tag: 'Story' },
   { code: 'bm_lewis', name: 'Lewis', desc: 'UK Male 🇬🇧 · British', tag: 'British' },
+  // Mandarin Chinese 🇨🇳
+  { code: 'zm_yunjian', name: 'Yunjian (云健)', desc: 'Mandarin Male 🇨🇳 · Standard', tag: 'Top Pick' },
+  // Japanese 🇯🇵
+  { code: 'jm_kumo', name: 'Kumo (クモ)', desc: 'Japanese Male 🇯🇵 · Crisp', tag: 'Top Pick' },
+  // Korean 🇰🇷
+  { code: 'km_joon', name: 'Joon (준)', desc: 'Korean Male 🇰🇷 · K-Style', tag: 'Top Pick' },
+  // European & Global
+  { code: 'em_alex', name: 'Alex', desc: 'Spanish Male 🇪🇸 · Warm', tag: 'Spanish' },
+  { code: 'im_nicola', name: 'Nicola', desc: 'Italian Male 🇮🇹 · Expressive', tag: 'Italian' },
+  { code: 'pm_alex', name: 'Alex', desc: 'Portuguese Male 🇧🇷 · Clear', tag: 'Portuguese' },
+  { code: 'hm_omega', name: 'Omega', desc: 'Hindi Male 🇮🇳 · Standard', tag: 'Hindi' },
 ];
 
 export const GEMINI_MALE_VOICES = [
@@ -147,18 +179,20 @@ export const GEMINI_FEMALE_VOICES = [
   { code: 'Despina', name: 'Despina', desc: 'Female ♀️ · Friendly Host', tag: 'Friendly' },
 ];
 
-export const KOKORO_DEFAULT_VOICE_MAP: Record<string, string> = {
-  'en-US': 'af_bella',
-  'en-GB': 'bf_emma',
-  'ja': 'jf_alpha',
-  'zh': 'zf_xiaobei',
-  'es': 'ef_dora',
-  'fr': 'ff_siwis',
-  'hi': 'hf_alpha',
-  'pt-BR': 'pf_dora',
-  'kr': 'af_bella',
-  'ko': 'af_bella',
-  'vi': 'Phạm Tuyên',
+export const KOKORO_DEFAULT_VOICE_MAP: Record<string, { female: string; male: string }> = {
+  'en-US': { female: 'af_bella', male: 'am_adam' },
+  'en-GB': { female: 'bf_emma', male: 'bm_george' },
+  'ja': { female: 'jf_alpha', male: 'jm_kumo' },
+  'zh': { female: 'zf_xiaobei', male: 'zm_yunjian' },
+  'cmn': { female: 'zf_xiaobei', male: 'zm_yunjian' },
+  'kr': { female: 'kf_sarah', male: 'km_joon' },
+  'ko': { female: 'kf_sarah', male: 'km_joon' },
+  'es': { female: 'ef_dora', male: 'em_alex' },
+  'fr': { female: 'ff_siwis', male: 'ff_siwis' },
+  'it': { female: 'if_sara', male: 'im_nicola' },
+  'pt-BR': { female: 'pf_dora', male: 'pm_alex' },
+  'hi': { female: 'hf_alpha', male: 'hm_omega' },
+  'vi': { female: 'Trúc Ly', male: 'Phạm Tuyên' },
 };
 
 export const AUDIO_READING_STYLES = [
@@ -554,9 +588,10 @@ export const AiVideoTab: React.FC = () => {
         setSpeakerA((prev) => ({ ...prev, name: 'Trúc Ly', voice_name: 'Trúc Ly', voice_engine: 'wynai', language_code: 'vi' }));
         setSpeakerB((prev) => ({ ...prev, name: 'Phạm Tuyên', voice_name: 'Phạm Tuyên', voice_engine: 'wynai', language_code: 'vi' }));
       } else {
-        setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[langCode] || 'af_bella');
-        setSpeakerA((prev) => ({ ...prev, name: 'Sarah', voice_name: 'af_bella', voice_engine: 'wynai', language_code: langCode }));
-        setSpeakerB((prev) => ({ ...prev, name: 'Tom', voice_name: 'am_adam', voice_engine: 'wynai', language_code: langCode }));
+        const def = KOKORO_DEFAULT_VOICE_MAP[langCode] || { female: 'af_bella', male: 'am_adam' };
+        setSelectedVoiceName(def.female);
+        setSpeakerA((prev) => ({ ...prev, name: langCode === 'zh' ? 'Xiaobei' : langCode === 'ja' ? 'Alpha' : langCode === 'ko' || langCode === 'kr' ? 'Sarah' : 'Sarah', voice_name: def.female, voice_engine: 'wynai', language_code: langCode }));
+        setSpeakerB((prev) => ({ ...prev, name: langCode === 'zh' ? 'Yunjian' : langCode === 'ja' ? 'Kumo' : langCode === 'ko' || langCode === 'kr' ? 'Joon' : 'Tom', voice_name: def.male, voice_engine: 'wynai', language_code: langCode }));
       }
     } else {
       setSpeakerA((prev) => ({ ...prev, voice_name: 'Aoede', voice_engine: 'gemini', language_code: langCode }));
@@ -572,9 +607,10 @@ export const AiVideoTab: React.FC = () => {
         setSpeakerA((prev) => ({ ...prev, voice_name: 'Trúc Ly', voice_engine: 'wynai' }));
         setSpeakerB((prev) => ({ ...prev, voice_name: 'Phạm Tuyên', voice_engine: 'wynai' }));
       } else {
-        setSelectedVoiceName(KOKORO_DEFAULT_VOICE_MAP[selectedLang] || 'af_bella');
-        setSpeakerA((prev) => ({ ...prev, voice_name: 'af_bella', voice_engine: 'wynai' }));
-        setSpeakerB((prev) => ({ ...prev, voice_name: 'am_adam', voice_engine: 'wynai' }));
+        const def = KOKORO_DEFAULT_VOICE_MAP[selectedLang] || { female: 'af_bella', male: 'am_adam' };
+        setSelectedVoiceName(def.female);
+        setSpeakerA((prev) => ({ ...prev, voice_name: def.female, voice_engine: 'wynai' }));
+        setSpeakerB((prev) => ({ ...prev, voice_name: def.male, voice_engine: 'wynai' }));
       }
     } else {
       setSelectedVoiceName('Puck');
