@@ -211,22 +211,22 @@ export const wynmotionService = {
    * Orchestrate Animation Scenes
    */
   async generateScenes(params: {
-    title: string;
+    title?: string;
     prompt: string;
     script: string;
     audio_url?: string;
     duration_sec?: number;
-    aspect_ratio?: string;
-    visual_style?: string;
-    character_subtype?: string;
+    aspect_ratio?: '16:9' | '9:16' | '1:1';
+    visual_style?: MotionVisualStyle;
+    character_subtype?: CharacterSubtype;
     science_domain?: string;
     product_images?: string[];
     hook_text?: string;
     price_text?: string;
     cta_text?: string;
     dialogue_speakers?: {
-      speaker_a: DialogueSpeakerConfig;
-      speaker_b: DialogueSpeakerConfig;
+      speaker_a: { name: string; gender: string; voice_engine: string; voice_name: string; language_code?: string };
+      speaker_b: { name: string; gender: string; voice_engine: string; voice_name: string; language_code?: string };
     };
     dialogue_turns?: any[];
     language_code?: string;
@@ -241,8 +241,14 @@ export const wynmotionService = {
       headers,
       body: JSON.stringify(params),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi phân cảnh hoạt họa');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const errMsg = data?.detail || data?.message || (res.status === 402 ? 'Số dư điểm không đủ để tạo video' : 'Lỗi phân cảnh hoạt họa');
+      throw new Error(errMsg);
+    }
+    if (!data || !data.project) {
+      throw new Error(data?.detail || data?.message || 'Phản hồi từ server không hợp lệ');
+    }
     return data;
   },
 
@@ -254,8 +260,14 @@ export const wynmotionService = {
     const res = await fetch(`${API_BASE_URL}/api/ai/motion/project/${projectId}`, {
       headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tải dự án');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const errMsg = data?.detail || data?.message || 'Lỗi tải dự án';
+      throw new Error(errMsg);
+    }
+    if (!data || !data.project) {
+      throw new Error('Dữ liệu dự án không hợp lệ');
+    }
     return data;
   },
 

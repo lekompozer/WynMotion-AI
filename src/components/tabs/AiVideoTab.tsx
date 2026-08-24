@@ -844,7 +844,7 @@ export const AiVideoTab: React.FC = () => {
         language_code: visualStyle === 'dialogue_scene' ? speakerA.language_code : selectedLang,
       });
 
-      if (res.project) {
+      if (res && res.project) {
         let finalProject = res.project;
 
         // ⏱️ Background Silent Polling up to 10 minutes (600s), pinging every 8-10s if status is processing/pending
