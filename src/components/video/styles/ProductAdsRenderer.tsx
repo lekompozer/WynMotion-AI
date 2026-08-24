@@ -186,15 +186,15 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
           position: 'absolute',
           inset: 0,
           background: isVertical
-            ? 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0.85) 100%)'
-            : 'linear-gradient(90deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.65) 100%)',
+            ? 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0.7) 100%)'
+            : 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)',
           pointerEvents: 'none',
           opacity: 1 - outroProgress,
         }}
       />
 
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 2: Ambient Particle Sparkles
+          LAYER 2: Ambient Particle Sparkles & Neon Glow Rays
           ───────────────────────────────────────────────────────────── */}
       {particles.map((p) => {
         const pOpacity = Math.abs(Math.sin((frame + p.delay) * p.speed)) * 0.75 * (1 - outroProgress);
@@ -227,10 +227,8 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
           position: 'absolute',
           inset: 0,
           display: 'flex',
-          justifyContent: isVertical || isSquare ? 'center' : 'flex-end',
+          justifyContent: 'center',
           alignItems: 'center',
-          paddingRight: isVertical || isSquare ? 0 : '8%',
-          paddingTop: isVertical ? '10%' : 0,
           transform: `translateX(${entranceTranslateX * (1 - outroProgress)}px) translateY(${(entranceTranslateY + productFloatY) * (1 - outroProgress)}px) rotate(${productRotate * (1 - outroProgress)}deg) scale(${productSpring})`,
           zIndex: 10,
           opacity: 1 - outroProgress * 0.95,
@@ -241,129 +239,17 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
             src={cutoutUrl}
             alt={scene.title || 'Product Cutout'}
             style={{
-              maxHeight: isVertical ? '56%' : isSquare ? '60%' : '80%',
-              maxWidth: isVertical ? '90%' : isSquare ? '84%' : '54%',
+              maxHeight: isVertical ? '72%' : isSquare ? '75%' : '88%',
+              maxWidth: isVertical ? '90%' : isSquare ? '88%' : '75%',
               objectFit: 'contain',
-              filter: `drop-shadow(0 25px 45px rgba(0,0,0,0.85)) drop-shadow(0 0 35px ${neonColor}33)`,
+              filter: `drop-shadow(0 25px 50px rgba(0,0,0,0.85)) drop-shadow(0 0 40px ${neonColor}44)`,
             }}
           />
         )}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 4: SUPPORT Kinetic Large Headline Typography & Billboard Badges
-          ───────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'absolute',
-          left: isVertical || isSquare ? 0 : '6%',
-          top: isVertical ? 80 : isSquare ? 50 : '18%',
-          width: isVertical || isSquare ? '100%' : '44%',
-          textAlign: isVertical || isSquare ? 'center' : 'left',
-          zIndex: 20,
-          padding: isVertical || isSquare ? '0 20px' : 0,
-          transform: `scale(${headlineSpring})`,
-          opacity: flickerOpacity * (1 - outroProgress),
-        }}
-      >
-        {/* Category Pill Tag */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 18px',
-            borderRadius: 999,
-            background: 'rgba(0,0,0,0.65)',
-            border: `1px solid ${accentColor}AA`,
-            boxShadow: `0 0 18px ${accentColor}44`,
-            marginBottom: 12,
-          }}
-        >
-          <span style={{ fontSize: 16 }}>⚡</span>
-          <span
-            style={{
-              fontSize: isVertical ? 14 : 16,
-              fontWeight: 800,
-              color: accentColor,
-              textTransform: 'uppercase',
-              letterSpacing: 2,
-            }}
-          >
-            HOT DEAL
-          </span>
-        </div>
-
-        {/* PRIMARY LARGE HEADLINE TEXT */}
-        <h1
-          style={{
-            margin: 0,
-            fontSize: isVertical ? 38 : isSquare ? 34 : 48,
-            fontWeight: 900,
-            color: '#FFFFFF',
-            textTransform: 'uppercase',
-            lineHeight: 1.12,
-            letterSpacing: 0.5,
-            textShadow: `0 0 ${glowRadius}px ${neonColor}, 0 4px 18px rgba(0,0,0,0.9)`,
-          }}
-        >
-          {largeHeadline}
-        </h1>
-
-        {subHeadline && (
-          <p
-            style={{
-              margin: '10px 0 0',
-              fontSize: isVertical ? 18 : 22,
-              fontWeight: 700,
-              color: '#F1F5F9',
-              textShadow: '0 2px 8px rgba(0,0,0,0.8)',
-            }}
-          >
-            {subHeadline}
-          </p>
-        )}
-
-        {/* BILLBOARD PRICE BADGE */}
-        {priceText && (
-          <div
-            style={{
-              marginTop: 18,
-              display: 'inline-flex',
-              transform: `scale(${badgeSpring})`,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 24px',
-                borderRadius: 18,
-                background: `linear-gradient(135deg, ${neonColor} 0%, #D946EF 100%)`,
-                boxShadow: `0 10px 30px ${neonColor}66, 0 0 20px ${accentColor}55`,
-                border: '2px solid rgba(255,255,255,0.4)',
-              }}
-            >
-              <span style={{ fontSize: 20 }}>🏷️</span>
-              <span
-                style={{
-                  fontSize: isVertical ? 18 : 22,
-                  fontWeight: 900,
-                  color: '#FFFFFF',
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                }}
-              >
-                {priceText}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          LAYER 5: SIGNATURE WYNMOTION "MATCH-TO-POSTER" REASSEMBLY OUTRO
+          LAYER 4: SIGNATURE WYNMOTION "MATCH-TO-POSTER" REASSEMBLY OUTRO
           ───────────────────────────────────────────────────────────── */}
       {originalPosterUrl && outroProgress > 0 && (
         <div
@@ -384,7 +270,7 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 6: CapCut White Flash Transition (0s -> 0.3s)
+          LAYER 5: CapCut White Flash Transition (0s -> 0.3s)
           ───────────────────────────────────────────────────────────── */}
       {flashOpacity > 0.01 && (
         <div
@@ -397,44 +283,6 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
             zIndex: 50,
           }}
         />
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          LAYER 7: Whisper Voice Subtitles
-          ───────────────────────────────────────────────────────────── */}
-      {showWhisperSubs && subtitle && (
-        <div
-          onClick={onSubsClick}
-          style={{
-            position: 'absolute',
-            bottom: isVertical ? 40 : 25,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            maxWidth: isVertical ? '90%' : '75%',
-            textAlign: 'center',
-            padding: '10px 22px',
-            borderRadius: 999,
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-            zIndex: 60,
-            cursor: onSubsClick ? 'pointer' : 'default',
-            opacity: 1 - outroProgress,
-          }}
-        >
-          <span
-            style={{
-              fontSize: isVertical ? 15 : 17,
-              fontWeight: 700,
-              color: '#FFFFFF',
-              lineHeight: 1.4,
-              textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-            }}
-          >
-            {subtitle}
-          </span>
-        </div>
       )}
     </div>
   );

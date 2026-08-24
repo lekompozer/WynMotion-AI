@@ -58,6 +58,11 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
     );
   }
 
+  const isPureVisualAds =
+    (visualStyle || '').toLowerCase().includes('product_ads') ||
+    (visualStyle || '').toLowerCase().includes('commercial_ads') ||
+    (visualStyle || '').toLowerCase().includes('brand_ads');
+
   return (
     <>
       {scenes.map((scene, index) => {
@@ -73,8 +78,8 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
             <DynamicSceneRenderer
               scene={scene}
               visualStyle={visualStyle}
-              showSceneCards={showSceneCards}
-              showWhisperSubs={showWhisperSubs}
+              showSceneCards={isPureVisualAds ? false : showSceneCards}
+              showWhisperSubs={isPureVisualAds ? false : showWhisperSubs}
               cardPosY={cardPosY}
               subsPosY={subsPosY}
               swapSpeakers={swapSpeakers}

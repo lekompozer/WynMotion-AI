@@ -213,23 +213,21 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'WynMotion AI';
   const secondaryKeywords = scene.highlight_keywords?.slice(1, 4) || [];
 
-  // 1. Dialogue scenes use dedicated avatar dialogue renderer
-  if (visualStyle === 'dialogue_scene') {
-    const ModularRenderer = getModularStyleRenderer(visualStyle);
-    if (ModularRenderer) {
-      return (
-        <ModularRenderer
-          scene={scene}
-          showSceneCards={showSceneCards}
-          showWhisperSubs={showWhisperSubs}
-          cardPosY={cardPosY}
-          subsPosY={subsPosY}
-          swapSpeakers={swapSpeakers}
-          onCardClick={onCardClick}
-          onSubsClick={onSubsClick}
-        />
-      );
-    }
+  // 1. Modular Style Pipeline Renderers (Product Ads, Dialogue, Science STEM, etc.)
+  const ModularRenderer = getModularStyleRenderer(visualStyle);
+  if (ModularRenderer) {
+    return (
+      <ModularRenderer
+        scene={scene}
+        showSceneCards={visualStyle === 'product_ads_motion' ? false : showSceneCards}
+        showWhisperSubs={visualStyle === 'product_ads_motion' ? false : showWhisperSubs}
+        cardPosY={cardPosY}
+        subsPosY={subsPosY}
+        swapSpeakers={swapSpeakers}
+        onCardClick={onCardClick}
+        onSubsClick={onSubsClick}
+      />
+    );
   }
 
   // 2. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE FIRST
