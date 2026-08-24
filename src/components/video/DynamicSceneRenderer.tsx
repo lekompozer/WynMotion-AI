@@ -283,23 +283,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     }
   }
 
-  // 3. Fallback to Modular Style Pipeline Renderer Registry
-  const ModularRenderer = getModularStyleRenderer(visualStyle);
-  if (ModularRenderer) {
-    return (
-      <ModularRenderer
-        scene={scene}
-        showSceneCards={showSceneCards}
-        showWhisperSubs={showWhisperSubs}
-        cardPosY={cardPosY}
-        subsPosY={subsPosY}
-        swapSpeakers={swapSpeakers}
-        onCardClick={onCardClick}
-        onSubsClick={onSubsClick}
-      />
-    );
-  }
-
   // Position styles for 2 Layers
   const getCardStyle = (headerSpring: number): React.CSSProperties => {
     if (cardPosY === 'top') {
