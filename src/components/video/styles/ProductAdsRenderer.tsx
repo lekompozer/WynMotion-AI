@@ -45,7 +45,7 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
     scene.cutout_url !== scene.original_image_url
   );
   const cutoutUrl = hasValidCutout ? scene.cutout_url : null;
-  const bgUrl = scene.clean_bg_url || scene.bg_url || (hasValidCutout ? originalPosterUrl : null);
+  const bgUrl = originalPosterUrl;
 
   const dominantColors = scene.dominant_colors || ['#FF0055', '#FFE600', '#00E5FF'];
   const neonColor = dominantColors[0] || '#FF0055';
