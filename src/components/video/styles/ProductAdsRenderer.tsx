@@ -54,12 +54,12 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
   const cutoutUrl = hasValidCutout ? scene.cutout_url : null;
   const bgUrl = originalPosterUrl;
 
-  const hookText = scene.hook_text || (scene as any).badge_text || 'HOT DEAL';
-  const headlineText = scene.headline_text || scene.title || 'SPECIAL PRODUCT';
-  const priceText = scene.price_text || (scene as any).feature_text || '';
-  const ctaText = scene.cta_text || 'MUA NGAY';
+  const hookText = (scene as any).hook_text || (scene as any).badge_text || 'HOT DEAL';
+  const headlineText = (scene as any).headline_text || scene.title || 'SPECIAL PRODUCT';
+  const priceText = (scene as any).price_text || (scene as any).feature_text || '';
+  const ctaText = (scene as any).cta_text || 'MUA NGAY';
 
-  const dominantColors = scene.dominant_colors || ['#FF0055', '#FFE600', '#00E5FF'];
+  const dominantColors = (scene as any).dominant_colors || ['#FF0055', '#FFE600', '#00E5FF'];
   const primaryColor = dominantColors[0] || '#FF0055';
   const accentColor = dominantColors[1] || '#FFE600';
 

@@ -66,6 +66,7 @@ import { LoginModal } from '@/components/auth/LoginModal';
 import { DualVoiceSelectorModal } from '@/components/video/DualVoiceSelectorModal';
 import { DialogueScriptEditor } from '@/components/video/DialogueScriptEditor';
 import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStudio';
+import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
 
 // ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
 
@@ -319,6 +320,14 @@ export const AiVideoTab: React.FC = () => {
   const [creationStage, setCreationStage] = useState<'idle' | 'scripting' | 'drawing' | 'syncing' | 'done'>('idle');
   const [createdProject, setCreatedProject] = useState<MotionProject | null>(null);
 
+  // Product Ads States (Style 7)
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
+  const [hookText, setHookText] = useState('');
+  const [priceText, setPriceText] = useState('ƯU ĐÃI');
+  const [ctaText, setCtaText] = useState('MUA NGAY');
+  const [capcutModalTemplate, setCapcutModalTemplate] = useState<'ads_strobe_teaser' | 'ads_cinematic_showcase' | null>(null);
+
   // 10-Minute Countdown & Minimize-to-Background State
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isCreationMinimized, setIsCreationMinimized] = useState(false);
@@ -327,12 +336,6 @@ export const AiVideoTab: React.FC = () => {
   const [creationCountdownSec, setCreationCountdownSec] = useState(600);
   const [creationError, setCreationError] = useState<string | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [productImages, setProductImages] = useState<string[]>([]);
-  const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
-  const [hookText, setHookText] = useState<string>('');
-  const [priceText, setPriceText] = useState<string>('');
-  const [ctaText, setCtaText] = useState<string>('');
 
   // Recent Projects
   const [recentProjects, setRecentProjects] = useState<MotionProject[]>([]);
@@ -917,6 +920,111 @@ export const AiVideoTab: React.FC = () => {
     }
   };
 
+  const handleApplyCapCutTemplate = async (params: {
+    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase';
+    prompt: string;
+    productImages: string[];
+    bgmUrl: string;
+    durationSec: number;
+    hookText?: string;
+    ctaText?: string;
+    solidText?: string;
+    outlineText?: string;
+    sloganText?: string;
+  }) => {
+    if (!user) {
+      showAuthToast(isVietnamese ? '🔐 Vui lòng đăng nhập để áp dụng mẫu CapCut' : '🔐 Please sign in to apply CapCut template');
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setIsCreatingProject(true);
+    setIsCreationModalOpen(true);
+    setIsCreationMinimized(false);
+    setCreationError(null);
+    setCreationProgressPercent(15);
+    setCreationCountdownSec(600);
+    setCreationStatusMessage(isVietnamese ? '⚡ Đang khởi tạo video theo mẫu CapCut...' : '⚡ Launching CapCut template video...');
+
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    countdownIntervalRef.current = setInterval(() => {
+      setCreationCountdownSec((prev) => {
+        if (prev <= 1) {
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    try {
+      const res = await wynmotionService.generateScenes({
+        title: params.prompt,
+        prompt: params.prompt,
+        script: params.prompt,
+        audio_url: params.bgmUrl,
+        duration_sec: params.durationSec,
+        aspect_ratio: '9:16',
+        visual_style: params.templateId,
+        product_images: params.productImages.length > 0 ? params.productImages : undefined,
+        hook_text: params.hookText,
+        cta_text: params.ctaText,
+        language_code: selectedLang,
+        ...(params.solidText && { headline_solid: params.solidText }),
+        ...(params.outlineText && { headline_outline: params.outlineText }),
+        ...(params.sloganText && { sub_headline: params.sloganText }),
+      } as any);
+
+      if (res && res.project) {
+        let finalProject = res.project;
+        if (finalProject.status === 'processing' || finalProject.status === 'queued' || finalProject.status === 'pending') {
+          setCreationStatusMessage(isVietnamese ? 'Đang tạo hình ảnh & bóc tách vật thể SAM 2...' : 'Generating visuals & SAM 2 segmentation...');
+          const startTime = Date.now();
+          const MAX_POLL_MS = 10 * 60 * 1000;
+          const POLL_INTERVAL_MS = 8000;
+
+          while (Date.now() - startTime < MAX_POLL_MS) {
+            await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+            try {
+              const polled = await wynmotionService.getProject(finalProject.project_id);
+              if (polled.success && polled.project) {
+                finalProject = polled.project;
+                const elapsed = (Date.now() - startTime) / 1000;
+                setCreationProgressPercent(Math.min(95, Math.round(20 + (elapsed / 60) * 70)));
+                if (finalProject.status === 'completed' || finalProject.status === 'ready' || finalProject.status === 'done') {
+                  setCreationProgressPercent(100);
+                  break;
+                }
+              }
+            } catch (pollErr: any) {
+              console.warn('Silent polling warning:', pollErr);
+            }
+          }
+        }
+
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        setCreationProgressPercent(100);
+        setCreationStatusMessage(isVietnamese ? '✨ Hoàn tất tạo video!' : '✨ Video ready!');
+
+        setTimeout(() => {
+          setIsCreationModalOpen(false);
+          setIsCreatingProject(false);
+          setCreatedProject(finalProject);
+          const updatedList = [finalProject, ...recentProjects.filter((p) => p.project_id !== finalProject.project_id)];
+          setRecentProjects(updatedList);
+          try {
+            localStorage.setItem(`wynmotion_cached_projects_${user.uid}`, JSON.stringify(updatedList));
+          } catch {}
+        }, 800);
+      }
+    } catch (err: any) {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      console.error('CapCut template launch error:', err);
+      setCreationError(err.message || (isVietnamese ? 'Lỗi tạo video theo mẫu CapCut' : 'Failed to launch CapCut template'));
+      setIsCreatingProject(false);
+    }
+  };
+
   // 7 Styles Organised into 3 Distinct Groups (Illustrative, Motion Explainer, Commercial Ads)
   const ILLUSTRATIVE_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
     {
@@ -1427,11 +1535,18 @@ export const AiVideoTab: React.FC = () => {
                 {COMMERCIAL_ADS_STYLES.map((st) => {
                   const Icon = st.icon;
                   const isSelected = visualStyle === st.id;
+                  const isCapcutTemplate = st.id === 'ads_strobe_teaser' || st.id === 'ads_cinematic_showcase';
                   return (
                     <button
                       key={st.id}
                       type="button"
-                      onClick={() => setVisualStyle(st.id)}
+                      onClick={() => {
+                        if (isCapcutTemplate) {
+                          setCapcutModalTemplate(st.id as any);
+                        } else {
+                          setVisualStyle(st.id);
+                        }
+                      }}
                       className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
                         isSelected
                           ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/15'
@@ -1448,8 +1563,10 @@ export const AiVideoTab: React.FC = () => {
                           <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {st.title.replace('\n', ' ')}
                           </div>
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
-                            HOT ADS
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full text-white uppercase tracking-wider ${
+                            isCapcutTemplate ? 'bg-gradient-to-r from-amber-500 to-rose-500' : 'bg-rose-500'
+                          }`}>
+                            {isCapcutTemplate ? '⚡ CAPCUT MẪU' : 'HOT ADS'}
                           </span>
                         </div>
                         <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -2570,6 +2687,14 @@ export const AiVideoTab: React.FC = () => {
           setIsCreationModalOpen(false);
           setIsCreatingProject(false);
         }}
+      />
+
+      {/* ── CapCut Fullscreen Preview & Instant Apply Modal ── */}
+      <CapCutTemplateModal
+        templateId={capcutModalTemplate}
+        isOpen={Boolean(capcutModalTemplate)}
+        onClose={() => setCapcutModalTemplate(null)}
+        onApply={handleApplyCapCutTemplate}
       />
     </div>
   );
