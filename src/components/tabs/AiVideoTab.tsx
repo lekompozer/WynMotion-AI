@@ -316,8 +316,8 @@ export const AiVideoTab: React.FC = () => {
   const [creationStage, setCreationStage] = useState<'idle' | 'scripting' | 'drawing' | 'syncing' | 'done'>('idle');
   const [createdProject, setCreatedProject] = useState<MotionProject | null>(null);
 
-  // Style 7 Product Ads States
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
   const [hookText, setHookText] = useState<string>('');
   const [priceText, setPriceText] = useState<string>('');
   const [ctaText, setCtaText] = useState<string>('');
@@ -1523,6 +1523,11 @@ export const AiVideoTab: React.FC = () => {
                               ✕
                             </button>
                           </>
+                        ) : uploadingImageIndex === idx ? (
+                          <div className="flex flex-col items-center justify-center w-full h-full text-rose-400 gap-1.5">
+                            <div className="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-[10px] font-bold">{t('Đang tải...', 'Uploading...')}</span>
+                          </div>
                         ) : (
                           <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-rose-400">
                             <span className="text-2xl mb-1">📸</span>
@@ -1537,6 +1542,7 @@ export const AiVideoTab: React.FC = () => {
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
+                                setUploadingImageIndex(idx);
                                 try {
                                   const formData = new FormData();
                                   formData.append('file', file);
@@ -1546,6 +1552,8 @@ export const AiVideoTab: React.FC = () => {
                                   }
                                 } catch (upErr: any) {
                                   alert(upErr.message || 'Lỗi tải ảnh lên');
+                                } finally {
+                                  setUploadingImageIndex(null);
                                 }
                               }}
                             />
