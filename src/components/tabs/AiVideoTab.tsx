@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
+import { WynMotionCreationModal } from '../video/WynMotionCreationModal';
 import {
   wynmotionService,
   MotionProject,
@@ -315,6 +316,15 @@ export const AiVideoTab: React.FC = () => {
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [creationStage, setCreationStage] = useState<'idle' | 'scripting' | 'drawing' | 'syncing' | 'done'>('idle');
   const [createdProject, setCreatedProject] = useState<MotionProject | null>(null);
+
+  // 10-Minute Countdown & Minimize-to-Background State
+  const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
+  const [isCreationMinimized, setIsCreationMinimized] = useState(false);
+  const [creationStatusMessage, setCreationStatusMessage] = useState('Đang khởi tạo tiến trình...');
+  const [creationProgressPercent, setCreationProgressPercent] = useState(10);
+  const [creationCountdownSec, setCreationCountdownSec] = useState(600);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [productImages, setProductImages] = useState<string[]>([]);
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
@@ -789,11 +799,31 @@ export const AiVideoTab: React.FC = () => {
     }
 
     setIsCreatingProject(true);
-    setCreationStage('scripting');
+    setIsCreationModalOpen(true);
+    setIsCreationMinimized(false);
+    setCreationError(null);
+    setCreationCountdownSec(600);
+    setCreationProgressPercent(15);
+    setCreationStatusMessage(isVietnamese ? 'Đang khởi tạo tiến trình AI Motion...' : 'Initializing AI Motion pipeline...');
+
+    // Start 1-second interval for countdown timer & smooth progress
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    countdownIntervalRef.current = setInterval(() => {
+      setCreationCountdownSec((prev) => {
+        if (prev <= 1) {
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+      setCreationProgressPercent((prev) => {
+        if (prev < 90) return prev + 0.5;
+        return prev;
+      });
+    }, 1000);
 
     try {
-      setTimeout(() => setCreationStage('drawing'), 2000);
-      setTimeout(() => setCreationStage('syncing'), 4500);
+      setCreationStatusMessage(isVietnamese ? 'Đang phân tích kịch bản & căn chỉnh nhịp độ...' : 'Analyzing script & timing...');
 
       const res = await wynmotionService.generateScenes({
         title: prompt.slice(0, 40),
@@ -817,11 +847,12 @@ export const AiVideoTab: React.FC = () => {
       if (res.project) {
         let finalProject = res.project;
 
-        // ⏱️ Background Silent Polling up to 10 minutes (600s), pinging every 10s if status is pending/processing
+        // ⏱️ Background Silent Polling up to 10 minutes (600s), pinging every 8-10s if status is processing/pending
         if (finalProject && (finalProject.status === 'processing' || finalProject.status === 'queued' || finalProject.status === 'pending')) {
+          setCreationStatusMessage(isVietnamese ? 'Đang tạo hình ảnh & bóc tách vật thể SAM 2...' : 'Generating visuals & SAM 2 segmentation...');
           const startTime = Date.now();
-          const MAX_POLL_MS = 10 * 60 * 1000; // 10 minutes max
-          const POLL_INTERVAL_MS = 10000; // 10s ping interval
+          const MAX_POLL_MS = 10 * 60 * 1000;
+          const POLL_INTERVAL_MS = 8000;
 
           while (Date.now() - startTime < MAX_POLL_MS) {
             await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
@@ -829,11 +860,18 @@ export const AiVideoTab: React.FC = () => {
               const polled = await wynmotionService.getProject(finalProject.project_id);
               if (polled && polled.project) {
                 finalProject = polled.project;
+                if ((polled.project as any).status_message) {
+                  setCreationStatusMessage((polled.project as any).status_message);
+                }
+                if ((polled.project as any).progress_percent) {
+                  setCreationProgressPercent((polled.project as any).progress_percent);
+                }
                 if (finalProject.status === 'completed' || finalProject.status === 'ready' || finalProject.status === 'done') {
+                  setCreationProgressPercent(100);
                   break;
                 }
                 if (finalProject.status === 'failed' || finalProject.status === 'error') {
-                  throw new Error((polled as any).error || 'Dự án gặp lỗi trong quá trình xử lý');
+                  throw new Error((polled as any).error || (finalProject as any).error || 'Dự án gặp lỗi trong quá trình xử lý');
                 }
               }
             } catch (pollErr: any) {
@@ -842,19 +880,28 @@ export const AiVideoTab: React.FC = () => {
           }
         }
 
-        setCreatedProject(finalProject);
-        // ✅ Update state + user-scoped cache
-        const updatedList = [finalProject, ...recentProjects.filter((p) => p.project_id !== finalProject.project_id)];
-        setRecentProjects(updatedList);
-        try {
-          localStorage.setItem(`wynmotion_cached_projects_${user.uid}`, JSON.stringify(updatedList));
-        } catch {}
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        setCreationProgressPercent(100);
+        setCreationStatusMessage(isVietnamese ? '✨ Hoàn tất tạo video!' : '✨ Video ready!');
+
+        setTimeout(() => {
+          setIsCreationModalOpen(false);
+          setIsCreatingProject(false);
+          setCreatedProject(finalProject);
+
+          const updatedList = [finalProject, ...recentProjects.filter((p) => p.project_id !== finalProject.project_id)];
+          setRecentProjects(updatedList);
+          try {
+            localStorage.setItem(`wynmotion_cached_projects_${user.uid}`, JSON.stringify(updatedList));
+          } catch {}
+        }, 800);
       }
-      setCreationStage('done');
     } catch (err: any) {
-      // Nếu backend trả 401 → prompt login
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       const errMsg = err.message || '';
       if (errMsg.includes('401') || errMsg.toLowerCase().includes('đăng nhập') || errMsg.toLowerCase().includes('sign in')) {
+        setIsCreationModalOpen(false);
+        setIsCreatingProject(false);
         showAuthToast(
           isVietnamese
             ? '🔐 Vui lòng đăng nhập để tạo dự án video'
@@ -862,10 +909,9 @@ export const AiVideoTab: React.FC = () => {
         );
         setTimeout(() => setIsLoginModalOpen(true), 400);
       } else {
-        alert(errMsg || (isVietnamese ? 'Lỗi tạo video hoạt họa' : 'Failed to generate animation video'));
+        setCreationError(errMsg || (isVietnamese ? 'Lỗi tạo video hoạt họa' : 'Failed to generate animation video'));
+        setIsCreatingProject(false);
       }
-      setIsCreatingProject(false);
-      setCreationStage('idle');
     }
   };
 
@@ -2493,6 +2539,24 @@ export const AiVideoTab: React.FC = () => {
 
       {/* ── Login Modal — hiển thị khi user chưa đăng nhập ── */}
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+
+      {/* ── 10-Minute Countdown & Minimize-to-Background Creation Modal ── */}
+      <WynMotionCreationModal
+        isOpen={isCreationModalOpen}
+        isMinimized={isCreationMinimized}
+        onToggleMinimize={() => setIsCreationMinimized(!isCreationMinimized)}
+        statusMessage={creationStatusMessage}
+        progressPercent={creationProgressPercent}
+        remainingSeconds={creationCountdownSec}
+        projectTitle={prompt.slice(0, 30)}
+        visualStyle={visualStyle}
+        error={creationError}
+        onCancel={() => {
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          setIsCreationModalOpen(false);
+          setIsCreatingProject(false);
+        }}
+      />
     </div>
   );
 };
