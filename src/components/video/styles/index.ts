@@ -5,12 +5,14 @@ import { StyleRendererProps, DialogueSceneRenderer } from './DialogueSceneRender
 import { AppleModernRenderer } from './AppleModernRenderer';
 import { ScienceExplainerRenderer } from './ScienceExplainerRenderer';
 import { CharacterMascotRenderer } from './CharacterMascotRenderer';
+import { ProductAdsRenderer } from './ProductAdsRenderer';
 
 export {
   DialogueSceneRenderer,
   AppleModernRenderer,
   ScienceExplainerRenderer,
   CharacterMascotRenderer,
+  ProductAdsRenderer,
 };
 export type { StyleRendererProps };
 
@@ -30,6 +32,13 @@ export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps
   character_animation: CharacterMascotRenderer,
   mascot_character: CharacterMascotRenderer,
   stickman: CharacterMascotRenderer,
+  product_ads_motion: ProductAdsRenderer as any,
+  brand_billboard_ads: ProductAdsRenderer as any,
+  fnb_ads: ProductAdsRenderer as any,
+  capcut_ads: ProductAdsRenderer as any,
+  product_ads: ProductAdsRenderer as any,
+  brand_ads: ProductAdsRenderer as any,
+  commercial_ads: ProductAdsRenderer as any,
 };
 
 export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRendererProps> | null {

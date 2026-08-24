@@ -56,6 +56,7 @@ import {
   CharacterAnimationIcon,
   DialogueSceneIcon,
   ScienceExplainerIcon,
+  ProductAdsIcon,
 } from '@/components/video/MotionStyleIcons';
 import { ProfileSidePanel } from '@/components/navigation/ProfileSidePanel';
 import { LoginModal } from '@/components/auth/LoginModal';
@@ -315,6 +316,12 @@ export const AiVideoTab: React.FC = () => {
   const [creationStage, setCreationStage] = useState<'idle' | 'scripting' | 'drawing' | 'syncing' | 'done'>('idle');
   const [createdProject, setCreatedProject] = useState<MotionProject | null>(null);
 
+  // Style 7 Product Ads States
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [hookText, setHookText] = useState<string>('');
+  const [priceText, setPriceText] = useState<string>('');
+  const [ctaText, setCtaText] = useState<string>('');
+
   // Recent Projects
   const [recentProjects, setRecentProjects] = useState<MotionProject[]>([]);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
@@ -551,6 +558,13 @@ export const AiVideoTab: React.FC = () => {
           t('🌟 Chú robot nhỏ dũng cảm vượt qua thử thách để tìm thấy viên pin năng lượng mặt trời', '🌟 A brave little robot overcoming obstacles to discover clean solar energy'),
           t('🦸‍♂️ Biệt đội siêu nhân nhí giải cứu khu rừng xanh khỏi ô nhiễm môi trường', '🦸‍♂️ Superhero kids mascot team rescuing the green forest from pollution'),
         ];
+      case 'product_ads_motion':
+        return [
+          t('🧋 Trà sữa trân châu đường đen mua 1 tặng 1 duy nhất hôm nay tại quán', '🧋 Brown sugar boba milk tea Buy 1 Get 1 Free today only at the shop'),
+          t('🍔 Combo Burger bò phô mai thượng hạng thơm nức giá chỉ 39K', '🍔 Premium juicy cheeseburger combo special offer only 39K'),
+          t('✨ Nước hoa Pháp hoàng gia lưu hương quyến rũ 24h - Ưu đãi giảm 50%', '✨ Royal French luxury perfume 24h long-lasting scent - 50% OFF deal'),
+          t('👟 Giày sneaker thể thao siêu nhẹ chống nước dẫn đầu xu hướng', '👟 Ultra-light waterproof athletic sneakers leading the trend'),
+        ];
       default:
         return [
           t('🌱 Mô phỏng chu trình quang hợp của cây xanh trong tự nhiên', '🌱 Simulate the photosynthesis process of green plants in nature'),
@@ -575,6 +589,8 @@ export const AiVideoTab: React.FC = () => {
         return t('Ví dụ: Giải thích Định luật II Newton (F = ma) kèm công thức và vector chuyển động STEM...', 'E.g., Explaining Newton\'s Second Law (F = ma) with formulas and STEM vectors...');
       case 'character_animation':
         return t('Ví dụ: Chú cáo WynMotion / Người Que hướng dẫn mẹo học tiếng Anh siêu tốc...', 'E.g., WynMotion Fox mascot or Stickman presenting rapid language learning tips...');
+      case 'product_ads_motion':
+        return t('Ví dụ: Quảng cáo Trà sữa trân châu đường đen mua 1 tặng 1, bóc tách ly trà sữa nổi bật kèm hiệu ứng giật nháy CapCut...', 'E.g., Brown sugar boba milk tea buy 1 get 1 free ad with SAM 2 cutout and CapCut flash effects...');
       default:
         return t('Nhập chủ đề chi tiết...', 'Enter detailed topic...');
     }
@@ -786,15 +802,46 @@ export const AiVideoTab: React.FC = () => {
         visual_style: visualStyle,
         character_subtype: characterSubtype,
         science_domain: visualStyle === 'science_explainer' ? scienceDomain : undefined,
+        product_images: visualStyle === 'product_ads_motion' && productImages.length > 0 ? productImages : undefined,
+        hook_text: visualStyle === 'product_ads_motion' ? (hookText || prompt.slice(0, 30)) : undefined,
+        price_text: visualStyle === 'product_ads_motion' ? (priceText || 'ƯU ĐÃI') : undefined,
+        cta_text: visualStyle === 'product_ads_motion' ? ctaText : undefined,
         dialogue_speakers: visualStyle === 'dialogue_scene' ? { speaker_a: speakerA, speaker_b: speakerB } : undefined,
         dialogue_turns: visualStyle === 'dialogue_scene' && dialogueTurns.length > 0 ? dialogueTurns : undefined,
         language_code: visualStyle === 'dialogue_scene' ? speakerA.language_code : selectedLang,
       });
 
       if (res.project) {
-        setCreatedProject(res.project);
+        let finalProject = res.project;
+
+        // ⏱️ Background Silent Polling up to 10 minutes (600s), pinging every 10s if status is pending/processing
+        if (finalProject && (finalProject.status === 'processing' || finalProject.status === 'queued' || finalProject.status === 'pending')) {
+          const startTime = Date.now();
+          const MAX_POLL_MS = 10 * 60 * 1000; // 10 minutes max
+          const POLL_INTERVAL_MS = 10000; // 10s ping interval
+
+          while (Date.now() - startTime < MAX_POLL_MS) {
+            await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+            try {
+              const polled = await wynmotionService.getProject(finalProject.project_id);
+              if (polled && polled.project) {
+                finalProject = polled.project;
+                if (finalProject.status === 'completed' || finalProject.status === 'ready' || finalProject.status === 'done') {
+                  break;
+                }
+                if (finalProject.status === 'failed' || finalProject.status === 'error') {
+                  throw new Error((polled as any).error || 'Dự án gặp lỗi trong quá trình xử lý');
+                }
+              }
+            } catch (pollErr: any) {
+              console.warn('Silent polling warning:', pollErr);
+            }
+          }
+        }
+
+        setCreatedProject(finalProject);
         // ✅ Update state + user-scoped cache
-        const updatedList = [res.project, ...recentProjects.filter((p) => p.project_id !== res.project.project_id)];
+        const updatedList = [finalProject, ...recentProjects.filter((p) => p.project_id !== finalProject.project_id)];
         setRecentProjects(updatedList);
         try {
           localStorage.setItem(`wynmotion_cached_projects_${user.uid}`, JSON.stringify(updatedList));
@@ -819,7 +866,7 @@ export const AiVideoTab: React.FC = () => {
     }
   };
 
-  // 6 Styles Organised into 2 Groups (Clean titles, monochrome icons)
+  // 7 Styles Organised into 3 Distinct Groups (Illustrative, Motion Explainer, Commercial Ads)
   const ILLUSTRATIVE_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
     {
       id: 'whiteboard_stream_hand',
@@ -859,6 +906,15 @@ export const AiVideoTab: React.FC = () => {
       title: isVietnamese ? 'Diễn giải\nkhoa học' : 'Science\nExplainer',
       desc: isVietnamese ? 'Sơ đồ, công thức & chuyển động khoa học' : 'Diagrams, formulas & scientific animations',
       icon: ScienceExplainerIcon,
+    },
+  ];
+
+  const COMMERCIAL_ADS_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
+    {
+      id: 'product_ads_motion',
+      title: isVietnamese ? 'Quảng cáo Sản phẩm\n& Thương hiệu (Ads)' : 'Product & Brand\nCommercial Ads',
+      desc: isVietnamese ? 'Bóc tách SAM 2, Parallax 2.5D, Kinetic Typography & hiệu ứng CapCut/Billboard 60fps' : 'SAM 2 cutouts, 2.5D parallax, Kinetic Typography & CapCut motion ads',
+      icon: ProductAdsIcon,
     },
   ];
 
@@ -1159,6 +1215,51 @@ export const AiVideoTab: React.FC = () => {
                 })}
               </div>
             </div>
+
+            {/* Nhóm 3: Commercial & Brand Ads */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🔥</span>
+                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Ads)' : 'Commercial & Brand Ads'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5">
+                {COMMERCIAL_ADS_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => handleStartStudio(style.id)}
+                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
+                        isDark
+                          ? 'bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-900 border-rose-900/50 text-white hover:border-rose-500/60 shadow-lg shadow-rose-950/20'
+                          : 'bg-gradient-to-r from-rose-50 via-purple-50 to-white border-rose-200 text-slate-900 shadow-sm hover:border-rose-300'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-200 ${
+                        isDark ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-rose-500 text-white shadow-md'
+                      }`}>
+                        <Icon size={28} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {style.title.replace('\n', ' ')}
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
+                            HOT 60FPS
+                          </span>
+                        </div>
+                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {style.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1328,6 +1429,53 @@ export const AiVideoTab: React.FC = () => {
               </div>
             </div>
 
+            {/* Nhóm 3: Commercial & Brand Ads */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🔥</span>
+                <label className="text-xs font-bold uppercase tracking-wider text-rose-400">
+                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Ads)' : 'Commercial & Brand Ads'}
+                </label>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5">
+                {COMMERCIAL_ADS_STYLES.map((st) => {
+                  const Icon = st.icon;
+                  const isSelected = visualStyle === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setVisualStyle(st.id)}
+                      className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
+                        isSelected
+                          ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/15'
+                          : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-rose-500 text-white shadow-md' : isDark ? 'bg-slate-800 text-rose-400' : 'bg-rose-100 text-rose-600'
+                      }`}>
+                        <Icon size={28} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {st.title.replace('\n', ' ')}
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
+                            HOT ADS
+                          </span>
+                        </div>
+                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {st.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Subtype for Character Animation */}
             {visualStyle === 'character_animation' && (
               <div className="space-y-2 p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5">
@@ -1413,6 +1561,98 @@ export const AiVideoTab: React.FC = () => {
                       {dom.label}
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Options for Product & Brand Ads (Style 7) */}
+            {visualStyle === 'product_ads_motion' && (
+              <div className="space-y-3 p-4 rounded-2xl border border-pink-500/30 bg-pink-500/5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
+                    <span>🛍️</span> {t('Hình ảnh sản phẩm (1-3 ảnh tách lớp SAM 2)', 'Product Images (1-3 images for SAM 2)')}
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    {productImages.length}/3 {t('ảnh', 'images')}
+                  </span>
+                </div>
+
+                {/* 1-3 Images Dropzone / Upload Grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[0, 1, 2].map((idx) => {
+                    const img = productImages[idx];
+                    return (
+                      <div
+                        key={idx}
+                        className={`relative aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-1.5 text-center transition-all ${
+                          img
+                            ? 'border-pink-500/60 bg-slate-900/80 overflow-hidden'
+                            : 'border-slate-700/60 bg-slate-900/30 hover:border-pink-500/40'
+                        }`}
+                      >
+                        {img ? (
+                          <>
+                            <img src={img} alt={`Product ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => setProductImages(productImages.filter((_, i) => i !== idx))}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600/90 text-white flex items-center justify-center text-[10px] font-bold shadow-md hover:scale-110 active:scale-95"
+                            >
+                              ✕
+                            </button>
+                            <span className="absolute bottom-1 left-1 bg-black/80 text-[10px] text-pink-300 px-1.5 py-0.5 rounded font-bold">
+                              #{idx + 1}
+                            </span>
+                          </>
+                        ) : (
+                          <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-pink-400">
+                            <span className="text-xl mb-0.5">📸</span>
+                            <span className="text-[10px] font-semibold">{t(`Ảnh #${idx + 1}`, `Image #${idx + 1}`)}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const url = URL.createObjectURL(file);
+                                  setProductImages([...productImages, url].slice(0, 3));
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Ads marketing fields (Price Tag, CTA) */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400 block mb-1">
+                      {t('🏷️ Giá / Ưu đãi (Price Tag)', '🏷️ Price / Offer Badge')}
+                    </label>
+                    <input
+                      type="text"
+                      value={priceText}
+                      onChange={(e) => setPriceText(e.target.value)}
+                      placeholder={t('VD: Giảm 50% / Chỉ 39K', 'E.g., 50% OFF / Only $19')}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:border-pink-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400 block mb-1">
+                      {t('📢 Kêu gọi hành động (CTA)', '📢 Call to Action')}
+                    </label>
+                    <input
+                      type="text"
+                      value={ctaText}
+                      onChange={(e) => setCtaText(e.target.value)}
+                      placeholder={t('VD: Mua ngay / Inbox quán', 'E.g., Order Now / Link in Bio')}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:border-pink-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             )}

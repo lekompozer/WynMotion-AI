@@ -66,6 +66,7 @@ function getStyleLabel(style: string): string {
     case 'character_animation': return 'Nhân vật';
     case 'science_explainer': return 'Khoa học';
     case 'dialogue_scene': return 'Hội thoại';
+    case 'product_ads_motion': return 'Quảng cáo';
     default: return style || 'Mặc định';
   }
 }

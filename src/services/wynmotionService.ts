@@ -29,7 +29,8 @@ export type MotionVisualStyle =
   | 'character_animation'
   | 'apple_modern_motion'
   | 'dialogue_scene'
-  | 'science_explainer';
+  | 'science_explainer'
+  | 'product_ads_motion';
 
 export type CharacterSubtype =
   | 'full_character'
@@ -63,6 +64,11 @@ export interface MotionScene {
   summary_text?: string;
   image_url?: string;
   video_url?: string;
+  cutout_url?: string;
+  bg_url?: string;
+  dominant_colors?: string[];
+  hook_text?: string;
+  price_text?: string;
   hide_text?: boolean;
   actions: SceneAction[];
   whisper_segments?: Array<{
@@ -125,7 +131,7 @@ export const wynmotionService = {
     script?: string;
     language_code?: string;
     target_audience?: 'kids' | 'teen' | 'adult';
-    script_style?: 'explainer' | 'storytelling' | 'humorous' | 'scientific';
+    script_style?: 'explainer' | 'storytelling' | 'humorous' | 'scientific' | 'commercial_ads';
     max_chars?: number;
     voice_engine?: 'wynai' | 'gemini';
     voice_name?: string;
@@ -192,6 +198,10 @@ export const wynmotionService = {
     visual_style?: string;
     character_subtype?: string;
     science_domain?: string;
+    product_images?: string[];
+    hook_text?: string;
+    price_text?: string;
+    cta_text?: string;
     dialogue_speakers?: {
       speaker_a: DialogueSpeakerConfig;
       speaker_b: DialogueSpeakerConfig;

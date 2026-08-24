@@ -35,6 +35,16 @@ export interface DynamicSceneData {
   video_url?: string;
   code?: string;
   duration_sec?: number;
+  cutout_url?: string;
+  bg_url?: string;
+  clean_bg_url?: string;
+  original_image_url?: string;
+  dominant_colors?: string[];
+  hook_text?: string;
+  headline_text?: string;
+  headline_sub?: string;
+  price_text?: string;
+  objects?: Array<{ id: number; cutout_url: string; label?: string; bounding_box?: number[] }>;
   dialogue_turns?: any[];
   swap_speakers?: boolean;
   bubble_custom_layout?: any;
@@ -55,7 +65,7 @@ export interface DynamicSceneData {
 
 export interface DynamicSceneRendererProps {
   scene: DynamicSceneData;
-  visualStyle?: 'handdrawn_fast_doodle' | 'whiteboard_stream_hand' | 'apple_modern_motion' | 'character_animation' | 'tech_ui' | 'dialogue_scene' | 'science_explainer' | string;
+  visualStyle?: 'handdrawn_fast_doodle' | 'whiteboard_stream_hand' | 'apple_modern_motion' | 'character_animation' | 'tech_ui' | 'dialogue_scene' | 'science_explainer' | 'product_ads_motion' | string;
   showSceneCards?: boolean;
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';

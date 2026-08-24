@@ -321,6 +321,79 @@ export const MobileDynamicSceneRenderer: React.FC<MobileDynamicSceneRendererProp
   }
 
   // ─────────────────────────────────────────────────────────────
+  // 3.5. STYLE: PRODUCT & BRAND ADS (Quảng cáo CapCut / SAM 2)
+  // ─────────────────────────────────────────────────────────────
+  if (visualStyle === 'product_ads_motion' || visualStyle === 'fnb_ads' || visualStyle === 'brand_billboard_ads') {
+    const cutoutUrl = (scene as any).cutout_url || scene.image_url;
+    const bgUrl = (scene as any).bg_url || scene.image_url;
+    const floatY = Math.sin(progress * Math.PI * 4) * 8;
+    const neonColor = (scene as any).dominant_colors?.[0] || '#FF0055';
+    const accentColor = (scene as any).dominant_colors?.[1] || '#FFE600';
+    const flashOpacity = progress < 0.1 ? (1 - progress / 0.1) * 0.9 : 0;
+
+    return (
+      <div className="w-full h-full bg-[#08080C] flex flex-col items-center justify-between p-3 relative overflow-hidden select-none text-white">
+        {/* Ambient Blurred Background */}
+        {bgUrl && (
+          <div className="absolute inset-0 overflow-hidden">
+            <img src={bgUrl} alt="Background" className="w-full h-full object-cover blur-md brightness-40 scale-110" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60" />
+          </div>
+        )}
+
+        {/* Top Tag & Hook */}
+        <div className="z-10 w-full flex flex-col items-center gap-1 pt-1">
+          <div
+            className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-md"
+            style={{ backgroundColor: `${accentColor}22`, border: `1px solid ${accentColor}`, color: accentColor }}
+          >
+            🔥 HOT DEAL ADS
+          </div>
+          <p
+            className="text-xs font-black text-center uppercase tracking-tight px-4 leading-tight drop-shadow-md line-clamp-2"
+            style={{ textShadow: `0 0 12px ${neonColor}` }}
+          >
+            {(scene as any).hook_text || scene.title || 'ƯU ĐÃI ĐẶC BIỆT'}
+          </p>
+        </div>
+
+        {/* Center Floating SAM 2 Cutout */}
+        <div
+          className="z-10 flex-1 flex items-center justify-center p-2 transition-transform duration-100"
+          style={{ transform: `translateY(${floatY}px)` }}
+        >
+          {cutoutUrl ? (
+            <img
+              src={cutoutUrl}
+              alt={scene.title}
+              className="max-h-[160px] max-w-[85%] object-contain drop-shadow-[0_20px_25px_rgba(0,0,0,0.8)]"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-pink-400/60 flex items-center justify-center text-2xl">
+              🛍️
+            </div>
+          )}
+        </div>
+
+        {/* Price Tag Badge */}
+        <div className="z-10 pb-2">
+          <div
+            className="px-3.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider text-black shadow-lg"
+            style={{ background: `linear-gradient(135deg, ${accentColor}, #FF9900)` }}
+          >
+            {(scene as any).price_text || 'MUA NGAY'}
+          </div>
+        </div>
+
+        {/* White Flash Effect on scene start */}
+        {flashOpacity > 0 && (
+          <div className="absolute inset-0 bg-white pointer-events-none z-50" style={{ opacity: flashOpacity }} />
+        )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 4. STYLE: CHARACTER ANIMATION (Mascot)
   // ─────────────────────────────────────────────────────────────
   if (visualStyle === 'character_animation') {

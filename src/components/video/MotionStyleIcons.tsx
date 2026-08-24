@@ -213,4 +213,37 @@ export const ScienceExplainerIcon: React.FC<StyleIconProps> = ({ className = '',
   </svg>
 );
 
+/**
+ * 7. Product & Brand Ads Icon — Commercial megaphone, star spark & discount tag
+ */
+export const ProductAdsIcon: React.FC<StyleIconProps> = ({ className = '', size = 44 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* Megaphone body */}
+    <path
+      d="M10 18H16L28 10V38L16 30H10C8.89543 30 8 29.1046 8 28V20C8 18.8954 8.89543 18 10 18Z"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinejoin="round"
+    />
+    {/* Sound waves / Neon burst */}
+    <path
+      d="M33 16C36 19 36 29 33 32M38 12C43 17 43 31 38 36"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+    />
+    {/* Sparkle star */}
+    <path d="M22 6L23 8L25 9L23 10L22 12L21 10L19 9L21 8L22 6Z" fill="currentColor" />
+    {/* Handle */}
+    <path d="M14 30V38C14 39.1046 14.8954 40 16 40H18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+);
+
 export const MascotCharacterIcon = CharacterAnimationIcon;
