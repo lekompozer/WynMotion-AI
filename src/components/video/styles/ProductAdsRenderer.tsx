@@ -38,118 +38,84 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
   const isSquare = Math.abs(width - height) < 50;
 
   // 1. Assets from Agent Pipeline
-  const cutoutUrl = scene.cutout_url || scene.image_url;
-  const bgUrl = scene.clean_bg_url || scene.bg_url || scene.image_url;
   const originalPosterUrl = scene.original_image_url || scene.image_url;
+  const hasValidCutout = Boolean(
+    scene.cutout_url &&
+    scene.cutout_url !== scene.image_url &&
+    scene.cutout_url !== scene.original_image_url
+  );
+  const cutoutUrl = hasValidCutout ? scene.cutout_url : null;
+  const bgUrl = scene.clean_bg_url || scene.bg_url || (hasValidCutout ? originalPosterUrl : null);
+
   const dominantColors = scene.dominant_colors || ['#FF0055', '#FFE600', '#00E5FF'];
   const neonColor = dominantColors[0] || '#FF0055';
   const accentColor = dominantColors[1] || '#FFE600';
 
-  // 2. Motion Intensity & Hierarchy
-  const intensity = (scene.motion_intensity || 'ENERGETIC').toUpperCase();
-  const intensityMultiplier = intensity === 'CALM' ? 0.45 : intensity === 'SUBTLE' ? 0.75 : intensity === 'HYPE' ? 1.35 : 1.0;
+  // 2. Motion Intensity
+  const intensity = (scene.motion_intensity || 'MODERATE').toUpperCase();
 
-  // 3. Sequenced Timing Delays (Director Action Plan)
-  const entranceDelayFrames = Math.round((scene.entrance_delay_sec || 0) * fps);
-  const headlineDelayFrames = Math.round((scene.headline_delay_sec || 0.25) * fps);
-  const priceDelayFrames = Math.round((scene.price_delay_sec || 1.6) * fps);
-
-  // 4. Large Kinetic Headline & Badges
-  const largeHeadline = scene.headline_text || scene.hook_text || scene.title || 'ƯU ĐÃI ĐẶC BIỆT';
-  const subHeadline = scene.headline_sub || '';
-  const priceText = scene.price_text || 'MUA NGAY';
-  const subtitle = scene.voice_transcript || scene.summary_text || '';
-
-  // 5. Actions
-  const animStyle = scene.headline_action || (scene as any).headline_animation || 'slam_and_glow';
-  const entranceDir = scene.entrance_action || (scene as any).product_entrance || 'from_bottom';
-  const floatStyle = scene.floating_motion || (scene as any).floating_style || 'gentle_sine';
-
-  // 6. Dynamic Outro Duration Calculation (Scaled by total duration)
+  // 3. Dynamic Outro Duration Calculation (Match-to-Poster)
   const totalSec = scene.duration_sec || (durationInFrames / fps) || 10;
   const calculatedOutroSec = scene.outro_duration_sec || (
-    totalSec <= 8 ? 1.0 : totalSec <= 12 ? 1.3 : totalSec <= 20 ? 1.6 : 2.2
+    totalSec <= 8 ? 1.2 : totalSec <= 12 ? 1.5 : totalSec <= 20 ? 1.8 : 2.2
   );
   const outroFrames = Math.min(Math.round(calculatedOutroSec * fps), Math.round(durationInFrames * 0.35));
   const outroStartFrame = Math.max(0, durationInFrames - outroFrames);
 
   // Outro Match-to-Poster Progress
-  const outroProgress = interpolate(frame, [outroStartFrame, durationInFrames - 4], [0, 1], {
+  const outroProgress = hasValidCutout
+    ? interpolate(frame, [outroStartFrame, durationInFrames - 4], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      })
+    : 0;
+  const outroScale = interpolate(outroProgress, [0, 1], [0.96, 1.0]);
+
+  // 4. Visual Hook White Flash Transition (0s -> 0.25s)
+  const flashOpacity = interpolate(frame, [0, 3, 10], [0.8, 0.4, 0], {
+    extrapolateRight: 'clamp',
+  });
+
+  // 5. Cinematic Background Pan & Parallax Scale
+  const bgScale = interpolate(frame, [0, durationInFrames], [1.0, hasValidCutout ? 1.06 : 1.04], {
+    extrapolateRight: 'clamp',
+  });
+
+  // 6. Hero Product Spring & Dynamic Entrance Physics (Smooth Luxury Commercial)
+  const entranceDelayFrames = Math.round((scene.entrance_delay_sec || 0) * fps);
+  const productSpring = spring({
+    frame: Math.max(0, frame - entranceDelayFrames),
+    fps,
+    config: { damping: 16, mass: 0.8, stiffness: 95 },
+  });
+
+  const entranceOpacity = interpolate(frame, [entranceDelayFrames, entranceDelayFrames + 8], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const outroScale = interpolate(outroProgress, [0, 1], [0.94, 1.0]);
 
-  // 7. Visual Hook White Flash Transition (0s -> 0.3s)
-  const flashOpacity = interpolate(frame, [0, 4, 14], [intensity === 'CALM' ? 0.4 : 0.95, 0.6, 0], {
+  const entranceDist = 60;
+  const entranceTranslateY = interpolate(frame, [entranceDelayFrames, entranceDelayFrames + 14], [entranceDist, 0], {
+    extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
-  // 8. 2.5D Parallax Background Scale & Depth
-  const bgScale = interpolate(frame, [0, 150], [1.02, 1.02 + 0.08 * intensityMultiplier], {
-    extrapolateRight: 'clamp',
-  });
+  // Floating Physics: Gentle, silky smooth commercial breathing
+  const floatAmp = 6;
+  const productFloatY = Math.sin(frame * 0.045) * floatAmp;
+  const productRotate = Math.sin(frame * 0.03) * 0.8;
 
-  // 9. Hero Product Spring & Dynamic Entrance Physics
-  const productSpring = spring({
-    frame: Math.max(0, frame - entranceDelayFrames - 4),
-    fps,
-    config: intensity === 'HYPE'
-      ? { damping: 8, mass: 0.6, stiffness: 170 }
-      : intensity === 'CALM'
-      ? { damping: 18, mass: 1.0, stiffness: 80 }
-      : { damping: 12, mass: 0.7, stiffness: 130 },
-  });
-
-  const entranceDist = 180 * intensityMultiplier;
-  const entranceTranslateX = entranceDir === 'from_left'
-    ? interpolate(frame, [entranceDelayFrames, entranceDelayFrames + 14], [-entranceDist, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-    : entranceDir === 'from_right'
-    ? interpolate(frame, [entranceDelayFrames, entranceDelayFrames + 14], [entranceDist, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-    : 0;
-
-  const entranceTranslateY = entranceDir === 'from_bottom'
-    ? interpolate(frame, [entranceDelayFrames, entranceDelayFrames + 15], [entranceDist, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-    : 0;
-
-  // Floating Physics & 3D Tilt
-  const floatAmp = (scene.floating_amplitude || (intensity === 'HYPE' ? 20 : intensity === 'CALM' ? 6 : 12)) * intensityMultiplier;
-  const tiltMax = (scene.tilt_deg || (intensity === 'HYPE' ? 3.5 : intensity === 'CALM' ? 0.8 : 1.8)) * intensityMultiplier;
-  const floatFreq = intensity === 'CALM' ? 0.05 : 0.08;
-
-  const productFloatY = floatStyle === 'energetic_bounce'
-    ? Math.abs(Math.sin(frame * floatFreq * 1.4)) * -floatAmp * 1.5
-    : Math.sin(frame * floatFreq) * floatAmp;
-  const productRotate = Math.sin(frame * floatFreq * 0.7) * tiltMax;
-
-  // 10. Support Layer: Kinetic Headline Physics
-  const headlineSpring = spring({
-    frame: Math.max(0, frame - headlineDelayFrames),
-    fps,
-    config: animStyle === 'kinetic_pop' ? { damping: 6, stiffness: 220 } : { damping: 9, stiffness: 180 },
-  });
-  const flickerOpacity = animStyle === 'neon_flicker' ? (frame % 9 < 2 ? 0.3 : 1) : 1;
-  const glowRadius = 12 + Math.abs(Math.sin(frame * 0.15)) * (16 * intensityMultiplier);
-
-  // 11. Support Layer: Billboard Price Badge Spring
-  const badgeSpring = spring({
-    frame: Math.max(0, frame - priceDelayFrames),
-    fps,
-    config: { damping: 11, stiffness: 190 },
-  });
-
-  // 12. Ambient Layer: Particle Sparkles
+  // 7. Ambient Layer: Subtle Luxury Particle Sparkles
   const particles = useMemo(() => {
-    const count = intensity === 'CALM' ? 6 : intensity === 'HYPE' ? 18 : 12;
-    return Array.from({ length: count }).map((_, i) => ({
+    return Array.from({ length: 8 }).map((_, i) => ({
       id: i,
-      x: 15 + (i * 7) % 75,
-      y: 20 + (i * 11) % 65,
-      size: 4 + (i % 5) * 2.5,
-      speed: 0.04 + (i % 4) * 0.02,
-      delay: i * 8,
+      x: 18 + (i * 9) % 68,
+      y: 22 + (i * 13) % 60,
+      size: 3 + (i % 3) * 1.5,
+      speed: 0.035 + (i % 3) * 0.015,
+      delay: i * 10,
     }));
-  }, [intensity]);
+  }, []);
 
   return (
     <div
@@ -162,20 +128,20 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 1: Ambient Clean Background (2.5D Parallax)
+          LAYER 1: Ambient Background / Master Poster (Cinematic Pan)
           ───────────────────────────────────────────────────────────── */}
-      {bgUrl && (
+      {(bgUrl || originalPosterUrl) && (
         <div
           style={{
             position: 'absolute',
-            inset: -40,
-            backgroundImage: `url(${bgUrl})`,
-            backgroundSize: 'cover',
+            inset: -30,
+            backgroundImage: `url(${bgUrl || originalPosterUrl})`,
+            backgroundSize: hasValidCutout ? 'cover' : 'contain',
+            backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             transform: `scale(${bgScale})`,
-            filter: 'brightness(0.92) contrast(1.05)',
-            transition: 'filter 0.3s ease',
-            opacity: 1 - outroProgress * 0.9,
+            filter: hasValidCutout ? 'brightness(0.85) blur(12px)' : 'none',
+            opacity: hasValidCutout ? (1 - outroProgress * 0.95) : 1,
           }}
         />
       )}
@@ -186,19 +152,19 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
           position: 'absolute',
           inset: 0,
           background: isVertical
-            ? 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0.7) 100%)'
-            : 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)',
+            ? 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.02) 35%, rgba(0,0,0,0.05) 65%, rgba(0,0,0,0.5) 100%)'
+            : 'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.4) 100%)',
           pointerEvents: 'none',
-          opacity: 1 - outroProgress,
+          opacity: hasValidCutout ? (1 - outroProgress) : 0.4,
         }}
       />
 
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 2: Ambient Particle Sparkles & Neon Glow Rays
+          LAYER 2: Ambient Sparkle Particles
           ───────────────────────────────────────────────────────────── */}
-      {particles.map((p) => {
-        const pOpacity = Math.abs(Math.sin((frame + p.delay) * p.speed)) * 0.75 * (1 - outroProgress);
-        const pY = p.y + Math.sin((frame + p.delay) * 0.05) * 8;
+      {hasValidCutout && particles.map((p) => {
+        const pOpacity = Math.abs(Math.sin((frame + p.delay) * p.speed)) * 0.6 * (1 - outroProgress);
+        const pY = p.y + Math.sin((frame + p.delay) * 0.04) * 6;
         return (
           <div
             key={p.id}
@@ -210,7 +176,7 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
               height: p.size,
               borderRadius: '50%',
               backgroundColor: accentColor,
-              boxShadow: `0 0 14px ${accentColor}`,
+              boxShadow: `0 0 10px ${accentColor}`,
               opacity: pOpacity,
               pointerEvents: 'none',
               zIndex: 5,
@@ -220,38 +186,38 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
       })}
 
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 3: HERO Product Cutout (2.5D Parallax Floating & Physical Spring)
+          LAYER 3: HERO Product Cutout (ONLY rendered if valid transparent PNG)
           ───────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          transform: `translateX(${entranceTranslateX * (1 - outroProgress)}px) translateY(${(entranceTranslateY + productFloatY) * (1 - outroProgress)}px) rotate(${productRotate * (1 - outroProgress)}deg) scale(${productSpring})`,
-          zIndex: 10,
-          opacity: 1 - outroProgress * 0.95,
-        }}
-      >
-        {cutoutUrl && (
+      {hasValidCutout && cutoutUrl && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            transform: `translateY(${(entranceTranslateY + productFloatY) * (1 - outroProgress)}px) rotate(${productRotate * (1 - outroProgress)}deg) scale(${productSpring})`,
+            opacity: entranceOpacity * (1 - outroProgress * 0.95),
+            zIndex: 10,
+          }}
+        >
           <img
             src={cutoutUrl}
             alt={scene.title || 'Product Cutout'}
             style={{
-              maxHeight: isVertical ? '72%' : isSquare ? '75%' : '88%',
-              maxWidth: isVertical ? '90%' : isSquare ? '88%' : '75%',
+              maxHeight: isVertical ? '72%' : isSquare ? '75%' : '85%',
+              maxWidth: isVertical ? '88%' : isSquare ? '85%' : '75%',
               objectFit: 'contain',
-              filter: `drop-shadow(0 25px 50px rgba(0,0,0,0.85)) drop-shadow(0 0 40px ${neonColor}44)`,
+              filter: `drop-shadow(0 20px 45px rgba(0,0,0,0.75)) drop-shadow(0 0 30px ${neonColor}33)`,
             }}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           LAYER 4: SIGNATURE WYNMOTION "MATCH-TO-POSTER" REASSEMBLY OUTRO
           ───────────────────────────────────────────────────────────── */}
-      {originalPosterUrl && outroProgress > 0 && (
+      {hasValidCutout && originalPosterUrl && outroProgress > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -263,14 +229,13 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({
             transform: `scale(${outroScale})`,
             opacity: outroProgress,
             zIndex: 40,
-            boxShadow: 'inset 0 0 100px rgba(0,0,0,0.8)',
             pointerEvents: 'none',
           }}
         />
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          LAYER 5: CapCut White Flash Transition (0s -> 0.3s)
+          LAYER 5: CapCut White Flash Transition (0s -> 0.25s)
           ───────────────────────────────────────────────────────────── */}
       {flashOpacity > 0.01 && (
         <div
