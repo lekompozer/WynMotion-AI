@@ -246,9 +246,7 @@ export const wynmotionService = {
       const errMsg = data?.detail || data?.message || (res.status === 402 ? 'Số dư điểm không đủ để tạo video' : 'Lỗi phân cảnh hoạt họa');
       throw new Error(errMsg);
     }
-    if (!data || !data.project) {
-      throw new Error(data?.detail || data?.message || 'Phản hồi từ server không hợp lệ');
-    }
+    if (!data) throw new Error('Mất kết nối đến server');
     return data;
   },
 
@@ -265,9 +263,7 @@ export const wynmotionService = {
       const errMsg = data?.detail || data?.message || 'Lỗi tải dự án';
       throw new Error(errMsg);
     }
-    if (!data || !data.project) {
-      throw new Error('Dữ liệu dự án không hợp lệ');
-    }
+    if (!data) throw new Error('Mất kết nối đến server');
     return data;
   },
 
