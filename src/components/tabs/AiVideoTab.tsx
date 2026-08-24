@@ -913,7 +913,7 @@ export const AiVideoTab: React.FC = () => {
     {
       id: 'product_ads_motion',
       title: isVietnamese ? 'Quảng cáo Sản phẩm\n& Thương hiệu (Ads)' : 'Product & Brand\nCommercial Ads',
-      desc: isVietnamese ? 'Bóc tách SAM 2, Parallax 2.5D, Kinetic Typography & hiệu ứng CapCut/Billboard 60fps' : 'SAM 2 cutouts, 2.5D parallax, Kinetic Typography & CapCut motion ads',
+      desc: isVietnamese ? 'Biến ảnh sản phẩm & poster thành video ads 60fps đỉnh cao, chữ giật nảy thu hút & sản phẩm 3D sống động' : 'High-converting 60fps commercial motion ads with 3D floating products & kinetic typography',
       icon: ProductAdsIcon,
     },
   ];
@@ -1140,8 +1140,53 @@ export const AiVideoTab: React.FC = () => {
             )}
           </div>
 
-          {/* 6 AI Animation Styles in 2 categories (Clean text, Monochrome icons, No tags) */}
+          {/* 7 AI Animation Styles in 3 categories (Clean text, Monochrome icons) */}
           <div className="space-y-6">
+            {/* Nhóm 3: Commercial & Brand Ads (TOP) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🔥</span>
+                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Hot Ads)' : 'Commercial & Brand Ads'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5">
+                {COMMERCIAL_ADS_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => handleStartStudio(style.id)}
+                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-rose-900/40 text-white hover:border-rose-500/50 shadow-lg shadow-rose-950/20'
+                          : 'bg-white border-rose-200 text-slate-900 shadow-sm hover:border-rose-300'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        <Icon size={36} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {style.title.replace('\n', ' ')}
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
+                            HOT 60FPS
+                          </span>
+                        </div>
+                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {style.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Nhóm 1: Illustrative */}
             <div className="space-y-3">
               <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -1208,51 +1253,6 @@ export const AiVideoTab: React.FC = () => {
                           isDark ? 'text-slate-200' : 'text-slate-800'
                         }`}>
                           {style.title}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Nhóm 3: Commercial & Brand Ads */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🔥</span>
-                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Ads)' : 'Commercial & Brand Ads'}
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 gap-2.5">
-                {COMMERCIAL_ADS_STYLES.map((style) => {
-                  const Icon = style.icon;
-                  return (
-                    <button
-                      key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
-                        isDark
-                          ? 'bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-900 border-rose-900/50 text-white hover:border-rose-500/60 shadow-lg shadow-rose-950/20'
-                          : 'bg-gradient-to-r from-rose-50 via-purple-50 to-white border-rose-200 text-slate-900 shadow-sm hover:border-rose-300'
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-200 ${
-                        isDark ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-rose-500 text-white shadow-md'
-                      }`}>
-                        <Icon size={28} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {style.title.replace('\n', ' ')}
-                          </div>
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
-                            HOT 60FPS
-                          </span>
-                        </div>
-                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {style.desc}
                         </div>
                       </div>
                     </button>
@@ -1352,10 +1352,56 @@ export const AiVideoTab: React.FC = () => {
         {/* ========================================================================= */}
         {wizardStep === '1' && (
           <div className="space-y-6 animate-in fade-in duration-150">
+            {/* Nhóm 3: Commercial & Brand Ads (TOP) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🔥</span>
+                <label className="text-xs font-bold uppercase tracking-wider text-rose-400">
+                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Hot Ads)' : 'Commercial & Brand Ads'}
+                </label>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5">
+                {COMMERCIAL_ADS_STYLES.map((st) => {
+                  const Icon = st.icon;
+                  const isSelected = visualStyle === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setVisualStyle(st.id)}
+                      className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
+                        isSelected
+                          ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/15'
+                          : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        <Icon size={36} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {st.title.replace('\n', ' ')}
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
+                            HOT ADS
+                          </span>
+                        </div>
+                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {st.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Nhóm 1: Illustrative */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   {isVietnamese ? 'Minh Họa & Vẽ Tay' : 'Illustrative'}
                 </label>
@@ -1392,7 +1438,6 @@ export const AiVideoTab: React.FC = () => {
             {/* Nhóm 2: Motion & Explainer */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   {isVietnamese ? 'Chuyển Động & Diễn Giải' : 'Motion & Explainer'}
                 </label>
@@ -1421,53 +1466,6 @@ export const AiVideoTab: React.FC = () => {
                       <div className="w-full">
                         <div className={`text-[11px] font-normal leading-tight whitespace-pre-line text-center ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                           {st.title}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Nhóm 3: Commercial & Brand Ads */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🔥</span>
-                <label className="text-xs font-bold uppercase tracking-wider text-rose-400">
-                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Ads)' : 'Commercial & Brand Ads'}
-                </label>
-              </div>
-              <div className="grid grid-cols-1 gap-2.5">
-                {COMMERCIAL_ADS_STYLES.map((st) => {
-                  const Icon = st.icon;
-                  const isSelected = visualStyle === st.id;
-                  return (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => setVisualStyle(st.id)}
-                      className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
-                        isSelected
-                          ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/15'
-                          : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-rose-500 text-white shadow-md' : isDark ? 'bg-slate-800 text-rose-400' : 'bg-rose-100 text-rose-600'
-                      }`}>
-                        <Icon size={28} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {st.title.replace('\n', ' ')}
-                          </div>
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
-                            HOT ADS
-                          </span>
-                        </div>
-                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {st.desc}
                         </div>
                       </div>
                     </button>

@@ -214,7 +214,7 @@ export const ScienceExplainerIcon: React.FC<StyleIconProps> = ({ className = '',
 );
 
 /**
- * 7. Product & Brand Ads Icon — Commercial megaphone, star spark & discount tag
+ * 7. Product & Brand Ads Icon — Sleek 3D showcase, commercial ribbon, kinetic wings & star sparkle
  */
 export const ProductAdsIcon: React.FC<StyleIconProps> = ({ className = '', size = 44 }) => (
   <svg
@@ -225,24 +225,35 @@ export const ProductAdsIcon: React.FC<StyleIconProps> = ({ className = '', size 
     xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    {/* Megaphone body */}
-    <path
-      d="M10 18H16L28 10V38L16 30H10C8.89543 30 8 29.1046 8 28V20C8 18.8954 8.89543 18 10 18Z"
+    {/* Commercial Product Package / Showcase */}
+    <rect
+      x="14"
+      y="11"
+      width="20"
+      height="22"
+      rx="4"
       stroke="currentColor"
       strokeWidth="2.2"
-      strokeLinejoin="round"
+      fill="transparent"
     />
-    {/* Sound waves / Neon burst */}
+    {/* Product branding ribbon & center seal */}
+    <path d="M14 19H34" stroke="currentColor" strokeWidth="1.4" strokeOpacity="0.5" />
+    <circle cx="24" cy="25" r="3" stroke="currentColor" strokeWidth="1.8" />
+
+    {/* Floating Commercial Stage / Pedestal base */}
+    <ellipse cx="24" cy="40" rx="16" ry="4" stroke="currentColor" strokeWidth="2.2" />
+
+    {/* Dynamic Kinetic Motion Flash & Speed Wings */}
     <path
-      d="M33 16C36 19 36 29 33 32M38 12C43 17 43 31 38 36"
+      d="M7 20L11 22M6 26L10 26M37 22L41 20M38 26L42 26"
       stroke="currentColor"
-      strokeWidth="2.4"
+      strokeWidth="2"
       strokeLinecap="round"
     />
-    {/* Sparkle star */}
-    <path d="M22 6L23 8L25 9L23 10L22 12L21 10L19 9L21 8L22 6Z" fill="currentColor" />
-    {/* Handle */}
-    <path d="M14 30V38C14 39.1046 14.8954 40 16 40H18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+
+    {/* Sparkle Star */}
+    <path d="M38 5L39 8L42 9L39 10L38 13L37 10L34 9L37 8L38 5Z" fill="currentColor" />
+    <circle cx="9" cy="10" r="1.5" fill="currentColor" />
   </svg>
 );
 
