@@ -15,16 +15,16 @@ export interface StrobeTeaserRendererProps {
  *    - Font: 'Impact', 'Anton', 'Bebas Neue', 'Arial Black', -apple-system, sans-serif
  * 2. Words Timeline:
  *    - Chữ 'READY?' xuất hiện chuẩn xác từ giây thứ 3.0s -> 4.0s (Frame 90 -> 120).
- *    - 'ARE' (0-1s), 'YOU' (1-2s), 'GET' (2-3s), 'READY?' (3-4s), 'SOMETHING' (4-5s), 'BIG' (5-6s), 'COMING' (6-7s).
+ *    - Chớp nháy siêu tốc gấp đôi (chu kỳ 2 frames/lần), đổi màu liên tục từng ký tự.
  * 3. Kích thước chữ 'SOMETHING':
- *    - Vừa vặn 100% bên trong khung dọc 9:16 (54px), không bị tràn mép.
+ *    - Vừa vặn 100% bên trong khung dọc 9:16 (48px), không bị tràn mép.
  * 4. 1-Second Linear Black Curtain Wipe (7.0s -> 8.0s / Frame 210 -> 240):
  *    - Hàng đen kéo dần từ trên xuống dưới trong 1s để mở ra ảnh/clip 4s cuối.
  * 5. Hero Outro (8.0s -> 11.7s):
  *    - Chữ trên Solid ('STAY') + Chữ dưới Hollow Outline ('TUNED' -webkit-text-stroke: 2.5px #fff).
  *    - Tagline Marketing cuối (Editable).
- * 6. Last 0.8s Warm Color Strobe:
- *    - Chỉ nháy ở nửa dưới màn hình (Bottom 55% gradient) chứ KHÔNG phủ toàn bộ màn hình.
+ * 6. Fast Warm Color Strobe (Cam/Vàng/Đỏ):
+ *    - Chớp sáng ở nửa dưới màn hình trong khoảng 0.8s -> 0.3s trước khi hết video, tắt hẳn ở 0.3s cuối.
  */
 export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scene }) => {
   const frame = useCurrentFrame();
@@ -57,21 +57,17 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
   let currentBg = bgColors[activeWordIndex % bgColors.length];
   let currentTextColor = textColors[activeWordIndex % textColors.length];
 
-  // ── WORD 'READY?' AT 3.0s -> 4.0s (Frame 90 -> 120): Background Pulse & Marquee Wave ──
+  // ── WORD 'READY?' AT 3.0s -> 4.0s (Frame 90 -> 120): Chớp Nháy Siêu Tốc Gấp Đôi ──
   const isReadyWord = currentWord.includes('?') || activeWordIndex === 3;
   const readyLetters = useMemo(() => 'READY?'.split(''), []);
 
   if (isReadyWord) {
-    const pulseNorm = currentWordFrame / wordDurationFrames; // 0 -> 1
-    if (pulseNorm < 0.25) {
-      currentBg = '#FFFFFF';
-    } else if (pulseNorm < 0.5) {
-      currentBg = '#222327';
-    } else if (pulseNorm < 0.75) {
-      currentBg = '#111215';
-    } else {
-      currentBg = '#FFFFFF';
-    }
+    // Chớp nền nhanh gấp đôi (chu kỳ 6 frames)
+    const fastPulse = Math.floor(currentWordFrame / 3) % 4;
+    if (fastPulse === 0) currentBg = '#FFFFFF';
+    else if (fastPulse === 1) currentBg = '#18191C';
+    else if (fastPulse === 2) currentBg = '#666870';
+    else currentBg = '#0B0C0E';
   }
 
   // Pop spring on word trigger
@@ -103,12 +99,13 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
     config: { damping: 12, mass: 0.6, stiffness: 130 },
   });
 
-  // ── PHASE 3: LAST 0.8s WARM COLOR STROBE (CHỈ Ở NỬA DƯỚI MÀN HÌNH BÊN DƯỚI) ──
+  // ── PHASE 3: WARM COLOR STROBE (Chớp lên lúc 0.8s trước khi kết thúc và TẮT HẲN ở 0.3s cuối) ──
   const framesFromEnd = Math.max(0, durationInFrames - frame);
-  const isFinalWarmFlash = framesFromEnd <= 24; // Last ~0.8s
+  // 24 frames = ~0.8s, 9 frames = ~0.3s
+  const isFinalWarmFlash = framesFromEnd <= 24 && framesFromEnd >= 9;
 
   const warmFlashOpacity = isFinalWarmFlash
-    ? interpolate(framesFromEnd, [24, 18, 12, 6, 0], [0, 0.9, 0.45, 0.95, 0.7], {
+    ? interpolate(framesFromEnd, [24, 18, 14, 9], [0, 0.95, 0.7, 0.0], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
@@ -148,11 +145,11 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
             alignItems: 'center',
             transform: `scale(${wordScale})`,
             padding: '0 20px',
-            transition: 'background-color 0.08s ease',
+            transition: 'background-color 0.04s ease',
           }}
         >
           {isReadyWord ? (
-            /* READY? at 3s -> 4s: Travelling Light Marquee Wave (from Left to Right) */
+            /* READY? at 3s -> 4s: Chớp tắt nháy đèn siêu tốc gấp đôi (2 frames/bước) */
             <div
               style={{
                 display: 'flex',
@@ -164,15 +161,16 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
               }}
             >
               {readyLetters.map((char: string, i: number) => {
-                const waveIndex = Math.floor(currentWordFrame / 4) % (readyLetters.length + 2);
+                // Tốc độ quét nhanh gấp đôi: mỗi 2 frames chuyển bước
+                const waveIndex = Math.floor(currentWordFrame / 2) % (readyLetters.length + 2);
                 const isLit = waveIndex === i || waveIndex === i + 1;
                 const isBgDark = currentBg !== '#FFFFFF';
 
                 let charColor = '#777777';
                 if (isBgDark) {
-                  charColor = isLit ? '#FFFFFF' : '#333336';
+                  charColor = isLit ? '#FFFFFF' : ((currentWordFrame + i) % 2 === 0 ? '#111113' : '#444448');
                 } else {
-                  charColor = isLit ? '#000000' : '#AAAAAA';
+                  charColor = isLit ? '#000000' : ((currentWordFrame + i) % 2 === 0 ? '#FFFFFF' : '#999999');
                 }
 
                 return (
@@ -182,11 +180,10 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
                       color: charColor,
                       textShadow:
                         isBgDark && isLit
-                          ? '0 0 20px rgba(255,255,255,0.9)'
+                          ? '0 0 25px rgba(255,255,255,0.95)'
                           : !isBgDark && isLit
-                          ? '0 0 12px rgba(0,0,0,0.35)'
+                          ? '0 0 14px rgba(0,0,0,0.5)'
                           : 'none',
-                      transition: 'color 0.08s ease',
                     }}
                   >
                     {char}
@@ -336,7 +333,7 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
-              PHASE 4: LAST 0.8s WARM COLOR STROBE (CHỈ Ở NỬA DƯỚI MÀN HÌNH)
+              PHASE 4: FAST WARM COLOR STROBE (CHỚP LÊN RỒI TẮT HẲN Ở 0.3s CUỐI)
               ───────────────────────────────────────────────────────────── */}
           {isFinalWarmFlash && (
             <div
