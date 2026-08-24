@@ -6,6 +6,8 @@ import { AppleModernRenderer } from './AppleModernRenderer';
 import { ScienceExplainerRenderer } from './ScienceExplainerRenderer';
 import { CharacterMascotRenderer } from './CharacterMascotRenderer';
 import { ProductAdsRenderer } from './ProductAdsRenderer';
+import { StrobeTeaserRenderer } from './StrobeTeaserRenderer';
+import { CinematicShowcaseRenderer } from './CinematicShowcaseRenderer';
 
 export {
   DialogueSceneRenderer,
@@ -13,6 +15,8 @@ export {
   ScienceExplainerRenderer,
   CharacterMascotRenderer,
   ProductAdsRenderer,
+  StrobeTeaserRenderer,
+  CinematicShowcaseRenderer,
 };
 export type { StyleRendererProps };
 
@@ -39,6 +43,10 @@ export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps
   product_ads: ProductAdsRenderer as any,
   brand_ads: ProductAdsRenderer as any,
   commercial_ads: ProductAdsRenderer as any,
+  ads_strobe_teaser: StrobeTeaserRenderer as any,
+  strobe_teaser: StrobeTeaserRenderer as any,
+  ads_cinematic_showcase: CinematicShowcaseRenderer as any,
+  cinematic_showcase: CinematicShowcaseRenderer as any,
 };
 
 export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRendererProps> | null {
@@ -46,4 +54,3 @@ export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRen
   const key = visualStyle.toLowerCase();
   return MODULAR_STYLE_RENDERERS[key] || null;
 }
-

@@ -257,4 +257,58 @@ export const ProductAdsIcon: React.FC<StyleIconProps> = ({ className = '', size 
   </svg>
 );
 
+/**
+ * 8. Strobe Teaser & Big Reveal Icon — Strobe typography lightning flash
+ */
+export const StrobeTeaserIcon: React.FC<StyleIconProps> = ({ className = '', size = 44 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* Strobe background box */}
+    <rect x="6" y="6" width="36" height="36" rx="6" stroke="currentColor" strokeWidth="2.2" fill="transparent" />
+    {/* Strobe lightning bolt */}
+    <path
+      d="M27 9L15 25H25L21 39L33 23H23L27 9Z"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    {/* Kinetic sound waves */}
+    <path d="M9 16V32M39 16V32" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+);
+
+/**
+ * 9. Cinematic Showcase Reel Icon — Multi-panel film reel & luxury flare
+ */
+export const CinematicShowcaseIcon: React.FC<StyleIconProps> = ({ className = '', size = 44 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* 3-Panel Split Gallery */}
+    <rect x="6" y="8" width="10" height="32" rx="3" stroke="currentColor" strokeWidth="2" fill="transparent" />
+    <rect x="19" y="8" width="10" height="32" rx="3" stroke="currentColor" strokeWidth="2.2" fill="transparent" />
+    <rect x="32" y="8" width="10" height="32" rx="3" stroke="currentColor" strokeWidth="2" fill="transparent" />
+    {/* Play / Showcase flare */}
+    <path d="M22 20L28 24L22 28Z" fill="currentColor" />
+    {/* Film perforations */}
+    <circle cx="11" cy="13" r="1.5" fill="currentColor" />
+    <circle cx="11" cy="35" r="1.5" fill="currentColor" />
+    <circle cx="37" cy="13" r="1.5" fill="currentColor" />
+    <circle cx="37" cy="35" r="1.5" fill="currentColor" />
+  </svg>
+);
+
 export const MascotCharacterIcon = CharacterAnimationIcon;
+

@@ -58,6 +58,8 @@ import {
   DialogueSceneIcon,
   ScienceExplainerIcon,
   ProductAdsIcon,
+  StrobeTeaserIcon,
+  CinematicShowcaseIcon,
 } from '@/components/video/MotionStyleIcons';
 import { ProfileSidePanel } from '@/components/navigation/ProfileSidePanel';
 import { LoginModal } from '@/components/auth/LoginModal';
@@ -835,10 +837,10 @@ export const AiVideoTab: React.FC = () => {
         visual_style: visualStyle,
         character_subtype: characterSubtype,
         science_domain: visualStyle === 'science_explainer' ? scienceDomain : undefined,
-        product_images: visualStyle === 'product_ads_motion' && productImages.length > 0 ? productImages : undefined,
-        hook_text: visualStyle === 'product_ads_motion' ? (hookText || prompt.slice(0, 30)) : undefined,
-        price_text: visualStyle === 'product_ads_motion' ? (priceText || 'ƯU ĐÃI') : undefined,
-        cta_text: visualStyle === 'product_ads_motion' ? ctaText : undefined,
+        product_images: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') && productImages.length > 0 ? productImages : undefined,
+        hook_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (hookText || prompt.slice(0, 30)) : undefined,
+        price_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (priceText || 'ƯU ĐÃI') : undefined,
+        cta_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? ctaText : undefined,
         dialogue_speakers: visualStyle === 'dialogue_scene' ? { speaker_a: speakerA, speaker_b: speakerB } : undefined,
         dialogue_turns: visualStyle === 'dialogue_scene' && dialogueTurns.length > 0 ? dialogueTurns : undefined,
         language_code: visualStyle === 'dialogue_scene' ? speakerA.language_code : selectedLang,
@@ -964,6 +966,18 @@ export const AiVideoTab: React.FC = () => {
       title: isVietnamese ? 'Quảng cáo Sản phẩm\n& Thương hiệu (Ads)' : 'Product & Brand\nCommercial Ads',
       desc: isVietnamese ? 'Biến ảnh sản phẩm & poster thành video ads 60fps đỉnh cao, chữ giật nảy thu hút & sản phẩm 3D sống động' : 'High-converting 60fps commercial motion ads with 3D floating products & kinetic typography',
       icon: ProductAdsIcon,
+    },
+    {
+      id: 'ads_strobe_teaser',
+      title: isVietnamese ? 'Strobe Teaser\n& Big Reveal' : 'Strobe Teaser\n& Big Reveal',
+      desc: isVietnamese ? 'Đập chữ nhịp điệu nhanh, chớp nháy vi mô R-E-A-D-Y & hé lộ sản phẩm với typography 2 tầng đẳng cấp' : 'Fast-paced rhythmic strobe typography with READY letter-flash and cinematic reveal outro',
+      icon: StrobeTeaserIcon,
+    },
+    {
+      id: 'ads_cinematic_showcase',
+      title: isVietnamese ? 'Cinematic Showcase\nReel 22s' : 'Cinematic Showcase\nReel 22s',
+      desc: isVietnamese ? 'Video F&B / Sản phẩm 7 phân cảnh điện ảnh, khói sương, nguyên liệu bay 3D, chia 3 cột & nút đặt hàng' : '7-stage commercial reel with flare intro, smoke VFX, zero-gravity floating ingredients, 3-panel split & pulse CTA',
+      icon: CinematicShowcaseIcon,
     },
   ];
 
@@ -1530,8 +1544,8 @@ export const AiVideoTab: React.FC = () => {
         {/* ========================================================================= */}
         {wizardStep === '2' && (
           <div className="space-y-6 animate-in fade-in duration-150">
-            {/* ── 1. STYLE 7: PRODUCT & BRAND COMMERCIAL ADS (1-3 Images + Offer Tag + CTA) ── */}
-            {visualStyle === 'product_ads_motion' && (
+            {/* ── 1. STYLE 7, 8, 9: COMMERCIAL ADS TEMPLATES (1-3 Images + Offer Tag + CTA) ── */}
+            {(visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') && (
               <div className="space-y-3 p-4 rounded-3xl border border-rose-500/30 bg-rose-950/20">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">

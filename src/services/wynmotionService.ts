@@ -30,7 +30,9 @@ export type MotionVisualStyle =
   | 'apple_modern_motion'
   | 'dialogue_scene'
   | 'science_explainer'
-  | 'product_ads_motion';
+  | 'product_ads_motion'
+  | 'ads_strobe_teaser'
+  | 'ads_cinematic_showcase';
 
 export type CharacterSubtype =
   | 'full_character'
