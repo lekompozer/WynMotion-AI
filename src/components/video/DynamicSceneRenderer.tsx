@@ -44,6 +44,18 @@ export interface DynamicSceneData {
   headline_text?: string;
   headline_sub?: string;
   price_text?: string;
+  motion_intensity?: 'CALM' | 'SUBTLE' | 'ENERGETIC' | 'HYPE' | string;
+  entrance_action?: string;
+  entrance_delay_sec?: number;
+  floating_motion?: string;
+  floating_amplitude?: number;
+  tilt_deg?: number;
+  headline_action?: string;
+  headline_delay_sec?: number;
+  price_action?: string;
+  price_delay_sec?: number;
+  outro_duration_sec?: number;
+  outro_type?: string;
   objects?: Array<{ id: number; cutout_url: string; label?: string; bounding_box?: number[] }>;
   dialogue_turns?: any[];
   swap_speakers?: boolean;
