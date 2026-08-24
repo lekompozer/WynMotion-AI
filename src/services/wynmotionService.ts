@@ -186,6 +186,28 @@ export const wynmotionService = {
   },
 
   /**
+   * Upload image / media file
+   */
+  async uploadMedia(formData: FormData): Promise<{ url: string; success?: boolean }> {
+    const authHeaders = await getAuthHeaders();
+    // Do not set Content-Type header so browser sets multipart boundary automatically
+    const headers: Record<string, string> = {};
+    if (authHeaders['Authorization']) {
+      headers['Authorization'] = authHeaders['Authorization'];
+    }
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Lỗi tải tệp lên' }));
+      throw new Error(err.detail || 'Lỗi tải tệp lên');
+    }
+    return res.json();
+  },
+
+  /**
    * Orchestrate Animation Scenes
    */
   async generateScenes(params: {

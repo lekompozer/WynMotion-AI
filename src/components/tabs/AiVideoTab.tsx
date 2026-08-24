@@ -721,14 +721,17 @@ export const AiVideoTab: React.FC = () => {
         setAudioUrl(targetAudioUrl);
         setAudioDurationSec(res.duration_sec || 45);
       } else {
-        // Standard Single Voice Synthesis
+        // Standard Single Voice Synthesis (Tailored per Visual Style)
+        const effectiveScriptStyle = visualStyle === 'product_ads_motion' ? 'commercial_ads' : (visualStyle === 'science_explainer' ? 'scientific' : scriptStyle);
+        const effectiveMaxChars = visualStyle === 'product_ads_motion' ? 350 : maxChars;
+
         const res = await wynmotionService.generateScriptAndAudio({
           prompt,
           script: scriptMode === 'custom' && customNarrationText.trim() ? customNarrationText.trim() : undefined,
           language_code: selectedLang,
           target_audience: targetAudience,
-          script_style: scriptStyle,
-          max_chars: maxChars,
+          script_style: effectiveScriptStyle as any,
+          max_chars: effectiveMaxChars,
           voice_engine: voiceModel,
           voice_name: selectedVoiceName,
           reading_style: readingStyle,
@@ -737,7 +740,7 @@ export const AiVideoTab: React.FC = () => {
         const targetAudioUrl = res.audio_url || (res as any).file_url || (res as any).public_url;
         setScriptText(res.script || customNarrationText || prompt);
         setAudioUrl(targetAudioUrl);
-        setAudioDurationSec(res.duration_sec || (maxChars === 500 ? 30 : maxChars === 750 ? 60 : maxChars === 1100 ? 120 : 160));
+        setAudioDurationSec(res.duration_sec || (effectiveMaxChars <= 350 ? 15 : maxChars === 500 ? 30 : maxChars === 750 ? 60 : maxChars === 1100 ? 120 : 160));
       }
     } catch (err: any) {
       alert(err.message || (isVietnamese ? 'Lỗi tạo giọng đọc AI' : 'Failed to generate AI voice'));
@@ -1473,10 +1476,150 @@ export const AiVideoTab: React.FC = () => {
                 })}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Subtype for Character Animation */}
+        {/* ========================================================================= */}
+        {/* STEP 2: PROMPT & STYLE-SPECIFIC CONFIGURATION */}
+        {/* ========================================================================= */}
+        {wizardStep === '2' && (
+          <div className="space-y-6 animate-in fade-in duration-150">
+            {/* ── 1. STYLE 7: PRODUCT & BRAND COMMERCIAL ADS (1-3 Images + Offer Tag + CTA) ── */}
+            {visualStyle === 'product_ads_motion' && (
+              <div className="space-y-3 p-4 rounded-3xl border border-rose-500/30 bg-rose-950/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                    <span>🛍️</span> {t('Tải ảnh sản phẩm / Poster (Tối đa 3 ảnh)', 'Upload Product Images / Poster (Max 3)')}
+                  </label>
+                  <span className="text-[11px] font-bold text-rose-400">
+                    {productImages.length}/3 {t('ảnh', 'images')}
+                  </span>
+                </div>
+
+                {/* 1-3 Images Dropzone / Upload Grid */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[0, 1, 2].map((idx) => {
+                    const img = productImages[idx];
+                    return (
+                      <div
+                        key={idx}
+                        className={`relative aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-1.5 text-center transition-all overflow-hidden ${
+                          img
+                            ? 'border-rose-500 bg-slate-900 shadow-md'
+                            : 'border-slate-700 bg-slate-900/40 hover:border-rose-400/60'
+                        }`}
+                      >
+                        {img ? (
+                          <>
+                            <img src={img} alt={`Product ${idx + 1}`} className="w-full h-full object-cover rounded-xl" />
+                            <span className="absolute top-1.5 left-1.5 bg-rose-500 text-[10px] text-white px-2 py-0.5 rounded-md font-black">
+                              Scene {idx + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setProductImages(productImages.filter((_, i) => i !== idx))}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-bold transition-all shadow-md"
+                            >
+                              ✕
+                            </button>
+                          </>
+                        ) : (
+                          <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-rose-400">
+                            <span className="text-2xl mb-1">📸</span>
+                            <span className="text-[11px] font-bold text-slate-200">Scene {idx + 1}</span>
+                            <span className="text-[9px] text-slate-500 mt-0.5">
+                              {idx === 0 ? t('Bắt buộc', 'Required') : t('Tùy chọn', 'Optional')}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const formData = new FormData();
+                                  formData.append('file', file);
+                                  const upRes = await wynmotionService.uploadMedia(formData);
+                                  if (upRes?.url) {
+                                    setProductImages([...productImages, upRes.url].slice(0, 3));
+                                  }
+                                } catch (upErr: any) {
+                                  alert(upErr.message || 'Lỗi tải ảnh lên');
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Ads marketing fields (Price Tag, CTA) */}
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-500/20">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      🏷️ {t('Tag Ưu Đãi / Khuyến Mãi', 'Offer / Promo Badge')}
+                    </label>
+                    <input
+                      type="text"
+                      value={priceText}
+                      onChange={(e) => setPriceText(e.target.value)}
+                      placeholder="MUA 1 TẶNG 1"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white font-bold focus:border-rose-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      📢 {t('Nút Kêu Gọi CTA', 'Call to Action')}
+                    </label>
+                    <input
+                      type="text"
+                      value={ctaText}
+                      onChange={(e) => setCtaText(e.target.value)}
+                      placeholder="MUA NGAY / ĐẶT HÀNG"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white font-bold focus:border-rose-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── 2. STYLE 6: SCIENCE & STEM EXPLAINER (5 Domains) ── */}
+            {visualStyle === 'science_explainer' && (
+              <div className="space-y-2 p-4 rounded-3xl border border-indigo-500/30 bg-indigo-950/20">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                  {t('Lĩnh vực khoa học & Bài toán', 'Scientific STEM Domain')}
+                </label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[
+                    { id: 'math' as const, label: '📐 Toán' },
+                    { id: 'physics' as const, label: '🚀 Vật lý' },
+                    { id: 'chemistry' as const, label: '⚗️ Hóa học' },
+                    { id: 'biology' as const, label: '🧬 Sinh học' },
+                    { id: 'cs' as const, label: '💻 Tin học' },
+                  ].map((dom) => (
+                    <button
+                      key={dom.id}
+                      type="button"
+                      onClick={() => setScienceDomain(dom.id)}
+                      className={`py-2 px-1 rounded-xl text-xs font-bold border text-center transition-all ${
+                        scienceDomain === dom.id
+                          ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm'
+                          : 'bg-slate-900 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {dom.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── 3. STYLE 4: CHARACTER MASCOT (Full Character vs Stickman) ── */}
             {visualStyle === 'character_animation' && (
-              <div className="space-y-2 p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5">
+              <div className="space-y-2 p-4 rounded-3xl border border-cyan-500/30 bg-cyan-950/20">
                 <label className="text-xs font-bold uppercase tracking-wider text-cyan-400">
                   {t('Kiểu nhân vật dẫn chuyện', 'Character Subtype')}
                 </label>
@@ -1503,9 +1646,9 @@ export const AiVideoTab: React.FC = () => {
               </div>
             )}
 
-            {/* Subtype for Dialogue Scene */}
+            {/* ── 4. STYLE 5: DIALOGUE SCENE (3D Pixar vs 2D Comic) ── */}
             {visualStyle === 'dialogue_scene' && (
-              <div className="space-y-2 p-4 rounded-2xl border border-purple-500/30 bg-purple-500/5">
+              <div className="space-y-2 p-4 rounded-3xl border border-purple-500/30 bg-purple-950/20">
                 <label className="text-xs font-bold uppercase tracking-wider text-purple-400">
                   {t('Phong cách thị giác 2 Nhân vật', '2-Character Visual Subtype')}
                 </label>
@@ -1532,139 +1675,12 @@ export const AiVideoTab: React.FC = () => {
               </div>
             )}
 
-            {/* Subtype for Science Explainer */}
-            {visualStyle === 'science_explainer' && (
-              <div className="space-y-2 p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/5">
-                <label className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                  {t('Lĩnh vực khoa học & Bài toán', 'Scientific STEM Domain')}
-                </label>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {[
-                    { id: 'math' as const, label: '📐 Toán' },
-                    { id: 'physics' as const, label: '🚀 Vật lý' },
-                    { id: 'chemistry' as const, label: '⚗️ Hóa học' },
-                    { id: 'biology' as const, label: '🧬 Sinh học' },
-                    { id: 'cs' as const, label: '💻 Tin học' },
-                  ].map((dom) => (
-                    <button
-                      key={dom.id}
-                      type="button"
-                      onClick={() => setScienceDomain(dom.id)}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold border text-center transition-all ${
-                        scienceDomain === dom.id
-                          ? 'bg-indigo-600 text-white border-indigo-400'
-                          : 'bg-slate-900 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {dom.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Options for Product & Brand Ads (Style 7) */}
-            {visualStyle === 'product_ads_motion' && (
-              <div className="space-y-3 p-4 rounded-2xl border border-pink-500/30 bg-pink-500/5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
-                    <span>🛍️</span> {t('Hình ảnh sản phẩm (1-3 ảnh tách lớp SAM 2)', 'Product Images (1-3 images for SAM 2)')}
-                  </label>
-                  <span className="text-[11px] text-slate-400">
-                    {productImages.length}/3 {t('ảnh', 'images')}
-                  </span>
-                </div>
-
-                {/* 1-3 Images Dropzone / Upload Grid */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[0, 1, 2].map((idx) => {
-                    const img = productImages[idx];
-                    return (
-                      <div
-                        key={idx}
-                        className={`relative aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-1.5 text-center transition-all ${
-                          img
-                            ? 'border-pink-500/60 bg-slate-900/80 overflow-hidden'
-                            : 'border-slate-700/60 bg-slate-900/30 hover:border-pink-500/40'
-                        }`}
-                      >
-                        {img ? (
-                          <>
-                            <img src={img} alt={`Product ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
-                            <button
-                              type="button"
-                              onClick={() => setProductImages(productImages.filter((_, i) => i !== idx))}
-                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600/90 text-white flex items-center justify-center text-[10px] font-bold shadow-md hover:scale-110 active:scale-95"
-                            >
-                              ✕
-                            </button>
-                            <span className="absolute bottom-1 left-1 bg-black/80 text-[10px] text-pink-300 px-1.5 py-0.5 rounded font-bold">
-                              #{idx + 1}
-                            </span>
-                          </>
-                        ) : (
-                          <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-pink-400">
-                            <span className="text-xl mb-0.5">📸</span>
-                            <span className="text-[10px] font-semibold">{t(`Ảnh #${idx + 1}`, `Image #${idx + 1}`)}</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const url = URL.createObjectURL(file);
-                                  setProductImages([...productImages, url].slice(0, 3));
-                                }
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Ads marketing fields (Price Tag, CTA) */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                      {t('🏷️ Giá / Ưu đãi (Price Tag)', '🏷️ Price / Offer Badge')}
-                    </label>
-                    <input
-                      type="text"
-                      value={priceText}
-                      onChange={(e) => setPriceText(e.target.value)}
-                      placeholder={t('VD: Giảm 50% / Chỉ 39K', 'E.g., 50% OFF / Only $19')}
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:border-pink-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                      {t('📢 Kêu gọi hành động (CTA)', '📢 Call to Action')}
-                    </label>
-                    <input
-                      type="text"
-                      value={ctaText}
-                      onChange={(e) => setCtaText(e.target.value)}
-                      placeholder={t('VD: Mua ngay / Inbox quán', 'E.g., Order Now / Link in Bio')}
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:border-pink-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* STEP 2: PROMPT & CONCEPTS */}
-        {/* ========================================================================= */}
-        {wizardStep === '2' && (
-          <div className="space-y-6 animate-in fade-in duration-150">
+            {/* Prompt Concept Textarea */}
             <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-wider text-slate-400">
-                {visualStyle === 'dialogue_scene'
+                {visualStyle === 'product_ads_motion'
+                  ? t('Mô tả sản phẩm & thông điệp quảng cáo (Ad Concept)', 'Product Concept & Advertising Message')
+                  : visualStyle === 'dialogue_scene'
                   ? t('Chủ đề hội thoại 2 nhân vật', 'Two-Character Conversation Topic')
                   : visualStyle === 'science_explainer'
                   ? t('Đề bài toán học / Hiện tượng khoa học', 'STEM Problem / Scientific Concept')
@@ -1673,9 +1689,9 @@ export const AiVideoTab: React.FC = () => {
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                rows={5}
+                rows={4}
                 placeholder={getPromptPlaceholder()}
-                className={`w-full p-4 rounded-3xl border text-base font-semibold outline-none resize-none transition-colors ${
+                className={`w-full p-4 rounded-3xl border text-sm font-semibold outline-none resize-none transition-colors ${
                   isDark ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400' : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
                 }`}
               />
