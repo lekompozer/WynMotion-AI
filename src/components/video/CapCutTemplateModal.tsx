@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { wynmotionService } from '@/services/wynmotionService';
+import { Loader2 } from 'lucide-react';
 
 export interface CapCutTemplateData {
   id: 'ads_strobe_teaser' | 'ads_cinematic_showcase';
@@ -14,7 +16,6 @@ export interface CapCutTemplateData {
   bgmUrl: string;
   badge: string;
   usageCount: string;
-  accentColor: string;
   maxImages: number;
   defaultHookVi: string;
   defaultHookEn: string;
@@ -38,7 +39,6 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/7fcf80645e11_templates/strobe_teaser_bgm.mp3',
     badge: '⚡ STROBE 11.7s',
     usageCount: '24.8K',
-    accentColor: '#FFE600',
     maxImages: 1,
     defaultHookVi: 'SIÊU PHẨM MỚI',
     defaultHookEn: 'NEW ARRIVAL',
@@ -60,7 +60,6 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/11ca09714987_templates/cinematic_showcase_bgm.mp3',
     badge: '💎 REEL 22.0s',
     usageCount: '41.2K',
-    accentColor: '#FF7A00',
     maxImages: 3,
     defaultHookVi: 'BEST MENU',
     defaultHookEn: 'BEST MENU',
@@ -152,15 +151,9 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const API_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'https://ai.wordai.pro';
-      const res = await fetch(`${API_URL}/api/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.url || data.file_url) {
-        const url = data.url || data.file_url;
-        setProductImages((prev) => [...prev, url].slice(0, template.maxImages));
+      const res = await wynmotionService.uploadMedia(formData);
+      if (res && res.url) {
+        setProductImages((prev) => [...prev, res.url].slice(0, template.maxImages));
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -193,10 +186,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
         {/* Top Header Bar */}
         <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
           <div className="flex items-center gap-2">
-            <span
-              className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-white shadow-lg"
-              style={{ backgroundColor: template.accentColor }}
-            >
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 shadow-lg">
               {template.badge}
             </span>
             <span className="text-[11px] font-bold text-white/80">
@@ -206,7 +196,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-sm font-bold border border-white/20 transition-all"
+            className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-sm font-bold border border-white/20 transition-all cursor-pointer"
           >
             ✕
           </button>
@@ -263,19 +253,16 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     e.stopPropagation();
                     setIsMuted(!isMuted);
                   }}
-                  className="text-white hover:text-rose-400 font-bold"
+                  className="text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer"
                 >
                   {isMuted ? '🔇 Bật tiếng' : '🔊 Tắt tiếng'}
                 </button>
               </div>
 
-              {/* Big Use Template Button */}
+              {/* Big Use Template Button (App Signature Cyan-Blue Gradient) */}
               <button
                 onClick={() => setStep('fill_data')}
-                className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-black flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
-                style={{
-                  background: `linear-gradient(135deg, ${template.accentColor}, #FFFFFF)`,
-                }}
+                className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 shadow-xl shadow-cyan-500/25 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>⚡</span>
                 <span>{t('Sử Dụng Mẫu Này (Use Template)', 'Use This Template')}</span>
@@ -296,14 +283,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
               </h3>
               <button
                 onClick={() => setStep('preview')}
-                className="text-xs text-white/60 hover:text-white underline font-medium"
+                className="text-xs text-cyan-400 hover:underline font-medium cursor-pointer"
               >
                 ← {t('Xem lại mẫu', 'Back to preview')}
               </button>
             </div>
 
             {/* 1. Product Images Slot */}
-            <div className="space-y-2 p-3 rounded-2xl bg-white/5 border border-white/10">
+            <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
               <label className="text-xs font-bold text-white/90 flex items-center justify-between">
                 <span>{t('Ảnh Sản Phẩm / Clip Cuối (Tối đa ' + template.maxImages + ' file)', 'Hero Media (Max ' + template.maxImages + ')')}</span>
                 <span className="text-[10px] text-white/60">{productImages.length}/{template.maxImages}</span>
@@ -316,7 +303,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     <div
                       key={idx}
                       className={`relative aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${
-                        img ? 'border-rose-500 bg-slate-900' : 'border-white/20 bg-white/5 hover:border-white/40'
+                        img ? 'border-cyan-500 bg-slate-900' : 'border-white/20 bg-white/5 hover:border-cyan-400/60'
                       }`}
                     >
                       {img ? (
@@ -325,17 +312,23 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setProductImages(productImages.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 text-white flex items-center justify-center text-[10px] font-bold"
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 text-white flex items-center justify-center text-[10px] font-bold cursor-pointer"
                           >
                             ✕
                           </button>
                         </>
                       ) : (
                         <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center p-1 text-center">
-                          <span className="text-lg">➕</span>
-                          <span className="text-[9px] text-white/60 font-bold mt-1">
-                            {idx === 0 ? t('Tải ảnh / clip', 'Upload') : t('Thêm ảnh', 'Extra')}
-                          </span>
+                          {isUploading ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                          ) : (
+                            <>
+                              <span className="text-lg">➕</span>
+                              <span className="text-[9px] text-white/70 font-bold mt-1">
+                                {idx === 0 ? t('Tải ảnh / clip', 'Upload') : t('Thêm ảnh', 'Extra')}
+                              </span>
+                            </>
+                          )}
                           <input
                             type="file"
                             accept="image/*,video/*"
@@ -361,7 +354,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={isVietnamese ? 'Ví dụ: Ô Long Sữa Phê La / Thời Trang Hè...' : 'E.g., Oolong Milk Tea / Summer Fashion...'}
-                className="w-full py-2.5 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-rose-500"
+                className="w-full py-2.5 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
               />
             </div>
 
@@ -373,7 +366,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   type="text"
                   value={solidText}
                   onChange={(e) => setSolidText(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none"
+                  className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
                 />
               </div>
               <div className="space-y-1">
@@ -382,7 +375,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   type="text"
                   value={outlineText}
                   onChange={(e) => setOutlineText(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none"
+                  className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
                 />
               </div>
             </div>
@@ -397,17 +390,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 value={sloganText}
                 onChange={(e) => setSloganText(e.target.value)}
                 placeholder={isVietnamese ? '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY' : '⚡ DISCOVER THE BEST - ORDER NOW'}
-                className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-rose-500"
+                className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
               />
             </div>
 
-            {/* Action Launch Button */}
+            {/* Action Launch Button (App Signature Cyan-Blue Gradient) */}
             <button
               onClick={handleLaunchCreation}
-              className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-black flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-2"
-              style={{
-                background: `linear-gradient(135deg, ${template.accentColor}, #FFFFFF)`,
-              }}
+              className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 shadow-xl shadow-cyan-500/25 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
               <span>🚀</span>
               <span>{t('Tạo Video & Mở Studio Result', 'Generate & Open Studio Result')}</span>

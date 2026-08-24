@@ -11,19 +11,20 @@ export interface StrobeTeaserRendererProps {
 /**
  * StrobeTeaserRenderer (Template 1) — 100% Exact CapCut Strobe Teaser & Big Reveal
  *
- * 1. Exact Typography (Bodoni / Didot Bold Condensed High-Contrast Serif):
- *    - Font: 'Bodoni MT', 'Bodoni 72', 'Didot', 'Playfair Display', serif
- *    - Heavy vertical contrast + sharp flat serifs + vertical scale.
- * 2. READY? Marquee Wave & Background Pulse:
- *    - Background: Trắng (#F5F5F5) -> Xám (#777777) -> Đen (#121214) -> Xám (#777777) -> Trắng (#FFFFFF).
- *    - Chữ R-E-A-D-Y-? nhấp nháy đèn biển hiệu từ trái sang phải (wave marquee).
- * 3. 1-Second Linear Black Curtain Wipe (7.0s -> 8.0s):
- *    - Hàng đen quét dần từ trên xuống dưới trong 1s để hiển thị ảnh/clip 4s cuối.
- * 4. Hero Outro (8.0s -> 11.7s):
- *    - Solid 'STAY' / Brand trên + Hollow Outlined 'TUNED' / Product dưới (-webkit-text-stroke: 2.5px #fff).
- *    - Tagline nghiêng (italic) chữ mỏng sang trọng.
- * 5. Last 0.5s - 0.8s Warm Color Strobe Flash:
- *    - Hiệu ứng chớp ánh sáng ấm (Cam - Vàng - Đỏ / Film Burn Light Leak) rực rỡ ở cuối clip.
+ * 1. Bold Condensed SANS-SERIF Typography (KHÔNG CÓ CHÂN / NO SERIFS):
+ *    - Font: 'Impact', 'Anton', 'Bebas Neue', 'Arial Black', -apple-system, sans-serif
+ * 2. Words Timeline:
+ *    - Chữ 'READY?' xuất hiện chuẩn xác từ giây thứ 3.0s -> 4.0s (Frame 90 -> 120).
+ *    - 'ARE' (0-1s), 'YOU' (1-2s), 'GET' (2-3s), 'READY?' (3-4s), 'SOMETHING' (4-5s), 'BIG' (5-6s), 'COMING' (6-7s).
+ * 3. Kích thước chữ 'SOMETHING':
+ *    - Vừa vặn 100% bên trong khung dọc 9:16 (54px), không bị tràn mép.
+ * 4. 1-Second Linear Black Curtain Wipe (7.0s -> 8.0s / Frame 210 -> 240):
+ *    - Hàng đen kéo dần từ trên xuống dưới trong 1s để mở ra ảnh/clip 4s cuối.
+ * 5. Hero Outro (8.0s -> 11.7s):
+ *    - Chữ trên Solid ('STAY') + Chữ dưới Hollow Outline ('TUNED' -webkit-text-stroke: 2.5px #fff).
+ *    - Tagline Marketing cuối (Editable).
+ * 6. Last 0.8s Warm Color Strobe:
+ *    - Chỉ nháy ở nửa dưới màn hình (Bottom 55% gradient) chứ KHÔNG phủ toàn bộ màn hình.
  */
 export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scene }) => {
   const frame = useCurrentFrame();
@@ -31,42 +32,41 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
 
   const isVertical = height > width;
 
-  // Strobe Words & Copy
-  const rawWords = (scene as any).strobe_words || ['ARE', 'YOU', 'READY?', 'SOMETHING', 'BIG', 'IS', 'COMING'];
+  // Strobe Words & Copy (Word 3 is READY? at 3s-4s)
+  const rawWords = (scene as any).strobe_words || ['ARE', 'YOU', 'GET', 'READY?', 'SOMETHING', 'BIG', 'COMING'];
   const headlineSolid = (scene as any).headline_solid || 'STAY';
   const headlineOutline = (scene as any).headline_outline || 'TUNED';
-  const subHeadline = (scene as any).sub_headline || scene.title || 'SOMETHING ABOUT YOUR PAGE';
+  const subHeadline = (scene as any).sub_headline || (scene as any).slogan_text || (scene as any).hook_text || '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY';
   const revealMediaUrl = (scene as any).reveal_video_url || (scene as any).reveal_image_url || scene.image_url;
 
   // Timing
   const wordDurationFrames = 30; // 1.0s per word
-  const revealStartFrame = wordDurationFrames * rawWords.length; // 210 frames = 7.0s
+  const revealStartFrame = 210; // 7.0s (7 words * 30 frames)
   const wipeDurationFrames = 30; // 1.0s wipe from 7.0s -> 8.0s
   const isRevealPhase = frame >= revealStartFrame;
 
-  // Active word index in Phase 1
+  // Active word index in Phase 1 (0s -> 7.0s)
   const activeWordIndex = Math.min(Math.floor(frame / wordDurationFrames), rawWords.length - 1);
   const currentWord = rawWords[activeWordIndex] || '';
   const currentWordFrame = frame % wordDurationFrames;
 
-  // Standard words background & text
-  const bgColors = ['#FFFFFF', '#08080C', '#FFFFFF', '#08080C', '#FFFFFF', '#08080C', '#FFFFFF'];
-  const textColors = ['#08080C', '#FFFFFF', '#08080C', '#FFFFFF', '#08080C', '#FFFFFF', '#08080C'];
+  // Background & Text monochrome strobe colors
+  const bgColors = ['#FFFFFF', '#08080C', '#08080C', '#FFFFFF', '#08080C', '#FFFFFF', '#08080C'];
+  const textColors = ['#08080C', '#FFFFFF', '#FFFFFF', '#08080C', '#FFFFFF', '#08080C', '#FFFFFF'];
 
   let currentBg = bgColors[activeWordIndex % bgColors.length];
   let currentTextColor = textColors[activeWordIndex % textColors.length];
 
-  // ── SPECIAL "READY?" STAGE: BG Pulse & Marquee Wave ──
-  const isReadyWord = currentWord.includes('?') || activeWordIndex === 2;
+  // ── WORD 'READY?' AT 3.0s -> 4.0s (Frame 90 -> 120): Background Pulse & Marquee Wave ──
+  const isReadyWord = currentWord.includes('?') || activeWordIndex === 3;
   const readyLetters = useMemo(() => 'READY?'.split(''), []);
 
-  // Background smooth pulse for READY? (White -> Gray -> Dark Charcoal -> Gray -> White)
   if (isReadyWord) {
-    const pulseNorm = (currentWordFrame % wordDurationFrames) / wordDurationFrames; // 0 -> 1
+    const pulseNorm = currentWordFrame / wordDurationFrames; // 0 -> 1
     if (pulseNorm < 0.25) {
       currentBg = '#FFFFFF';
     } else if (pulseNorm < 0.5) {
-      currentBg = '#202226';
+      currentBg = '#222327';
     } else if (pulseNorm < 0.75) {
       currentBg = '#111215';
     } else {
@@ -91,8 +91,8 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
     extrapolateRight: 'clamp',
   });
 
-  // Slow subtle cinematic zoom drift on hero media (1.0 -> 1.06)
-  const mediaZoom = interpolate(revealFrame, [0, durationInFrames - revealStartFrame], [1.0, 1.06], {
+  // Slow subtle cinematic zoom drift on hero media (1.0 -> 1.05)
+  const mediaZoom = interpolate(revealFrame, [0, durationInFrames - revealStartFrame], [1.0, 1.05], {
     extrapolateRight: 'clamp',
   });
 
@@ -103,20 +103,26 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
     config: { damping: 12, mass: 0.6, stiffness: 130 },
   });
 
-  // ── PHASE 3: LAST 0.5s - 0.8s WARM COLOR STROBE (ORANGE / RED / YELLOW FILM BURN) ──
+  // ── PHASE 3: LAST 0.8s WARM COLOR STROBE (CHỈ Ở NỬA DƯỚI MÀN HÌNH BÊN DƯỚI) ──
   const framesFromEnd = Math.max(0, durationInFrames - frame);
   const isFinalWarmFlash = framesFromEnd <= 24; // Last ~0.8s
 
-  // Flashing orange/yellow/red opacity
   const warmFlashOpacity = isFinalWarmFlash
-    ? interpolate(framesFromEnd, [24, 18, 12, 6, 0], [0, 0.85, 0.45, 0.95, 0.7], {
+    ? interpolate(framesFromEnd, [24, 18, 12, 6, 0], [0, 0.9, 0.45, 0.95, 0.7], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
     : 0;
 
-  // Bodoni / Didot Bold Condensed Serif Font Family
-  const bodoniSerifFont = '"Bodoni MT", "Bodoni 72", "Didot", "Playfair Display", "Times New Roman", serif';
+  // Pure Heavy Sans-Serif Font (KHÔNG CÓ CHÂN)
+  const heavySansFont = '"Impact", "Anton", "Bebas Neue", "Arial Black", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+  // Dynamic responsive font size to ensure 'SOMETHING' fits completely within 9:16
+  const getWordFontSize = (word: string) => {
+    if (word.length >= 9) return isVertical ? '48px' : '78px'; // For 'SOMETHING'
+    if (word.length >= 6) return isVertical ? '62px' : '92px'; // For 'COMING'
+    return isVertical ? '76px' : '108px'; // For 'ARE', 'YOU', 'BIG'
+  };
 
   return (
     <div
@@ -125,7 +131,7 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
         inset: 0,
         overflow: 'hidden',
         backgroundColor: '#08080C',
-        fontFamily: bodoniSerifFont,
+        fontFamily: heavySansFont,
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
@@ -141,34 +147,32 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
             justifyContent: 'center',
             alignItems: 'center',
             transform: `scale(${wordScale})`,
-            padding: '0 24px',
-            transition: 'background-color 0.1s ease',
+            padding: '0 20px',
+            transition: 'background-color 0.08s ease',
           }}
         >
           {isReadyWord ? (
-            /* READY? Travelling Light Marquee Wave (from Left to Right) */
+            /* READY? at 3s -> 4s: Travelling Light Marquee Wave (from Left to Right) */
             <div
               style={{
                 display: 'flex',
-                gap: isVertical ? '4px' : '8px',
-                fontSize: isVertical ? '92px' : '124px',
+                gap: isVertical ? '6px' : '10px',
+                fontSize: isVertical ? '78px' : '112px',
                 fontWeight: 900,
-                letterSpacing: '2px',
+                letterSpacing: '3px',
                 textTransform: 'uppercase',
-                transform: 'scaleY(1.18)',
               }}
             >
               {readyLetters.map((char: string, i: number) => {
-                // Wave sweeps from left to right every 4 frames
                 const waveIndex = Math.floor(currentWordFrame / 4) % (readyLetters.length + 2);
                 const isLit = waveIndex === i || waveIndex === i + 1;
                 const isBgDark = currentBg !== '#FFFFFF';
 
-                let charColor = '#888888';
+                let charColor = '#777777';
                 if (isBgDark) {
                   charColor = isLit ? '#FFFFFF' : '#333336';
                 } else {
-                  charColor = isLit ? '#111111' : '#A0A0A0';
+                  charColor = isLit ? '#000000' : '#AAAAAA';
                 }
 
                 return (
@@ -178,9 +182,9 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
                       color: charColor,
                       textShadow:
                         isBgDark && isLit
-                          ? '0 0 25px rgba(255,255,255,0.85)'
+                          ? '0 0 20px rgba(255,255,255,0.9)'
                           : !isBgDark && isLit
-                          ? '0 0 15px rgba(0,0,0,0.4)'
+                          ? '0 0 12px rgba(0,0,0,0.35)'
                           : 'none',
                       transition: 'color 0.08s ease',
                     }}
@@ -191,17 +195,18 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
               })}
             </div>
           ) : (
-            /* Standard Bodoni Condensed Strobe Word */
+            /* Standard Bold Sans-Serif Strobe Word (Auto-sized to fit screen) */
             <h1
               style={{
                 margin: 0,
-                fontSize: isVertical ? '84px' : '116px',
+                fontSize: getWordFontSize(currentWord),
                 fontWeight: 900,
                 color: currentTextColor,
-                letterSpacing: '3px',
+                letterSpacing: '2px',
                 textAlign: 'center',
                 textTransform: 'uppercase',
-                transform: 'scaleY(1.18)',
+                maxWidth: '92%',
+                whiteSpace: 'nowrap',
               }}
             >
               {currentWord}
@@ -240,7 +245,7 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
                 left: 0,
                 right: 0,
                 top: `${wipeProgress}%`,
-                height: '6px',
+                height: '5px',
                 backgroundColor: 'rgba(255,255,255,0.75)',
                 boxShadow: '0 0 20px rgba(255,255,255,0.9), 0 0 40px rgba(0,0,0,0.95)',
                 zIndex: 15,
@@ -260,7 +265,7 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
             }}
           />
 
-          {/* Signature Dual-Layer Typography (Bodoni High-Contrast Serif) */}
+          {/* Signature Dual-Layer Typography (Pure Bold Sans-Serif) */}
           <div
             style={{
               position: 'absolute',
@@ -278,13 +283,12 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
             {/* Top Solid Headline ("STAY" / Brand Name) */}
             <div
               style={{
-                fontSize: isVertical ? '96px' : '130px',
+                fontSize: isVertical ? '84px' : '118px',
                 fontWeight: 900,
                 color: '#FFFFFF',
                 letterSpacing: '4px',
-                lineHeight: 0.88,
+                lineHeight: 0.9,
                 textTransform: 'uppercase',
-                transform: 'scaleY(1.18)',
                 textShadow: '0 10px 35px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85)',
               }}
             >
@@ -294,36 +298,36 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
             {/* Bottom Hollow Outlined Headline ("TUNED" / Product Name) */}
             <div
               style={{
-                fontSize: isVertical ? '96px' : '130px',
+                fontSize: isVertical ? '84px' : '118px',
                 fontWeight: 900,
                 color: 'transparent',
                 WebkitTextStroke: '2.5px #FFFFFF',
                 letterSpacing: '4px',
-                lineHeight: 0.88,
+                lineHeight: 0.9,
                 textTransform: 'uppercase',
-                transform: 'scaleY(1.18)',
-                marginTop: '10px',
+                marginTop: '6px',
                 filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.95))',
               }}
             >
               {headlineOutline}
             </div>
 
-            {/* Tagline Italic Subtitle with Wide Letter Tracking */}
+            {/* Editable Marketing Slogan Subtitle */}
             {subHeadline && (
               <div
                 style={{
-                  marginTop: '28px',
+                  marginTop: '24px',
                   fontSize: isVertical ? '12px' : '15px',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 600,
-                  fontStyle: 'italic',
-                  letterSpacing: '4px',
+                  fontWeight: 700,
+                  letterSpacing: '3px',
                   color: '#FFFFFF',
                   opacity: 0.95,
                   textTransform: 'uppercase',
                   textAlign: 'center',
                   textShadow: '0 2px 10px rgba(0,0,0,0.9)',
+                  maxWidth: '90%',
+                  lineHeight: 1.3,
                 }}
               >
                 {subHeadline}
@@ -332,15 +336,18 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
-              PHASE 4: LAST 0.5s - 0.8s WARM COLOR STROBE (RED/ORANGE/YELLOW)
+              PHASE 4: LAST 0.8s WARM COLOR STROBE (CHỈ Ở NỬA DƯỚI MÀN HÌNH)
               ───────────────────────────────────────────────────────────── */}
           {isFinalWarmFlash && (
             <div
               style={{
                 position: 'absolute',
-                inset: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: '55%',
                 background:
-                  'linear-gradient(135deg, rgba(255, 20, 0, 0.8) 0%, rgba(255, 110, 0, 0.85) 45%, rgba(255, 220, 0, 0.75) 100%)',
+                  'linear-gradient(to top, rgba(255, 30, 0, 0.9) 0%, rgba(255, 120, 0, 0.8) 45%, rgba(255, 210, 0, 0.4) 75%, rgba(255, 210, 0, 0) 100%)',
                 mixBlendMode: 'screen',
                 opacity: warmFlashOpacity,
                 pointerEvents: 'none',
