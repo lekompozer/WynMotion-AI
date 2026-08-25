@@ -32,7 +32,8 @@ export type MotionVisualStyle =
   | 'science_explainer'
   | 'product_ads_motion'
   | 'ads_strobe_teaser'
-  | 'ads_cinematic_showcase';
+  | 'ads_cinematic_showcase'
+  | 'video_news_60s';
 
 export type CharacterSubtype =
   | 'full_character'
@@ -388,5 +389,44 @@ export const wynmotionService = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tái tạo hình ảnh');
     return data;
+  },
+
+  /**
+   * Summarize News Article (URL or Text) into a 60-second viral TikTok news script
+   */
+  async summarizeNews(params: {
+    url?: string;
+    text?: string;
+    language?: string;
+    target_duration_sec?: number;
+  }): Promise<{
+    success: boolean;
+    headline: string;
+    category: string;
+    ticker_text: string;
+    full_voice_script: string;
+    scenes: Array<{
+      scene_id: number;
+      time_range: string;
+      headline: string;
+      narration: string;
+      image_prompt: string;
+      suggested_image_index: number;
+    }>;
+    crawled_images: string[];
+    source_title?: string;
+    source_url?: string;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/summarize-news`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Lỗi tóm tắt tin tức');
+    }
+    return res.json();
   },
 };

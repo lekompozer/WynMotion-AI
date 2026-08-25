@@ -310,5 +310,31 @@ export const CinematicShowcaseIcon: React.FC<StyleIconProps> = ({ className = ''
   </svg>
 );
 
+/**
+ * 10. Video News 60s Icon — Breaking News camera broadcast & live ticker
+ */
+export const VideoNewsIcon: React.FC<StyleIconProps> = ({ className = '', size = 44 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* Studio News Screen frame */}
+    <rect x="5" y="7" width="38" height="28" rx="4" stroke="currentColor" strokeWidth="2.2" />
+    {/* Lower third banner bar */}
+    <rect x="9" y="24" width="30" height="7" rx="2" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="1.5" />
+    {/* Breaking live badge */}
+    <rect x="9" y="11" width="12" height="5" rx="2" fill="currentColor" />
+    <circle cx="28" cy="13.5" r="2" fill="currentColor" />
+    <circle cx="34" cy="13.5" r="2" fill="currentColor" />
+    {/* Stand base */}
+    <path d="M18 39H30M24 35V39" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+);
+
 export const MascotCharacterIcon = CharacterAnimationIcon;
+
 

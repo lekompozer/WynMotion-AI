@@ -60,6 +60,7 @@ import {
   ProductAdsIcon,
   StrobeTeaserIcon,
   CinematicShowcaseIcon,
+  VideoNewsIcon,
 } from '@/components/video/MotionStyleIcons';
 import { ProfileSidePanel } from '@/components/navigation/ProfileSidePanel';
 import { LoginModal } from '@/components/auth/LoginModal';
@@ -327,6 +328,56 @@ export const AiVideoTab: React.FC = () => {
   const [priceText, setPriceText] = useState('ƯU ĐÃI');
   const [ctaText, setCtaText] = useState('MUA NGAY');
   const [capcutModalTemplate, setCapcutModalTemplate] = useState<'ads_strobe_teaser' | 'ads_cinematic_showcase' | null>(null);
+
+  // Video News 60s States
+  const [newsInputMode, setNewsInputMode] = useState<'url' | 'text'>('url');
+  const [newsUrlInput, setNewsUrlInput] = useState('');
+  const [newsRawTextInput, setNewsRawTextInput] = useState('');
+  const [isSummarizingNews, setIsSummarizingNews] = useState(false);
+  const [newsHeadline, setNewsHeadline] = useState('');
+  const [newsCategory, setNewsCategory] = useState('THỜI SỰ');
+  const [newsTickerText, setNewsTickerText] = useState('BẢN TIN NÓNG 60S • CẬP NHẬT MỚI NHẤT LIÊN TỤC • ĐĂNG KÝ KÊNH ĐỂ THEO DÕI');
+  const [newsImages, setNewsImages] = useState<string[]>([]);
+  const [newsScenes, setNewsScenes] = useState<any[]>([]);
+
+  const handleSummarizeNews = async () => {
+    if (newsInputMode === 'url' && !newsUrlInput.trim()) {
+      alert(isVietnamese ? 'Vui lòng dán link bài báo cần tóm tắt.' : 'Please paste an article URL.');
+      return;
+    }
+    if (newsInputMode === 'text' && !newsRawTextInput.trim()) {
+      alert(isVietnamese ? 'Vui lòng nhập hoặc dán nội dung tin tức.' : 'Please enter news content.');
+      return;
+    }
+
+    setIsSummarizingNews(true);
+    try {
+      const res = await wynmotionService.summarizeNews({
+        url: newsInputMode === 'url' ? newsUrlInput.trim() : undefined,
+        text: newsInputMode === 'text' ? newsRawTextInput.trim() : undefined,
+        language: selectedLang.startsWith('vi') ? 'vi' : 'en',
+      });
+
+      if (res.headline) setNewsHeadline(res.headline);
+      if (res.category) setNewsCategory(res.category);
+      if (res.ticker_text) setNewsTickerText(res.ticker_text);
+      if (res.full_voice_script) {
+        setPrompt(res.full_voice_script);
+        setCustomNarrationText(res.full_voice_script);
+      }
+      if (res.crawled_images && res.crawled_images.length > 0) {
+        setNewsImages(res.crawled_images.slice(0, 4));
+      }
+      if (res.scenes) {
+        setNewsScenes(res.scenes);
+      }
+    } catch (err: any) {
+      console.error('News summarization error:', err);
+      alert(err.message || (isVietnamese ? 'Lỗi tóm tắt tin tức' : 'Failed to summarize news'));
+    } finally {
+      setIsSummarizingNews(false);
+    }
+  };
 
   // 10-Minute Countdown & Minimize-to-Background State
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
@@ -840,10 +891,10 @@ export const AiVideoTab: React.FC = () => {
         visual_style: visualStyle,
         character_subtype: characterSubtype,
         science_domain: visualStyle === 'science_explainer' ? scienceDomain : undefined,
-        product_images: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') && productImages.length > 0 ? productImages : undefined,
-        hook_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (hookText || prompt.slice(0, 30)) : undefined,
-        price_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (priceText || 'ƯU ĐÃI') : undefined,
-        cta_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? ctaText : undefined,
+        product_images: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') && productImages.length > 0 ? productImages : (visualStyle === 'video_news_60s' && newsImages.length > 0 ? newsImages : undefined),
+        hook_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (hookText || prompt.slice(0, 30)) : (visualStyle === 'video_news_60s' ? newsHeadline : undefined),
+        price_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (priceText || 'ƯU ĐÃI') : (visualStyle === 'video_news_60s' ? newsCategory : undefined),
+        cta_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? ctaText : (visualStyle === 'video_news_60s' ? newsTickerText : undefined),
         dialogue_speakers: visualStyle === 'dialogue_scene' ? { speaker_a: speakerA, speaker_b: speakerB } : undefined,
         dialogue_turns: visualStyle === 'dialogue_scene' && dialogueTurns.length > 0 ? dialogueTurns : undefined,
         language_code: visualStyle === 'dialogue_scene' ? speakerA.language_code : selectedLang,
@@ -1088,6 +1139,15 @@ export const AiVideoTab: React.FC = () => {
       title: isVietnamese ? 'Cinematic Showcase\nReel 22s' : 'Cinematic Showcase\nReel 22s',
       desc: isVietnamese ? 'Video F&B / Sản phẩm 7 phân cảnh điện ảnh, khói sương, nguyên liệu bay 3D, chia 3 cột & nút đặt hàng' : '7-stage commercial reel with flare intro, smoke VFX, zero-gravity floating ingredients, 3-panel split & pulse CTA',
       icon: CinematicShowcaseIcon,
+    },
+  ];
+
+  const NEWS_VIDEO_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
+    {
+      id: 'video_news_60s',
+      title: isVietnamese ? 'Bản Tin Nóng 60s\n(Video News)' : '60s Video News\n& Daily Digest',
+      desc: isVietnamese ? 'Tự động đọc bài báo từ Link hoặc Dán văn bản, tóm tắt tin tức 60s TikTok, hiệu ứng Ken Burns & thanh tin vắn' : 'Auto-crawl news links or paste text, generate 60s TikTok breaking news reels with Ken Burns & live ticker',
+      icon: VideoNewsIcon,
     },
   ];
 
@@ -1348,6 +1408,51 @@ export const AiVideoTab: React.FC = () => {
                           </div>
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
                             HOT 60FPS
+                          </span>
+                        </div>
+                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {style.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Nhóm 4: Video News 60s (Tin Tức & Điểm Tin) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">📰</span>
+                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                  {isVietnamese ? 'Tin Tức & Điểm Tin 60s (Video News)' : '60s Video News & Daily Digest'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5">
+                {NEWS_VIDEO_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => handleStartStudio(style.id)}
+                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-amber-900/40 text-white hover:border-amber-500/50 shadow-lg shadow-amber-950/20'
+                          : 'bg-white border-amber-200 text-slate-900 shadow-sm hover:border-amber-300'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        <Icon size={36} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {style.title.replace('\n', ' ')}
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase tracking-wider">
+                            TIKTOK 60S
                           </span>
                         </div>
                         <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -1770,6 +1875,110 @@ export const AiVideoTab: React.FC = () => {
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ── STYLE: VIDEO NEWS 60S (URL vs Raw Text) ── */}
+            {visualStyle === 'video_news_60s' && (
+              <div className="space-y-4 p-4 rounded-3xl border border-amber-500/30 bg-amber-950/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <span>📰</span>
+                    <span>{t('Nguồn tin tức (Link bài báo hoặc dán văn bản)', 'News Source (Article URL or Raw Text)')}</span>
+                  </label>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase">
+                    Auto-60s
+                  </span>
+                </div>
+
+                {/* Input Mode Switcher */}
+                <div className="flex bg-slate-900/80 p-1 rounded-2xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setNewsInputMode('url')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                      newsInputMode === 'url'
+                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🔗 {t('Dán Link Báo', 'Paste Article URL')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewsInputMode('text')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                      newsInputMode === 'text'
+                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    📝 {t('Dán Nội Dung / Điểm Tin', 'Paste Text / Digest')}
+                  </button>
+                </div>
+
+                {newsInputMode === 'url' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={newsUrlInput}
+                      onChange={(e) => setNewsUrlInput(e.target.value)}
+                      placeholder="https://vnexpress.net/... hoặc báo quốc tế"
+                      className="w-full px-4 py-3 text-xs rounded-2xl bg-slate-900 border border-slate-800 text-white font-medium focus:border-amber-400 focus:outline-none"
+                    />
+                    <div className="text-[10px] text-slate-400">
+                      * Hỗ trợ VnExpress, Tuổi Trẻ, Zing, Dân Trí, TechCrunch, CNN, Reuters...
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      value={newsRawTextInput}
+                      onChange={(e) => setNewsRawTextInput(e.target.value)}
+                      rows={4}
+                      placeholder={t('Dán bài báo hoặc gom nhiều mẩu tin ngắn để tổng hợp điểm tin 60s...', 'Paste news article or multiple news snippets for a 60s digest...')}
+                      className="w-full p-3.5 text-xs rounded-2xl bg-slate-900 border border-slate-800 text-white font-medium focus:border-amber-400 focus:outline-none resize-none"
+                    />
+                  </div>
+                )}
+
+                {/* Summarize Action Button */}
+                <button
+                  type="button"
+                  onClick={handleSummarizeNews}
+                  disabled={isSummarizingNews}
+                  className={`w-full py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 ${
+                    isSummarizingNews
+                      ? 'bg-slate-800 text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 shadow-lg shadow-amber-500/20 active:scale-[0.98]'
+                  }`}
+                >
+                  {isSummarizingNews ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                      <span>{t('AI đang đọc & tóm tắt bản tin 60s...', 'AI summarizing news for 60s video...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4" />
+                      <span>{t('✨ AI Đọc & Tóm Tắt Bản Tin 60s (Auto-Summarize)', '✨ AI Auto-Summarize 60s Video Script')}</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Extracted Headline & Ticker Preview */}
+                {newsHeadline && (
+                  <div className="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/40 space-y-2">
+                    <div className="flex items-center justify-between text-[10px] font-bold">
+                      <span className="text-amber-400 uppercase">TIÊU ĐỀ HEADLINE:</span>
+                      <span className="text-slate-400">{newsCategory}</span>
+                    </div>
+                    <div className="text-xs font-black text-white">{newsHeadline}</div>
+                    <div className="text-[10px] text-amber-300/90 truncate pt-1 border-t border-slate-800">
+                      ⚡ Ticker: {newsTickerText}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

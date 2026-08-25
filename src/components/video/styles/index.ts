@@ -8,6 +8,7 @@ import { CharacterMascotRenderer } from './CharacterMascotRenderer';
 import { ProductAdsRenderer } from './ProductAdsRenderer';
 import { StrobeTeaserRenderer } from './StrobeTeaserRenderer';
 import { CinematicShowcaseRenderer } from './CinematicShowcaseRenderer';
+import { NewsVideoRenderer } from './NewsVideoRenderer';
 
 export {
   DialogueSceneRenderer,
@@ -17,12 +18,12 @@ export {
   ProductAdsRenderer,
   StrobeTeaserRenderer,
   CinematicShowcaseRenderer,
+  NewsVideoRenderer,
 };
 export type { StyleRendererProps };
 
 /**
  * Registry of modular visual style renderers.
- * Adding new styles (7 to 30+) is as simple as adding an entry to this map!
  */
 export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps>> = {
   dialogue_scene: DialogueSceneRenderer,
@@ -47,6 +48,10 @@ export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps
   strobe_teaser: StrobeTeaserRenderer as any,
   ads_cinematic_showcase: CinematicShowcaseRenderer as any,
   cinematic_showcase: CinematicShowcaseRenderer as any,
+  video_news_60s: NewsVideoRenderer as any,
+  news_video: NewsVideoRenderer as any,
+  video_news: NewsVideoRenderer as any,
+  breaking_news: NewsVideoRenderer as any,
 };
 
 export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRendererProps> | null {
