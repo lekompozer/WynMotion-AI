@@ -367,43 +367,44 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          PHASE 4: FAST WARM COLOR STROBE / FILM BURN LIGHT LEAK (CHỚP LÊN RỒI TẮT HẲN Ở 0.3s CUỐI)
-          Always in root container with top-level zIndex: 100 so it overlays ANY Video or Image.
+          PHASE 4: FAST WARM COLOR STROBE / FILM BURN LIGHT LEAK
+          Root-level zIndex:200 — ALWAYS above video GPU layer.
+          Use isolation + will-change to guarantee compositing order.
           ───────────────────────────────────────────────────────────── */}
-      {isFinalWarmFlash && (
+      {isFinalWarmFlash && warmFlashOpacity > 0 && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            zIndex: 100,
-            overflow: 'hidden',
+            zIndex: 200,
+            isolation: 'isolate',
+            willChange: 'opacity',
           }}
         >
-          {/* Layer 1: Solid & Saturated Orange/Red/Yellow Flame Burn from Bottom */}
+          {/* Layer 1: Full-screen warm film burn from bottom */}
           <div
             style={{
               position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: '80%',
+              inset: 0,
               background:
-                'linear-gradient(to top, rgba(255, 35, 0, 0.95) 0%, rgba(255, 120, 0, 0.85) 35%, rgba(255, 215, 0, 0.6) 70%, rgba(255, 215, 0, 0) 100%)',
+                'linear-gradient(to top, rgba(255, 30, 0, 1) 0%, rgba(255, 110, 0, 0.92) 25%, rgba(255, 195, 0, 0.7) 55%, rgba(255, 235, 100, 0.2) 80%, transparent 100%)',
               opacity: warmFlashOpacity,
+              willChange: 'opacity',
             }}
           />
-          {/* Layer 2: Ultra-Bright Golden Core Spotlight in the lower half */}
+          {/* Layer 2: Ultra-Bright Golden Core Spotlight */}
           <div
             style={{
               position: 'absolute',
               left: '-10%',
               right: '-10%',
               bottom: '-5%',
-              height: '60%',
+              height: '70%',
               background:
-                'radial-gradient(ellipse at center bottom, rgba(255, 255, 200, 0.98) 0%, rgba(255, 170, 0, 0.85) 40%, rgba(255, 50, 0, 0) 80%)',
+                'radial-gradient(ellipse at 50% 110%, rgba(255, 255, 180, 1) 0%, rgba(255, 180, 0, 0.9) 30%, rgba(255, 60, 0, 0.5) 65%, transparent 85%)',
               opacity: warmFlashOpacity,
+              willChange: 'opacity',
             }}
           />
         </div>
