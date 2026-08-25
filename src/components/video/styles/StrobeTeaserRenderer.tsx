@@ -107,13 +107,15 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
     config: { damping: 12, mass: 0.6, stiffness: 130 },
   });
 
-  // ── PHASE 3: WARM COLOR STROBE (Chớp lên lúc 0.8s trước khi kết thúc và TẮT HẲN ở 0.3s cuối) ──
-  const framesFromEnd = Math.max(0, durationInFrames - frame);
-  // 24 frames = ~0.8s, 9 frames = ~0.3s
-  const isFinalWarmFlash = framesFromEnd <= 24 && framesFromEnd >= 9;
+  const effectiveDurationFrames = scene.duration_frames || ((scene as any).duration ? Math.round((scene as any).duration * fps) : (durationInFrames || 349));
+  // Warm color strobe occurs in the last 0.8s to 0.3s (frame 325 to 340 out of 349, or 24 to 9 frames before end)
+  const currentSceneFrame = frame % effectiveDurationFrames;
+  const framesFromEnd = Math.max(0, effectiveDurationFrames - currentSceneFrame);
+  // 24 frames = ~0.8s, 8 frames = ~0.26s
+  const isFinalWarmFlash = framesFromEnd <= 26 && framesFromEnd >= 8;
 
   const warmFlashOpacity = isFinalWarmFlash
-    ? interpolate(framesFromEnd, [24, 18, 14, 9], [0, 0.95, 0.7, 0.0], {
+    ? interpolate(framesFromEnd, [26, 20, 15, 8], [0, 1.0, 0.75, 0.0], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
