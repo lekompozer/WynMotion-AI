@@ -997,7 +997,7 @@ export const AiVideoTab: React.FC = () => {
     setIsCreationMinimized(false);
     setCreationError(null);
     setCreationProgressPercent(15);
-    setCreationCountdownSec(600);
+    setCreationCountdownSec(300);
     setCreationStatusMessage(isVietnamese ? '⚡ Đang khởi tạo video theo mẫu CapCut...' : '⚡ Launching CapCut template video...');
 
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -1070,6 +1070,7 @@ export const AiVideoTab: React.FC = () => {
           try {
             localStorage.setItem(`wynmotion_cached_projects_${user.uid}`, JSON.stringify(updatedList));
           } catch {}
+          openProjectInEditor(finalProject);
         }, 800);
       }
     } catch (err: any) {
@@ -1552,6 +1553,24 @@ export const AiVideoTab: React.FC = () => {
           defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
           onClose={() => setCapcutModalTemplate(null)}
           onApply={handleApplyCapCutTemplate}
+        />
+
+        {/* ── 5-Minute Countdown & Minimize-to-Background Creation Modal in Home Mode ── */}
+        <WynMotionCreationModal
+          isOpen={isCreationModalOpen}
+          isMinimized={isCreationMinimized}
+          onToggleMinimize={() => setIsCreationMinimized(!isCreationMinimized)}
+          statusMessage={creationStatusMessage}
+          progressPercent={creationProgressPercent}
+          remainingSeconds={creationCountdownSec}
+          projectTitle={prompt.slice(0, 30)}
+          visualStyle={visualStyle}
+          error={creationError}
+          onCancel={() => {
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            setIsCreationModalOpen(false);
+            setIsCreatingProject(false);
+          }}
         />
       </div>
     );

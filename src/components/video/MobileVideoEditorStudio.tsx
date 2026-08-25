@@ -970,16 +970,16 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
         {/* ── Bottom Action Toolbar ── */}
         <div
-          className={`flex-shrink-0 flex items-center justify-around px-4 py-2.5 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),10px)+0.5rem)] ${
+          className={`flex-shrink-0 grid grid-cols-5 gap-1 px-2 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] ${
             isDark ? 'border-slate-800 bg-[#0F131C]' : 'border-slate-200 bg-white shadow-sm'
           }`}
         >
           {[
-            { id: 'assets' as BottomSheet, icon: Folder, labelVi: 'Assets', labelEn: 'Assets', color: 'text-amber-400' },
-            { id: 'audio' as BottomSheet, icon: Music, labelVi: 'Âm Thanh', labelEn: 'Audio', color: 'text-purple-400' },
-            { id: 'canvas' as BottomSheet, icon: Sliders, labelVi: 'Canvas', labelEn: 'Canvas', color: 'text-cyan-400' },
-            { id: 'templates' as BottomSheet, icon: LayoutTemplate, labelVi: 'Mẫu Video', labelEn: 'Templates', color: 'text-emerald-400' },
-            { id: 'captions' as BottomSheet, icon: Type, labelVi: 'Phụ Đề AI', labelEn: 'Captions', color: 'text-pink-400' },
+            { id: 'assets' as BottomSheet, icon: Folder, label: 'Assets', color: 'text-amber-400' },
+            { id: 'audio' as BottomSheet, icon: Music, label: 'Sound', color: 'text-purple-400' },
+            { id: 'canvas' as BottomSheet, icon: Sliders, label: 'Settings', color: 'text-cyan-400' },
+            { id: 'templates' as BottomSheet, icon: LayoutTemplate, label: 'FX', color: 'text-emerald-400' },
+            { id: 'captions' as BottomSheet, icon: Type, label: 'Captions', color: 'text-pink-400' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeBottomSheet === item.id;
@@ -988,17 +988,17 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 key={item.id}
                 type="button"
                 onClick={() => setActiveBottomSheet(isActive ? null : item.id)}
-                className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-2xl transition-all active:scale-90 ${
+                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all active:scale-95 min-w-0 ${
                   isActive
-                    ? `bg-slate-800/90 border border-slate-600 ${item.color} shadow-sm`
+                    ? `bg-slate-800/90 border border-slate-600 ${item.color} shadow-sm font-black`
                     : isDark
-                    ? 'text-slate-400 hover:text-white'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'text-slate-400 hover:text-white font-semibold'
+                    : 'text-slate-500 hover:text-slate-900 font-semibold'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs font-bold">
-                  {isVietnamese ? item.labelVi : item.labelEn}
+                <Icon className="w-5 h-5 shrink-0" />
+                <span className="text-[10px] sm:text-xs leading-none truncate max-w-full hidden min-[340px]:block">
+                  {item.label}
                 </span>
               </button>
             );
