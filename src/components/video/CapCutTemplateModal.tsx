@@ -308,7 +308,11 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     >
                       {img ? (
                         <>
-                          <img src={img} alt="Product" className="w-full h-full object-cover" />
+                          {img.toLowerCase().includes('.mp4') || img.toLowerCase().includes('.mov') || img.toLowerCase().includes('.webm') ? (
+                            <video src={img} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={img} alt="Product" className="w-full h-full object-cover" />
+                          )}
                           <button
                             type="button"
                             onClick={() => setProductImages(productImages.filter((_, i) => i !== idx))}

@@ -8,6 +8,12 @@ export interface StrobeTeaserRendererProps {
   scene: DynamicSceneData;
 }
 
+const anyVideoExt = (url?: string): boolean => {
+  if (!url) return false;
+  const clean = url.split('?')[0].toLowerCase();
+  return clean.endsWith('.mp4') || clean.endsWith('.mov') || clean.endsWith('.webm') || clean.endsWith('.avi');
+};
+
 /**
  * StrobeTeaserRenderer (Template 1) — 100% Exact CapCut Strobe Teaser & Big Reveal
  *
@@ -37,7 +43,9 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
   const headlineSolid = (scene as any).headline_solid || 'STAY';
   const headlineOutline = (scene as any).headline_outline || 'TUNED';
   const subHeadline = (scene as any).sub_headline || (scene as any).slogan_text || (scene as any).hook_text || '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY';
-  const revealMediaUrl = (scene as any).reveal_video_url || (scene as any).reveal_image_url || scene.image_url;
+  const revealVideoUrl = (scene as any).reveal_video_url || (scene as any).video_url || ((scene as any).image_url && anyVideoExt((scene as any).image_url) ? (scene as any).image_url : undefined);
+  const revealImageUrl = (scene as any).reveal_image_url || scene.image_url;
+  const revealMediaUrl = revealVideoUrl || revealImageUrl;
 
   // Timing
   const wordDurationFrames = 30; // 1.0s per word
@@ -217,21 +225,43 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
           ───────────────────────────────────────────────────────────── */}
       {isRevealPhase && (
         <div style={{ position: 'absolute', inset: 0 }}>
-          {/* Hero Media Layer (Image or Video) with Subtle Zoom Drift */}
+          {/* Hero Media Layer (Video or Image) with Subtle Zoom Drift */}
           {revealMediaUrl && (
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
-                backgroundImage: `url(${revealMediaUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
                 transform: `scale(${mediaZoom})`,
                 filter: 'brightness(0.95) contrast(1.06)',
-                // Linear Vertical Wipe revealing from top to bottom
                 clipPath: `inset(0 0 ${100 - wipeProgress}% 0)`,
+                overflow: 'hidden',
               }}
-            />
+            >
+              {revealVideoUrl ? (
+                <video
+                  src={revealVideoUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundImage: `url(${revealMediaUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              )}
+            </div>
           )}
 
           {/* Black Curtain Wipe Bar Edge */}
