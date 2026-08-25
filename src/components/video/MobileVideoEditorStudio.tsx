@@ -47,6 +47,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Film,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -55,6 +56,9 @@ import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
 import { RemotionPlayerProvider, useRemotion, useCurrentFrame, useVideoConfig } from './RemotionEngine';
 import { DynamicAnimationComposition } from './DynamicAnimationComposition';
 import { DynamicSceneData } from './DynamicSceneRenderer';
+import { TemplatesFlyoutTab } from './flyouts/TemplatesFlyoutTab';
+import { CaptionsFlyoutTab } from './flyouts/CaptionsFlyoutTab';
+import { CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -69,7 +73,7 @@ const BG_THEMES = [
 
 export type TextLangMode = 'vi' | 'en' | 'bilingual';
 export type TextPosition = 'top' | 'middle' | 'bottom';
-type BottomSheet = null | 'assets' | 'audio' | 'canvas';
+type BottomSheet = null | 'assets' | 'audio' | 'canvas' | 'templates' | 'captions';
 
 function formatTimecode(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -185,6 +189,41 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   // Sheets & Audio mixer
   const [isSettingsSheetOpen, setIsSettingsSheetOpen] = useState(false);
   const [activeBottomSheet, setActiveBottomSheet] = useState<BottomSheet>(null);
+  const [visualStyle, setVisualStyle] = useState<string>((project as any).visual_style || 'handdrawn_fast_doodle');
+
+  // Auto-Captions Whisper & CapCut Subtitle State
+  const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>([]);
+  const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
+  const [isTranscribingCaptions, setIsTranscribingCaptions] = useState(false);
+
+  const handleTranscribeCaptions = async (targetAudioUrl: string, language: string) => {
+    try {
+      setIsTranscribingCaptions(true);
+      const API_BASE = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'https://ai.wordai.pro';
+      const res = await fetch(`${API_BASE}/api/ai/motion/transcribe-caption`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audio_url: targetAudioUrl,
+          language: language || 'vi',
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Lỗi nhận diện phụ đề từ âm thanh');
+      }
+      const data = await res.json();
+      if (data.segments) {
+        setCaptionSegments(data.segments);
+        setShowWhisperSubs(true);
+      }
+    } catch (err: any) {
+      console.error('Whisper caption error:', err);
+      alert(err.message || 'Không thể tạo phụ đề lúc này');
+    } finally {
+      setIsTranscribingCaptions(false);
+    }
+  };
   const [bgmVolume, setBgmVolume] = useState(0.3);
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement>(null);
@@ -685,12 +724,14 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           >
             <DynamicAnimationComposition
               scenes={scenes}
-              visualStyle={project.visual_style || 'whiteboard_stream_hand'}
+              visualStyle={visualStyle}
               showSceneCards={showSceneCards}
               showWhisperSubs={showWhisperSubs}
               cardPosY={cardPosY}
               subsPosY={subsPosY}
               swapSpeakers={swapSpeakers}
+              captionSegments={captionSegments}
+              captionPresetStyle={captionPresetStyle}
               onCardClick={() => setActiveBottomSheet('canvas')}
               onSubsClick={() => setActiveBottomSheet('canvas')}
             />
@@ -936,7 +977,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           {[
             { id: 'assets' as BottomSheet, icon: Folder, labelVi: 'Assets', labelEn: 'Assets', color: 'text-amber-400' },
             { id: 'audio' as BottomSheet, icon: Music, labelVi: 'Âm Thanh', labelEn: 'Audio', color: 'text-purple-400' },
-            { id: 'canvas' as BottomSheet, icon: Sliders, labelVi: 'Canvas & Text', labelEn: 'Canvas & Text', color: 'text-cyan-400' },
+            { id: 'canvas' as BottomSheet, icon: Sliders, labelVi: 'Canvas', labelEn: 'Canvas', color: 'text-cyan-400' },
+            { id: 'templates' as BottomSheet, icon: LayoutTemplate, labelVi: 'Mẫu Video', labelEn: 'Templates', color: 'text-emerald-400' },
+            { id: 'captions' as BottomSheet, icon: Type, labelVi: 'Phụ Đề AI', labelEn: 'Captions', color: 'text-pink-400' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeBottomSheet === item.id;
@@ -1660,6 +1703,37 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* TEMPLATES SHEET */}
+          {activeBottomSheet === 'templates' && (
+            <div className="space-y-4">
+              <TemplatesFlyoutTab
+                onClose={() => setActiveBottomSheet(null)}
+                onApplyTemplate={(tplId) => {
+                  setVisualStyle(tplId);
+                  setActiveBottomSheet(null);
+                }}
+                currentTemplateId={visualStyle}
+                isVertical={aspectRatio === '9:16'}
+              />
+            </div>
+          )}
+
+          {/* CAPTIONS SHEET */}
+          {activeBottomSheet === 'captions' && (
+            <div className="space-y-4">
+              <CaptionsFlyoutTab
+                onClose={() => setActiveBottomSheet(null)}
+                audioUrl={audioSrc}
+                segments={captionSegments}
+                onChangeSegments={setCaptionSegments}
+                presetStyle={captionPresetStyle}
+                onChangePresetStyle={setCaptionPresetStyle}
+                onTranscribeWhisper={handleTranscribeCaptions}
+                isTranscribing={isTranscribingCaptions}
+              />
             </div>
           )}
         </BottomSheetOverlay>

@@ -1,16 +1,9 @@
 'use client';
 
-/**
- * DynamicAnimationComposition.tsx — WynMotion-AI iOS Studio
- *
- * Exact 1:1 Parity with wordai Web DynamicAnimationComposition.tsx:
- * - Wraps scenes into Remotion Sequences based on start_frame and duration_frames
- * - Passes showSceneCards, showWhisperSubs, cardPosY, subsPosY to DynamicSceneRenderer
- */
-
 import React from 'react';
 import { Sequence, useRemotion } from './RemotionEngine';
 import { DynamicSceneRenderer, DynamicSceneData } from './DynamicSceneRenderer';
+import { CapCutCaptionRenderer, CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
 
 interface DynamicAnimationCompositionProps {
   scenes?: DynamicSceneData[];
@@ -22,6 +15,8 @@ interface DynamicAnimationCompositionProps {
   swapSpeakers?: boolean;
   onCardClick?: () => void;
   onSubsClick?: () => void;
+  captionSegments?: CaptionSegment[];
+  captionPresetStyle?: CaptionPresetStyle;
 }
 
 export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionProps> = ({
@@ -31,9 +26,11 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   showWhisperSubs = true,
   cardPosY = 'middle',
   subsPosY = 'bottom',
-  swapSpeakers = false,
+  swapSpeakers,
   onCardClick,
   onSubsClick,
+  captionSegments = [],
+  captionPresetStyle = 'karaoke_glow',
 }) => {
   const { bgColor } = useRemotion();
 
@@ -49,46 +46,51 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
           alignItems: 'center',
           justifyContent: 'center',
           color: '#64748B',
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: 700,
         }}
       >
-        No scenes available
+        Chưa có Scene nào được nạp...
       </div>
     );
   }
 
-  const isPureVisualAds =
-    (visualStyle || '').toLowerCase().includes('product_ads') ||
-    (visualStyle || '').toLowerCase().includes('commercial_ads') ||
-    (visualStyle || '').toLowerCase().includes('brand_ads');
-
   return (
-    <>
-      {scenes.map((scene, index) => {
-        const from = scene.start_frame || 0;
-        const durationInFrames = scene.duration_frames || 150;
+    <div
+      style={{
+        flex: 1,
+        width: '100%',
+        height: '100%',
+        backgroundColor: bgColor || (visualStyle === 'vector_motion' ? '#0F172A' : '#FDFBF7'),
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {scenes.map((scene) => (
+        <Sequence
+          key={scene.scene_id}
+          from={scene.start_frame || 0}
+          durationInFrames={scene.duration_frames || 150}
+        >
+          <DynamicSceneRenderer
+            scene={scene}
+            visualStyle={visualStyle}
+            showSceneCards={showSceneCards}
+            showWhisperSubs={captionSegments.length > 0 ? false : showWhisperSubs}
+            cardPosY={cardPosY}
+            subsPosY={subsPosY}
+          />
+        </Sequence>
+      ))}
 
-        return (
-          <Sequence
-            key={scene.scene_id || index}
-            from={from}
-            durationInFrames={durationInFrames}
-          >
-            <DynamicSceneRenderer
-              scene={scene}
-              visualStyle={visualStyle}
-              showSceneCards={isPureVisualAds ? false : showSceneCards}
-              showWhisperSubs={isPureVisualAds ? false : showWhisperSubs}
-              cardPosY={cardPosY}
-              subsPosY={subsPosY}
-              swapSpeakers={swapSpeakers}
-              onCardClick={onCardClick}
-              onSubsClick={onSubsClick}
-            />
-          </Sequence>
-        );
-      })}
-    </>
+      {/* CapCut Animated Caption Engine (Global Subtitle Layer) */}
+      {showWhisperSubs && captionSegments && captionSegments.length > 0 && (
+        <CapCutCaptionRenderer
+          segments={captionSegments}
+          presetStyle={captionPresetStyle}
+          positionY={subsPosY}
+        />
+      )}
+    </div>
   );
 };
