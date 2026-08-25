@@ -926,6 +926,7 @@ export const AiVideoTab: React.FC = () => {
     productImages: string[];
     bgmUrl: string;
     durationSec: number;
+    aspectRatio?: '9:16' | '16:9';
     hookText?: string;
     ctaText?: string;
     solidText?: string;
@@ -958,13 +959,14 @@ export const AiVideoTab: React.FC = () => {
     }, 1000);
 
     try {
+      const chosenAspectRatio = params.aspectRatio || (aspectRatio === '16:9' ? '16:9' : '9:16');
       const res = await wynmotionService.generateScenes({
         title: params.prompt,
         prompt: params.prompt,
         script: params.prompt,
         audio_url: params.bgmUrl,
         duration_sec: params.durationSec,
-        aspect_ratio: '9:16',
+        aspect_ratio: chosenAspectRatio,
         visual_style: params.templateId,
         product_images: params.productImages.length > 0 ? params.productImages : undefined,
         hook_text: params.hookText,
@@ -2693,6 +2695,7 @@ export const AiVideoTab: React.FC = () => {
       <CapCutTemplateModal
         templateId={capcutModalTemplate}
         isOpen={Boolean(capcutModalTemplate)}
+        defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
         onClose={() => setCapcutModalTemplate(null)}
         onApply={handleApplyCapCutTemplate}
       />

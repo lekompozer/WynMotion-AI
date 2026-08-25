@@ -76,12 +76,14 @@ export interface CapCutTemplateModalProps {
   templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | null;
   isOpen: boolean;
   onClose: () => void;
+  defaultAspectRatio?: '9:16' | '16:9';
   onApply: (params: {
     templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase';
     prompt: string;
     productImages: string[];
     bgmUrl: string;
     durationSec: number;
+    aspectRatio: '9:16' | '16:9';
     hookText?: string;
     ctaText?: string;
     solidText?: string;
@@ -94,12 +96,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   templateId,
   isOpen,
   onClose,
+  defaultAspectRatio = '9:16',
   onApply,
 }) => {
   const { isVietnamese, isDark, t } = useApp();
   const [step, setStep] = useState<'preview' | 'fill_data'>('preview');
 
   // Input states
+  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>(defaultAspectRatio);
   const [prompt, setPrompt] = useState('');
   const [productImages, setProductImages] = useState<string[]>([]);
   const [hookText, setHookText] = useState('');
@@ -119,14 +123,17 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
     if (isOpen) {
       setStep('preview');
       setIsPlaying(true);
+      setAspectRatio(defaultAspectRatio);
       if (template) {
         setHookText(isVietnamese ? template.defaultHookVi : template.defaultHookEn);
         setSolidText(isVietnamese ? template.defaultSolidVi : template.defaultSolidEn);
         setOutlineText(isVietnamese ? template.defaultOutlineVi : template.defaultOutlineEn);
         setSloganText(isVietnamese ? template.defaultSloganVi : template.defaultSloganEn);
+        setCtaText(template.id === 'ads_cinematic_showcase' ? 'ORDER NOW' : 'MUA NGAY');
+        setProductImages([]);
       }
     }
-  }, [isOpen, templateId, isVietnamese]);
+  }, [isOpen, templateId, isVietnamese, defaultAspectRatio]);
 
   if (!isOpen || !template) return null;
 
@@ -173,6 +180,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       productImages,
       bgmUrl: template.bgmUrl,
       durationSec: template.durationSec,
+      aspectRatio,
       hookText: hookText.trim() || undefined,
       ctaText: ctaText.trim() || undefined,
       solidText: solidText.trim() || undefined,
@@ -292,6 +300,38 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
               </button>
             </div>
 
+            {/* Aspect Ratio Selector */}
+            <div className="space-y-1.5 p-3 rounded-2xl bg-white/5 border border-white/10">
+              <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                <span>📐 {t('Tỉ Lệ Khung Hình Video', 'Video Aspect Ratio')}</span>
+                <span className="text-[10px] text-cyan-300 font-bold">{aspectRatio === '9:16' ? 'Dọc (TikTok/Reels)' : 'Ngang (YouTube/TV)'}</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setAspectRatio('9:16')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    aspectRatio === '9:16'
+                      ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <span>📱 9:16 (Dọc)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAspectRatio('16:9')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    aspectRatio === '16:9'
+                      ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <span>🖥️ 16:9 (Ngang)</span>
+                </button>
+              </div>
+            </div>
+
             {/* 1. Product Images Slot */}
             <div className="space-y-2.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-between">
@@ -304,12 +344,52 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
               </div>
 
               {template.id === 'ads_cinematic_showcase' && (
-                <p className="text-[10px] text-amber-300/90 leading-tight bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
-                  💡 {t('Mẹo: Bạn có thể tải 1 ảnh Menu (AI Gemini sẽ tự đọc và sinh 8 món ăn tương ứng) hoặc tải sẵn từ 1 đến 8 ảnh món!', 'Tip: Upload 1 Menu photo (Gemini AI will read & generate 8 dishes) or upload 1 to 8 dish photos!')}
-                </p>
+                <div className="p-3 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
+                    <span>💡</span>
+                    <span>{t('Hướng dẫn tải ảnh cho mẫu Menu 8 món (22.0s):', 'Image Upload Guide for 8-Dish Menu:')}</span>
+                  </div>
+                  <ul className="text-[11px] text-white/80 space-y-1 pl-4 list-disc">
+                    <li>
+                      <strong className="text-cyan-300">{t('Cách 1 (Khuyên dùng):', 'Option 1 (Recommended):')}</strong>{' '}
+                      {t(
+                        'Tải 1 ảnh chụp Menu thực đơn → AI Gemini sẽ tự động đọc các món ăn và tạo đủ 8 ảnh 1080p chuẩn studio theo tỉ lệ ' + aspectRatio + '!',
+                        'Upload 1 Menu photo → Gemini AI will automatically read items and generate all 8 studio 1080p dishes in ' + aspectRatio + '!'
+                      )}
+                    </li>
+                    <li>
+                      <strong className="text-amber-300">{t('Cách 2:', 'Option 2:')}</strong>{' '}
+                      {t('Hoặc tải lên từ 1 đến 8 ảnh món ăn / sản phẩm đã có sẵn.', 'Or directly upload 1 to 8 dish / product photos.')}
+                    </li>
+                  </ul>
+                </div>
               )}
 
-              <div className={`grid ${template.maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
+              {/* Bulk upload trigger button */}
+              <label className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30 text-xs font-bold cursor-pointer transition-all">
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                    <span>{t('Đang tải ảnh lên...', 'Uploading...')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>📂</span>
+                    <span>{t('Chọn ảnh từ thiết bị (1 hoặc nhiều ảnh)', 'Select photos (Single or Multiple)')}</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Grid 8 slots */}
+              <div className={`grid ${template.maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 pt-1`}>
                 {Array.from({ length: template.maxImages }).map((_, idx) => {
                   const img = productImages[idx];
                   return (
@@ -326,7 +406,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                           ) : (
                             <img src={img} alt={`Asset ${idx + 1}`} className="w-full h-full object-cover" />
                           )}
-                          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-black text-cyan-300">
+                          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-black text-cyan-300">
                             #{idx + 1}
                           </div>
                           <button
