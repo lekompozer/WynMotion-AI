@@ -11,19 +11,19 @@ export interface CinematicShowcaseRendererProps {
 /**
  * CinematicShowcaseRenderer (Template 2) — 22.0s Full F&B Menu Showcase Reel
  *
- * 12 Timed Animation Stages (660 frames @ 30fps):
+ * Exact Timeline & Formula:
  * 1. 0.0s – 1.0s (Scene 1): Blur background + Purple lens flare intro + Text "BEST"
- * 2. 1.0s – 2.0s (Scene 2 - Asset 1): Scale zoom 1.0 -> 1.05 + Text "BEST Menu"
- * 3. 2.0s – 3.0s (Scene 3A - Asset 2): Grayscale(100%) + 70deg Diagonal Strip color wipe X: -100% -> 100%
- * 4. 3.0s – 5.0s (Scene 3B - Asset 3): Full color + Steam particles + Vertical Paper Tear split mask
- * 5. 5.0s – 7.0s (Scene 4 - Asset 4): Halftone stipple -> Full color expand + Crumpled Paper Ball effect
- * 6. 8.0s – 10.0s (Scene 5 - Asset 5): Crumpled paper ball unwrap & spin scale: 0.1 -> 1.0, rotate: 0 -> 360deg
- * 7. 10.0s – 12.5s (Scene 6 - Asset 6): 3-Column Slices flying in staggered Y: ±100% -> 0% + 3D Door Flip
- * 8. 12.5s – 15.0s (Scene 7A - Asset 7): 3D Accordion fold / roll-down unrolling from top to bottom
- * 9. 15.0s – 16.5s (Scene 7B - Asset 7 + Thumbnails): Split screen 50/50 (Left close-up / Right 3 vertical cards)
- * 10. 16.5s – 19.0s (Scene 8A - Asset 8): 3D Flip open / scale up + Amber glow flare sweep
- * 11. 19.0s – 20.5s (Scene 8B - Asset 8 + CTA): Brush stroke sweep + Pop-up "ORDER Now" bounce spring
- * 12. 20.5s – 22.0s (Scene 8C - Asset 8 + 3D Book Mockup): Perspective scale down into 3D open book page, hardcover folds shut, camera zoom out, fade out
+ * 2. 1.0s – 2.0s (Scene 2 - Ảnh 1): Scale zoom 1.0 -> 1.05 + Text "BEST Menu"
+ * 3. 2.0s – 3.0s (Scene 3A - Ảnh 2): Grayscale(100%) + 70deg Diagonal Strip color wipe X: -100% -> 100% (giữ "BEST Menu")
+ * 4. 3.0s – 5.0s (Scene 3B - Ảnh 3 & Ảnh 4): Ảnh 3 full màu + Chữ "BEST Menu" ở giữa + Hiệu ứng rạch giấy ở giữa (4.5s - 5.0s) để lộ Ảnh 4 (đang ở grayscale xám) bên dưới
+ * 5. 5.0s – 7.0s (Scene 4 - Ảnh 4): Ảnh 4 từ xám chuyển dần sang đầy đủ màu sắc (5s - 7s) -> Cuộn giấy vo tròn ở giữa (7s - 8s)
+ * 6. 8.0s – 10.0s (Scene 5 - Ảnh 5): Cuộn giấy mở bung xoay tròn 360° hé lộ hoàn toàn Ảnh 5
+ * 7. 10.0s – 12.5s (Scene 6 - Ảnh 6): Từng 1/3 (3 dải dọc) của Ảnh 6 bay vào so le trên/dưới khớp vị trí + 3D Door Flip
+ * 8. 12.5s – 15.0s (Scene 7A - Ảnh 7): Ảnh 7 xếp 3D từ trên xuống (Accordion roll-down) phẳng hoàn chỉnh ở giây 15
+ * 9. 15.0s – 16.5s (Scene 7B - Ảnh 7): Layout chia đôi 50/50: Bên trái là Ảnh 7 zoom mờ, Bên phải là 3 hàng card ảnh -> Slide left
+ * 10. 16.5s – 19.0s (Scene 8A - Ảnh 8): Ảnh 8 lật 3D Flip open full màn hình + Ánh sáng cam vàng quét qua ở 19s
+ * 11. 19.0s – 20.5s (Scene 8B - Ảnh 8 + CTA): Vệt cọ quét vàng cam + Chữ "ORDER NOW" pop-up bounce spring (19.5s - 20.5s)
+ * 12. 20.5s – 22.0s (Scene 8C - 3D Book Mockup Outro): Ảnh 8 trong trang sách, camera lùi xa, quyển sách gập đóng lại, fade out kết thúc.
  */
 export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps> = ({ scene }) => {
   const frame = useCurrentFrame();
@@ -46,7 +46,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
   const [img1, img2, img3, img4, img5, img6, img7, img8] = gallery;
 
   // Text Props
-  const hookBadge = (scene as any).badge_text || 'BEST MENU';
+  const hookBadge = (scene as any).badge_text || (scene as any).headline_solid || 'BEST MENU';
   const ctaText = (scene as any).cta_text || 'ORDER NOW';
   const sloganText = (scene as any).sub_headline || (scene as any).slogan_text || '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY';
   const accentColor = (scene as any).accent_color || '#FF7A00';
@@ -58,7 +58,8 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
   const f3A = Math.round(3.0 * fps);  // 90
   const f3B = Math.round(5.0 * fps);  // 150
   const f4 = Math.round(7.0 * fps);   // 210
-  const f5 = Math.round(10.0 * fps);  // 300
+  const f5 = Math.round(8.0 * fps);   // 240
+  const f5End = Math.round(10.0 * fps); // 300
   const f6 = Math.round(12.5 * fps);  // 375
   const f7A = Math.round(15.0 * fps); // 450
   const f7B = Math.round(16.5 * fps); // 495
@@ -66,15 +67,14 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
   const f8B = Math.round(20.5 * fps); // 615
   const f8C = Math.round(22.0 * fps); // 660
 
-  // Steam / Mist Particles for Scene 3B & 4
+  // Steam / Mist Particles for Scene 3B
   const steamParticles = useMemo(() => {
-    return Array.from({ length: 12 }).map((_, i) => ({
+    return Array.from({ length: 10 }).map((_, i) => ({
       id: i,
       x: 20 + (i * 7) % 65,
       yStart: 85 + (i * 4) % 15,
       size: 4 + (i % 3) * 3,
       speed: 0.05 + (i % 3) * 0.02,
-      delay: i * 6,
     }));
   }, []);
 
@@ -170,7 +170,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          2. SCENE 2 (1.0s – 2.0s): Image 1 Zoom Drift + Text "BEST Menu"
+          2. SCENE 2 (1.0s – 2.0s): Ảnh 1 Zoom Drift + Text "BEST Menu"
           ───────────────────────────────────────────────────────────── */}
       {frame >= f1 && frame < f2 && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -191,39 +191,35 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           {/* Vignette */}
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, transparent 40%, rgba(0,0,0,0.7) 100%)' }} />
 
-          {/* Top Badge: "BEST Menu" */}
+          {/* Center White Title: "BEST Menu" */}
           <div
             style={{
               position: 'absolute',
-              top: '12%',
-              left: 0,
-              right: 0,
+              inset: 0,
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               zIndex: 20,
             }}
           >
-            <div
+            <h2
               style={{
-                backgroundColor: accentColor,
                 color: '#FFFFFF',
-                fontSize: isVertical ? '28px' : '36px',
+                fontSize: isVertical ? '54px' : '72px',
                 fontWeight: 900,
-                padding: '10px 32px',
-                borderRadius: '8px',
-                letterSpacing: '5px',
+                letterSpacing: '6px',
                 textTransform: 'uppercase',
-                boxShadow: `0 0 35px ${accentColor}99, 0 10px 25px rgba(0,0,0,0.7)`,
+                textShadow: '0 0 30px rgba(0,0,0,0.9), 0 4px 15px rgba(0,0,0,0.8)',
               }}
             >
-              {hookBadge}
-            </div>
+              BEST MENU
+            </h2>
           </div>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. SCENE 3A (2.0s – 3.0s): Image 2 Grayscale + 70° Diagonal Color Strip Wipe
+          3. SCENE 3A (2.0s – 3.0s): Ảnh 2 Grayscale + Dải chéo Diagonal Wipe
           ───────────────────────────────────────────────────────────── */}
       {frame >= f2 && frame < f3A && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -260,22 +256,36 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             );
           })()}
 
-          {/* Badge: "BEST Menu" */}
-          <div style={{ position: 'absolute', top: '12%', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 20 }}>
-            <div style={{ backgroundColor: accentColor, color: '#FFF', fontSize: isVertical ? '28px' : '36px', fontWeight: 900, padding: '10px 32px', borderRadius: '8px', letterSpacing: '5px', textTransform: 'uppercase', boxShadow: `0 0 35px ${accentColor}99` }}>
-              {hookBadge}
-            </div>
+          {/* Center White Title: "BEST Menu" */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+            <h2 style={{ color: '#FFFFFF', fontSize: isVertical ? '54px' : '72px', fontWeight: 900, letterSpacing: '6px', textTransform: 'uppercase', textShadow: '0 0 30px rgba(0,0,0,0.9), 0 4px 15px rgba(0,0,0,0.8)' }}>
+              BEST MENU
+            </h2>
           </div>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          4. SCENE 3B (3.0s – 5.0s): Image 3 Full Color + Steam + Vertical Paper Tear Split
+          4. SCENE 3B (3.0s – 5.0s): Ảnh 3 Full Màu + "BEST Menu" + Rạch giấy ở giữa lộ Ảnh 4 (Xám) bên dưới
           ───────────────────────────────────────────────────────────── */}
       {frame >= f3A && frame < f3B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          {/* UNDERNEATH LAYER: Ảnh 4 in GRAYSCALE xám đen (bắt đầu lộ dần khi Ảnh 3 bị rạch) */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${img4 || img1})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'grayscale(100%) contrast(1.2) brightness(0.9)',
+              zIndex: 1,
+            }}
+          />
+
+          {/* TOP LAYER: Ảnh 3 with Paper Tear Split */}
           {(() => {
-            const tearFrame = frame - 135; // Tear happens in last 0.5s (135 - 150)
+            const tearFrame = frame - 135; // Tear happens in last 0.5s of Scene 3B (135 - 150)
             const isTearing = tearFrame > 0;
             const tearSplitX = isTearing
               ? interpolate(tearFrame, [0, 15], [0, 52], { extrapolateRight: 'clamp' })
@@ -283,7 +293,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
 
             return (
               <>
-                {/* Left Half of Paper Tear */}
+                {/* Left Half of Ảnh 3 */}
                 <div
                   style={{
                     position: 'absolute',
@@ -308,7 +318,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       backgroundPosition: 'center',
                     }}
                   />
-                  {/* Jagged White Tear Edge */}
+                  {/* White Jagged Tear Edge */}
                   {isTearing && (
                     <div
                       style={{
@@ -324,7 +334,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   )}
                 </div>
 
-                {/* Right Half of Paper Tear */}
+                {/* Right Half of Ảnh 3 */}
                 <div
                   style={{
                     position: 'absolute',
@@ -349,7 +359,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       backgroundPosition: 'center',
                     }}
                   />
-                  {/* Jagged White Tear Edge */}
+                  {/* White Jagged Tear Edge */}
                   {isTearing && (
                     <div
                       style={{
@@ -365,7 +375,24 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   )}
                 </div>
 
-                {/* Steam Particles Rising */}
+                {/* Center White Title: "BEST Menu" on Ảnh 3 (fades out as paper tears) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 20,
+                    opacity: isTearing ? Math.max(0, 1 - tearFrame / 10) : 1,
+                  }}
+                >
+                  <h2 style={{ color: '#FFFFFF', fontSize: isVertical ? '54px' : '72px', fontWeight: 900, letterSpacing: '6px', textTransform: 'uppercase', textShadow: '0 0 30px rgba(0,0,0,0.9), 0 4px 15px rgba(0,0,0,0.8)' }}>
+                    BEST MENU
+                  </h2>
+                </div>
+
+                {/* Steam Particles */}
                 {!isTearing && steamParticles.map((p) => {
                   const steamY = p.yStart - (((frame - f3A) * p.speed * 4) % 90);
                   const steamOpacity = Math.abs(Math.sin((frame - f3A) * 0.08 + p.id)) * 0.45;
@@ -395,28 +422,27 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. SCENE 4 (5.0s – 7.0s / 8.0s): Halftone -> Full Color Expand -> Crumpled Paper Ball
+          5. SCENE 4 (5.0s – 7.0s / 8.0s): Ảnh 4 Từ Xám -> Hiện Đầy Đủ Màu -> Vo Tròn Thành Cuộn Giấy (7s - 8s)
           ───────────────────────────────────────────────────────────── */}
-      {frame >= f3B && frame < f4 + 30 && (
+      {frame >= f3B && frame < f5 && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
-            const s4Frame = frame - f3B;
-            const isHalftone = s4Frame < 30; // 5s -> 6s: Halftone black/white
-            const isCrumpling = s4Frame >= 60; // 7s -> 8s: Crumpled paper ball
-
-            const filterStyle = isHalftone
-              ? 'grayscale(100%) contrast(1.8) brightness(1.2)'
-              : 'none';
-
-            const zoom = interpolate(s4Frame, [30, 60], [1.0, 1.06], {
+            const s4Frame = frame - f3B; // 0 to 90 frames (5.0s -> 8.0s)
+            // 5s -> 7s (0 to 60 frames): Grayscale 100% -> 0% (hiện đủ màu)
+            const grayPercent = interpolate(s4Frame, [0, 50], [100, 0], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            });
+            const zoom = interpolate(s4Frame, [0, 60], [1.0, 1.06], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
 
-            // Crumple Ball Scale & Rotation
+            // 7s -> 8s (60 to 90 frames): Vo tròn thành cuộn giấy (Crumpled Paper Ball) ở giữa tâm
+            const isCrumpling = s4Frame >= 60;
             const ballScale = isCrumpling
               ? interpolate(s4Frame - 60, [0, 30], [1.0, 0.15], { extrapolateRight: 'clamp' })
-              : 1.0;
+              : zoom;
             const ballRotate = isCrumpling
               ? interpolate(s4Frame - 60, [0, 30], [0, 240], { extrapolateRight: 'clamp' })
               : 0;
@@ -438,11 +464,10 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     backgroundImage: `url(${img4 || img1})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    filter: filterStyle,
-                    transform: `scale(${isCrumpling ? ballScale : zoom}) rotate(${ballRotate}deg)`,
+                    filter: `grayscale(${grayPercent}%) contrast(1.1)`,
+                    transform: `scale(${ballScale}) rotate(${ballRotate}deg)`,
                     borderRadius: isCrumpling ? '50%' : '0px',
-                    boxShadow: isCrumpling ? '0 30px 70px rgba(0,0,0,0.9), inset 0 0 50px rgba(0,0,0,0.8)' : 'none',
-                    transition: 'border-radius 0.2s',
+                    boxShadow: isCrumpling ? '0 30px 70px rgba(0,0,0,0.95), inset 0 0 50px rgba(0,0,0,0.8)' : 'none',
                   }}
                 />
               </div>
@@ -452,12 +477,12 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          6. SCENE 5 (8.0s – 10.0s): Crumpled Paper Ball Unwrap & Spin -> Full Image 5
+          6. SCENE 5 (8.0s – 10.0s): Cuộn Giấy Mở Bung Ra & Xoay Tròn -> Ảnh 5
           ───────────────────────────────────────────────────────────── */}
-      {frame >= f4 + 30 && frame < f5 && (
+      {frame >= f5 && frame < f5End && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
-            const s5Frame = frame - (f4 + 30);
+            const s5Frame = frame - f5; // 0 to 60 frames (8.0s -> 10.0s)
             const unwrapSpring = spring({ frame: s5Frame, fps, config: { damping: 13, stiffness: 90 } });
             const unwrapScale = interpolate(unwrapSpring, [0, 1], [0.15, 1.0]);
             const unwrapRotate = interpolate(unwrapSpring, [0, 1], [360, 0]);
@@ -490,9 +515,9 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          7. SCENE 6 (10.0s – 12.5s): 3-Column Slices Flying In Staggered + 3D Door Flip
+          7. SCENE 6 (10.0s – 12.5s): Từng 1/3 (3 Dải Dọc) của Ảnh 6 Bay Vào Khớp Vị Trí + 3D Door Flip
           ───────────────────────────────────────────────────────────── */}
-      {frame >= f5 && frame < f6 && (
+      {frame >= f5End && frame < f6 && (
         <div
           style={{
             position: 'absolute',
@@ -503,8 +528,8 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           }}
         >
           {(() => {
-            const s6Frame = frame - f5;
-            const isClosingDoor = s6Frame >= 60; // 12.0s -> 12.5s: 3D Flip
+            const s6Frame = frame - f5End; // 0 to 75 frames (10.0s -> 12.5s)
+            const isClosingDoor = s6Frame >= 60; // 12.0s -> 12.5s: 3D Door Flip
             const doorRotateY = isClosingDoor
               ? interpolate(s6Frame - 60, [0, 15], [0, -90], { extrapolateRight: 'clamp' })
               : 0;
@@ -523,15 +548,15 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   transformOrigin: 'left center',
                 }}
               >
-                {/* Column 1 */}
+                {/* 1/3 Cột 1 */}
                 <div style={{ width: '33.333%', height: '100%', overflow: 'hidden', transform: `translateY(${col1Y}px)` }}>
                   <div style={{ width: `${width}px`, height: '100%', backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'left center' }} />
                 </div>
-                {/* Column 2 */}
+                {/* 1/3 Cột 2 */}
                 <div style={{ width: '33.333%', height: '100%', overflow: 'hidden', transform: `translateY(${col2Y}px)` }}>
                   <div style={{ width: `${width}px`, height: '100%', marginLeft: `-${width / 3}px`, backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center center' }} />
                 </div>
-                {/* Column 3 */}
+                {/* 1/3 Cột 3 */}
                 <div style={{ width: '33.334%', height: '100%', overflow: 'hidden', transform: `translateY(${col3Y}px)` }}>
                   <div style={{ width: `${width}px`, height: '100%', marginLeft: `-${(width * 2) / 3}px`, backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'right center' }} />
                 </div>
@@ -542,7 +567,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          8. SCENE 7A (12.5s – 15.0s): 3D Accordion Fold / Roll-Down Flat Full-Screen
+          8. SCENE 7A (12.5s / 13.0s – 15.0s): Ảnh 7 Xếp 3D Từ Trên Xuống Phẳng Hoàn Chỉnh Ở Giây 15
           ───────────────────────────────────────────────────────────── */}
       {frame >= f6 && frame < f7A && (
         <div
@@ -556,7 +581,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           }}
         >
           {(() => {
-            const s7AFrame = frame - f6;
+            const s7AFrame = frame - f6; // 0 to 75 frames (12.5s -> 15.0s)
             const foldSpring = spring({ frame: s7AFrame, fps, config: { damping: 14, stiffness: 100 } });
             const foldRotateX = interpolate(foldSpring, [0, 1], [-85, 0]);
 
@@ -579,12 +604,12 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          9. SCENE 7B (15.0s – 16.5s): Split Screen 50/50 (Left Close-Up / Right 3 Cards) -> Slide Left
+          9. SCENE 7B (15.0s – 16.5s): Layout Chia Đôi: Trái là Ảnh 7 Mờ, Phải là 3 Hàng Card Ảnh -> Slide Left
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7A && frame < f7B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
-            const s7BFrame = frame - f7A;
+            const s7BFrame = frame - f7A; // 0 to 45 frames (15.0s -> 16.5s)
             const slideLeft = s7BFrame >= 35
               ? interpolate(s7BFrame - 35, [0, 10], [0, -100], { extrapolateRight: 'clamp' })
               : 0;
@@ -598,7 +623,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   transform: `translateX(${slideLeft}%)`,
                 }}
               >
-                {/* Left 50%: Macro Zoom on Dish */}
+                {/* Nửa Trái (50%): Ảnh 7 zoom cận cảnh và mờ nhẹ */}
                 <div
                   style={{
                     width: '50%',
@@ -606,26 +631,26 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     backgroundImage: `url(${img7 || img1})`,
                     backgroundSize: '220%',
                     backgroundPosition: 'center 40%',
-                    filter: 'contrast(1.1)',
+                    filter: 'blur(3px) brightness(0.75)',
                     borderRight: '3px solid rgba(255,255,255,0.2)',
                   }}
                 />
 
-                {/* Right 50%: 3 Vertical Thumbnail Cards */}
+                {/* Nửa Phải (50%): 3 Hàng Card Ảnh Xếp Dọc */}
                 <div
                   style={{
                     width: '50%',
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
-                    padding: '4px',
+                    gap: '6px',
+                    padding: '6px',
                     backgroundColor: '#0A0D14',
                   }}
                 >
-                  <div style={{ flex: 1, backgroundImage: `url(${img1})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '6px', filter: 'brightness(1.05)' }} />
-                  <div style={{ flex: 1, backgroundImage: `url(${img3})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '6px', filter: 'saturate(1.2)' }} />
-                  <div style={{ flex: 1, backgroundImage: `url(${img5})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '6px', filter: 'contrast(1.15)' }} />
+                  <div style={{ flex: 1, backgroundImage: `url(${img1})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px', filter: 'brightness(1.05)' }} />
+                  <div style={{ flex: 1, backgroundImage: `url(${img3})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px', filter: 'saturate(1.2)' }} />
+                  <div style={{ flex: 1, backgroundImage: `url(${img5})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px', filter: 'contrast(1.15)' }} />
                 </div>
               </div>
             );
@@ -634,17 +659,17 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          10. SCENE 8A (16.5s – 19.0s): Image 8 3D Flip Open Scale-Up + Glow Flare Sweep
+          10. SCENE 8A (16.5s – 19.0s): Mở Ảnh 8 Lật 3D Ra Full Màn Hình + Ánh Sáng Cam Vàng Quét Qua
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7B && frame < f8A && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px' }}>
           {(() => {
-            const s8AFrame = frame - f7B;
+            const s8AFrame = frame - f7B; // 0 to 75 frames (16.5s -> 19.0s)
             const flipSpring = spring({ frame: s8AFrame, fps, config: { damping: 14, stiffness: 110 } });
             const flipScale = interpolate(flipSpring, [0, 1], [0.8, 1.04]);
             const flipRotateY = interpolate(flipSpring, [0, 1], [70, 0]);
 
-            // Glow sweep at end
+            // Warm Amber Glow Sweep at 19s (frames 55 - 75)
             const sweepProgress = interpolate(s8AFrame, [55, 75], [-100, 200], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
@@ -684,11 +709,11 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          11. SCENE 8B (19.0s – 20.5s): Brush Stroke Sweep + Pop-Up "ORDER Now"
+          11. SCENE 8B (19.0s – 20.5s): Vệt Cọ Quét Vàng Cam + Pop-up "ORDER NOW" (19.5s - 20.5s)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f8A && frame < f8B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-          {/* Background Image 8 */}
+          {/* Background Ảnh 8 */}
           <div
             style={{
               position: 'absolute',
@@ -700,11 +725,12 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             }}
           />
 
-          {/* Brush Stroke Gold Banner & Pop-up "ORDER NOW" */}
+          {/* Vệt Cọ Quét & Pop-up "ORDER NOW" */}
           {(() => {
-            const s8BFrame = frame - f8A;
+            const s8BFrame = frame - f8A; // 0 to 45 frames (19.0s -> 20.5s)
             const strokeWidth = interpolate(s8BFrame, [0, 18], [0, 100], { extrapolateRight: 'clamp' });
-            const ctaSpring = spring({ frame: Math.max(0, s8BFrame - 8), fps, config: { damping: 10, mass: 0.8, stiffness: 140 } });
+            // Pop-up "ORDER NOW" bounces in around 19.5s (s8BFrame >= 15)
+            const ctaSpring = spring({ frame: Math.max(0, s8BFrame - 15), fps, config: { damping: 10, mass: 0.8, stiffness: 140 } });
 
             return (
               <div
@@ -769,7 +795,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          12. SCENE 8C (20.5s – 22.0s): Pure-Code 3D Book Mockup Outro & Cover Fold-Close
+          12. SCENE 8C (20.5s – 22.0s): Dùng Ảnh 8 Trong Trang Sách 3D, Đẩy Ra Xa, Bìa Đóng Lại Kết Thúc
           ───────────────────────────────────────────────────────────── */}
       {frame >= f8B && (
         <div
@@ -786,9 +812,9 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
         >
           {(() => {
             const s8CFrame = frame - f8B; // 0 to 45 frames (20.5s -> 22.0s)
-            // Camera scale pull-back
+            // Camera scale pull-back (đẩy ra xa)
             const cameraScale = interpolate(s8CFrame, [0, 40], [0.85, 0.52], { extrapolateRight: 'clamp' });
-            // Left Cover fold angle: 0deg (open) -> -180deg (folded shut over right page)
+            // Left Cover fold angle: 0deg (open) -> -180deg (gập đóng lại che trang sách)
             const foldCloseAngle = interpolate(s8CFrame, [10, 35], [0, -180], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
@@ -820,7 +846,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     borderRadius: '8px',
                   }}
                 >
-                  {/* Right Page: Displays Image 8 */}
+                  {/* Trang Phải (Right Page): Chứa Ảnh 8 */}
                   <div
                     style={{
                       position: 'absolute',
@@ -840,7 +866,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30px', background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)' }} />
                   </div>
 
-                  {/* Left Static Base: Book Inside Left Page */}
+                  {/* Trang Trái (Left Page - Cố định bên trong) */}
                   <div
                     style={{
                       position: 'absolute',
@@ -871,7 +897,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     </p>
                   </div>
 
-                  {/* Left Folding Hardcover: Rotates on Right Edge of Left Page (Spine Axis) */}
+                  {/* Bìa Cứng Bên Trái: Gập Đóng Lại Trên Trục Gáy Sách */}
                   <div
                     style={{
                       position: 'absolute',
@@ -885,7 +911,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       zIndex: 30,
                     }}
                   >
-                    {/* Hardcover Front Texture (Visible when closed) */}
+                    {/* Mặt Ngoài Của Bìa (Hiển thị khi sách đã gập đóng lại) */}
                     <div
                       style={{
                         position: 'absolute',
@@ -915,7 +941,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     </div>
                   </div>
 
-                  {/* Center Spine Crease */}
+                  {/* Gáy Sách (Center Spine Crease) */}
                   <div
                     style={{
                       position: 'absolute',
