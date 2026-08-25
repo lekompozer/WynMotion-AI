@@ -108,17 +108,23 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
   });
 
   const effectiveDurationFrames = scene.duration_frames || ((scene as any).duration ? Math.round((scene as any).duration * fps) : (durationInFrames || 349));
-  // Warm color strobe occurs in the last 1.2s to 0.2s before clip end
+  // Warm color strobe occurs in the last 1.2s to 0.2s before clip end (36 frames to 6 frames before end)
   const currentSceneFrame = frame % effectiveDurationFrames;
-  const framesFromEnd = Math.max(0, effectiveDurationFrames - currentSceneFrame);
-  // 36 frames = ~1.2s, 6 frames = ~0.2s
-  const isFinalWarmFlash = framesFromEnd <= 36 && framesFromEnd >= 6;
+  const flashStartFrame = effectiveDurationFrames - 36;
+  const flashEndFrame = effectiveDurationFrames - 6;
+  const isFinalWarmFlash = currentSceneFrame >= flashStartFrame && currentSceneFrame <= flashEndFrame;
 
+  // Remotion interpolate requires strictly ASCENDING inputRange: [flashStartFrame, flashStartFrame + 10, flashStartFrame + 20, flashEndFrame]
   const warmFlashOpacity = isFinalWarmFlash
-    ? interpolate(framesFromEnd, [36, 26, 16, 6], [0, 1.0, 0.9, 0.0], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      })
+    ? interpolate(
+        currentSceneFrame,
+        [flashStartFrame, flashStartFrame + 10, flashStartFrame + 20, flashEndFrame],
+        [0.0, 1.0, 0.95, 0.0],
+        {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        }
+      )
     : 0;
 
   // Pure Heavy Sans-Serif Font (KHÔNG CÓ CHÂN)

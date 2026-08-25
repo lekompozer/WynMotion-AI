@@ -213,14 +213,15 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'WynMotion AI';
   const secondaryKeywords = scene.highlight_keywords?.slice(1, 4) || [];
 
-  // 1. Modular Style Pipeline Renderers (Product Ads, Dialogue, Science STEM, etc.)
-  const ModularRenderer = getModularStyleRenderer(visualStyle);
+  // 1. Modular Style Pipeline Renderers (Product Ads, Strobe Teaser, Dialogue, Science STEM, etc.)
+  const effectiveStyle = (scene as any).template_type || (scene as any).visual_style || visualStyle;
+  const ModularRenderer = getModularStyleRenderer(effectiveStyle) || getModularStyleRenderer(visualStyle);
   if (ModularRenderer) {
     return (
       <ModularRenderer
         scene={scene}
-        showSceneCards={visualStyle === 'product_ads_motion' ? false : showSceneCards}
-        showWhisperSubs={visualStyle === 'product_ads_motion' ? false : showWhisperSubs}
+        showSceneCards={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showSceneCards}
+        showWhisperSubs={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showWhisperSubs}
         cardPosY={cardPosY}
         subsPosY={subsPosY}
         swapSpeakers={swapSpeakers}
