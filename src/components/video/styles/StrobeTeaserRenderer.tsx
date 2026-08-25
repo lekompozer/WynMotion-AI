@@ -368,21 +368,40 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
               PHASE 4: FAST WARM COLOR STROBE (CHỚP LÊN RỒI TẮT HẲN Ở 0.3s CUỐI)
               ───────────────────────────────────────────────────────────── */}
           {isFinalWarmFlash && (
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: '65%',
-                background:
-                  'linear-gradient(to top, rgba(255, 30, 0, 1.0) 0%, rgba(255, 120, 0, 0.9) 40%, rgba(255, 220, 0, 0.6) 75%, rgba(255, 220, 0, 0) 100%)',
-                mixBlendMode: 'screen',
-                opacity: warmFlashOpacity,
-                pointerEvents: 'none',
-                zIndex: 35,
-              }}
-            />
+            <>
+              {/* Layer 1: Intense Warm Orange/Red Gradient Rise */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: '75%',
+                  background:
+                    'linear-gradient(to top, rgba(255, 30, 0, 1.0) 0%, rgba(255, 100, 0, 0.9) 35%, rgba(255, 200, 0, 0.6) 70%, rgba(255, 200, 0, 0) 100%)',
+                  mixBlendMode: 'screen',
+                  opacity: warmFlashOpacity,
+                  pointerEvents: 'none',
+                  zIndex: 40,
+                }}
+              />
+              {/* Layer 2: Bright Golden Core Flare in the lower third */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '10%',
+                  right: '10%',
+                  bottom: '5%',
+                  height: '45%',
+                  background:
+                    'radial-gradient(ellipse at center bottom, rgba(255, 240, 150, 0.95) 0%, rgba(255, 140, 0, 0.7) 45%, rgba(255, 50, 0, 0) 80%)',
+                  mixBlendMode: 'plus-lighter',
+                  opacity: warmFlashOpacity * 0.9,
+                  pointerEvents: 'none',
+                  zIndex: 41,
+                }}
+              />
+            </>
           )}
         </div>
       )}
