@@ -6,7 +6,7 @@ import { wynmotionService } from '@/services/wynmotionService';
 import { Loader2 } from 'lucide-react';
 
 export interface CapCutTemplateData {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase';
+  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
   titleVi: string;
   titleEn: string;
   descVi: string;
@@ -38,7 +38,7 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     videoUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/strobe_teaser_demo.mp4',
     bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/7fcf80645e11_templates/strobe_teaser_bgm.mp3',
     badge: '⚡ STROBE 11.7s',
-    usageCount: '24.8K',
+    usageCount: '76.9K',
     maxImages: 1,
     defaultHookVi: 'SIÊU PHẨM MỚI',
     defaultHookEn: 'NEW ARRIVAL',
@@ -70,15 +70,36 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     defaultSloganVi: '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY',
     defaultSloganEn: '⚡ TASTE THE PERFECTION - ORDER NOW',
   },
+  product_ads_motion: {
+    id: 'product_ads_motion',
+    titleVi: 'Product Commercial Billboard (Style 7)',
+    titleEn: 'Product Commercial Billboard (Style 7)',
+    descVi: 'Chuyển động 2.5D Parallax thuần Visual, SAM 2 bóc tách vật thể, RGB Glitch & Flash Blast, Match-to-Poster Outro.',
+    descEn: 'Pure visual 2.5D parallax ads, SAM 2 packshot cutout, RGB Glitch & Flash Blast, Match-to-Poster Outro.',
+    durationSec: 15.0,
+    videoUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/strobe_teaser_demo.mp4',
+    bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/7fcf80645e11_templates/strobe_teaser_bgm.mp3',
+    badge: '💎 2.5D ADS 15.0s',
+    usageCount: '6.5K',
+    maxImages: 3,
+    defaultHookVi: 'SIÊU PHẨM MỚI',
+    defaultHookEn: 'NEW ARRIVAL',
+    defaultSolidVi: 'ORDER',
+    defaultSolidEn: 'ORDER',
+    defaultOutlineVi: 'NOW',
+    defaultOutlineEn: 'NOW',
+    defaultSloganVi: '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY',
+    defaultSloganEn: '⚡ DISCOVER THE BEST - ORDER NOW',
+  },
 };
 
 export interface CapCutTemplateModalProps {
-  templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | null;
+  templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | null;
   isOpen: boolean;
   onClose: () => void;
   defaultAspectRatio?: '9:16' | '16:9';
   onApply: (params: {
-    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase';
+    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
     prompt: string;
     productImages: string[];
     bgmUrl: string;

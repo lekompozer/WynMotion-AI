@@ -328,7 +328,7 @@ export const AiVideoTab: React.FC = () => {
   const [hookText, setHookText] = useState('');
   const [priceText, setPriceText] = useState('ƯU ĐÃI');
   const [ctaText, setCtaText] = useState('MUA NGAY');
-  const [capcutModalTemplate, setCapcutModalTemplate] = useState<'ads_strobe_teaser' | 'ads_cinematic_showcase' | null>(null);
+  const [capcutModalTemplate, setCapcutModalTemplate] = useState<'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | null>(null);
   const [isCapCutGalleryOpen, setIsCapCutGalleryOpen] = useState(false);
 
   // Video News 60s States
@@ -974,7 +974,7 @@ export const AiVideoTab: React.FC = () => {
   };
 
   const handleApplyCapCutTemplate = async (params: {
-    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase';
+    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
     prompt: string;
     productImages: string[];
     bgmUrl: string;
@@ -1541,12 +1541,17 @@ export const AiVideoTab: React.FC = () => {
           onClose={() => setIsCapCutGalleryOpen(false)}
           onSelectTemplate={(tplId) => {
             setIsCapCutGalleryOpen(false);
-            if (tplId === 'ads_strobe_teaser' || tplId === 'ads_cinematic_showcase') {
-              setCapcutModalTemplate(tplId);
-            } else {
-              handleStartStudio(tplId);
-            }
+            setCapcutModalTemplate(tplId);
           }}
+        />
+
+        {/* ── CapCut Fullscreen Preview & Instant Apply Modal in Home Mode ── */}
+        <CapCutTemplateModal
+          templateId={capcutModalTemplate}
+          isOpen={Boolean(capcutModalTemplate)}
+          defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
+          onClose={() => setCapcutModalTemplate(null)}
+          onApply={handleApplyCapCutTemplate}
         />
       </div>
     );
