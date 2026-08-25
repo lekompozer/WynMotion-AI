@@ -64,21 +64,20 @@ export const BestMenuTypography: React.FC<{
 };
 
 /**
- * Paper Tear SVG Mask Component (Hyper-realistic Torn Edges with Halftone + Halftone Grayscale Texture)
+ * Paper Tear SVG Mask Component (Scene 3B)
  */
 export const PaperTearRealistic: React.FC<{
-  tearProgress: number; // 0 (closed) to 1 (fully torn/opened)
+  tearProgress: number; // 0 (closed) to 1 (fully opened)
   topImage: string;
   underneathImage: string;
   width: number;
   height: number;
 }> = ({ tearProgress, topImage, underneathImage, width, height }) => {
-  // SVG Jagged Torn Edge Paths
   const shiftX = tearProgress * (width * 0.55);
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-      {/* UNDERNEATH LAYER: Ảnh 4 in Halftone Grayscale Dot-Screen (Matches Reference Image 5) */}
+      {/* UNDERNEATH LAYER: Ảnh 4 in Halftone Grayscale Dot-Screen */}
       <div
         style={{
           position: 'absolute',
@@ -90,7 +89,6 @@ export const PaperTearRealistic: React.FC<{
           zIndex: 1,
         }}
       >
-        {/* Halftone Dot Matrix Pattern Overlay */}
         <div
           style={{
             position: 'absolute',
@@ -127,25 +125,12 @@ export const PaperTearRealistic: React.FC<{
             clipPath: 'polygon(0% 0%, 100% 0%, 94% 8%, 98% 18%, 92% 28%, 99% 38%, 91% 48%, 98% 58%, 93% 68%, 100% 78%, 92% 88%, 97% 96%, 100% 100%, 0% 100%)',
           }}
         />
-        {/* White Fiber Pulp Edge (Left) */}
         <svg
           viewBox="0 0 100 1000"
           preserveAspectRatio="none"
-          style={{
-            position: 'absolute',
-            right: '-2px',
-            top: 0,
-            bottom: 0,
-            width: '18px',
-            height: '100%',
-            pointerEvents: 'none',
-          }}
+          style={{ position: 'absolute', right: '-2px', top: 0, bottom: 0, width: '18px', height: '100%', pointerEvents: 'none' }}
         >
-          <path
-            d="M 20 0 Q 80 80 30 180 T 70 380 T 20 580 T 80 780 T 30 960 L 100 1000 L 0 1000 L 0 0 Z"
-            fill="#FFFFFF"
-            filter="drop-shadow(0 0 4px #FFF)"
-          />
+          <path d="M 20 0 Q 80 80 30 180 T 70 380 T 20 580 T 80 780 T 30 960 L 100 1000 L 0 1000 L 0 0 Z" fill="#FFFFFF" filter="drop-shadow(0 0 4px #FFF)" />
         </svg>
       </div>
 
@@ -174,25 +159,12 @@ export const PaperTearRealistic: React.FC<{
             clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 8% 96%, 3% 88%, 9% 78%, 2% 68%, 8% 58%, 1% 48%, 9% 38%, 2% 28%, 7% 18%, 1% 8%)',
           }}
         />
-        {/* White Fiber Pulp Edge (Right) */}
         <svg
           viewBox="0 0 100 1000"
           preserveAspectRatio="none"
-          style={{
-            position: 'absolute',
-            left: '-2px',
-            top: 0,
-            bottom: 0,
-            width: '18px',
-            height: '100%',
-            pointerEvents: 'none',
-          }}
+          style={{ position: 'absolute', left: '-2px', top: 0, bottom: 0, width: '18px', height: '100%', pointerEvents: 'none' }}
         >
-          <path
-            d="M 80 0 Q 20 80 70 180 T 30 380 T 80 580 T 20 780 T 70 960 L 0 1000 L 100 1000 L 100 0 Z"
-            fill="#FFFFFF"
-            filter="drop-shadow(0 0 4px #FFF)"
-          />
+          <path d="M 80 0 Q 20 80 70 180 T 30 380 T 80 580 T 20 780 T 70 960 L 0 1000 L 100 1000 L 100 0 Z" fill="#FFFFFF" filter="drop-shadow(0 0 4px #FFF)" />
         </svg>
       </div>
     </div>
@@ -200,24 +172,17 @@ export const PaperTearRealistic: React.FC<{
 };
 
 /**
- * Realistic White Paper Ball Component (Matches Reference Image 3)
- * Pure procedural wrinkled paper ball with facet creases and organic crumpled texture
+ * Progressive Paper Unwrap Component (Scene 5 - Matches User Reference 1 & 2)
  */
-export const WhiteCrumpledPaperBall: React.FC<{
-  scale: number;
-  rotation: number;
-  unfoldingProgress: number; // 0 = tight crumpled ball, 1 = flattened paper sheet
+export const ProgressivePaperUnwrap: React.FC<{
+  progress: number; // 0 to 1
   revealedImage: string;
   width: number;
   height: number;
-}> = ({ scale, rotation, unfoldingProgress, revealedImage, width, height }) => {
-  // During unfolding: the outer edges remain white/gray crumpled paper, while center reveals the image
-  const isBall = unfoldingProgress < 0.3;
-  const imageOpacity = interpolate(unfoldingProgress, [0.2, 0.85], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const paperBrightness = interpolate(unfoldingProgress, [0, 1], [1.3, 1.0]);
+}> = ({ progress, revealedImage, width, height }) => {
+  const isFullyOpen = progress >= 0.95;
+  const ballScale = interpolate(progress, [0, 0.15, 0.5, 0.85, 1.0], [0.25, 0.4, 0.72, 0.95, 1.0]);
+  const rotation = interpolate(progress, [0, 1.0], [45, 0]);
 
   return (
     <div
@@ -227,58 +192,44 @@ export const WhiteCrumpledPaperBall: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        pointerEvents: 'none',
-        zIndex: 30,
+        overflow: 'hidden',
       }}
     >
       <div
         style={{
-          width: isBall ? '240px' : `${width}px`,
-          height: isBall ? '240px' : `${height}px`,
-          transform: `scale(${scale}) rotate(${rotation}deg)`,
+          width: isFullyOpen ? '100%' : `${width}px`,
+          height: isFullyOpen ? '100%' : `${height}px`,
+          transform: `scale(${ballScale}) rotate(${rotation}deg)`,
           position: 'relative',
-          borderRadius: isBall ? '44% 56% 52% 48% / 54% 46% 58% 42%' : '0px',
-          overflow: 'hidden',
-          boxShadow: isBall
-            ? '0 40px 90px rgba(0,0,0,0.95), 0 10px 30px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.85), inset 20px 20px 40px rgba(255,255,255,0.9)'
-            : 'none',
-          backgroundColor: '#EAEAEA',
-          transition: 'border-radius 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        {/* Layer 1: White/Gray Creased Textured Paper Ball (Matches Image 3) */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(circle at 35% 35%, #FFFFFF 0%, #D8D8D8 45%, #9E9E9E 75%, #424242 100%)',
-            opacity: 1 - imageOpacity * 0.9,
+            backgroundImage: `url(${revealedImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            borderRadius: isFullyOpen ? '0px' : '20px',
+            boxShadow: isFullyOpen ? 'none' : '0 30px 80px rgba(0,0,0,0.9)',
           }}
-        >
-          {/* Faceted Crinkle Shadow Lines */}
-          <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', opacity: 0.85 }}>
-            <polygon points="40,30 90,50 60,100" fill="#FFF" opacity="0.9" />
-            <polygon points="90,50 140,40 120,95" fill="#C5C5C5" />
-            <polygon points="60,100 120,95 85,155" fill="#757575" />
-            <polygon points="120,95 170,110 135,165" fill="#4B4B4B" />
-            <polygon points="30,85 60,100 45,150" fill="#A0A0A0" />
-            <polygon points="85,155 135,165 100,185" fill="#303030" />
-            <polygon points="140,40 180,60 170,110" fill="#E0E0E0" />
-            <polygon points="40,30 100,15 90,50" fill="#F5F5F5" />
-          </svg>
-        </div>
+        />
 
-        {/* Layer 2: Revealed Target Image 5 (Reveals from inside as ball unfolds) */}
-        {revealedImage && (
+        {!isFullyOpen && (
           <div
             style={{
               position: 'absolute',
-              inset: 0,
-              backgroundImage: `url(${revealedImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: imageOpacity,
-              filter: `brightness(${paperBrightness}) contrast(1.05)`,
+              inset: -15,
+              pointerEvents: 'none',
+              opacity: Math.max(0, 1 - progress * 1.05),
+              background: 'radial-gradient(ellipse at center, transparent 40%, rgba(240,240,240,0.95) 60%, #D0D0D0 80%, #909090 100%)',
+              border: '12px solid #FFFFFF',
+              boxShadow: 'inset 0 0 35px rgba(0,0,0,0.6), 0 0 25px rgba(255,255,255,0.8)',
+              filter: 'drop-shadow(0 10px 25px rgba(0,0,0,0.9))',
+              clipPath: 'polygon(5% 0%, 95% 4%, 100% 92%, 94% 100%, 6% 96%, 0% 12%)',
             }}
           />
         )}
@@ -330,7 +281,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
   const f8A = Math.round(19.0 * fps); // 570
   const f8B = Math.round(20.5 * fps); // 615
 
-  // Steam / Mist Particles for Scene 2 & 3B
+  // Steam / Mist Particles
   const steamParticles = useMemo(() => {
     return Array.from({ length: 12 }).map((_, i) => ({
       id: i,
@@ -435,7 +386,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             />
           )}
 
-          {/* Realistic Steam Effects */}
+          {/* Realistic Steam */}
           {steamParticles.map((p) => {
             const steamY = p.yStart - (((frame - f1) * p.speed * 4) % 90);
             return (
@@ -462,11 +413,10 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. SCENE 3A (2.0s – 3.0s): Ảnh 2 Grayscale + Dải chéo màu (Matches Image 2)
+          3. SCENE 3A (2.0s – 3.0s): Ảnh 2 Grayscale + Dải chéo màu
           ───────────────────────────────────────────────────────────── */}
       {frame >= f2 && frame < f3A && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-          {/* Base Layer: Grayscale Image 2 */}
           <div
             style={{
               position: 'absolute',
@@ -478,7 +428,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             }}
           />
 
-          {/* Diagonal Color Wipe Band (Matches Reference Image 2) */}
           {(() => {
             const wipeProgress = interpolate(frame - f2, [0, 30], [-100, 100], {
               extrapolateLeft: 'clamp',
@@ -510,8 +459,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       {frame >= f3A && frame < f3B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
-            const s3bFrame = frame - f3A; // 0 to 60 frames (3.0s -> 5.0s)
-            // Tearing begins at frame 40 (4.33s) and opens until 60 (5.0s)
+            const s3bFrame = frame - f3A;
             const tearProgress = interpolate(s3bFrame, [35, 60], [0, 1], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
@@ -526,7 +474,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   width={width}
                   height={height}
                 />
-                {/* Best Menu fades out smoothly as paper splits */}
                 <BestMenuTypography
                   isVertical={isVertical}
                   opacity={Math.max(0, 1 - tearProgress * 1.5)}
@@ -538,12 +485,12 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. SCENE 4 (5.0s – 8.0s): Ảnh 4 Từ Halftone Xám -> Full Màu (5-7s) -> Vo Tròn Thành Cuộn Giấy Trắng (7-8s)
+          5. SCENE 4 (5.0s – 8.0s): Ảnh 4 Từ Halftone Xám -> Full Màu (5-7s) -> Cuộn Giấy Vo Tròn (7-8s)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f3B && frame < f5 && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
-            const s4Frame = frame - f3B; // 0 to 90 frames (5.0s -> 8.0s)
+            const s4Frame = frame - f3B;
 
             // Phase 1 (5s -> 7s): Grayscale Halftone smoothly transitions into Full Vivid Color
             const isFullColorPhase = s4Frame < 60;
@@ -552,21 +499,14 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
               extrapolateRight: 'clamp',
             });
 
-            // Phase 2 (7s -> 8s): Crumpling into Real White Paper Ball (Matches Image 3)
+            // Phase 2 (7s -> 8s): Cuộn giấy xuất hiện ở giữa
             const isCrumpling = s4Frame >= 60;
-            const crumpleProgress = isCrumpling
-              ? interpolate(s4Frame - 60, [0, 30], [0, 1], { extrapolateRight: 'clamp' })
-              : 0;
-
             const ballScale = isCrumpling
-              ? interpolate(crumpleProgress, [0, 1], [1.0, 0.45])
-              : interpolate(s4Frame, [0, 60], [1.0, 1.05]);
-
-            const ballRotation = isCrumpling ? crumpleProgress * 260 : 0;
+              ? interpolate(s4Frame - 60, [0, 30], [0.0, 0.25], { extrapolateRight: 'clamp' })
+              : 0;
 
             return (
               <>
-                {/* Background Dish Image 4 */}
                 <div
                   style={{
                     position: 'absolute',
@@ -575,20 +515,33 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     filter: `grayscale(${grayPercent}%) contrast(${1.4 - (grayPercent / 100) * 0.3})`,
-                    opacity: isCrumpling ? Math.max(0, 1 - crumpleProgress * 2) : 1,
+                    transform: `scale(${interpolate(s4Frame, [0, 60], [1.0, 1.05])})`,
                   }}
                 />
 
-                {/* White Crumpled Paper Ball Transition at 7s - 8s (Matches Image 3) */}
+                {/* Cuộn giấy trắng xuất hiện ở giữa từ nhỏ đến vừa */}
                 {isCrumpling && (
-                  <WhiteCrumpledPaperBall
-                    scale={ballScale}
-                    rotation={ballRotation}
-                    unfoldingProgress={0}
-                    revealedImage=""
-                    width={width}
-                    height={height}
-                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 30,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '240px',
+                        height: '240px',
+                        transform: `scale(${ballScale}) rotate(${(s4Frame - 60) * 8}deg)`,
+                        borderRadius: '44% 56% 52% 48% / 54% 46% 58% 42%',
+                        background: 'radial-gradient(circle at 35% 35%, #FFFFFF 0%, #D8D8D8 45%, #9E9E9E 75%, #424242 100%)',
+                        boxShadow: '0 30px 80px rgba(0,0,0,0.95), inset 0 0 50px rgba(0,0,0,0.85), inset 15px 15px 30px #FFF',
+                      }}
+                    />
+                  </div>
                 )}
               </>
             );
@@ -597,21 +550,21 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          6. SCENE 5 (8.0s – 10.0s): Cuộn Giấy Trắng Mở Bung Xoay 360° Hé Lộ Ảnh 5
+          6. SCENE 5 (8.0s – 10.0s): Cuộn Giấy Trắng Mở Bung Dần (30% -> 50% -> 70% -> 100%) Hé Lộ Ảnh 5
           ───────────────────────────────────────────────────────────── */}
       {frame >= f5 && frame < f5End && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
             const s5Frame = frame - f5; // 0 to 60 frames (8.0s -> 10.0s)
-            const unwrapSpring = spring({ frame: s5Frame, fps, config: { damping: 13, mass: 0.8, stiffness: 95 } });
-            const unwrapScale = interpolate(unwrapSpring, [0, 1], [0.45, 1.0]);
-            const unwrapRotate = interpolate(unwrapSpring, [0, 1], [360, 0]);
+            // Progress goes from 0.0 (tight ball) to 1.0 (flat fullscreen)
+            const progress = interpolate(s5Frame, [0, 48], [0.0, 1.0], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            });
 
             return (
-              <WhiteCrumpledPaperBall
-                scale={unwrapScale}
-                rotation={unwrapRotate}
-                unfoldingProgress={unwrapSpring}
+              <ProgressivePaperUnwrap
+                progress={progress}
                 revealedImage={img5 || img1}
                 width={width}
                 height={height}
@@ -625,7 +578,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           7. SCENE 6 (10.0s – 12.5s): 3 Dải Dọc Ảnh 6 Bay Vào + 3D Door Flip
           ───────────────────────────────────────────────────────────── */}
       {frame >= f5End && frame < f6 && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', perspective: '1200px' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
             const s6Frame = frame - f5End;
             const isClosingDoor = s6Frame >= 60;
@@ -690,23 +643,118 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          9. SCENE 7B (15.0s – 16.5s): Layout Chia Đôi 50/50 -> Slide Left
+          9. SCENE 7B (15.0s – 16.5s): Ảnh 7 Thu Nhỏ Đẩy Sang Phải Thành Card Giữa Trong 3 Ảnh Màu + Bên Trái Mờ Đen
+          (Matches Exact User Reference Images 4 & 5)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7A && frame < f7B && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', backgroundColor: '#05070B' }}>
           {(() => {
-            const s7BFrame = frame - f7A;
-            const slideLeft = s7BFrame >= 35
-              ? interpolate(s7BFrame - 35, [0, 10], [0, -100], { extrapolateRight: 'clamp' })
-              : 0;
+            const s7BFrame = frame - f7A; // 0 to 45 frames (15.0s -> 16.5s)
+
+            const pushRightProgress = interpolate(s7BFrame, [0, 18], [0, 1], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            });
+
+            const stackShiftY = interpolate(s7BFrame, [32, 45], [0, -60], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            });
 
             return (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', transform: `translateX(${slideLeft}%)` }}>
-                <div style={{ width: '50%', height: '100%', backgroundImage: `url(${img7 || img1})`, backgroundSize: '220%', backgroundPosition: 'center 40%', filter: 'blur(3px) brightness(0.75)', borderRight: '3px solid rgba(255,255,255,0.2)' }} />
-                <div style={{ width: '50%', height: '100%', display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px', backgroundColor: '#0A0D14' }}>
-                  <div style={{ flex: 1, backgroundImage: `url(${img1})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px' }} />
-                  <div style={{ flex: 1, backgroundImage: `url(${img3})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px' }} />
-                  <div style={{ flex: 1, backgroundImage: `url(${img5})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px' }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+                {/* Nửa bên trái: 1 nửa full chiều cao của ảnh nhưng có lớp mờ màu đen bên trên */}
+                <div
+                  style={{
+                    width: '58%',
+                    height: '100%',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundImage: `url(${img7 || img1})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'left center',
+                      filter: 'blur(2px) brightness(0.35)',
+                    }}
+                  />
+                  {/* Dark Shadow Gradient Overlay */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.95) 100%)',
+                    }}
+                  />
+                </div>
+
+                {/* Nửa bên phải: 3 Tấm Ảnh Xếp Dọc với Lớp Phủ Màu Khác Nhau */}
+                <div
+                  style={{
+                    width: '42%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '14px',
+                    padding: '12px 14px',
+                    transform: `translateY(${stackShiftY}px)`,
+                  }}
+                >
+                  {/* Card 1 (Top): Blue/Cyan Tint Overlay */}
+                  <div
+                    style={{
+                      flex: 1,
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      backgroundImage: `url(${img6 || img1})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.9)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(14, 165, 233, 0.4)', mixBlendMode: 'multiply' }} />
+                  </div>
+
+                  {/* Card 2 (Middle - Target Ảnh 7/8): Magenta / Hot Pink Tint Overlay */}
+                  <div
+                    style={{
+                      flex: 1.15,
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      backgroundImage: `url(${img8 || img7 || img1})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 12px 35px rgba(0,0,0,0.95)',
+                      border: '2px solid rgba(255,255,255,0.25)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(236, 72, 153, 0.35)', mixBlendMode: 'multiply' }} />
+                  </div>
+
+                  {/* Card 3 (Bottom): Yellow / Gold Tint Overlay */}
+                  <div
+                    style={{
+                      flex: 1,
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      backgroundImage: `url(${img5 || img1})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.9)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(234, 179, 8, 0.4)', mixBlendMode: 'multiply' }} />
+                  </div>
                 </div>
               </div>
             );
@@ -715,15 +763,18 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          10. SCENE 8A (16.5s – 19.0s): Mở Ảnh 8 Lật 3D + Ánh Sáng Cam Vàng Quét
+          10. SCENE 8A (16.5s – 19.0s): Lấy Ảnh Ở Giữa Lật Flip (0 -> 180 -> 0) Đưa Từ Phải Qua Giữa Phóng To Full Màn Hình
+          (Matches Exact User Reference Image 5)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7B && frame < f8A && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px', backgroundColor: '#05070B' }}>
           {(() => {
             const s8AFrame = frame - f7B;
-            const flipSpring = spring({ frame: s8AFrame, fps, config: { damping: 14, stiffness: 110 } });
-            const flipScale = interpolate(flipSpring, [0, 1], [0.8, 1.04]);
-            const flipRotateY = interpolate(flipSpring, [0, 1], [70, 0]);
+
+            const expandSpring = spring({ frame: s8AFrame, fps, config: { damping: 14, stiffness: 100 } });
+            const cardX = interpolate(expandSpring, [0, 1], [30, 0]);
+            const cardScale = interpolate(expandSpring, [0, 1], [0.38, 1.0]);
+            const flipRotateY = interpolate(expandSpring, [0, 0.5, 1], [35, 180, 0]);
 
             const sweepProgress = interpolate(s8AFrame, [55, 75], [-100, 200], {
               extrapolateLeft: 'clamp',
@@ -739,9 +790,13 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     backgroundImage: `url(${img8 || img1})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    transform: `scale(${flipScale}) rotateY(${flipRotateY}deg)`,
+                    transform: `translateX(${cardX}%) scale(${cardScale}) rotateY(${flipRotateY}deg)`,
+                    boxShadow: cardScale < 0.95 ? '0 30px 80px rgba(0,0,0,0.95)' : 'none',
+                    borderRadius: cardScale < 0.95 ? '12px' : '0px',
+                    filter: 'brightness(1.02) contrast(1.05)',
                   }}
                 />
+
                 <div
                   style={{
                     position: 'absolute',
