@@ -215,8 +215,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-200">
       {/* Container Dialog */}
       <div className="relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-md bg-[#0A0D14] border border-white/10 sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
-        {/* Top Header Bar */}
-        <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        {/* Top Header Bar (Safe area for iPhone Notch / Tai thỏ) */}
+        <div className="absolute top-0 left-0 right-0 z-40 flex items-center justify-between px-4 pt-12 sm:pt-4 pb-3 bg-gradient-to-b from-black/90 via-black/50 to-transparent">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 shadow-lg">
               {template.badge}
@@ -228,7 +228,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-sm font-bold border border-white/20 transition-all cursor-pointer"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-black/70 hover:bg-black/90 text-white flex items-center justify-center text-sm font-bold border border-white/20 transition-all active:scale-95 cursor-pointer shadow-lg"
           >
             ✕
           </button>
@@ -307,8 +307,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             VIEW 2: QUICK ASSET & DATA INPUT DRAWER
             ───────────────────────────────────────────────────────────── */}
         {step === 'fill_data' && (
-          <div className="flex-1 p-5 overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
-            <div className="pt-6 flex items-center justify-between">
+          <div className="flex-1 px-4 pt-14 sm:pt-6 pb-6 overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
                 <span>📸</span>
                 <span>{t('Tùy Biến Dữ Liệu Mẫu', 'Customize Template')}</span>
