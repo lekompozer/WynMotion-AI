@@ -108,14 +108,14 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
   });
 
   const effectiveDurationFrames = scene.duration_frames || ((scene as any).duration ? Math.round((scene as any).duration * fps) : (durationInFrames || 349));
-  // Warm color strobe occurs in the last 0.8s to 0.3s (frame 325 to 340 out of 349, or 24 to 9 frames before end)
+  // Warm color strobe occurs in the last 1.2s to 0.2s before clip end
   const currentSceneFrame = frame % effectiveDurationFrames;
   const framesFromEnd = Math.max(0, effectiveDurationFrames - currentSceneFrame);
-  // 24 frames = ~0.8s, 8 frames = ~0.26s
-  const isFinalWarmFlash = framesFromEnd <= 26 && framesFromEnd >= 8;
+  // 36 frames = ~1.2s, 6 frames = ~0.2s
+  const isFinalWarmFlash = framesFromEnd <= 36 && framesFromEnd >= 6;
 
   const warmFlashOpacity = isFinalWarmFlash
-    ? interpolate(framesFromEnd, [26, 20, 15, 8], [0, 1.0, 0.75, 0.0], {
+    ? interpolate(framesFromEnd, [36, 26, 16, 6], [0, 1.0, 0.9, 0.0], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
@@ -363,46 +363,49 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
               </div>
             )}
           </div>
+        </div>
+      )}
 
-          {/* ─────────────────────────────────────────────────────────────
-              PHASE 4: FAST WARM COLOR STROBE (CHỚP LÊN RỒI TẮT HẲN Ở 0.3s CUỐI)
-              ───────────────────────────────────────────────────────────── */}
-          {isFinalWarmFlash && (
-            <>
-              {/* Layer 1: Intense Warm Orange/Red Gradient Rise */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: '75%',
-                  background:
-                    'linear-gradient(to top, rgba(255, 30, 0, 1.0) 0%, rgba(255, 100, 0, 0.9) 35%, rgba(255, 200, 0, 0.6) 70%, rgba(255, 200, 0, 0) 100%)',
-                  mixBlendMode: 'screen',
-                  opacity: warmFlashOpacity,
-                  pointerEvents: 'none',
-                  zIndex: 40,
-                }}
-              />
-              {/* Layer 2: Bright Golden Core Flare in the lower third */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '10%',
-                  right: '10%',
-                  bottom: '5%',
-                  height: '45%',
-                  background:
-                    'radial-gradient(ellipse at center bottom, rgba(255, 240, 150, 0.95) 0%, rgba(255, 140, 0, 0.7) 45%, rgba(255, 50, 0, 0) 80%)',
-                  mixBlendMode: 'plus-lighter',
-                  opacity: warmFlashOpacity * 0.9,
-                  pointerEvents: 'none',
-                  zIndex: 41,
-                }}
-              />
-            </>
-          )}
+      {/* ─────────────────────────────────────────────────────────────
+          PHASE 4: FAST WARM COLOR STROBE / FILM BURN LIGHT LEAK (CHỚP LÊN RỒI TẮT HẲN Ở 0.3s CUỐI)
+          Always in root container with top-level zIndex: 100 so it overlays ANY Video or Image.
+          ───────────────────────────────────────────────────────────── */}
+      {isFinalWarmFlash && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 100,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Layer 1: Solid & Saturated Orange/Red/Yellow Flame Burn from Bottom */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '80%',
+              background:
+                'linear-gradient(to top, rgba(255, 35, 0, 0.95) 0%, rgba(255, 120, 0, 0.85) 35%, rgba(255, 215, 0, 0.6) 70%, rgba(255, 215, 0, 0) 100%)',
+              opacity: warmFlashOpacity,
+            }}
+          />
+          {/* Layer 2: Ultra-Bright Golden Core Spotlight in the lower half */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '-10%',
+              right: '-10%',
+              bottom: '-5%',
+              height: '60%',
+              background:
+                'radial-gradient(ellipse at center bottom, rgba(255, 255, 200, 0.98) 0%, rgba(255, 170, 0, 0.85) 40%, rgba(255, 50, 0, 0) 80%)',
+              opacity: warmFlashOpacity,
+            }}
+          />
         </div>
       )}
     </div>
