@@ -64,6 +64,62 @@ export const BestMenuTypography: React.FC<{
 };
 
 /**
+ * Typography Component: ORDER Now (Matches Exact CapCut Reference Images 1 & 2)
+ * - "ORDER": Bold Uppercase Sans-Serif White
+ * - "Now": Serif Italic Regular White, Centered below ORDER
+ */
+export const OrderNowTypography: React.FC<{
+  isVertical?: boolean;
+  scale?: number;
+  opacity?: number;
+}> = ({ isVertical = true, scale = 1, opacity = 1 }) => {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 30,
+        opacity,
+        transform: `scale(${scale})`,
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          fontFamily: '"Anton", "Impact", "Montserrat", sans-serif',
+          fontWeight: 900,
+          fontSize: isVertical ? '64px' : '82px',
+          color: '#FFFFFF',
+          letterSpacing: '4px',
+          lineHeight: 0.95,
+          textShadow: '0 0 25px rgba(255,255,255,0.9), 0 4px 20px rgba(0,0,0,0.8)',
+        }}
+      >
+        ORDER
+      </div>
+      <div
+        style={{
+          fontFamily: '"Playfair Display", "Times New Roman", Georgia, serif',
+          fontStyle: 'italic',
+          fontWeight: 400,
+          fontSize: isVertical ? '38px' : '48px',
+          color: '#FFFFFF',
+          letterSpacing: '2px',
+          marginTop: '2px',
+          textShadow: '0 0 20px rgba(255,255,255,0.8), 0 4px 15px rgba(0,0,0,0.8)',
+        }}
+      >
+        Now
+      </div>
+    </div>
+  );
+};
+
+/**
  * Paper Tear SVG Mask Component (Scene 3B)
  */
 export const PaperTearRealistic: React.FC<{
@@ -77,7 +133,6 @@ export const PaperTearRealistic: React.FC<{
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-      {/* UNDERNEATH LAYER: Ảnh 4 in Halftone Grayscale Dot-Screen */}
       <div
         style={{
           position: 'absolute',
@@ -101,7 +156,6 @@ export const PaperTearRealistic: React.FC<{
         />
       </div>
 
-      {/* TOP LAYER (ẢNH 3): Left Torn Piece */}
       <div
         style={{
           position: 'absolute',
@@ -134,7 +188,6 @@ export const PaperTearRealistic: React.FC<{
         </svg>
       </div>
 
-      {/* TOP LAYER (ẢNH 3): Right Torn Piece */}
       <div
         style={{
           position: 'absolute',
@@ -172,7 +225,7 @@ export const PaperTearRealistic: React.FC<{
 };
 
 /**
- * Progressive Paper Unwrap Component (Scene 5 - Matches User Reference 1 & 2)
+ * Progressive Paper Unwrap Component (Scene 5)
  */
 export const ProgressivePaperUnwrap: React.FC<{
   progress: number; // 0 to 1
@@ -185,16 +238,7 @@ export const ProgressivePaperUnwrap: React.FC<{
   const rotation = interpolate(progress, [0, 1.0], [45, 0]);
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <div
         style={{
           width: isFullyOpen ? '100%' : `${width}px`,
@@ -260,12 +304,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
 
   const [img1, img2, img3, img4, img5, img6, img7, img8] = gallery;
 
-  // Text Props
-  const hookBadge = (scene as any).badge_text || (scene as any).headline_solid || 'BEST MENU';
-  const ctaText = (scene as any).cta_text || 'ORDER NOW';
-  const sloganText = (scene as any).sub_headline || (scene as any).slogan_text || '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY';
-  const accentColor = (scene as any).accent_color || '#FF7A00';
-
   // Frame Boundaries (30fps)
   const f0 = 0;
   const f1 = Math.round(1.0 * fps);   // 30
@@ -320,21 +358,11 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             />
           )}
 
-          {/* Central Purple Lens Flare */}
           {(() => {
             const flareSpring = spring({ frame, fps, config: { damping: 14, stiffness: 120 } });
             const flareScale = interpolate(flareSpring, [0, 1], [0.2, 2.2]);
             return (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                 <div
                   style={{
                     width: isVertical ? '400px' : '700px',
@@ -349,7 +377,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             );
           })()}
 
-          {/* Intro BEST Typography */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
             <h1
               style={{
@@ -386,7 +413,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             />
           )}
 
-          {/* Realistic Steam */}
           {steamParticles.map((p) => {
             const steamY = p.yStart - (((frame - f1) * p.speed * 4) % 90);
             return (
@@ -491,15 +517,11 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
             const s4Frame = frame - f3B;
-
-            // Phase 1 (5s -> 7s): Grayscale Halftone smoothly transitions into Full Vivid Color
-            const isFullColorPhase = s4Frame < 60;
             const grayPercent = interpolate(s4Frame, [0, 45], [100, 0], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
 
-            // Phase 2 (7s -> 8s): Cuộn giấy xuất hiện ở giữa
             const isCrumpling = s4Frame >= 60;
             const ballScale = isCrumpling
               ? interpolate(s4Frame - 60, [0, 30], [0.0, 0.25], { extrapolateRight: 'clamp' })
@@ -519,18 +541,8 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   }}
                 />
 
-                {/* Cuộn giấy trắng xuất hiện ở giữa từ nhỏ đến vừa */}
                 {isCrumpling && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 30,
-                    }}
-                  >
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30 }}>
                     <div
                       style={{
                         width: '240px',
@@ -555,8 +567,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       {frame >= f5 && frame < f5End && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           {(() => {
-            const s5Frame = frame - f5; // 0 to 60 frames (8.0s -> 10.0s)
-            // Progress goes from 0.0 (tight ball) to 1.0 (flat fullscreen)
+            const s5Frame = frame - f5;
             const progress = interpolate(s5Frame, [0, 48], [0.0, 1.0], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
@@ -644,18 +655,11 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
 
       {/* ─────────────────────────────────────────────────────────────
           9. SCENE 7B (15.0s – 16.5s): Ảnh 7 Thu Nhỏ Đẩy Sang Phải Thành Card Giữa Trong 3 Ảnh Màu + Bên Trái Mờ Đen
-          (Matches Exact User Reference Images 4 & 5)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7A && frame < f7B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', backgroundColor: '#05070B' }}>
           {(() => {
-            const s7BFrame = frame - f7A; // 0 to 45 frames (15.0s -> 16.5s)
-
-            const pushRightProgress = interpolate(s7BFrame, [0, 18], [0, 1], {
-              extrapolateLeft: 'clamp',
-              extrapolateRight: 'clamp',
-            });
-
+            const s7BFrame = frame - f7A;
             const stackShiftY = interpolate(s7BFrame, [32, 45], [0, -60], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
@@ -663,15 +667,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
 
             return (
               <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-                {/* Nửa bên trái: 1 nửa full chiều cao của ảnh nhưng có lớp mờ màu đen bên trên */}
-                <div
-                  style={{
-                    width: '58%',
-                    height: '100%',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
+                <div style={{ width: '58%', height: '100%', position: 'relative', overflow: 'hidden' }}>
                   <div
                     style={{
                       position: 'absolute',
@@ -682,17 +678,9 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       filter: 'blur(2px) brightness(0.35)',
                     }}
                   />
-                  {/* Dark Shadow Gradient Overlay */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.95) 100%)',
-                    }}
-                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.95) 100%)' }} />
                 </div>
 
-                {/* Nửa bên phải: 3 Tấm Ảnh Xếp Dọc với Lớp Phủ Màu Khác Nhau */}
                 <div
                   style={{
                     width: '42%',
@@ -705,54 +693,13 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     transform: `translateY(${stackShiftY}px)`,
                   }}
                 >
-                  {/* Card 1 (Top): Blue/Cyan Tint Overlay */}
-                  <div
-                    style={{
-                      flex: 1,
-                      position: 'relative',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      backgroundImage: `url(${img6 || img1})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.9)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
+                  <div style={{ flex: 1, position: 'relative', borderRadius: '8px', overflow: 'hidden', backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(14, 165, 233, 0.4)', mixBlendMode: 'multiply' }} />
                   </div>
-
-                  {/* Card 2 (Middle - Target Ảnh 7/8): Magenta / Hot Pink Tint Overlay */}
-                  <div
-                    style={{
-                      flex: 1.15,
-                      position: 'relative',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      backgroundImage: `url(${img8 || img7 || img1})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      boxShadow: '0 12px 35px rgba(0,0,0,0.95)',
-                      border: '2px solid rgba(255,255,255,0.25)',
-                    }}
-                  >
+                  <div style={{ flex: 1.15, position: 'relative', borderRadius: '8px', overflow: 'hidden', backgroundImage: `url(${img8 || img7 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 12px 35px rgba(0,0,0,0.95)', border: '2px solid rgba(255,255,255,0.25)' }}>
                     <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(236, 72, 153, 0.35)', mixBlendMode: 'multiply' }} />
                   </div>
-
-                  {/* Card 3 (Bottom): Yellow / Gold Tint Overlay */}
-                  <div
-                    style={{
-                      flex: 1,
-                      position: 'relative',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      backgroundImage: `url(${img5 || img1})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.9)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
+                  <div style={{ flex: 1, position: 'relative', borderRadius: '8px', overflow: 'hidden', backgroundImage: `url(${img5 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(234, 179, 8, 0.4)', mixBlendMode: 'multiply' }} />
                   </div>
                 </div>
@@ -763,20 +710,22 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          10. SCENE 8A (16.5s – 19.0s): Lấy Ảnh Ở Giữa Lật Flip (0 -> 180 -> 0) Đưa Từ Phải Qua Giữa Phóng To Full Màn Hình
-          (Matches Exact User Reference Image 5)
+          10. SCENE 8A (16.5s – 19.0s): Card Giữa Lật Flip Phóng Lớn + Lớp Phủ Cam Vàng Quét Từ Dưới Lên Toàn Màn Hình
+          (Matches Exact Reference Images 1 & 2)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7B && frame < f8A && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px', backgroundColor: '#05070B' }}>
           {(() => {
-            const s8AFrame = frame - f7B;
+            const s8AFrame = frame - f7B; // 0 to 75 frames (16.5s -> 19.0s)
 
+            // Zoom-in & Move from Right Card position to Fullscreen Center
             const expandSpring = spring({ frame: s8AFrame, fps, config: { damping: 14, stiffness: 100 } });
             const cardX = interpolate(expandSpring, [0, 1], [30, 0]);
             const cardScale = interpolate(expandSpring, [0, 1], [0.38, 1.0]);
             const flipRotateY = interpolate(expandSpring, [0, 0.5, 1], [35, 180, 0]);
 
-            const sweepProgress = interpolate(s8AFrame, [55, 75], [-100, 200], {
+            // Orange/Amber Flood from Bottom to Top (giây 18.0s -> 19.0s / s8AFrame 40 -> 75)
+            const floodProgress = interpolate(s8AFrame, [40, 75], [100, 0], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
@@ -797,17 +746,25 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   }}
                 />
 
+                {/* Orange/Amber Warm Light Flooding from Bottom to Top */}
                 <div
                   style={{
                     position: 'absolute',
-                    top: 0,
-                    bottom: 0,
-                    width: '60%',
-                    left: `${sweepProgress}%`,
-                    background: 'linear-gradient(to right, transparent, rgba(255, 170, 0, 0.8), rgba(255, 230, 100, 0.9), transparent)',
-                    filter: 'blur(20px)',
+                    inset: 0,
+                    transform: `translateY(${floodProgress}%)`,
+                    background: 'linear-gradient(to top, #E65100 0%, #FF8F00 50%, #FFA000 80%, rgba(255, 179, 0, 0.4) 100%)',
+                    mixBlendMode: 'color',
                     pointerEvents: 'none',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    transform: `translateY(${floodProgress}%)`,
+                    background: 'radial-gradient(ellipse at bottom center, rgba(255, 111, 0, 0.7) 0%, rgba(255, 179, 0, 0.4) 50%, transparent 90%)',
                     mixBlendMode: 'screen',
+                    pointerEvents: 'none',
                   }}
                 />
               </>
@@ -817,48 +774,58 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          11. SCENE 8B (19.0s – 20.5s): Vệt Cọ Quét & Pop-up ORDER NOW
+          11. SCENE 8B (19.0s – 20.5s): Phủ Cam Vàng Đầy Màn Hình + ORDER Now Typography
+          (Matches Exact Reference Image 2)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f8A && frame < f8B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${img8 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.9)' }} />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${img8 || img1})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'contrast(1.15) brightness(0.95)',
+            }}
+          />
+
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to top, #E65100 0%, #FF8F00 45%, #FFA000 85%, #FFB300 100%)',
+              mixBlendMode: 'color',
+              pointerEvents: 'none',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at 50% 50%, rgba(255, 235, 59, 0.3) 0%, rgba(255, 111, 0, 0.5) 70%, rgba(191, 54, 12, 0.7) 100%)',
+              mixBlendMode: 'screen',
+              pointerEvents: 'none',
+            }}
+          />
+
           {(() => {
             const s8BFrame = frame - f8A;
-            const strokeWidth = interpolate(s8BFrame, [0, 18], [0, 100], { extrapolateRight: 'clamp' });
-            const ctaSpring = spring({ frame: Math.max(0, s8BFrame - 15), fps, config: { damping: 10, mass: 0.8, stiffness: 140 } });
-
+            const springPop = spring({ frame: s8BFrame, fps, config: { damping: 12, stiffness: 120 } });
             return (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
-                <div
-                  style={{
-                    width: `${strokeWidth}%`,
-                    maxWidth: '85%',
-                    height: isVertical ? '80px' : '100px',
-                    background: 'linear-gradient(90deg, #FF7A00 0%, #FFB800 50%, #FF7A00 100%)',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 15px 50px rgba(255, 122, 0, 0.7), 0 0 30px rgba(0,0,0,0.8)',
-                    transform: `scale(${ctaSpring})`,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <span style={{ fontSize: isVertical ? '36px' : '48px', fontWeight: 900, color: '#000000', letterSpacing: '6px', textTransform: 'uppercase', whiteSpace: 'nowrap', fontFamily: '"Impact", "Anton", sans-serif' }}>
-                    {ctaText}
-                  </span>
-                </div>
-                <p style={{ marginTop: '20px', fontSize: isVertical ? '14px' : '18px', color: '#FFFFFF', letterSpacing: '3px', textTransform: 'uppercase', textShadow: '0 4px 14px rgba(0,0,0,0.9)', fontWeight: 700, fontFamily: '"Impact", "Anton", sans-serif' }}>
-                  {sloganText}
-                </p>
-              </div>
+              <OrderNowTypography
+                isVertical={isVertical}
+                scale={springPop}
+                opacity={Math.min(1, s8BFrame / 10)}
+              />
             );
           })()}
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          12. SCENE 8C (20.5s – 22.0s): 3D Book Mockup Outro
+          12. SCENE 8C (20.5s – 22.0s): Tấm Ảnh Mờ Xước Cũ Trong Quyển Tập (Trang Vàng) + Quyển Sách Đóng Lại
+          (Matches Exact Reference Images 3, 4, 5)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f8B && (
         <div
@@ -866,7 +833,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             position: 'absolute',
             inset: 0,
             overflow: 'hidden',
-            backgroundColor: '#040508',
+            backgroundColor: '#14110C',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -874,26 +841,27 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           }}
         >
           {(() => {
-            const s8CFrame = frame - f8B;
-            const cameraScale = interpolate(s8CFrame, [0, 40], [0.85, 0.52], { extrapolateRight: 'clamp' });
-            const foldCloseAngle = interpolate(s8CFrame, [10, 35], [0, -180], {
+            const s8CFrame = frame - f8B; // 0 to 45 frames (20.5s -> 22.0s)
+            const cameraScale = interpolate(s8CFrame, [0, 40], [0.92, 0.62], { extrapolateRight: 'clamp' });
+            const foldCloseAngle = interpolate(s8CFrame, [12, 38], [0, -180], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
-            const fadeOut = interpolate(s8CFrame, [35, 45], [1.0, 0.0], { extrapolateRight: 'clamp' });
+            const fadeOut = interpolate(s8CFrame, [36, 45], [1.0, 0.0], { extrapolateRight: 'clamp' });
 
             const bookW = isVertical ? 420 : 640;
-            const bookH = isVertical ? 580 : 440;
+            const bookH = isVertical ? 600 : 460;
             const pageW = bookW / 2;
 
             return (
               <div
                 style={{
-                  transform: `scale(${cameraScale}) rotateX(14deg) rotateY(-8deg)`,
+                  transform: `scale(${cameraScale}) rotateX(10deg) rotateY(-6deg)`,
                   transformStyle: 'preserve-3d',
                   opacity: fadeOut,
                 }}
               >
+                {/* 3D BOOK MOCKUP */}
                 <div
                   style={{
                     position: 'relative',
@@ -901,9 +869,9 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     height: `${bookH}px`,
                     transformStyle: 'preserve-3d',
                     boxShadow: '0 40px 100px rgba(0,0,0,0.95), 0 10px 30px rgba(0,0,0,0.8)',
-                    borderRadius: '8px',
                   }}
                 >
+                  {/* Trang Phải (Right Page - Màu Vàng Cổ Điển Matches Image 3 & 4) */}
                   <div
                     style={{
                       position: 'absolute',
@@ -911,15 +879,63 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       top: 0,
                       width: `${pageW}px`,
                       height: `${bookH}px`,
-                      backgroundImage: `url(${img8 || img1})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
+                      backgroundColor: '#EEDC9A',
+                      backgroundImage: 'radial-gradient(circle at 50% 40%, #F5E8B7 0%, #E6D28C 80%, #D4BE74 100%)',
                       borderTopRightRadius: '6px',
                       borderBottomRightRadius: '6px',
-                      boxShadow: 'inset 25px 0 35px rgba(0,0,0,0.4)',
+                      boxShadow: 'inset 25px 0 35px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '24px 16px',
+                      overflow: 'hidden',
                     }}
                   >
-                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30px', background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)' }} />
+                    {/* Tấm Ảnh Mờ Xước Cũ Dạng Vệt Cọ / Brush Cutout (Matches Image 3) */}
+                    <div
+                      style={{
+                        position: 'relative',
+                        width: '85%',
+                        height: '52%',
+                        marginTop: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: -10,
+                          backgroundColor: '#1E160E',
+                          clipPath: 'polygon(15% 0%, 85% 5%, 98% 25%, 92% 70%, 75% 98%, 25% 92%, 5% 75%, 2% 20%)',
+                          boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          backgroundImage: `url(${img8 || img1})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          clipPath: 'polygon(18% 2%, 82% 6%, 95% 26%, 88% 68%, 72% 96%, 28% 90%, 8% 72%, 4% 22%)',
+                          filter: 'sepia(0.35) contrast(1.15) brightness(0.95)',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginTop: '16px', textAlign: 'center', width: '90%' }}>
+                      <div style={{ fontFamily: '"Playfair Display", serif', fontStyle: 'italic', fontSize: '13px', color: '#4A3B22', fontWeight: 600 }}>
+                        Special Selection
+                      </div>
+                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center', opacity: 0.45 }}>
+                        <div style={{ width: '85%', height: '3px', backgroundColor: '#5C4828', borderRadius: '2px' }} />
+                        <div style={{ width: '92%', height: '3px', backgroundColor: '#5C4828', borderRadius: '2px' }} />
+                        <div style={{ width: '70%', height: '3px', backgroundColor: '#5C4828', borderRadius: '2px' }} />
+                      </div>
+                    </div>
                   </div>
 
                   <div
@@ -929,29 +945,14 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       top: 0,
                       width: `${pageW}px`,
                       height: `${bookH}px`,
-                      backgroundColor: '#1E232E',
+                      backgroundColor: '#EEDC9A',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '24px',
-                      textAlign: 'center',
-                      boxShadow: 'inset -25px 0 35px rgba(0,0,0,0.5)',
+                      boxShadow: 'inset -25px 0 35px rgba(0,0,0,0.3)',
                     }}
-                  >
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontSize: '20px', marginBottom: '12px' }}>
-                      ★
-                    </div>
-                    <h4 style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', fontFamily: '"Playfair Display", serif' }}>
-                      {hookBadge}
-                    </h4>
-                    <p style={{ color: '#94A3B8', fontSize: '11px', marginTop: '8px', lineHeight: 1.4 }}>
-                      {sloganText}
-                    </p>
-                  </div>
+                  />
 
+                  {/* Bìa Sách Bên Trái Gập Đóng Lại (Matches Images 4 & 5) */}
                   <div
                     style={{
                       position: 'absolute',
@@ -969,9 +970,9 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        backgroundColor: '#111622',
-                        backgroundImage: 'radial-gradient(circle at 50% 50%, #1E293B 0%, #0F172A 100%)',
-                        border: '3px solid rgba(255,255,255,0.15)',
+                        backgroundColor: '#16110A',
+                        backgroundImage: 'radial-gradient(circle at 50% 50%, #2A2117 0%, #120D08 100%)',
+                        border: '3px solid rgba(238, 220, 154, 0.2)',
                         borderRadius: '6px',
                         display: 'flex',
                         flexDirection: 'column',
@@ -979,16 +980,15 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                         justifyContent: 'center',
                         backfaceVisibility: 'hidden',
                         transform: 'rotateY(180deg)',
-                        padding: '20px',
-                        boxShadow: '0 25px 60px rgba(0,0,0,0.9)',
+                        boxShadow: '0 25px 60px rgba(0,0,0,0.95)',
                       }}
                     >
-                      <div style={{ border: `2px solid ${accentColor}`, padding: '16px 24px', borderRadius: '8px', textAlign: 'center' }}>
-                        <span style={{ fontSize: '12px', color: accentColor, letterSpacing: '4px', textTransform: 'uppercase', fontWeight: 800 }}>
+                      <div style={{ border: '2px solid #EEDC9A', padding: '16px 24px', borderRadius: '8px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '11px', color: '#EEDC9A', letterSpacing: '4px', textTransform: 'uppercase', fontWeight: 800 }}>
                           SPECIAL MENU
                         </span>
-                        <h2 style={{ fontSize: '28px', color: '#FFFFFF', fontWeight: 900, letterSpacing: '4px', marginTop: '6px', textTransform: 'uppercase', fontFamily: '"Playfair Display", serif' }}>
-                          {hookBadge}
+                        <h2 style={{ fontSize: '26px', color: '#FFFFFF', fontWeight: 900, letterSpacing: '3px', marginTop: '6px', textTransform: 'uppercase', fontFamily: '"Playfair Display", serif', fontStyle: 'italic' }}>
+                          BEST
                         </h2>
                       </div>
                     </div>
@@ -1001,7 +1001,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       top: 0,
                       bottom: 0,
                       width: '12px',
-                      background: 'linear-gradient(to right, rgba(0,0,0,0.7), rgba(255,255,255,0.2) 50%, rgba(0,0,0,0.7))',
+                      background: 'linear-gradient(to right, rgba(0,0,0,0.6), rgba(255,255,255,0.2) 50%, rgba(0,0,0,0.6))',
                       zIndex: 40,
                     }}
                   />
