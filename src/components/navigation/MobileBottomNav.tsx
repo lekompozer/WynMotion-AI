@@ -10,7 +10,7 @@ export const MobileBottomNav: React.FC = () => {
   const TABS = [
     {
       id: 'video' as WynMotionTab,
-      label: t('AI Video', 'AI Video'),
+      label: t('Studio', 'Studio'),
       icon: Film,
     },
     {

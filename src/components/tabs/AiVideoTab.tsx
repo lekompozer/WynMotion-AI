@@ -68,6 +68,7 @@ import { DualVoiceSelectorModal } from '@/components/video/DualVoiceSelectorModa
 import { DialogueScriptEditor } from '@/components/video/DialogueScriptEditor';
 import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStudio';
 import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
+import { CapCutGalleryModal } from '@/components/video/CapCutGalleryModal';
 
 // ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
 
@@ -328,6 +329,7 @@ export const AiVideoTab: React.FC = () => {
   const [priceText, setPriceText] = useState('ƯU ĐÃI');
   const [ctaText, setCtaText] = useState('MUA NGAY');
   const [capcutModalTemplate, setCapcutModalTemplate] = useState<'ads_strobe_teaser' | 'ads_cinematic_showcase' | null>(null);
+  const [isCapCutGalleryOpen, setIsCapCutGalleryOpen] = useState(false);
 
   // Video News 60s States
   const [newsInputMode, setNewsInputMode] = useState<'url' | 'text'>('url');
@@ -1375,48 +1377,41 @@ export const AiVideoTab: React.FC = () => {
 
           {/* 7 AI Animation Styles in 3 categories (Clean text, Monochrome icons) */}
           <div className="space-y-6">
-            {/* Nhóm 3: Commercial & Brand Ads (TOP) */}
+            {/* Nhóm 3: Commercial & Brand Ads (Single card opening CapCut-style Masonry Gallery) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm">🔥</span>
                 <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Hot Ads)' : 'Commercial & Brand Ads'}
+                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu' : 'Commercial & Brand Ads'}
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
-                {COMMERCIAL_ADS_STYLES.map((style) => {
-                  const Icon = style.icon;
-                  return (
-                    <button
-                      key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
-                        isDark
-                          ? 'bg-slate-900/90 border-rose-900/40 text-white hover:border-rose-500/50 shadow-lg shadow-rose-950/20'
-                          : 'bg-white border-rose-200 text-slate-900 shadow-sm hover:border-rose-300'
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
-                        isDark ? 'text-white' : 'text-slate-900'
-                      }`}>
-                        <Icon size={36} />
+                <button
+                  onClick={() => setIsCapCutGalleryOpen(true)}
+                  className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
+                    isDark
+                      ? 'bg-slate-900/90 border-rose-900/40 text-white hover:border-rose-500/50 shadow-lg shadow-rose-950/20'
+                      : 'bg-white border-rose-200 text-slate-900 shadow-sm hover:border-rose-300'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <ProductAdsIcon size={36} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {isVietnamese ? 'Kho Mẫu Quảng Cáo & Thương Hiệu' : 'Commercial & Brand Ads Templates'}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {style.title.replace('\n', ' ')}
-                          </div>
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">
-                            HOT 60FPS
-                          </span>
-                        </div>
-                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {style.desc}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                    </div>
+                    <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      {isVietnamese
+                        ? 'Strobe Teaser, Cinematic Menu 22s & Billboard 60fps đỉnh cao'
+                        : 'Strobe Teaser, Cinematic Showcase & Billboard motion templates'}
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -1451,9 +1446,6 @@ export const AiVideoTab: React.FC = () => {
                           <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {style.title.replace('\n', ' ')}
                           </div>
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase tracking-wider">
-                            TIKTOK 60S
-                          </span>
                         </div>
                         <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           {style.desc}
@@ -1543,6 +1535,19 @@ export const AiVideoTab: React.FC = () => {
 
         <ProfileSidePanel isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+
+        <CapCutGalleryModal
+          isOpen={isCapCutGalleryOpen}
+          onClose={() => setIsCapCutGalleryOpen(false)}
+          onSelectTemplate={(tplId) => {
+            setIsCapCutGalleryOpen(false);
+            if (tplId === 'ads_strobe_teaser' || tplId === 'ads_cinematic_showcase') {
+              setCapcutModalTemplate(tplId);
+            } else {
+              handleStartStudio(tplId);
+            }
+          }}
+        />
       </div>
     );
   }
@@ -1630,59 +1635,81 @@ export const AiVideoTab: React.FC = () => {
         {/* ========================================================================= */}
         {wizardStep === '1' && (
           <div className="space-y-6 animate-in fade-in duration-150">
-            {/* Nhóm 3: Commercial & Brand Ads (TOP) */}
+            {/* Nhóm 3: Commercial & Brand Ads (Single card opening CapCut-style Masonry Gallery) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm">🔥</span>
                 <label className="text-xs font-bold uppercase tracking-wider text-rose-400">
-                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu (Hot Ads)' : 'Commercial & Brand Ads'}
+                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu' : 'Commercial & Brand Ads'}
                 </label>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
-                {COMMERCIAL_ADS_STYLES.map((st) => {
-                  const Icon = st.icon;
-                  const isSelected = visualStyle === st.id;
-                  const isCapcutTemplate = st.id === 'ads_strobe_teaser' || st.id === 'ads_cinematic_showcase';
-                  return (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => {
-                        if (isCapcutTemplate) {
-                          setCapcutModalTemplate(st.id as any);
-                        } else {
-                          setVisualStyle(st.id);
-                        }
-                      }}
-                      className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
-                        isSelected
-                          ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/15'
-                          : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                        isDark ? 'text-white' : 'text-slate-900'
-                      }`}>
-                        <Icon size={36} />
+                <button
+                  type="button"
+                  onClick={() => setIsCapCutGalleryOpen(true)}
+                  className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
+                    visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase'
+                      ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/15'
+                      : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <ProductAdsIcon size={36} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {isVietnamese ? 'Kho Mẫu Quảng Cáo & Thương Hiệu' : 'Commercial & Brand Ads Templates'}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {st.title.replace('\n', ' ')}
-                          </div>
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full text-white uppercase tracking-wider ${
-                            isCapcutTemplate ? 'bg-gradient-to-r from-amber-500 to-rose-500' : 'bg-rose-500'
-                          }`}>
-                            {isCapcutTemplate ? '⚡ CAPCUT MẪU' : 'HOT ADS'}
-                          </span>
-                        </div>
-                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {st.desc}
-                        </div>
+                    </div>
+                    <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      {isVietnamese
+                        ? 'Strobe Teaser, Cinematic Menu 22s & Billboard 60fps đỉnh cao'
+                        : 'Strobe Teaser, Cinematic Showcase & Billboard motion templates'}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Nhóm 4: Video News 60s (Tin Tức & Điểm Tin) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">📰</span>
+                <label className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                  {isVietnamese ? 'Tin Tức & Điểm Tin 60s (Video News)' : '60s Video News & Daily Digest'}
+                </label>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setVisualStyle('video_news_60s')}
+                  className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-center gap-3.5 ${
+                    visualStyle === 'video_news_60s'
+                      ? 'bg-amber-500/15 border-amber-400 shadow-md shadow-amber-500/15'
+                      : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <VideoNewsIcon size={36} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {isVietnamese ? 'Bản Tin Nóng 60s (Video News)' : '60s Video News & Daily Digest'}
                       </div>
-                    </button>
-                  );
-                })}
+                    </div>
+                    <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      {isVietnamese
+                        ? 'Tự động đọc bài báo từ Link hoặc Dán văn bản, tóm tắt tin tức 60s TikTok, hiệu ứng Ken Burns & thanh tin vắn'
+                        : 'Auto-crawl news links or paste text, generate 60s TikTok breaking news reels with Ken Burns & live ticker'}
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
 
