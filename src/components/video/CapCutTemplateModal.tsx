@@ -60,7 +60,7 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/11ca09714987_templates/cinematic_showcase_bgm.mp3',
     badge: '💎 REEL 22.0s',
     usageCount: '41.2K',
-    maxImages: 3,
+    maxImages: 8,
     defaultHookVi: 'BEST MENU',
     defaultHookEn: 'BEST MENU',
     defaultSolidVi: 'SPECIAL',
@@ -147,13 +147,16 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
     setIsUploading(true);
     try {
-      const file = files[0];
-      const formData = new FormData();
-      formData.append('file', file);
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await wynmotionService.uploadMedia(formData);
+        return res?.url;
+      });
 
-      const res = await wynmotionService.uploadMedia(formData);
-      if (res && res.url) {
-        setProductImages((prev) => [...prev, res.url].slice(0, template.maxImages));
+      const uploadedUrls = (await Promise.all(uploadPromises)).filter(Boolean) as string[];
+      if (uploadedUrls.length > 0) {
+        setProductImages((prev) => [...prev, ...uploadedUrls].slice(0, template.maxImages));
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -290,20 +293,30 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             </div>
 
             {/* 1. Product Images Slot */}
-            <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-              <label className="text-xs font-bold text-white/90 flex items-center justify-between">
-                <span>{t('Ảnh Sản Phẩm / Clip Cuối (Tối đa ' + template.maxImages + ' file)', 'Hero Media (Max ' + template.maxImages + ')')}</span>
-                <span className="text-[10px] text-white/60">{productImages.length}/{template.maxImages}</span>
-              </label>
+            <div className="space-y-2.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white/90">
+                  {template.id === 'ads_cinematic_showcase'
+                    ? t('📸 8 Ảnh Món Ăn / Menu (Tải 1-8 ảnh)', '📸 8 Food / Menu Images (Upload 1-8)')
+                    : t('Ảnh Sản Phẩm / Clip Cuối', 'Hero Media')}
+                </label>
+                <span className="text-[10px] text-cyan-300 font-semibold">{productImages.length}/{template.maxImages}</span>
+              </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
+              {template.id === 'ads_cinematic_showcase' && (
+                <p className="text-[10px] text-amber-300/90 leading-tight bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
+                  💡 {t('Mẹo: Bạn có thể tải 1 ảnh Menu (AI Gemini sẽ tự đọc và sinh 8 món ăn tương ứng) hoặc tải sẵn từ 1 đến 8 ảnh món!', 'Tip: Upload 1 Menu photo (Gemini AI will read & generate 8 dishes) or upload 1 to 8 dish photos!')}
+                </p>
+              )}
+
+              <div className={`grid ${template.maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
                 {Array.from({ length: template.maxImages }).map((_, idx) => {
                   const img = productImages[idx];
                   return (
                     <div
                       key={idx}
-                      className={`relative aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${
-                        img ? 'border-cyan-500 bg-slate-900' : 'border-white/20 bg-white/5 hover:border-cyan-400/60'
+                      className={`relative aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${
+                        img ? 'border-cyan-500 bg-slate-900 shadow-md' : 'border-white/20 bg-white/5 hover:border-cyan-400/60'
                       }`}
                     >
                       {img ? (
@@ -311,31 +324,35 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                           {img.toLowerCase().includes('.mp4') || img.toLowerCase().includes('.mov') || img.toLowerCase().includes('.webm') ? (
                             <video src={img} autoPlay loop muted playsInline className="w-full h-full object-cover" />
                           ) : (
-                            <img src={img} alt="Product" className="w-full h-full object-cover" />
+                            <img src={img} alt={`Asset ${idx + 1}`} className="w-full h-full object-cover" />
                           )}
+                          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-black text-cyan-300">
+                            #{idx + 1}
+                          </div>
                           <button
                             type="button"
                             onClick={() => setProductImages(productImages.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 text-white flex items-center justify-center text-[10px] font-bold cursor-pointer"
+                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center text-[9px] font-bold cursor-pointer"
                           >
                             ✕
                           </button>
                         </>
                       ) : (
-                        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center p-1 text-center">
+                        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center p-1 text-center group">
                           {isUploading ? (
-                            <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                            <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
                           ) : (
                             <>
-                              <span className="text-lg">➕</span>
-                              <span className="text-[9px] text-white/70 font-bold mt-1">
-                                {idx === 0 ? t('Tải ảnh / clip', 'Upload') : t('Thêm ảnh', 'Extra')}
+                              <span className="text-sm group-hover:scale-110 transition-transform">➕</span>
+                              <span className="text-[8px] text-white/60 font-bold mt-0.5">
+                                #{idx + 1}
                               </span>
                             </>
                           )}
                           <input
                             type="file"
                             accept="image/*,video/*"
+                            multiple
                             onChange={handleFileUpload}
                             disabled={isUploading}
                             className="hidden"
