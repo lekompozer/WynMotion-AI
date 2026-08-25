@@ -372,13 +372,13 @@ export const StrobeTeaserRenderer: React.FC<StrobeTeaserRendererProps> = ({ scen
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: '55%',
+                height: '65%',
                 background:
-                  'linear-gradient(to top, rgba(255, 30, 0, 0.9) 0%, rgba(255, 120, 0, 0.8) 45%, rgba(255, 210, 0, 0.4) 75%, rgba(255, 210, 0, 0) 100%)',
+                  'linear-gradient(to top, rgba(255, 30, 0, 1.0) 0%, rgba(255, 120, 0, 0.9) 40%, rgba(255, 220, 0, 0.6) 75%, rgba(255, 220, 0, 0) 100%)',
                 mixBlendMode: 'screen',
                 opacity: warmFlashOpacity,
                 pointerEvents: 'none',
-                zIndex: 30,
+                zIndex: 35,
               }}
             />
           )}
