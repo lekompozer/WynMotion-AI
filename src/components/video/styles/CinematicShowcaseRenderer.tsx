@@ -763,7 +763,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           7. SCENE 6 (10.0s – 12.5s): 3 Dải Dọc Ảnh 6 Bay Vào + 3D Door Flip
           ───────────────────────────────────────────────────────────── */}
       {frame >= f5End && frame < f6 && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px' }}>
           {(() => {
             const s6Frame = frame - f5End;
             const isClosingDoor = s6Frame >= 60;
@@ -778,22 +778,49 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             return (
               <div
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
+                  position: 'absolute',
+                  inset: 0,
                   transform: `rotateY(${doorRotateY}deg)`,
                   transformOrigin: 'left center',
+                  transformStyle: 'preserve-3d',
                 }}
               >
-                <div style={{ width: '33.333%', height: '100%', overflow: 'hidden', transform: `translateY(${col1Y}px)` }}>
-                  <div style={{ width: `${width}px`, height: '100%', backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'left center' }} />
-                </div>
-                <div style={{ width: '33.333%', height: '100%', overflow: 'hidden', transform: `translateY(${col2Y}px)` }}>
-                  <div style={{ width: `${width}px`, height: '100%', marginLeft: `-${width / 3}px`, backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center center' }} />
-                </div>
-                <div style={{ width: '33.334%', height: '100%', overflow: 'hidden', transform: `translateY(${col3Y}px)` }}>
-                  <div style={{ width: `${width}px`, height: '100%', marginLeft: `-${(width * 2) / 3}px`, backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'right center' }} />
-                </div>
+                {/* Dải 1 (Trái 1/3): clipPath cắt chuẩn xác 0 đến 33.333% của ảnh */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `url(${img6 || img1})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    clipPath: 'inset(0 66.666% 0 0)',
+                    transform: `translateY(${col1Y}px)`,
+                  }}
+                />
+                {/* Dải 2 (Giữa 1/3): clipPath cắt chuẩn xác 33.333% đến 66.666% của ảnh */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `url(${img6 || img1})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    clipPath: 'inset(0 33.333% 0 33.333%)',
+                    transform: `translateY(${col2Y}px)`,
+                  }}
+                />
+                {/* Dải 3 (Phải 1/3): clipPath cắt chuẩn xác 66.666% đến 100% của ảnh */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `url(${img6 || img1})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    clipPath: 'inset(0 0 0 66.666%)',
+                    transform: `translateY(${col3Y}px)`,
+                  }}
+                />
               </div>
             );
           })()}
