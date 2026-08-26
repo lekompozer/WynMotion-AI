@@ -1984,7 +1984,49 @@ interface MobileVideoEditorStudioProps {
 }
 
 export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = ({ project, onBack }) => {
-  const scenes = project.scenes && project.scenes.length > 0 ? (project.scenes as any) : [];
+  let rawScenes = project.scenes && project.scenes.length > 0 ? (project.scenes as any) : [];
+
+  // Safe Fallback: If CapCut template or single-scene ads has empty scenes, synthesize the template scene from project metadata
+  if (
+    rawScenes.length === 0 &&
+    project.visual_style &&
+    ['ads_cinematic_showcase', 'cinematic_showcase', 'ads_strobe_teaser', 'strobe_teaser', 'product_ads_motion'].includes(
+      project.visual_style
+    )
+  ) {
+    const gallery =
+      (project as any).product_images ||
+      (project as any).user_media_urls ||
+      (project as any).gallery_images ||
+      [];
+    const fallbackImage =
+      (project as any).image_url ||
+      gallery[0] ||
+      'https://static.wordai.pro/ai-generated-images/wynmotion/sample_menu.jpg';
+
+    rawScenes = [
+      {
+        scene_id: 'scene_1',
+        scene_number: 1,
+        title: project.title || 'CapCut Ads Reel',
+        visual_concept: project.prompt || project.title,
+        start_frame: 0,
+        duration_frames: Math.round((project.duration_sec || 22.0) * 30),
+        duration_sec: project.duration_sec || 22.0,
+        visual_style: project.visual_style,
+        template_type: project.visual_style,
+        gallery_images: gallery.length > 0 ? gallery : [fallbackImage],
+        image_url: fallbackImage,
+        headline_solid: (project as any).headline_solid || (project as any).hook_text || 'BEST MENU',
+        headline_outline: (project as any).headline_outline || 'CHOICE',
+        sub_headline: (project as any).sub_headline || (project as any).slogan_text || '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY',
+        cta_text: (project as any).cta_text || 'ORDER NOW',
+        accent_color: '#FF7A00',
+      },
+    ];
+  }
+
+  const scenes = rawScenes;
   const totalDuration = project.duration_sec || scenes.reduce((acc: number, s: any) => acc + getSceneDuration(s), 0) || 10;
   const initialFrames = Math.round(totalDuration * 30);
 
