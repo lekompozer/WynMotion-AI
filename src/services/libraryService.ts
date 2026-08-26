@@ -90,13 +90,14 @@ export async function uploadLibraryFile(
 }
 
 /**
- * List library files with filters
+ * List library files with filters and optional delta since timestamp
  */
 export async function listLibraryFiles(
   category?: 'images' | 'videos' | 'audio',
   tags?: string[],
   limit = 100,
-  offset = 0
+  offset = 0,
+  since?: string
 ): Promise<LibraryFile[]> {
   const headers = await getAuthHeaders();
   const params = new URLSearchParams();
@@ -104,6 +105,7 @@ export async function listLibraryFiles(
   if (tags && tags.length > 0) params.append('tags', tags.join(','));
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
+  if (since) params.append('since', since);
 
   const response = await fetch(`${API_BASE_URL}/api/library/files?${params}`, {
     headers,

@@ -16,6 +16,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   ArrowLeft,
   Settings,
+  Info,
+  Trash2,
   Download,
   Play,
   Pause,
@@ -52,6 +54,7 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { wynmotionService, MotionProject, MotionScene } from '@/services/wynmotionService';
+import { libraryCacheManager } from '@/services/libraryCacheManager';
 import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
 import { RemotionPlayerProvider, useRemotion, useCurrentFrame, useVideoConfig } from './RemotionEngine';
 import { DynamicAnimationComposition } from './DynamicAnimationComposition';
@@ -228,6 +231,97 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement>(null);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
+  const audioUploadInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+
+  // ── Upload & Replace / Remove Attached Audio ──
+  const handleUploadCustomAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAudio(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await wynmotionService.uploadMedia(formData);
+      if (res && res.url) {
+        setAudioSrc?.(res.url);
+        libraryCacheManager.notifyLibraryUpdated('audio');
+        const temp = new Audio(res.url);
+        temp.addEventListener('loadedmetadata', () => {
+          if (temp.duration && isFinite(temp.duration)) {
+            syncAnimationWithAudio(temp.duration, file.name);
+          }
+        });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi tải tệp âm thanh');
+    } finally {
+      setIsUploadingAudio(false);
+    }
+  };
+
+  const handleRemoveAudio = () => {
+    if (confirm(t('Bạn có chắc muốn xoá audio đính kèm khỏi video?', 'Are you sure you want to remove attached audio?'))) {
+      setAudioSrc?.('');
+    }
+  };
+
+  // ── Scrubber Live Dragging Ref & Handlers ──
+  const scrubberTrackRef = useRef<HTMLDivElement>(null);
+  const isDraggingScrubberRef = useRef<boolean>(false);
+
+  const handleScrubberSeek = useCallback(
+    (clientX: number) => {
+      if (!scrubberTrackRef.current || durationInFrames <= 0) return;
+      const rect = scrubberTrackRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const pct = clickX / rect.width;
+      const targetFrame = Math.round(pct * durationInFrames);
+      seekTo(targetFrame);
+    },
+    [durationInFrames, seekTo]
+  );
+
+  const handleScrubberPointerDown = (e: React.PointerEvent) => {
+    isDraggingScrubberRef.current = true;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    handleScrubberSeek(e.clientX);
+  };
+
+  const handleScrubberPointerMove = (e: React.PointerEvent) => {
+    if (isDraggingScrubberRef.current) {
+      handleScrubberSeek(e.clientX);
+    }
+  };
+
+  const handleScrubberPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingScrubberRef.current) {
+      isDraggingScrubberRef.current = false;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      } catch (err) {}
+    }
+  };
+
+  // ── Swipe Down Gesture to Reveal Attached Audio ──
+  const touchStartYRef = useRef<number | null>(null);
+
+  const handleStageTouchStart = (e: React.TouchEvent) => {
+    if (e.touches && e.touches[0]) {
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleStageTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartYRef.current !== null && e.changedTouches && e.changedTouches[0]) {
+      const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+      // Vuốt ngón trỏ kéo xuống > 45px -> Mở khay Audio đính kèm
+      if (deltaY > 45) {
+        setActiveBottomSheet('audio');
+      }
+      touchStartYRef.current = null;
+    }
+  };
 
   // Export state & Progress polling modal
   const [isExporting, setIsExporting] = useState(false);
@@ -534,6 +628,8 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
               mp4Url: finalUrl,
               jobId: jobId,
             });
+            libraryCacheManager.notifyLibraryUpdated('videos');
+            libraryCacheManager.notifyLibraryUpdated('projects');
             if (finalUrl) triggerNativeShare(finalUrl);
           } else if (statusRes.status === 'failed') {
             if (exportIntervalRef.current) clearInterval(exportIntervalRef.current);
@@ -583,6 +679,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       });
       if (res && res.image_url) {
         updateScene(activeScene.scene_id, { image_url: res.image_url });
+        libraryCacheManager.notifyLibraryUpdated('images');
         await refreshSubscription?.();
         alert(t('🎨 Đã vẽ lại hình ảnh nhân vật thành công (-3 điểm)!', '🎨 Image successfully re-designed (-3 points)!'));
       }
@@ -636,13 +733,14 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           <button
             type="button"
             onClick={() => setIsSettingsSheetOpen(true)}
+            title={t('Thông Tin Dự Án', 'Project Info')}
             className={`p-2 rounded-2xl transition-all active:scale-90 ${
               isDark
                 ? 'text-slate-300 hover:text-white hover:bg-slate-800'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <Settings className="w-5 h-5" />
+            <Info className="w-5 h-5" />
           </button>
 
           <button
@@ -660,7 +758,11 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       {/* ═══════════════════════════════════════════════════════════
           2. MAIN BODY: Large Remotion Canvas Stage + Controls
       ═══════════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      <div
+        className="flex-1 flex flex-col overflow-hidden relative"
+        onTouchStart={handleStageTouchStart}
+        onTouchEnd={handleStageTouchEnd}
+      >
         {syncStatusMsg && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-2xl bg-cyan-500/90 text-slate-950 text-xs font-black shadow-xl backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
             <Zap className="w-4 h-4 fill-slate-950" />
@@ -700,7 +802,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                       }`}
                     >
                       <span>{r}</span>
-                      {aspectRatio === r && <Check className="w-3.5 h-3.5 text-slate-950" />}
+                      {aspectRatio === r && <Check className="w-3.5 h-3.5" />}
                     </button>
                   ))}
                 </div>
@@ -808,18 +910,19 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           </div>
         </div>
 
-        {/* ── Audio Language & Sync Bar ── */}
+        {/* ── Audio Language & Sync Bar (Tap or Swipe Down to Open Audio Panel) ── */}
         <div
-          className={`flex-shrink-0 flex items-center justify-between px-4 py-2 border-t ${
-            isDark ? 'border-slate-800/80 bg-[#0E111B]' : 'border-slate-100 bg-slate-50'
+          onClick={() => setActiveBottomSheet('audio')}
+          className={`flex-shrink-0 flex items-center justify-between px-4 py-2 border-t cursor-pointer select-none transition-colors ${
+            isDark ? 'border-slate-800/80 bg-[#0E111B] hover:bg-slate-900/90' : 'border-slate-100 bg-slate-50 hover:bg-slate-100'
           }`}
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1">
               <Music className="w-3 h-3 text-cyan-400" />
-              Audio:
+              🎵 Audio:
             </span>
-            <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700">
+            <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 onClick={() => handleSelectAudioLang('vi')}
@@ -845,74 +948,74 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
-            disabled={isSyncingTimeline}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-400 text-[10px] font-black hover:bg-cyan-500/25 active:scale-95 transition-all shadow-sm"
-          >
-            {isSyncingTimeline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 fill-cyan-400" />}
-            <span>{t('Sync Animation', 'Sync Animation')}</span>
-          </button>
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
+              disabled={isSyncingTimeline}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-400 text-[10px] font-black hover:bg-cyan-500/25 active:scale-95 transition-all shadow-sm"
+            >
+              {isSyncingTimeline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 fill-cyan-400" />}
+              <span>{t('Sync Animation', 'Sync Animation')}</span>
+            </button>
+          </div>
         </div>
 
-        {/* ── Playback Controller Row ── */}
+        {/* ── Playback Controller Row: Play on LEFT, Wide Interactive Scrubber on RIGHT ── */}
         <div
-          className={`flex-shrink-0 flex items-center justify-between px-6 py-2 border-t ${
+          className={`flex-shrink-0 flex items-center gap-4 px-4 py-2.5 border-t ${
             isDark ? 'border-slate-800/80 bg-[#0F131C]' : 'border-slate-100 bg-white'
           }`}
         >
-          <button
-            type="button"
-            onClick={() => {
-              const prevIdx = Math.max(0, activeSceneIndex - 1);
-              const sf = scenes[prevIdx]?.start_frame || 0;
-              seekTo(sf);
-            }}
-            disabled={activeSceneIndex === 0}
-            className={`p-2 rounded-2xl transition-all active:scale-90 disabled:opacity-30 ${
-              isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <SkipBack className="w-5 h-5" />
-          </button>
-
-          <div className="flex flex-col items-center gap-1">
-            <div className={`text-xs font-mono font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              {formatTimecode(currentTimeSec)} / {formatTimecode(totalDurationSec)}
-            </div>
-            <div className={`w-36 h-1.5 rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-              <div
-                className="h-1.5 rounded-full bg-cyan-400 transition-all shadow-sm"
-                style={{
-                  width: totalDurationSec > 0 ? `${(currentTimeSec / totalDurationSec) * 100}%` : '0%',
-                }}
-              />
-            </div>
-          </div>
-
+          {/* Nút Play to, nổi bật bên trái */}
           <button
             type="button"
             onClick={togglePlay}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/25 active:scale-90 transition-all"
+            className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/25 active:scale-90 transition-all cursor-pointer"
           >
             {isPlaying ? <Pause className="w-5 h-5 fill-slate-950" /> : <Play className="w-5 h-5 fill-slate-950 ml-0.5" />}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              const nextIdx = Math.min(scenes.length - 1, activeSceneIndex + 1);
-              const sf = scenes[nextIdx]?.start_frame || 0;
-              seekTo(sf);
-            }}
-            disabled={activeSceneIndex === scenes.length - 1}
-            className={`p-2 rounded-2xl transition-all active:scale-90 disabled:opacity-30 ${
-              isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <SkipForward className="w-5 h-5" />
-          </button>
+          {/* Thanh trượt Scrubber dài mở rộng bên phải */}
+          <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
+            {/* Timecode Header */}
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-mono font-black tracking-tight ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                {formatTimecode(currentTimeSec)}
+              </span>
+              <span className={`text-[11px] font-mono font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {formatTimecode(totalDurationSec)}
+              </span>
+            </div>
+
+            {/* Interactive Progress Bar (Click / Drag to Seek) */}
+            <div
+              ref={scrubberTrackRef}
+              onPointerDown={handleScrubberPointerDown}
+              onPointerMove={handleScrubberPointerMove}
+              onPointerUp={handleScrubberPointerUp}
+              className="relative w-full h-4 flex items-center cursor-pointer touch-none select-none py-1 group"
+            >
+              {/* Background Track */}
+              <div className={`w-full h-2 rounded-full overflow-hidden transition-all ${isDark ? 'bg-slate-800 group-hover:bg-slate-700' : 'bg-slate-200'}`}>
+                {/* Active Progress Fill */}
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 shadow-sm"
+                  style={{
+                    width: totalDurationSec > 0 ? `${Math.min(100, Math.max(0, (currentTimeSec / totalDurationSec) * 100))}%` : '0%',
+                  }}
+                />
+              </div>
+
+              {/* Glowing Playhead Thumb Knob */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.95)] pointer-events-none transition-transform group-hover:scale-125"
+                style={{
+                  left: totalDurationSec > 0 ? `calc(${Math.min(100, Math.max(0, (currentTimeSec / totalDurationSec) * 100))}% - 8px)` : '-8px',
+                }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* ── Horizontal Scene Timeline Carousel ── */}
@@ -1154,70 +1257,164 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             </div>
           )}
 
-          {/* AUDIO SHEET */}
+          {/* AUDIO SHEET: ATTACHED AUDIO MANAGEMENT */}
           {activeBottomSheet === 'audio' && (
-            <div className="space-y-6">
+            <div className="space-y-4 scrollbar-none">
               <SheetHeader
-                title={t('Âm Thanh & Nhạc Nền', 'Audio & Background Music')}
+                title={t('🎵 Audio Đính Kèm & Âm Thanh', '🎵 Attached Audio & Sound')}
+                subtitle={t('Chạm vào audio để đổi mới hoặc xoá', 'Tap on audio to replace or remove')}
                 isDark={isDark}
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between">
+              {/* Hidden file input for uploading/replacing attached audio */}
+              <input
+                ref={audioUploadInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={handleUploadCustomAudio}
+              />
+
+              {/* ATTACHED AUDIO INTERACTIVE CARD */}
+              <div
+                className={`p-4 rounded-3xl border transition-all ${
+                  isDark
+                    ? 'bg-gradient-to-br from-slate-900 to-[#0F1422] border-cyan-500/40 shadow-lg shadow-cyan-500/5'
+                    : 'bg-gradient-to-br from-cyan-50/70 to-blue-50/70 border-cyan-300 shadow-md'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
+                      <Music className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black truncate text-cyan-400">
+                        {audioSrc ? t('Audio Đang Đính Kèm', 'Attached Audio Track') : t('Chưa Có Audio', 'No Audio Attached')}
+                      </div>
+                      <div className={`text-[10px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {audioSrc ? (audioSrc.startsWith('data:') || audioSrc.startsWith('blob:') ? 'Tệp đã tải lên' : audioSrc.split('/').pop()?.slice(0, 30) || 'Audio Stream') : t('Chạm bên dưới để tải audio', 'Tap below to upload')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {audioSrc && (
+                    <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
+                      {Math.round(totalDurationSec)}s
+                    </span>
+                  )}
+                </div>
+
+                {/* Touch Actions: Replace or Delete Audio */}
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-cyan-500/20">
+                  <button
+                    type="button"
+                    disabled={isUploadingAudio}
+                    onClick={() => audioUploadInputRef.current?.click()}
+                    className="py-2.5 px-3 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isUploadingAudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                    <span>{audioSrc ? t('Đổi Audio Mới', 'Change Audio') : t('Tải Audio Lên', 'Upload Audio')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!audioSrc}
+                    onClick={handleRemoveAudio}
+                    className={`py-2.5 px-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
+                      isDark
+                        ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                        : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>{t('Xoá Audio', 'Delete Audio')}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* DUAL LANGUAGE VOICE TRACK SWITCHER */}
+              <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-black text-cyan-400">
-                    {t('⚡ Đồng Bộ Animation Theo Audio', '⚡ Sync Animation to Audio')}
-                  </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">
-                    {t('Chia tỉ lệ phân cảnh tự động khớp thời lượng giọng đọc', 'Automatically scale scenes to narration duration')}
-                  </div>
+                  <div className="text-xs font-black text-white">{t('Giọng Đọc AI Kịch Bản', 'AI Narration Track')}</div>
+                  <div className="text-[10px] text-slate-400">{t('Chuyển đổi âm thanh Tiếng Việt / Tiếng Anh', 'Switch VI / EN track')}</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => syncAnimationWithAudio(totalDurationSec, 'Audio Track')}
-                  className="px-3.5 py-2 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs shadow-md active:scale-95 transition-all flex-shrink-0"
-                >
-                  {t('Đồng Bộ Ngay', 'Sync Now')}
-                </button>
+                <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAudioLang('vi')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                      activeAudioLang === 'vi' ? 'bg-cyan-400 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🇻🇳 VI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAudioLang('en')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                      activeAudioLang === 'en' ? 'bg-cyan-400 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🇺🇸 EN
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                    <Volume2 className="w-4 h-4 text-cyan-400" />
-                    <span>{t('Giọng Đọc AI (Voice Narration)', 'AI Narration Volume')}</span>
-                  </label>
-                  <span className="text-sm font-black text-cyan-400">{Math.round(volume * 100)}%</span>
+              {/* VOLUME SLIDERS */}
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{t('Âm lượng Giọng Đọc (Voice)', 'Voice Volume')}</span>
+                    </label>
+                    <span className="text-xs font-black text-cyan-400">{Math.round(volume * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={volume}
+                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                    className="w-full accent-cyan-400 h-2 rounded-lg"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={volume}
-                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-400 h-2 rounded-lg"
-                />
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      <Music className="w-3.5 h-3.5 text-purple-400" />
+                      <span>{t('Âm lượng Nhạc Nền (BGM)', 'BGM Volume')}</span>
+                    </label>
+                    <span className="text-xs font-black text-purple-400">{Math.round(bgmVolume * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={bgmVolume}
+                    onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
+                    className="w-full accent-purple-400 h-2 rounded-lg"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                    <Music className="w-4 h-4 text-purple-400" />
-                    <span>{t('Nhạc Nền (BGM Volume)', 'Background Music Volume')}</span>
-                  </label>
-                  <span className="text-sm font-black text-purple-400">{Math.round(bgmVolume * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={bgmVolume}
-                  onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
-                  className="w-full accent-purple-400 h-2 rounded-lg"
-                />
-              </div>
+              {/* AUTO SYNC BUTTON */}
+              <button
+                type="button"
+                onClick={() => {
+                  syncAnimationWithAudio(totalDurationSec, 'Audio Track');
+                  setActiveBottomSheet(null);
+                }}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                <span>{t('⚡ Đồng Bộ Khung Hình Theo Audio Này', '⚡ Sync All Scenes to Audio')}</span>
+              </button>
             </div>
           )}
 
@@ -1739,7 +1936,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         </BottomSheetOverlay>
       )}
 
-      {/* SETTINGS ACTION SHEET */}
+      {/* PROJECT INFO ACTION MODAL / SHEET */}
       {isSettingsSheetOpen && (
         <div className="fixed inset-0 z-50 flex items-end">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsSettingsSheetOpen(false)} />
@@ -1749,9 +1946,14 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             }`}
           >
             <div className="flex items-center justify-between">
-              <h3 className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {t('Cài Đặt Dự Án & Nâng Cao', 'Project Settings & Info')}
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-cyan-400/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+                  <Info className="w-4 h-4" />
+                </div>
+                <h3 className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {t('Thông Tin Chi Tiết Dự Án', 'Project Info & Specifications')}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsSettingsSheetOpen(false)}
@@ -1762,25 +1964,29 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             </div>
 
             <div
-              className={`p-4 rounded-2xl text-xs space-y-2 border ${
+              className={`p-4 rounded-2xl text-xs space-y-2.5 border ${
                 isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
               }`}
             >
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">{t('Mã Dự Án (ID)', 'Project ID')}</span>
                 <span className="font-mono text-cyan-400 font-bold">{project.project_id}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">{t('Phong Cách', 'Visual Style')}</span>
-                <span className="font-bold">{project.visual_style}</span>
+                <span className="font-bold text-white uppercase">{project.visual_style}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">{t('Tổng Số Scenes', 'Total Scenes')}</span>
                 <span className="font-bold">{scenes.length}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">{t('Thời Lượng', 'Total Duration')}</span>
-                <span className="font-bold">{Math.round(totalDurationSec)}s ({durationInFrames} frames)</span>
+                <span className="font-bold text-cyan-400">{Math.round(totalDurationSec)}s ({durationInFrames} frames)</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">{t('Tỉ Lệ Khung Hình', 'Aspect Ratio')}</span>
+                <span className="font-bold text-cyan-400">{aspectRatio}</span>
               </div>
             </div>
 
@@ -1789,7 +1995,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
               onClick={() => setIsSettingsSheetOpen(false)}
               className="w-full py-3.5 rounded-2xl bg-cyan-400 text-slate-950 font-black text-sm transition-all shadow-md"
             >
-              <span>{t('Đóng Cài Đặt', 'Close Settings')}</span>
+              <span>{t('Đóng', 'Close')}</span>
             </button>
           </div>
         </div>

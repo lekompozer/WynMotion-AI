@@ -226,9 +226,9 @@ export const PaperTearRealistic: React.FC<{
 
 /**
  * 3D Horizontal Split Block Cascade Component (Scene 5)
- * Slices image into 3 distinct 3D extruded blocks (A: Bottom 1/3, B: Middle 1/3, C: Top 1/3)
- * Blocks fall from above the top edge (initially hidden outside screen) onto the previous background image.
- * Block A falls first to bottom position, Block B falls second to middle, Block C falls last to top.
+ * Slices ONE single image into 3 distinct 3D extruded blocks (A: Bottom 1/3, B: Middle 1/3, C: Top 1/3)
+ * using CSS clipPath: inset(...) so that when assembled, it forms 100% of the exact original image seamlessly.
+ * Blocks fall sequentially from above the top edge onto the previous background image.
  */
 export const Split3DBlockFall: React.FC<{
   frame: number; // local frame 0 to 60 (2.0s)
@@ -237,8 +237,6 @@ export const Split3DBlockFall: React.FC<{
   width: number;
   height: number;
 }> = ({ frame, image, bgImage, width, height }) => {
-  const sliceH = height / 3;
-
   // Global Ken Burns zoom once assembled (frame 34 -> 60)
   const globalZoom = interpolate(frame, [34, 60], [1.0, 1.05], {
     extrapolateLeft: 'clamp',
@@ -253,8 +251,8 @@ export const Split3DBlockFall: React.FC<{
 
   // ─────────────────────────────────────────────────────────────
   // 1. KHỐI A (1/3 DƯỚI CÙNG - BOTTOM SLICE)
-  // Target position: top = 66.666% (2 * sliceH)
-  // Initial position: hoàn toàn trên mép đỉnh (translateY <= -(2 * sliceH + sliceH + 50) = -(height + 50))
+  // Target position: translateY = 0 (clipPath shows bottom 33.3%)
+  // Initial position: mép dưới của khối A (ở 100% height) phải nằm trên mép trên (Y <= 0) -> translateY = -(height + 60)
   // Fall timing: frame 0 -> 18
   // ─────────────────────────────────────────────────────────────
   const fA = frame;
@@ -263,16 +261,16 @@ export const Split3DBlockFall: React.FC<{
     extrapolateRight: 'clamp',
     easing: (t) => 1 + --t * t * t * t * t, // Quintic ease-out
   });
-  const aTranslateY = interpolate(aProgress, [0, 1], [-(height + 80), 0]);
-  const aRotateX = interpolate(aProgress, [0, 1], [38, 0]);
-  const aRotateY = interpolate(aProgress, [0, 1], [-6, 0]);
-  const aZ = interpolate(aProgress, [0, 1], [100, 0]);
+  const aTranslateY = interpolate(aProgress, [0, 1], [-(height + 60), 0]);
+  const aRotateX = interpolate(aProgress, [0, 1], [36, 0]);
+  const aRotateY = interpolate(aProgress, [0, 1], [-5, 0]);
+  const aZ = interpolate(aProgress, [0, 1], [90, 0]);
   const aDepth = interpolate(aProgress, [0, 0.8, 1], [40, 30, 0]);
 
   // ─────────────────────────────────────────────────────────────
   // 2. KHỐI B (1/3 Ở GIỮA - MIDDLE SLICE)
-  // Target position: top = 33.333% (sliceH)
-  // Initial position: hoàn toàn trên mép đỉnh (translateY <= -(sliceH + sliceH + 50) = -(2 * sliceH + 50))
+  // Target position: translateY = 0 (clipPath shows middle 33.3%)
+  // Initial position: mép dưới của khối B (ở 66.6% height) nằm trên mép trên -> translateY = -(height * 0.67 + 60)
   // Fall timing: delay 7 frames -> frame 7 -> 25
   // ─────────────────────────────────────────────────────────────
   const fB = Math.max(0, frame - 7);
@@ -281,16 +279,16 @@ export const Split3DBlockFall: React.FC<{
     extrapolateRight: 'clamp',
     easing: (t) => 1 + --t * t * t * t * t,
   });
-  const bTranslateY = interpolate(bProgress, [0, 1], [-(sliceH * 2 + 80), 0]);
-  const bRotateX = interpolate(bProgress, [0, 1], [38, 0]);
-  const bRotateY = interpolate(bProgress, [0, 1], [8, 0]);
-  const bZ = interpolate(bProgress, [0, 1], [120, 0]);
+  const bTranslateY = interpolate(bProgress, [0, 1], [-(height * 0.67 + 60), 0]);
+  const bRotateX = interpolate(bProgress, [0, 1], [36, 0]);
+  const bRotateY = interpolate(bProgress, [0, 1], [6, 0]);
+  const bZ = interpolate(bProgress, [0, 1], [110, 0]);
   const bDepth = interpolate(bProgress, [0, 0.8, 1], [40, 30, 0]);
 
   // ─────────────────────────────────────────────────────────────
   // 3. KHỐI C (1/3 TRÊN CÙNG - TOP SLICE)
-  // Target position: top = 0%
-  // Initial position: hoàn toàn trên mép đỉnh (translateY <= -(sliceH + 50))
+  // Target position: translateY = 0 (clipPath shows top 33.3%)
+  // Initial position: mép dưới của khối C (ở 33.3% height) nằm trên mép trên -> translateY = -(height * 0.34 + 60)
   // Fall timing: delay 14 frames -> frame 14 -> 32
   // ─────────────────────────────────────────────────────────────
   const fC = Math.max(0, frame - 14);
@@ -299,10 +297,10 @@ export const Split3DBlockFall: React.FC<{
     extrapolateRight: 'clamp',
     easing: (t) => 1 + --t * t * t * t * t,
   });
-  const cTranslateY = interpolate(cProgress, [0, 1], [-(sliceH + 80), 0]);
-  const cRotateX = interpolate(cProgress, [0, 1], [38, 0]);
-  const cRotateY = interpolate(cProgress, [0, 1], [-5, 0]);
-  const cZ = interpolate(cProgress, [0, 1], [140, 0]);
+  const cTranslateY = interpolate(cProgress, [0, 1], [-(height * 0.34 + 60), 0]);
+  const cRotateX = interpolate(cProgress, [0, 1], [36, 0]);
+  const cRotateY = interpolate(cProgress, [0, 1], [-4, 0]);
+  const cZ = interpolate(cProgress, [0, 1], [130, 0]);
   const cDepth = interpolate(cProgress, [0, 0.8, 1], [40, 30, 0]);
 
   return (
@@ -344,154 +342,102 @@ export const Split3DBlockFall: React.FC<{
         <div
           style={{
             position: 'absolute',
-            top: '66.666%',
-            left: 0,
-            width: '100%',
-            height: '33.334%',
+            inset: 0,
             transformStyle: 'preserve-3d',
+            transformOrigin: 'center 83.333%',
             transform: `translateY(${aTranslateY}px) translateZ(${aZ}px) rotateX(${aRotateX}deg) rotateY(${aRotateY}deg)`,
             zIndex: 10,
           }}
         >
-          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D */}
+          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D tại vị trí 66.666% */}
           {aDepth > 1 && (
             <div
               style={{
                 position: 'absolute',
-                top: 0,
+                top: '66.666%',
                 left: 0,
                 right: 0,
                 height: `${aDepth}px`,
                 transformOrigin: 'top center',
                 transform: 'rotateX(90deg)',
                 background: 'linear-gradient(to bottom, #3E4046, #1C1D21 65%, #08080A)',
-                borderTop: '1.5px solid rgba(255,255,255,0.6)',
+                borderTop: '1.5px solid rgba(255,255,255,0.7)',
                 boxShadow: '0 -10px 25px rgba(0,0,0,0.9)',
+                zIndex: 11,
               }}
             />
           )}
 
-          {/* Mặt Trước (Front Face): Hình A (1/3 dưới ảnh mới) */}
+          {/* Mặt Trước (Front Face): Toàn bộ ảnh nhưng cắt đúng 1/3 dưới cùng */}
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              overflow: 'hidden',
+              backgroundImage: `url(${image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              clipPath: 'inset(66.6666% 0% 0% 0%)',
               boxShadow: aZ > 5 ? '0 30px 60px rgba(0,0,0,0.95)' : 'none',
             }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: `-${(height * 2) / 3}px`,
-                left: 0,
-                width: `${width}px`,
-                height: `${height}px`,
-                backgroundImage: `url(${image})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            {/* Viền sáng mép trên */}
-            {aDepth > 1 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.95), rgba(255,255,255,0.2))',
-                  boxShadow: '0 0 8px rgba(255,255,255,0.8)',
-                }}
-              />
-            )}
-          </div>
+          />
         </div>
 
         {/* ── KHỐI B: 1/3 Ở GIỮA (MIDDLE SLICE) ── */}
         <div
           style={{
             position: 'absolute',
-            top: '33.333%',
-            left: 0,
-            width: '100%',
-            height: '33.334%',
+            inset: 0,
             transformStyle: 'preserve-3d',
+            transformOrigin: 'center 50%',
             transform: `translateY(${bTranslateY}px) translateZ(${bZ}px) rotateX(${bRotateX}deg) rotateY(${bRotateY}deg)`,
-            zIndex: 11,
+            zIndex: 12,
           }}
         >
-          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D */}
+          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D tại vị trí 33.333% */}
           {bDepth > 1 && (
             <div
               style={{
                 position: 'absolute',
-                top: 0,
+                top: '33.333%',
                 left: 0,
                 right: 0,
                 height: `${bDepth}px`,
                 transformOrigin: 'top center',
                 transform: 'rotateX(90deg)',
                 background: 'linear-gradient(to bottom, #3E4046, #1C1D21 65%, #08080A)',
-                borderTop: '1.5px solid rgba(255,255,255,0.6)',
+                borderTop: '1.5px solid rgba(255,255,255,0.7)',
                 boxShadow: '0 -10px 25px rgba(0,0,0,0.9)',
+                zIndex: 13,
               }}
             />
           )}
 
-          {/* Mặt Trước (Front Face): Hình B (1/3 giữa ảnh mới) */}
+          {/* Mặt Trước (Front Face): Toàn bộ ảnh nhưng cắt đúng 1/3 ở giữa */}
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              overflow: 'hidden',
+              backgroundImage: `url(${image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              clipPath: 'inset(33.3333% 0% 33.3333% 0%)',
               boxShadow: bZ > 5 ? '0 30px 60px rgba(0,0,0,0.95)' : 'none',
             }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: `-${height / 3}px`,
-                left: 0,
-                width: `${width}px`,
-                height: `${height}px`,
-                backgroundImage: `url(${image})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            {/* Viền sáng mép trên */}
-            {bDepth > 1 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.95), rgba(255,255,255,0.2))',
-                  boxShadow: '0 0 8px rgba(255,255,255,0.8)',
-                }}
-              />
-            )}
-          </div>
+          />
         </div>
 
         {/* ── KHỐI C: 1/3 TRÊN CÙNG (TOP SLICE) ── */}
         <div
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '33.334%',
+            inset: 0,
             transformStyle: 'preserve-3d',
+            transformOrigin: 'center 16.666%',
             transform: `translateY(${cTranslateY}px) translateZ(${cZ}px) rotateX(${cRotateX}deg) rotateY(${cRotateY}deg)`,
-            zIndex: 12,
+            zIndex: 14,
           }}
         >
-          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D */}
+          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D tại đỉnh 0% */}
           {cDepth > 1 && (
             <div
               style={{
@@ -503,48 +449,25 @@ export const Split3DBlockFall: React.FC<{
                 transformOrigin: 'top center',
                 transform: 'rotateX(90deg)',
                 background: 'linear-gradient(to bottom, #3E4046, #1C1D21 65%, #08080A)',
-                borderTop: '1.5px solid rgba(255,255,255,0.6)',
+                borderTop: '1.5px solid rgba(255,255,255,0.7)',
                 boxShadow: '0 -10px 25px rgba(0,0,0,0.9)',
+                zIndex: 15,
               }}
             />
           )}
 
-          {/* Mặt Trước (Front Face): Hình C (1/3 trên ảnh mới) */}
+          {/* Mặt Trước (Front Face): Toàn bộ ảnh nhưng cắt đúng 1/3 trên cùng */}
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              overflow: 'hidden',
+              backgroundImage: `url(${image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              clipPath: 'inset(0% 0% 66.6666% 0%)',
               boxShadow: cZ > 5 ? '0 30px 60px rgba(0,0,0,0.95)' : 'none',
             }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: `${width}px`,
-                height: `${height}px`,
-                backgroundImage: `url(${image})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            {/* Viền sáng mép trên */}
-            {cDepth > 1 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.95), rgba(255,255,255,0.2))',
-                  boxShadow: '0 0 8px rgba(255,255,255,0.8)',
-                }}
-              />
-            )}
-          </div>
+          />
         </div>
 
         {/* ── SHIMMER SWEEP ACROSS ASSEMBLED IMAGE ── */}
@@ -554,7 +477,7 @@ export const Split3DBlockFall: React.FC<{
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              zIndex: 20,
+              zIndex: 25,
               background: `linear-gradient(to bottom, transparent ${shimmerY - 20}%, rgba(255,255,255,0.35) ${shimmerY}%, transparent ${shimmerY + 20}%)`,
             }}
           />

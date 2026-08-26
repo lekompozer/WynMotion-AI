@@ -32,6 +32,7 @@ import {
   formatFileSize,
   LibraryFile,
 } from '@/services/libraryService';
+import { libraryCacheManager } from '@/services/libraryCacheManager';
 
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { LoginModal } from '@/components/auth/LoginModal';
@@ -81,6 +82,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('projects');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -95,66 +97,100 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Load data on mount and user/category change ──
-  useEffect(() => {
-    // Clear any stale legacy global cache
-    try {
-      localStorage.removeItem('wynmotion_cached_projects');
-    } catch {}
-
-    if (!user) {
-      setProjects([]);
-      setRecentProjects([]);
-      setFiles([]);
-      return;
-    }
-
-    const cacheKey = `wynmotion_cached_projects_${user.uid}`;
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed: MotionProject[] = JSON.parse(cached);
-        setProjects(parsed);
-        setRecentProjects(parsed.slice(0, 8));
+  // ── Load data on mount and category change with Cache-First + Delta Sync ──
+  const loadCategoryData = useCallback(
+    async (cat: AssetCategory, forceFresh = false) => {
+      if (!user) {
+        setProjects([]);
+        setRecentProjects([]);
+        setFiles([]);
+        return;
       }
-    } catch {}
 
+      const cacheKey = `wynmotion_cached_projects_${user.uid}`;
+
+      // ── PHA 1: 0ms INSTANT LOAD TỪ CACHE ──
+      if (cat === 'projects') {
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed: MotionProject[] = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProjects(parsed);
+              setRecentProjects(parsed.slice(0, 8));
+            }
+          }
+        } catch {}
+      } else {
+        const { files: cachedFiles, lastSync } = libraryCacheManager.getCachedFiles(user.uid, cat);
+        if (cachedFiles && cachedFiles.length > 0) {
+          setFiles(cachedFiles);
+        }
+      }
+
+      // ── PHA 2: BACKGROUND DELTA / FRESH SYNC ──
+      const hasCachedData =
+        cat === 'projects'
+          ? projects.length > 0
+          : libraryCacheManager.getCachedFiles(user.uid, cat).files.length > 0;
+
+      if (!hasCachedData) {
+        setLoading(true);
+      } else {
+        setIsSyncing(true);
+      }
+
+      try {
+        if (cat === 'projects') {
+          const res = await wynmotionService.listProjects(100);
+          if (res && res.projects) {
+            setProjects(res.projects);
+            setRecentProjects(res.projects.slice(0, 8));
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(res.projects));
+            } catch {}
+          }
+        } else {
+          const { files: existingCached, lastSync } = libraryCacheManager.getCachedFiles(user.uid, cat);
+          // If forceFresh or no previous sync timestamp, do full fetch
+          const sinceParam = !forceFresh && lastSync && existingCached.length > 0 ? lastSync : undefined;
+
+          const data = await listLibraryFiles(cat as any, undefined, 100, 0, sinceParam);
+          
+          if (sinceParam && data && data.length > 0) {
+            // Merge delta items into head of list
+            const merged = libraryCacheManager.mergeDeltaFiles(existingCached, data);
+            setFiles(merged);
+            libraryCacheManager.setCachedFiles(user.uid, cat, merged);
+          } else if (!sinceParam && data) {
+            // Fresh full load
+            setFiles(data);
+            libraryCacheManager.setCachedFiles(user.uid, cat, data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync library data:', err);
+      } finally {
+        setLoading(false);
+        setIsSyncing(false);
+      }
+    },
+    [user, projects.length]
+  );
+
+  useEffect(() => {
     loadCategoryData(activeCategory);
   }, [user, activeCategory]);
 
-  const loadCategoryData = useCallback(async (cat: AssetCategory) => {
-    if (!user) {
-      setProjects([]);
-      setRecentProjects([]);
-      setFiles([]);
-      return;
-    }
-
-    setLoading(true);
-    const cacheKey = `wynmotion_cached_projects_${user.uid}`;
-    try {
-      if (cat === 'projects') {
-        const res = await wynmotionService.listProjects(100);
-        if (res.projects) {
-          setProjects(res.projects);
-          setRecentProjects(res.projects.slice(0, 8));
-          try {
-            localStorage.setItem(cacheKey, JSON.stringify(res.projects));
-          } catch {}
-        } else {
-          setProjects([]);
-          setRecentProjects([]);
-        }
-      } else {
-        const data = await listLibraryFiles(cat as any, undefined, 100, 0);
-        setFiles(data || []);
+  // ── Listen for Cross-Tab Update Broadcasts (e.g. from Studio) ──
+  useEffect(() => {
+    const unsub = libraryCacheManager.onLibraryUpdated((updatedCat) => {
+      if (!updatedCat || updatedCat === activeCategory || updatedCat === 'all') {
+        loadCategoryData(activeCategory, true);
       }
-    } catch (err) {
-      console.error('Failed to load library:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    });
+    return unsub;
+  }, [activeCategory, loadCategoryData]);
 
   // ── Search Filter ──
   const filteredProjects = projects.filter((p) => {
