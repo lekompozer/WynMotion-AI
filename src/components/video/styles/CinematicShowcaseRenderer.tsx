@@ -226,99 +226,84 @@ export const PaperTearRealistic: React.FC<{
 
 /**
  * 3D Horizontal Split Block Cascade Component (Scene 5)
- * Slices image into 3 distinct 3D extruded blocks (Top, Middle, Bottom)
- * Blocks tumble and cascade from above with realistic 3D perspective, bevel depth and drop shadows,
- * then snap into a seamless, high-res image.
+ * Slices image into 3 distinct 3D extruded blocks (A: Bottom 1/3, B: Middle 1/3, C: Top 1/3)
+ * Blocks fall from above the top edge (initially hidden outside screen) onto the previous background image.
+ * Block A falls first to bottom position, Block B falls second to middle, Block C falls last to top.
  */
 export const Split3DBlockFall: React.FC<{
   frame: number; // local frame 0 to 60 (2.0s)
-  image: string;
+  image: string; // new food image (img5)
+  bgImage?: string; // previous background image (img4)
   width: number;
   height: number;
-}> = ({ frame, image, width, height }) => {
-  // Global Ken Burns zoom once assembled
-  const globalZoom = interpolate(frame, [30, 60], [1.0, 1.05], {
+}> = ({ frame, image, bgImage, width, height }) => {
+  const sliceH = height / 3;
+
+  // Global Ken Burns zoom once assembled (frame 34 -> 60)
+  const globalZoom = interpolate(frame, [34, 60], [1.0, 1.05], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
-  // Light sweep shimmer from top to bottom once assembled (frame 32 -> 52)
-  const shimmerY = interpolate(frame, [32, 52], [-100, 200], {
+  // Light sweep shimmer from top to bottom once assembled (frame 36 -> 54)
+  const shimmerY = interpolate(frame, [36, 54], [-100, 200], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
-  // Block 1: Top 1/3 (0s -> 0.73s: frames 0 -> 22)
-  const f1 = frame;
-  const b1TranslateY = interpolate(f1, [0, 22], [-height * 1.1, 0], {
+  // ─────────────────────────────────────────────────────────────
+  // 1. KHỐI A (1/3 DƯỚI CÙNG - BOTTOM SLICE)
+  // Target position: top = 66.666% (2 * sliceH)
+  // Initial position: hoàn toàn trên mép đỉnh (translateY <= -(2 * sliceH + sliceH + 50) = -(height + 50))
+  // Fall timing: frame 0 -> 18
+  // ─────────────────────────────────────────────────────────────
+  const fA = frame;
+  const aProgress = interpolate(fA, [0, 18], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: (t) => 1 + --t * t * t * t * t, // Quintic ease-out
+  });
+  const aTranslateY = interpolate(aProgress, [0, 1], [-(height + 80), 0]);
+  const aRotateX = interpolate(aProgress, [0, 1], [38, 0]);
+  const aRotateY = interpolate(aProgress, [0, 1], [-6, 0]);
+  const aZ = interpolate(aProgress, [0, 1], [100, 0]);
+  const aDepth = interpolate(aProgress, [0, 0.8, 1], [40, 30, 0]);
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. KHỐI B (1/3 Ở GIỮA - MIDDLE SLICE)
+  // Target position: top = 33.333% (sliceH)
+  // Initial position: hoàn toàn trên mép đỉnh (translateY <= -(sliceH + sliceH + 50) = -(2 * sliceH + 50))
+  // Fall timing: delay 7 frames -> frame 7 -> 25
+  // ─────────────────────────────────────────────────────────────
+  const fB = Math.max(0, frame - 7);
+  const bProgress = interpolate(fB, [0, 18], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: (t) => 1 + --t * t * t * t * t,
   });
-  const b1RotateX = interpolate(f1, [0, 22], [45, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b1RotateY = interpolate(f1, [0, 22], [-10, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b1Z = interpolate(f1, [0, 22], [90, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b1DepthOpen = interpolate(f1, [0, 18, 22], [40, 30, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const bTranslateY = interpolate(bProgress, [0, 1], [-(sliceH * 2 + 80), 0]);
+  const bRotateX = interpolate(bProgress, [0, 1], [38, 0]);
+  const bRotateY = interpolate(bProgress, [0, 1], [8, 0]);
+  const bZ = interpolate(bProgress, [0, 1], [120, 0]);
+  const bDepth = interpolate(bProgress, [0, 0.8, 1], [40, 30, 0]);
 
-  // Block 2: Middle 1/3 (delay 4 frames: frame 4 -> 26)
-  const f2 = Math.max(0, frame - 4);
-  const b2TranslateY = interpolate(f2, [0, 22], [-height * 1.6, 0], {
+  // ─────────────────────────────────────────────────────────────
+  // 3. KHỐI C (1/3 TRÊN CÙNG - TOP SLICE)
+  // Target position: top = 0%
+  // Initial position: hoàn toàn trên mép đỉnh (translateY <= -(sliceH + 50))
+  // Fall timing: delay 14 frames -> frame 14 -> 32
+  // ─────────────────────────────────────────────────────────────
+  const fC = Math.max(0, frame - 14);
+  const cProgress = interpolate(fC, [0, 18], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: (t) => 1 + --t * t * t * t * t,
   });
-  const b2RotateX = interpolate(f2, [0, 22], [-40, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b2RotateY = interpolate(f2, [0, 22], [12, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b2Z = interpolate(f2, [0, 22], [140, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b2DepthOpen = interpolate(f2, [0, 18, 22], [50, 35, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  // Block 3: Bottom 1/3 (delay 8 frames: frame 8 -> 30)
-  const f3 = Math.max(0, frame - 8);
-  const b3TranslateY = interpolate(f3, [0, 22], [-height * 2.1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: (t) => 1 + --t * t * t * t * t,
-  });
-  const b3RotateX = interpolate(f3, [0, 22], [35, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b3RotateY = interpolate(f3, [0, 22], [-8, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b3Z = interpolate(f3, [0, 22], [180, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const b3DepthOpen = interpolate(f3, [0, 18, 22], [45, 30, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const cTranslateY = interpolate(cProgress, [0, 1], [-(sliceH + 80), 0]);
+  const cRotateX = interpolate(cProgress, [0, 1], [38, 0]);
+  const cRotateY = interpolate(cProgress, [0, 1], [-5, 0]);
+  const cZ = interpolate(cProgress, [0, 1], [140, 0]);
+  const cDepth = interpolate(cProgress, [0, 0.8, 1], [40, 30, 0]);
 
   return (
     <div
@@ -328,134 +313,87 @@ export const Split3DBlockFall: React.FC<{
         overflow: 'hidden',
         perspective: '1200px',
         perspectiveOrigin: '50% 50%',
-        transform: `scale(${globalZoom})`,
         backgroundColor: '#050505',
       }}
     >
-      {/* ── BLOCK 1: TOP 1/3 ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '33.334%',
-          transformStyle: 'preserve-3d',
-          transform: `translateY(${b1TranslateY}px) translateZ(${b1Z}px) rotateX(${b1RotateX}deg) rotateY(${b1RotateY}deg)`,
-          zIndex: 3,
-        }}
-      >
-        {/* Front Face (Top 1/3 Image) */}
+      {/* ── 0. BACKGROUND: ẢNH CŨ TRƯỚC ĐÓ (Img 4) ── */}
+      {bgImage && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            overflow: 'hidden',
-            boxShadow: b1Z > 5 ? '0 25px 50px rgba(0,0,0,0.85)' : 'none',
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'brightness(0.75) contrast(1.1)',
+            transform: 'scale(1.03)',
+          }}
+        />
+      )}
+
+      {/* ── 3D CONTAINER ── */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transformStyle: 'preserve-3d',
+          transform: `scale(${globalZoom})`,
+        }}
+      >
+        {/* ── KHỐI A: 1/3 DƯỚI CÙNG (BOTTOM SLICE) ── */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '66.666%',
+            left: 0,
+            width: '100%',
+            height: '33.334%',
+            transformStyle: 'preserve-3d',
+            transform: `translateY(${aTranslateY}px) translateZ(${aZ}px) rotateX(${aRotateX}deg) rotateY(${aRotateY}deg)`,
+            zIndex: 10,
           }}
         >
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: `${width}px`,
-              height: `${height}px`,
-              backgroundImage: `url(${image})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-          {/* Bevel highlight along bottom cut */}
-          {b1DepthOpen > 2 && (
+          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D */}
+          {aDepth > 1 && (
             <div
               style={{
                 position: 'absolute',
-                bottom: 0,
+                top: 0,
                 left: 0,
                 right: 0,
-                height: '2px',
-                background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.9), rgba(255,255,255,0.2))',
-                boxShadow: '0 0 8px rgba(255,255,255,0.8)',
+                height: `${aDepth}px`,
+                transformOrigin: 'top center',
+                transform: 'rotateX(90deg)',
+                background: 'linear-gradient(to bottom, #3E4046, #1C1D21 65%, #08080A)',
+                borderTop: '1.5px solid rgba(255,255,255,0.6)',
+                boxShadow: '0 -10px 25px rgba(0,0,0,0.9)',
               }}
             />
           )}
-        </div>
 
-        {/* Bottom 3D Bevel Slab Face */}
-        {b1DepthOpen > 2 && (
+          {/* Mặt Trước (Front Face): Hình A (1/3 dưới ảnh mới) */}
           <div
             style={{
               position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: `${b1DepthOpen}px`,
-              transformOrigin: 'bottom center',
-              transform: 'rotateX(-90deg)',
-              background: 'linear-gradient(to bottom, #2C2D30, #141517 60%, #050505)',
-              borderBottom: '1px solid rgba(255,255,255,0.3)',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.9)',
+              inset: 0,
+              overflow: 'hidden',
+              boxShadow: aZ > 5 ? '0 30px 60px rgba(0,0,0,0.95)' : 'none',
             }}
-          />
-        )}
-      </div>
-
-      {/* ── BLOCK 2: MIDDLE 1/3 ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '33.333%',
-          left: 0,
-          width: '100%',
-          height: '33.334%',
-          transformStyle: 'preserve-3d',
-          transform: `translateY(${b2TranslateY}px) translateZ(${b2Z}px) rotateX(${b2RotateX}deg) rotateY(${b2RotateY}deg)`,
-          zIndex: 2,
-        }}
-      >
-        {/* Top 3D Bevel Slab Face */}
-        {b2DepthOpen > 2 && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: `${b2DepthOpen}px`,
-              transformOrigin: 'top center',
-              transform: 'rotateX(90deg)',
-              background: 'linear-gradient(to bottom, #3A3B40, #1A1B1E 60%, #080808)',
-              borderTop: '1px solid rgba(255,255,255,0.4)',
-              boxShadow: '0 -5px 20px rgba(0,0,0,0.8)',
-            }}
-          />
-        )}
-
-        {/* Front Face (Middle 1/3 Image) */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            overflow: 'hidden',
-            boxShadow: b2Z > 5 ? '0 30px 60px rgba(0,0,0,0.9)' : 'none',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              top: `-${height / 3}px`,
-              left: 0,
-              width: `${width}px`,
-              height: `${height}px`,
-              backgroundImage: `url(${image})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-          {/* Bevel highlight along edges */}
-          {b2DepthOpen > 2 && (
-            <>
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: `-${(height * 2) / 3}px`,
+                left: 0,
+                width: `${width}px`,
+                height: `${height}px`,
+                backgroundImage: `url(${image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            {/* Viền sáng mép trên */}
+            {aDepth > 1 && (
               <div
                 style={{
                   position: 'absolute',
@@ -463,120 +401,165 @@ export const Split3DBlockFall: React.FC<{
                   left: 0,
                   right: 0,
                   height: '2px',
-                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.9), rgba(255,255,255,0.2))',
+                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.95), rgba(255,255,255,0.2))',
+                  boxShadow: '0 0 8px rgba(255,255,255,0.8)',
                 }}
               />
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.9), rgba(255,255,255,0.2))',
-                }}
-              />
-            </>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Bottom 3D Bevel Slab Face */}
-        {b2DepthOpen > 2 && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: `${b2DepthOpen}px`,
-              transformOrigin: 'bottom center',
-              transform: 'rotateX(-90deg)',
-              background: 'linear-gradient(to bottom, #2C2D30, #141517 60%, #050505)',
-              borderBottom: '1px solid rgba(255,255,255,0.3)',
-            }}
-          />
-        )}
-      </div>
-
-      {/* ── BLOCK 3: BOTTOM 1/3 ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '66.666%',
-          left: 0,
-          width: '100%',
-          height: '33.334%',
-          transformStyle: 'preserve-3d',
-          transform: `translateY(${b3TranslateY}px) translateZ(${b3Z}px) rotateX(${b3RotateX}deg) rotateY(${b3RotateY}deg)`,
-          zIndex: 1,
-        }}
-      >
-        {/* Top 3D Bevel Slab Face */}
-        {b3DepthOpen > 2 && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: `${b3DepthOpen}px`,
-              transformOrigin: 'top center',
-              transform: 'rotateX(90deg)',
-              background: 'linear-gradient(to bottom, #3A3B40, #1A1B1E 60%, #080808)',
-              borderTop: '1px solid rgba(255,255,255,0.4)',
-            }}
-          />
-        )}
-
-        {/* Front Face (Bottom 1/3 Image) */}
+        {/* ── KHỐI B: 1/3 Ở GIỮA (MIDDLE SLICE) ── */}
         <div
           style={{
             position: 'absolute',
-            inset: 0,
-            overflow: 'hidden',
-            boxShadow: b3Z > 5 ? '0 30px 60px rgba(0,0,0,0.9)' : 'none',
+            top: '33.333%',
+            left: 0,
+            width: '100%',
+            height: '33.334%',
+            transformStyle: 'preserve-3d',
+            transform: `translateY(${bTranslateY}px) translateZ(${bZ}px) rotateX(${bRotateX}deg) rotateY(${bRotateY}deg)`,
+            zIndex: 11,
           }}
         >
-          <div
-            style={{
-              position: 'absolute',
-              top: `-${(height * 2) / 3}px`,
-              left: 0,
-              width: `${width}px`,
-              height: `${height}px`,
-              backgroundImage: `url(${image})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-          {/* Bevel highlight along top cut */}
-          {b3DepthOpen > 2 && (
+          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D */}
+          {bDepth > 1 && (
             <div
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
-                height: '2px',
-                background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.9), rgba(255,255,255,0.2))',
+                height: `${bDepth}px`,
+                transformOrigin: 'top center',
+                transform: 'rotateX(90deg)',
+                background: 'linear-gradient(to bottom, #3E4046, #1C1D21 65%, #08080A)',
+                borderTop: '1.5px solid rgba(255,255,255,0.6)',
+                boxShadow: '0 -10px 25px rgba(0,0,0,0.9)',
               }}
             />
           )}
-        </div>
-      </div>
 
-      {/* ── SHIMMER SWEEP ACROSS ASSEMBLED IMAGE ── */}
-      {frame >= 32 && frame <= 52 && (
+          {/* Mặt Trước (Front Face): Hình B (1/3 giữa ảnh mới) */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              overflow: 'hidden',
+              boxShadow: bZ > 5 ? '0 30px 60px rgba(0,0,0,0.95)' : 'none',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: `-${height / 3}px`,
+                left: 0,
+                width: `${width}px`,
+                height: `${height}px`,
+                backgroundImage: `url(${image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            {/* Viền sáng mép trên */}
+            {bDepth > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '2px',
+                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.95), rgba(255,255,255,0.2))',
+                  boxShadow: '0 0 8px rgba(255,255,255,0.8)',
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* ── KHỐI C: 1/3 TRÊN CÙNG (TOP SLICE) ── */}
         <div
           style={{
             position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            zIndex: 10,
-            background: `linear-gradient(to bottom, transparent ${shimmerY - 20}%, rgba(255,255,255,0.3) ${shimmerY}%, transparent ${shimmerY + 20}%)`,
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '33.334%',
+            transformStyle: 'preserve-3d',
+            transform: `translateY(${cTranslateY}px) translateZ(${cZ}px) rotateX(${cRotateX}deg) rotateY(${cRotateY}deg)`,
+            zIndex: 12,
           }}
-        />
-      )}
+        >
+          {/* Cạnh Trên (Top Face): Mặt Vát Đen Đá 3D */}
+          {cDepth > 1 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: `${cDepth}px`,
+                transformOrigin: 'top center',
+                transform: 'rotateX(90deg)',
+                background: 'linear-gradient(to bottom, #3E4046, #1C1D21 65%, #08080A)',
+                borderTop: '1.5px solid rgba(255,255,255,0.6)',
+                boxShadow: '0 -10px 25px rgba(0,0,0,0.9)',
+              }}
+            />
+          )}
+
+          {/* Mặt Trước (Front Face): Hình C (1/3 trên ảnh mới) */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              overflow: 'hidden',
+              boxShadow: cZ > 5 ? '0 30px 60px rgba(0,0,0,0.95)' : 'none',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: `${width}px`,
+                height: `${height}px`,
+                backgroundImage: `url(${image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            {/* Viền sáng mép trên */}
+            {cDepth > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '2px',
+                  background: 'linear-gradient(to right, rgba(255,255,255,0.2), rgba(255,255,255,0.95), rgba(255,255,255,0.2))',
+                  boxShadow: '0 0 8px rgba(255,255,255,0.8)',
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* ── SHIMMER SWEEP ACROSS ASSEMBLED IMAGE ── */}
+        {frame >= 36 && frame <= 56 && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 20,
+              background: `linear-gradient(to bottom, transparent ${shimmerY - 20}%, rgba(255,255,255,0.35) ${shimmerY}%, transparent ${shimmerY + 20}%)`,
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
@@ -846,6 +829,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           <Split3DBlockFall
             frame={frame - f5}
             image={img5 || img1}
+            bgImage={img4 || img1}
             width={width}
             height={height}
           />
