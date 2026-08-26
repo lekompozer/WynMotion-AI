@@ -545,63 +545,205 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
-          1. SCENE 1 (0.0s – 1.0s): Blur Background + Purple Lens Flare
+          1. SCENE 1 (0.0s – 1.0s): Chữ B E S T ở xa thu gọn + Đốm sáng tím/trắng quét từ phải qua nổ tung giữa chữ
           ───────────────────────────────────────────────────────────── */}
       {frame >= f0 && frame < f1 && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', backgroundColor: '#020204' }}>
+          {/* Nền ảnh 1 xuất hiện dần khi vụ nổ ánh sáng trắng bùng ra */}
           {img1 && (
             <div
               style={{
                 position: 'absolute',
-                inset: -20,
+                inset: 0,
                 backgroundImage: `url(${img1})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                filter: 'blur(24px) brightness(0.6)',
-                transform: 'scale(1.1)',
+                opacity: interpolate(frame, [22, 30], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+                transform: `scale(${interpolate(frame, [22, 30], [1.08, 1.0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })})`,
               }}
             />
           )}
 
           {(() => {
-            const flareSpring = spring({ frame, fps, config: { damping: 14, stiffness: 120 } });
-            const flareScale = interpolate(flareSpring, [0, 1], [0.2, 2.2]);
+            // Chữ B E S T ở xa (scale nhỏ, giãn cách chữ rộng) thu gọn lại thành chữ BEST giữa màn hình
+            const textScale = interpolate(frame, [0, 22], [0.75, 1.0], { extrapolateRight: 'clamp' });
+            const letterSpacing = interpolate(frame, [0, 22], [32, 6], { extrapolateRight: 'clamp' });
+            const textOpacity = interpolate(frame, [0, 6], [0, 1], { extrapolateRight: 'clamp' });
+
+            // Đốm sáng trắng + Vệt tia sáng + Bokeh tím quét từ phải qua tâm (frame 0 -> 24: 115% -> 50%) rồi lướt tiếp sang trái (frame 24 -> 30)
+            const flareX = interpolate(frame, [0, 24, 30], [115, 50, 30], { extrapolateRight: 'clamp' });
+            const flareY = 50; // Chính giữa chiều cao chữ BEST
+            const flareOpacity = interpolate(frame, [0, 4, 28, 30], [0, 1, 1, 0.8], { extrapolateRight: 'clamp' });
+
+            // Vụ nổ ánh sáng trắng (Radial White Burst) khi đốm sáng chạm tâm chữ BEST (frame 22 -> 30)
+            const burstScale = interpolate(frame, [22, 26, 30], [0.2, 3.5, 5.5], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+            const burstOpacity = interpolate(frame, [22, 25, 30], [0, 1.0, 0.5], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+            const screenFlash = interpolate(frame, [23, 25, 30], [0, 0.95, 0.2], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+
             return (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <>
+                {/* Chữ BEST Typography ở giữa */}
                 <div
                   style={{
-                    width: isVertical ? '400px' : '700px',
-                    height: isVertical ? '400px' : '700px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(168, 85, 247, 1) 0%, rgba(139, 92, 246, 0.7) 35%, rgba(99, 102, 241, 0.3) 65%, transparent 80%)',
-                    transform: `scale(${flareScale})`,
-                    filter: 'blur(30px)',
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10,
+                  }}
+                >
+                  <h1
+                    style={{
+                      fontFamily: '"Playfair Display", "Times New Roman", Georgia, serif',
+                      fontStyle: 'italic',
+                      fontWeight: 900,
+                      fontSize: isVertical ? '88px' : '124px',
+                      color: '#FFFFFF',
+                      letterSpacing: `${letterSpacing}px`,
+                      transform: `scale(${textScale})`,
+                      opacity: textOpacity,
+                      textShadow: '0 0 25px rgba(255,255,255,0.8), 0 0 60px rgba(168, 85, 247, 0.9), 0 10px 30px rgba(0,0,0,0.9)',
+                      margin: 0,
+                    }}
+                  >
+                    BEST
+                  </h1>
+                </div>
+
+                {/* Đốm sáng trắng + Vệt sáng Anamorphic + Vòng tròn quang sai Bokeh tím */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${flareX}%`,
+                    top: `${flareY}%`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 20,
+                    opacity: flareOpacity,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {/* Tia sáng ngang Anamorphic kéo dài */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: isVertical ? '480px' : '750px',
+                      height: '18px',
+                      background: 'linear-gradient(to right, transparent 0%, rgba(192, 132, 252, 0.5) 25%, #FFFFFF 50%, rgba(192, 132, 252, 0.5) 75%, transparent 100%)',
+                      filter: 'blur(2px)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: isVertical ? '320px' : '500px',
+                      height: '6px',
+                      backgroundColor: '#FFFFFF',
+                      boxShadow: '0 0 25px #FFFFFF, 0 0 50px rgba(192, 132, 252, 1)',
+                    }}
+                  />
+
+                  {/* Tâm điểm sáng trắng rực rỡ */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '140px',
+                      height: '140px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, #FFFFFF 0%, rgba(255,255,255,0.95) 30%, rgba(216, 180, 254, 0.6) 60%, transparent 80%)',
+                      filter: 'blur(4px)',
+                    }}
+                  />
+
+                  {/* Các vòng quang sai Bokeh tím / hồng tím (Purple Lens Bokeh Rings Matches Reference) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      transform: 'translateX(-90px)',
+                      width: '75px',
+                      height: '75px',
+                      borderRadius: '50%',
+                      border: '2.5px solid rgba(216, 180, 254, 0.85)',
+                      background: 'radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, transparent 75%)',
+                      boxShadow: '0 0 25px rgba(168, 85, 247, 0.6)',
+                      filter: 'blur(1px)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      transform: 'translateX(-160px)',
+                      width: '110px',
+                      height: '110px',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(192, 132, 252, 0.65)',
+                      background: 'radial-gradient(circle, rgba(147, 51, 234, 0.25) 0%, transparent 75%)',
+                      boxShadow: '0 0 30px rgba(147, 51, 234, 0.45)',
+                      filter: 'blur(1.5px)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      transform: 'translateX(-230px)',
+                      width: '140px',
+                      height: '140px',
+                      borderRadius: '50%',
+                      border: '1.5px solid rgba(168, 85, 247, 0.45)',
+                      background: 'radial-gradient(circle, rgba(126, 34, 206, 0.18) 0%, transparent 80%)',
+                      boxShadow: '0 0 35px rgba(126, 34, 206, 0.3)',
+                      filter: 'blur(2px)',
+                    }}
+                  />
+                </div>
+
+                {/* Vụ nổ quầng sáng trắng cực đại ở giữa chữ BEST (Radial White Flash Explosion) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 25,
+                    opacity: burstOpacity,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '320px',
+                      height: '320px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, #FFFFFF 0%, rgba(255,255,255,0.95) 35%, rgba(233, 213, 255, 0.7) 65%, transparent 85%)',
+                      transform: `scale(${burstScale})`,
+                      filter: 'blur(20px)',
+                    }}
+                  />
+                </div>
+
+                {/* Lớp chớp sáng trắng toàn màn hình */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: '#FFFFFF',
+                    opacity: screenFlash,
+                    pointerEvents: 'none',
+                    zIndex: 30,
                   }}
                 />
-              </div>
+              </>
             );
           })()}
-
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
-            <h1
-              style={{
-                fontFamily: '"Playfair Display", "Times New Roman", Georgia, serif',
-                fontStyle: 'italic',
-                fontWeight: 900,
-                fontSize: isVertical ? '88px' : '120px',
-                color: '#FFFFFF',
-                textShadow: '0 0 40px rgba(168, 85, 247, 0.9), 0 10px 30px rgba(0,0,0,0.9)',
-                transform: `scale(${interpolate(frame, [0, 20], [0.85, 1.0], { extrapolateRight: 'clamp' })})`,
-              }}
-            >
-              BEST
-            </h1>
-          </div>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          2. SCENE 2 (1.0s – 2.0s): Ảnh 1 Zoom Drift + BEST Menu
+          2. SCENE 2 (1.0s – 2.0s): Quầng Sáng Kéo Dần Sang Trái Rồi Tan Hết -> Để Lại BEST MENU Trên Ảnh 1
           ───────────────────────────────────────────────────────────── */}
       {frame >= f1 && frame < f2 && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -617,6 +759,51 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
               }}
             />
           )}
+
+          {/* Quầng sáng trắng kéo đi tiếp sang bên trái rồi tan dần biến mất (giây 1.0s -> 1.5s / frame f1 -> f1+15) */}
+          {(() => {
+            const s2Frame = frame - f1;
+            const flareDragX = interpolate(s2Frame, [0, 15], [30, -25], { extrapolateRight: 'clamp' });
+            const flareFade = interpolate(s2Frame, [0, 15], [0.8, 0.0], { extrapolateRight: 'clamp' });
+
+            if (flareFade <= 0.01) return null;
+
+            return (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${flareDragX}%`,
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  zIndex: 22,
+                  opacity: flareFade,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: isVertical ? '400px' : '650px',
+                    height: '14px',
+                    background: 'linear-gradient(to right, transparent, rgba(192, 132, 252, 0.5) 25%, #FFFFFF 50%, rgba(192, 132, 252, 0.5) 75%, transparent)',
+                    filter: 'blur(3px)',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #FFFFFF 0%, rgba(216, 180, 254, 0.5) 60%, transparent 80%)',
+                    filter: 'blur(8px)',
+                  }}
+                />
+              </div>
+            );
+          })()}
 
           {steamParticles.map((p) => {
             const steamY = p.yStart - (((frame - f1) * p.speed * 4) % 90);
@@ -644,7 +831,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. SCENE 3A (2.0s – 3.0s): Ảnh 2 Grayscale + Dải chéo màu
+          3. SCENE 3A (2.0s – 3.0s): Ảnh 2 Grayscale + Dải Chéo Màu (Thu Nhỏ Lại 40%)
           ───────────────────────────────────────────────────────────── */}
       {frame >= f2 && frame < f3A && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -664,6 +851,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
+            // Thu nhỏ dải chéo màu lại 40% (từ width 70% xuống 42%: -21% đến +21% ở đỉnh, -33% đến +9% ở đáy)
             return (
               <div
                 style={{
@@ -672,7 +860,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   backgroundImage: `url(${img2 || img1})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  clipPath: `polygon(${wipeProgress - 35}% 0%, ${wipeProgress + 35}% 0%, ${wipeProgress + 15}% 100%, ${wipeProgress - 55}% 100%)`,
+                  clipPath: `polygon(${wipeProgress - 21}% 0%, ${wipeProgress + 21}% 0%, ${wipeProgress + 9}% 100%, ${wipeProgress - 33}% 100%)`,
                   filter: 'contrast(1.1) brightness(1.02)',
                   boxShadow: '0 0 30px rgba(0,0,0,0.8)',
                 }}
@@ -785,7 +973,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                   transformStyle: 'preserve-3d',
                 }}
               >
-                {/* Dải 1 (Trái 1/3): clipPath cắt chuẩn xác 0 đến 33.333% của ảnh */}
                 <div
                   style={{
                     position: 'absolute',
@@ -797,7 +984,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     transform: `translateY(${col1Y}px)`,
                   }}
                 />
-                {/* Dải 2 (Giữa 1/3): clipPath cắt chuẩn xác 33.333% đến 66.666% của ảnh */}
                 <div
                   style={{
                     position: 'absolute',
@@ -809,7 +995,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     transform: `translateY(${col2Y}px)`,
                   }}
                 />
-                {/* Dải 3 (Phải 1/3): clipPath cắt chuẩn xác 66.666% đến 100% của ảnh */}
                 <div
                   style={{
                     position: 'absolute',
@@ -855,7 +1040,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          9. SCENE 7B (15.0s – 16.5s): Ảnh 7 Thu Nhỏ Đẩy Sang Phải Thành Card Giữa Trong 3 Ảnh Màu + Bên Trái Mờ Đen
+          9. SCENE 7B (15.0s – 16.5s): Ảnh 7 Thu Nhỏ Sang Phải + Nửa Trái Món Chính Rõ Nét + Nửa Phải Nền Trắng Sáng với 3 Card Neon
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7A && frame < f7B && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', backgroundColor: '#05070B' }}>
@@ -868,40 +1053,43 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
 
             return (
               <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-                <div style={{ width: '58%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ width: '50%', height: '100%', position: 'relative', overflow: 'hidden' }}>
                   <div
                     style={{
                       position: 'absolute',
                       inset: 0,
                       backgroundImage: `url(${img7 || img1})`,
                       backgroundSize: 'cover',
-                      backgroundPosition: 'left center',
-                      filter: 'blur(2px) brightness(0.35)',
+                      backgroundPosition: 'center',
+                      filter: 'contrast(1.08) brightness(1.02)',
                     }}
                   />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.95) 100%)' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 80%, rgba(0,0,0,0.4) 100%)' }} />
                 </div>
 
                 <div
                   style={{
-                    width: '42%',
+                    width: '50%',
                     height: '100%',
+                    backgroundColor: '#FFFFFF',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    gap: '14px',
-                    padding: '12px 14px',
+                    gap: '16px',
+                    padding: '24px 18px',
                     transform: `translateY(${stackShiftY}px)`,
+                    boxShadow: '-10px 0 30px rgba(0,0,0,0.3)',
+                    zIndex: 10,
                   }}
                 >
-                  <div style={{ flex: 1, position: 'relative', borderRadius: '8px', overflow: 'hidden', backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(14, 165, 233, 0.4)', mixBlendMode: 'multiply' }} />
+                  <div style={{ flex: 1, position: 'relative', borderRadius: '10px', overflow: 'hidden', backgroundImage: `url(${img6 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.4)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 160, 255, 0.45)', mixBlendMode: 'multiply' }} />
                   </div>
-                  <div style={{ flex: 1.15, position: 'relative', borderRadius: '8px', overflow: 'hidden', backgroundImage: `url(${img8 || img7 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 12px 35px rgba(0,0,0,0.95)', border: '2px solid rgba(255,255,255,0.25)' }}>
-                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(236, 72, 153, 0.35)', mixBlendMode: 'multiply' }} />
+                  <div style={{ flex: 1.15, position: 'relative', borderRadius: '10px', overflow: 'hidden', backgroundImage: `url(${img8 || img7 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 14px 35px rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.8)' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(235, 30, 130, 0.45)', mixBlendMode: 'multiply' }} />
                   </div>
-                  <div style={{ flex: 1, position: 'relative', borderRadius: '8px', overflow: 'hidden', backgroundImage: `url(${img5 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(234, 179, 8, 0.4)', mixBlendMode: 'multiply' }} />
+                  <div style={{ flex: 1, position: 'relative', borderRadius: '10px', overflow: 'hidden', backgroundImage: `url(${img5 || img1})`, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.4)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(245, 180, 0, 0.45)', mixBlendMode: 'multiply' }} />
                   </div>
                 </div>
               </div>
@@ -911,43 +1099,55 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          10. SCENE 8A (16.5s – 19.0s): Card Giữa Lật Flip Phóng Lớn + Lớp Phủ Cam Vàng Quét Từ Dưới Lên Toàn Màn Hình
-          (Matches Exact Reference Images 1 & 2)
+          10. SCENE 8A (16.5s – 19.0s): Card Giữa Lật Flip Phóng Lớn + Hiển Thị Full Bề Ngang Menu Không Xén Chữ
           ───────────────────────────────────────────────────────────── */}
       {frame >= f7B && frame < f8A && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px', backgroundColor: '#05070B' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', perspective: '1200px', backgroundColor: '#0A0806' }}>
           {(() => {
-            const s8AFrame = frame - f7B; // 0 to 75 frames (16.5s -> 19.0s)
-
-            // Zoom-in & Move from Right Card position to Fullscreen Center
+            const s8AFrame = frame - f7B;
             const expandSpring = spring({ frame: s8AFrame, fps, config: { damping: 14, stiffness: 100 } });
             const cardX = interpolate(expandSpring, [0, 1], [30, 0]);
             const cardScale = interpolate(expandSpring, [0, 1], [0.38, 1.0]);
             const flipRotateY = interpolate(expandSpring, [0, 0.5, 1], [35, 180, 0]);
-
-            // Orange/Amber Flood from Bottom to Top (giây 18.0s -> 19.0s / s8AFrame 40 -> 75)
+            const kenBurnsZoom = interpolate(s8AFrame, [20, 75], [1.0, 1.06], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
             const floodProgress = interpolate(s8AFrame, [40, 75], [100, 0], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
 
             return (
-              <>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  transform: `translateX(${cardX}%) scale(${cardScale * kenBurnsZoom}) rotateY(${flipRotateY}deg)`,
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: -20,
+                    backgroundImage: `url(${img8 || img1})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'blur(30px) brightness(0.35)',
+                    transform: 'scale(1.1)',
+                  }}
+                />
+
                 <div
                   style={{
                     position: 'absolute',
                     inset: 0,
                     backgroundImage: `url(${img8 || img1})`,
-                    backgroundSize: 'cover',
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
-                    transform: `translateX(${cardX}%) scale(${cardScale}) rotateY(${flipRotateY}deg)`,
-                    boxShadow: cardScale < 0.95 ? '0 30px 80px rgba(0,0,0,0.95)' : 'none',
-                    borderRadius: cardScale < 0.95 ? '12px' : '0px',
-                    filter: 'brightness(1.02) contrast(1.05)',
+                    filter: 'contrast(1.05) brightness(1.02) drop-shadow(0 20px 60px rgba(0,0,0,0.9))',
                   }}
                 />
 
-                {/* Orange/Amber Warm Light Flooding from Bottom to Top */}
                 <div
                   style={{
                     position: 'absolute',
@@ -968,26 +1168,38 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     pointerEvents: 'none',
                   }}
                 />
-              </>
+              </div>
             );
           })()}
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          11. SCENE 8B (19.0s – 20.5s): Phủ Cam Vàng Đầy Màn Hình + ORDER Now Typography
-          (Matches Exact Reference Image 2)
+          11. SCENE 8B (19.0s – 20.5s): Phủ Cam Vàng Đầy Màn Hình + ORDER Now Typography + Menu Rõ Nét
           ───────────────────────────────────────────────────────────── */}
       {frame >= f8A && frame < f8B && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', backgroundColor: '#0A0806' }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: -20,
+              backgroundImage: `url(${img8 || img1})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(30px) brightness(0.35)',
+              transform: 'scale(1.1)',
+            }}
+          />
+
           <div
             style={{
               position: 'absolute',
               inset: 0,
               backgroundImage: `url(${img8 || img1})`,
-              backgroundSize: 'cover',
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
-              filter: 'contrast(1.15) brightness(0.95)',
+              filter: 'contrast(1.1) brightness(0.98)',
             }}
           />
 
@@ -1025,8 +1237,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          12. SCENE 8C (20.5s – 22.0s): Tấm Ảnh Mờ Xước Cũ Trong Quyển Tập (Trang Vàng) + Quyển Sách Đóng Lại
-          (Matches Exact Reference Images 3, 4, 5)
+          12. SCENE 8C (20.5s – 22.0s): Menu Lùi Nhỏ Thành 1 Trang Trong Quyển Sách Menu Đóng Lại
           ───────────────────────────────────────────────────────────── */}
       {frame >= f8B && (
         <div
@@ -1034,7 +1245,7 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
             position: 'absolute',
             inset: 0,
             overflow: 'hidden',
-            backgroundColor: '#14110C',
+            backgroundColor: '#0D0A07',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1042,27 +1253,26 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
           }}
         >
           {(() => {
-            const s8CFrame = frame - f8B; // 0 to 45 frames (20.5s -> 22.0s)
-            const cameraScale = interpolate(s8CFrame, [0, 40], [0.92, 0.62], { extrapolateRight: 'clamp' });
-            const foldCloseAngle = interpolate(s8CFrame, [12, 38], [0, -180], {
+            const s8CFrame = frame - f8B;
+            const cameraScale = interpolate(s8CFrame, [0, 40], [0.96, 0.68], { extrapolateRight: 'clamp' });
+            const foldCloseAngle = interpolate(s8CFrame, [10, 36], [0, -180], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
             });
             const fadeOut = interpolate(s8CFrame, [36, 45], [1.0, 0.0], { extrapolateRight: 'clamp' });
 
-            const bookW = isVertical ? 420 : 640;
-            const bookH = isVertical ? 600 : 460;
+            const bookW = isVertical ? 440 : 660;
+            const bookH = isVertical ? 620 : 480;
             const pageW = bookW / 2;
 
             return (
               <div
                 style={{
-                  transform: `scale(${cameraScale}) rotateX(10deg) rotateY(-6deg)`,
+                  transform: `scale(${cameraScale}) rotateX(8deg) rotateY(-4deg)`,
                   transformStyle: 'preserve-3d',
                   opacity: fadeOut,
                 }}
               >
-                {/* 3D BOOK MOCKUP */}
                 <div
                   style={{
                     position: 'relative',
@@ -1072,7 +1282,6 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                     boxShadow: '0 40px 100px rgba(0,0,0,0.95), 0 10px 30px rgba(0,0,0,0.8)',
                   }}
                 >
-                  {/* Trang Phải (Right Page - Màu Vàng Cổ Điển Matches Image 3 & 4) */}
                   <div
                     style={{
                       position: 'absolute',
@@ -1080,65 +1289,36 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       top: 0,
                       width: `${pageW}px`,
                       height: `${bookH}px`,
-                      backgroundColor: '#EEDC9A',
-                      backgroundImage: 'radial-gradient(circle at 50% 40%, #F5E8B7 0%, #E6D28C 80%, #D4BE74 100%)',
+                      backgroundColor: '#F9F5EB',
+                      backgroundImage: 'radial-gradient(circle at 50% 40%, #FFFDF9 0%, #F5EFE1 80%, #E8DEC8 100%)',
                       borderTopRightRadius: '6px',
                       borderBottomRightRadius: '6px',
                       boxShadow: 'inset 25px 0 35px rgba(0,0,0,0.3)',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      padding: '24px 16px',
+                      justifyContent: 'center',
+                      padding: '12px',
                       overflow: 'hidden',
                     }}
                   >
-                    {/* Tấm Ảnh Mờ Xước Cũ Dạng Vệt Cọ / Brush Cutout (Matches Image 3) */}
+                    {/* Trang Menu Hiển Thị Trọn Vẹn 100% Không Bị Xén */}
                     <div
                       style={{
                         position: 'relative',
-                        width: '85%',
-                        height: '52%',
-                        marginTop: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `url(${img8 || img1})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        borderRadius: '4px',
+                        filter: 'contrast(1.05) brightness(1.0)',
                       }}
-                    >
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: -10,
-                          backgroundColor: '#1E160E',
-                          clipPath: 'polygon(15% 0%, 85% 5%, 98% 25%, 92% 70%, 75% 98%, 25% 92%, 5% 75%, 2% 20%)',
-                          boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
-                        }}
-                      />
-
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          backgroundImage: `url(${img8 || img1})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          clipPath: 'polygon(18% 2%, 82% 6%, 95% 26%, 88% 68%, 72% 96%, 28% 90%, 8% 72%, 4% 22%)',
-                          filter: 'sepia(0.35) contrast(1.15) brightness(0.95)',
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ marginTop: '16px', textAlign: 'center', width: '90%' }}>
-                      <div style={{ fontFamily: '"Playfair Display", serif', fontStyle: 'italic', fontSize: '13px', color: '#4A3B22', fontWeight: 600 }}>
-                        Special Selection
-                      </div>
-                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center', opacity: 0.45 }}>
-                        <div style={{ width: '85%', height: '3px', backgroundColor: '#5C4828', borderRadius: '2px' }} />
-                        <div style={{ width: '92%', height: '3px', backgroundColor: '#5C4828', borderRadius: '2px' }} />
-                        <div style={{ width: '70%', height: '3px', backgroundColor: '#5C4828', borderRadius: '2px' }} />
-                      </div>
-                    </div>
+                    />
                   </div>
 
+                  {/* Trang Trái Cố Định */}
                   <div
                     style={{
                       position: 'absolute',
@@ -1146,12 +1326,26 @@ export const CinematicShowcaseRenderer: React.FC<CinematicShowcaseRendererProps>
                       top: 0,
                       width: `${pageW}px`,
                       height: `${bookH}px`,
-                      backgroundColor: '#EEDC9A',
+                      backgroundColor: '#F9F5EB',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
                       boxShadow: 'inset -25px 0 35px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '24px',
                     }}
-                  />
+                  >
+                    {/* Trang bìa lót hoặc thông tin nhà hàng */}
+                    <div style={{ textAlign: 'center', opacity: 0.6 }}>
+                      <div style={{ fontFamily: '"Playfair Display", serif', fontStyle: 'italic', fontSize: '15px', color: '#3A2E1C', fontWeight: 700 }}>
+                        Chef's Special Menu
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6A583E', marginTop: '6px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                        FINE DINING
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Bìa Sách Bên Trái Gập Đóng Lại (Matches Images 4 & 5) */}
                   <div
