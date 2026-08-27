@@ -72,16 +72,16 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
   },
   product_ads_motion: {
     id: 'product_ads_motion',
-    titleVi: 'Product Commercial Billboard (Style 7)',
-    titleEn: 'Product Commercial Billboard (Style 7)',
-    descVi: 'Chuyển động 2.5D Parallax thuần Visual, SAM 2 bóc tách vật thể, RGB Glitch & Flash Blast, Match-to-Poster Outro.',
-    descEn: 'Pure visual 2.5D parallax ads, SAM 2 packshot cutout, RGB Glitch & Flash Blast, Match-to-Poster Outro.',
+    titleVi: 'Universal Product Ads Motion (Style 7)',
+    titleEn: 'Universal Product Ads Motion (Style 7)',
+    descVi: 'Đạo diễn AI (Gemini 3.7 Flash) tự động sáng tạo kịch bản, phối hợp kho 125+ Shaders GLSL, bóc tách BiRefNet & bố cục linh hoạt 1-10 ảnh.',
+    descEn: 'Universal AI Motion Director (Gemini 3.7 Flash) with 125+ GLSL Shaders, BiRefNet packshot cutout & dynamic 1-10 photos layout.',
     durationSec: 15.0,
-    videoUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/strobe_teaser_demo.mp4',
-    bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/7fcf80645e11_templates/strobe_teaser_bgm.mp3',
-    badge: '💎 2.5D ADS 15.0s',
-    usageCount: '6.5K',
-    maxImages: 3,
+    videoUrl: '',
+    bgmUrl: '',
+    badge: '💎 AI MOTION 15-60s',
+    usageCount: '18.5K',
+    maxImages: 10,
     defaultHookVi: 'SIÊU PHẨM MỚI',
     defaultHookEn: 'NEW ARRIVAL',
     defaultSolidVi: 'ORDER',
@@ -120,40 +120,40 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   defaultAspectRatio = '9:16',
   onApply,
 }) => {
-  const { isVietnamese, isDark, t } = useApp();
-  // 3-step intuitive flow: preview -> fill_assets (Step 1) -> fill_texts (Step 2)
-  const [step, setStep] = useState<'preview' | 'fill_assets' | 'fill_texts'>('preview');
-
-  // Input states
-  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>(defaultAspectRatio);
-  const [prompt, setPrompt] = useState('');
-  const [productImages, setProductImages] = useState<string[]>([]);
-  const [hookText, setHookText] = useState('');
-  const [ctaText, setCtaText] = useState('MUA NGAY');
-  const [solidText, setSolidText] = useState('STAY');
-  const [outlineText, setOutlineText] = useState('TUNED');
-  const [sloganText, setSloganText] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const { isVietnamese, t } = useApp();
 
   const template = templateId ? CAPCUT_ADS_TEMPLATES[templateId] : null;
 
+  // 3-step intuitive flow: preview -> fill_assets (Step 1) -> fill_texts (Step 2)
+  const [step, setStep] = useState<'preview' | 'fill_assets' | 'fill_texts'>('preview');
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+
+  // Form Fields
+  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>(defaultAspectRatio);
+  const [prompt, setPrompt] = useState('');
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [hookText, setHookText] = useState('');
+  const [solidText, setSolidText] = useState('');
+  const [outlineText, setOutlineText] = useState('');
+  const [sloganText, setSloganText] = useState('');
+  const [ctaText, setCtaText] = useState('ORDER NOW');
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
-    if (isOpen) {
+    if (template) {
       setStep('preview');
       setIsPlaying(true);
       setAspectRatio(defaultAspectRatio);
-      if (template) {
-        setHookText(isVietnamese ? template.defaultHookVi : template.defaultHookEn);
-        setSolidText(isVietnamese ? template.defaultSolidVi : template.defaultSolidEn);
-        setOutlineText(isVietnamese ? template.defaultOutlineVi : template.defaultOutlineEn);
-        setSloganText(isVietnamese ? template.defaultSloganVi : template.defaultSloganEn);
-        setCtaText(template.id === 'ads_cinematic_showcase' ? 'ORDER NOW' : 'MUA NGAY');
-        setProductImages([]);
-      }
+      setPrompt(isVietnamese ? template.titleVi : template.titleEn);
+      setHookText(isVietnamese ? template.defaultHookVi : template.defaultHookEn);
+      setSolidText(isVietnamese ? template.defaultSolidVi : template.defaultSolidEn);
+      setOutlineText(isVietnamese ? template.defaultOutlineVi : template.defaultOutlineEn);
+      setSloganText(isVietnamese ? template.defaultSloganVi : template.defaultSloganEn);
+      setCtaText(template.id === 'ads_cinematic_showcase' ? 'ORDER NOW' : 'DISCOVER NOW');
+      setProductImages([]);
     }
   }, [isOpen, templateId, isVietnamese, defaultAspectRatio]);
 
@@ -214,28 +214,63 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-200">
-      {/* Container Dialog */}
-      <div className="relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-md bg-[#0A0D14] border border-white/10 sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
+      {/* Container Dialog: Full screen on mobile, tall 9:16 smartphone preview card on desktop */}
+      <div className="relative w-full h-full sm:h-[88vh] sm:max-h-[850px] sm:w-[440px] sm:max-w-[95vw] bg-[#0A0D14] border border-white/10 sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
         
         {/* ─────────────────────────────────────────────────────────────
             VIEW 1: FULLSCREEN VIDEO PREVIEW PLAYER (FLOATING OVERLAY)
             ───────────────────────────────────────────────────────────── */}
         {step === 'preview' && (
-          <div className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-black">
-            {/* Full-bleed Video Background */}
-            <video
-              ref={videoRef}
-              src={template.videoUrl}
-              autoPlay
-              loop
-              playsInline
-              muted={isMuted}
-              onClick={handleTogglePlay}
-              className="absolute inset-0 w-full h-full object-cover sm:object-contain cursor-pointer"
-            />
+          <div className="relative w-full h-full flex flex-col overflow-hidden bg-black">
+            {template.videoUrl ? (
+              <>
+                {/* Ambient Blurred Video Background for Seamless Letterbox Filling */}
+                <video
+                  src={template.videoUrl}
+                  autoPlay
+                  loop
+                  playsInline
+                  muted
+                  className="absolute inset-0 w-full h-full object-cover filter blur-2xl opacity-40 scale-110 pointer-events-none"
+                />
+
+                {/* Crisp Main Video Player */}
+                <div className="absolute inset-0 z-10 flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    src={template.videoUrl}
+                    autoPlay
+                    loop
+                    playsInline
+                    muted={isMuted}
+                    onClick={handleTogglePlay}
+                    className="w-full h-full object-contain cursor-pointer"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black p-6 text-center space-y-4">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-rose-500/20 via-pink-500/15 to-amber-500/20 border border-rose-500/30 flex items-center justify-center text-3xl shadow-2xl">
+                  🎬
+                </div>
+                <div className="space-y-1.5 max-w-xs">
+                  <h4 className="text-base font-black text-white">{isVietnamese ? template.titleVi : template.titleEn}</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {t(
+                      'Mẫu quảng cáo thương hiệu 2.5D Parallax thuần Visual (60fps). Bấm nút bên dưới để tải ảnh sản phẩm và tạo video!',
+                      '2.5D Parallax pure visual brand ads (60fps). Click button below to upload product images and create video!'
+                    )}
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                  <span>✨</span>
+                  <span>{t('60fps CapCut Trilogy Animation', '60fps CapCut Trilogy Animation')}</span>
+                </div>
+              </div>
+            )}
 
             {/* Top Bar Floating on Video */}
-            <div className="relative z-30 flex items-center justify-between px-4 pt-12 sm:pt-4 pb-3 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+            <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-12 sm:pt-4 pb-3 bg-gradient-to-b from-black/85 via-black/40 to-transparent">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 shadow-lg">
                   {template.badge}
@@ -255,7 +290,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
             {/* Center Play/Pause indicator */}
             {!isPlaying && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 pointer-events-none">
+              <div
+                onClick={handleTogglePlay}
+                className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 cursor-pointer"
+              >
                 <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white text-2xl shadow-2xl">
                   ▶
                 </div>
@@ -263,7 +301,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             )}
 
             {/* Bottom Floating Info & "Use Template" CTA Bar */}
-            <div className="relative z-30 p-4 sm:p-5 pt-12 pb-6 bg-gradient-to-t from-black/95 via-black/75 to-transparent space-y-3">
+            <div className="absolute bottom-0 left-0 right-0 z-30 p-4 sm:p-5 pt-16 pb-6 bg-gradient-to-t from-black/95 via-black/80 to-transparent space-y-3">
               <div>
                 <h3 className="text-base font-black text-white flex items-center gap-2 drop-shadow-md">
                   <span>🎬</span>
@@ -372,10 +410,27 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   <label className="text-xs font-bold text-white/90">
                     {template.id === 'ads_cinematic_showcase'
                       ? t('📸 8 Ảnh Món Ăn / Menu (Tải 1-8 ảnh)', '📸 8 Food / Menu Images (Upload 1-8)')
+                      : template.id === 'product_ads_motion'
+                      ? t('📸 Tải 1 - 10 Ảnh Sản Phẩm (Tự động tách nền & phân cảnh AI)', '📸 1-10 Product Images (Auto Cutout & AI Directing)')
                       : t('Ảnh Sản Phẩm / Clip Cuối', 'Hero Media')}
                   </label>
                   <span className="text-[10px] text-cyan-300 font-semibold">{productImages.length}/{template.maxImages}</span>
                 </div>
+
+                {template.id === 'product_ads_motion' && (
+                  <div className="p-3 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-transparent border border-purple-500/30 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-purple-300 font-bold text-xs">
+                      <span>✨</span>
+                      <span>{t('Universal AI Motion Director (1 - 10 ảnh):', 'Universal AI Motion Director (1 - 10 photos):')}</span>
+                    </div>
+                    <p className="text-[11px] text-white/80 leading-relaxed">
+                      {t(
+                        'Tải từ 1 đến 10 ảnh sản phẩm. Gemini 3.7 Flash tự động phối hợp 125+ Shaders GLSL, hiệu ứng Strobe Beat & Typography Apple đè lên video độc bản.',
+                        'Upload 1 to 10 product photos. Gemini 3.7 Flash will auto-orchestrate 125+ GLSL Shaders, Strobe Beats & Apple-style Typography overlay.'
+                      )}
+                    </p>
+                  </div>
+                )}
 
                 {template.id === 'ads_cinematic_showcase' && (
                   <div className="p-3 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 rounded-xl space-y-1.5">
@@ -409,7 +464,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   ) : (
                     <>
                       <span>📂</span>
-                      <span>{t('Chọn ảnh từ thiết bị (1 hoặc nhiều ảnh)', 'Select photos (Single or Multiple)')}</span>
+                      <span>{t('Chọn ảnh từ thiết bị (1 hoặc nhiều ảnh, tối đa 10 ảnh)', 'Select photos (Single or Multiple, up to 10)')}</span>
                     </>
                   )}
                   <input
@@ -423,7 +478,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 </label>
 
                 {/* Grid slots */}
-                <div className={`grid ${template.maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 pt-1`}>
+                <div className={`grid ${template.maxImages >= 8 ? 'grid-cols-4 sm:grid-cols-5' : template.maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 pt-1`}>
                   {Array.from({ length: template.maxImages }).map((_, idx) => {
                     const img = productImages[idx];
                     return (
@@ -520,18 +575,25 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
             {/* Scrollable Content */}
             <div className="flex-1 px-4 py-4 overflow-y-auto space-y-4">
-              {/* 1. Product Name / Topic Prompt */}
+              {/* 1. Product Name / Detailed Description Prompt */}
               <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
-                  <span>🏷️</span>
-                  <span>{t('Tên Sản Phẩm / Chủ Đề', 'Product Name / Topic')}</span>
+                <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span>🏷️</span>
+                    <span>{t('Tên & Mô Tả Sản Phẩm / Ý Tưởng AI', 'Product Name & Description / AI Concept')}</span>
+                  </span>
+                  <span className="text-[10px] text-cyan-300 font-normal">{t('Kèm mô tả chi tiết', 'With description')}</span>
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={3}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder={isVietnamese ? 'Ví dụ: Ô Long Sữa Phê La / Thời Trang Hè...' : 'E.g., Oolong Milk Tea / Summer Fashion...'}
-                  className="w-full py-2.5 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
+                  placeholder={
+                    isVietnamese
+                      ? 'Ví dụ: Trà thảo mộc cao cấp chiết xuất hoa cúc tự nhiên, bao bì tinh tế sang trọng, phong cách trẻ trung hiện đại...'
+                      : 'E.g., Premium chamomile herbal tea with natural extract, elegant packaging, modern refreshing style...'
+                  }
+                  className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
                 />
               </div>
 
