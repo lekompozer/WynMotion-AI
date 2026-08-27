@@ -2364,7 +2364,7 @@ export const AiVideoTab: React.FC = () => {
                       }`}
                     >
                       <div className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>WynAI Ultra-HD (48kHz)</div>
-                      <div className="text-[10px] text-cyan-500 font-bold mt-0.5">VieNeu & Kokoro Studio</div>
+                      <div className="text-[10px] text-cyan-500 font-bold mt-0.5">WynAI Voice Studio</div>
                     </button>
                     <button
                       type="button"
@@ -2375,8 +2375,8 @@ export const AiVideoTab: React.FC = () => {
                           : isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
                       }`}
                     >
-                      <div className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Google Gemini AI</div>
-                      <div className="text-[10px] text-purple-400 font-bold mt-0.5">Expressive Multimodal</div>
+                      <div className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>WynAI Neural Voice</div>
+                      <div className="text-[10px] text-purple-400 font-bold mt-0.5">Natural Multi-dialect</div>
                     </button>
                   </div>
                 </div>
