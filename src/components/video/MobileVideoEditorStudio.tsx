@@ -147,8 +147,28 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     } catch (e) {
       console.warn('Could not load local draft:', e);
     }
+    const rawScenes = (project?.scenes && project.scenes.length > 0) ? project.scenes : (initialScenes.length > 0 ? initialScenes : []);
+    if (rawScenes.length === 0 && ((project as any)?.visual_style === 'product_ads_motion' || visualStyle === 'product_ads_motion')) {
+      const pImages = (project as any)?.product_images || [];
+      const defaultImg = pImages[0] || 'https://static.wordai.pro/ai-generated-images/wynmotion/11ca09714987_templates/cinematic_showcase_cover.png';
+      return [{
+        scene_id: 1,
+        title: project.title || 'Product Commercial Ad',
+        start_sec: 0.0,
+        end_sec: 15.0,
+        start_frame: 0,
+        duration_frames: 450,
+        duration_sec: 15.0,
+        image_url: defaultImg,
+        visual_style: 'product_ads_motion',
+        shader_name: 'GlitchMemories',
+        headline: (project as any)?.hook_text || 'SIÊU PHẨM MỚI',
+        category: (project as any)?.price_text || 'ƯU ĐÃI',
+        cta_text: (project as any)?.cta_text || 'MUA NGAY',
+      } as any];
+    }
     let curFrame = 0;
-    return initialScenes.map((s, idx) => {
+    return (rawScenes as any[]).map((s: any, idx) => {
       const durSec = getSceneDuration(s);
       const durFrames = s.duration_frames || Math.round(durSec * 30);
       const sf = s.start_frame !== undefined ? s.start_frame : curFrame;
