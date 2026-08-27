@@ -100,39 +100,43 @@ flowchart TD
 
 ---
 
-## 4. QUY CHUẨN KỊCH BẢN THEO SỐ LƯỢNG ẢNH
+## 4. QUY CHUẨN KỊCH BẢN THEO SỐ LƯỢNG ẢNH (MARVEL / FAST ADS STANDARD)
 
-### 🎬 Kịch Bản 1 Hình Ảnh (8–15s): *The Hero Impact & Deal Buster*
+### 🎬 Kịch Bản 1 Hình Ảnh (6.0s – 8.0s, Mặc định 7.0s): *The Hero Impact & Deal Buster*
 ```text
-0s ───────── 2–3s ───────────────── N ───── 1–2s ─── End
-      HOOK              DESIRE             CONVERT
-       ↓                   ↓                   ↓
-  Product Entrance     2.5D Parallax       Match-to-Poster
-   (Impact Pop)       Floating Motion     Reassembly Outro
+0s ──────── 0.5s ────── 1.4s ─────────────────── 5.8s ─────── 7.0s (End)
+   ENTRANCE     BG REVEAL      ANAMORPHIC SHEEN         MATCH-TO-POSTER
+      ↓             ↓                 ↓                        ↓
+ Object Pop    Background      Specular Light Scan     Reassembly Lock
+ (Spring Pop)  Bung Sáng       & Camera Ken Burns       to Master Poster
 ```
-- **0s – 2.5s (HOOK):** Vật thể Hero Product xuất hiện mạnh mẽ (`zoom_pop`, `from_bottom`, `scale_pop`) cùng hiệu ứng White Flash 0.3s.
-- **2.5s – (End - 1.5s) (DESIRE):** Hero Product lơ lửng 2.5D Parallax 3D (`gentle_sine`, `3d_tilt`, `energetic_bounce`) tách lớp khỏi phông nền chuyển động chậm.
-- **1.5s cuối (CONVERT / OUTRO):** Vật thể đang lơ lửng nhẹ nhàng thu phóng và khớp chính xác 100% vào vị trí ban đầu trong bức ảnh **Master Poster Gốc**.
+- **0.0s – 0.5s (NHỊP 1 - ENTRANCE):** Hero Cutout xuất hiện nhanh & dứt khoát tại trung tâm (Scale Spring Pop).
+- **0.4s – 1.4s (NHỊP 2 - BG REVEAL):** Background ảnh gốc hiển thị dần (Smooth Reveal) đúng ngay tại vị trí của vật thể (hiệu ứng xuất hiện nhân vật/sản phẩm rồi bung sáng toàn cảnh).
+- **1.4s – 5.8s (NHỊP 3 - SHEEN & FLOAT):** Vệt sáng phản quang Anamorphic Sheen quét qua bề mặt sản phẩm, camera lướt nhẹ chậm rãi (không rung lắc giật cục).
+- **5.8s – 7.0s (NHỊP 4 - OUTRO):** Tái hợp khóa khớp 100% về Master Poster gốc (Match-to-Poster Outro 1.2s).
 
 ---
 
-### 🎬 Kịch Bản 2 Hình Ảnh (12–20s): *Dynamic Duo / Match & Combo*
+### 🎬 Kịch Bản 2 Hình Ảnh (Tổng 15.0s = 7.5s + 7.5s): *Dynamic Duo / Match & Combo*
 ```text
-SCENE 1 (5–8s)       ──[Visual Transition]──>       SCENE 2 (5–8s)       ──>       OUTRO (1.5–2s)
+SCENE 1 (7.5s)       ──[Fast Flash / Whip]──>       SCENE 2 (7.5s)       ──>       OUTRO (1.2s)
 ──────────────                                      ──────────────                 ──────────────
-Product A (Motion)                                  Product B (Motion)             Master Poster
-Ambient Parallax                                    Ambient Parallax               Match-to-Poster
+Product A (Marvel Motion)                           Product B (Marvel Motion)      Master Poster
+Background Reveal                                   Background Reveal              Match-to-Poster
 ```
-- **Mối quan hệ kịch bản do Gemini 3.7 quyết định:** `A → B`, `A ↔ B`, `A → Combo`, `Before → After`, `Feature → Benefit`, `Problem → Solution`.
-- **Hiệu ứng chuyển cảnh thị giác:** `whip_pan`, `camera_zoom`, `push_left`, `swipe`, `flash`, `object_wipe`, `match_cut`, `morph`.
+- **Scene 1 (7.5s):** Product A xuất hiện $\rightarrow$ BG Reveal $\rightarrow$ Light Sheen $\rightarrow$ Chuyển cảnh Fast Flash / Whip siêu nhanh ở 0.5s cuối.
+- **Scene 2 (7.5s):** Product B xuất hiện $\rightarrow$ BG Reveal $\rightarrow$ Light Sheen $\rightarrow$ Match-to-Poster Outro 1.2s.
 
 ---
 
-### 🎬 Kịch Bản 3 Hình Ảnh (18–30s): *The Full Story & Mega Promotion*
+### 🎬 Kịch Bản 3 Hình Ảnh (Tổng 15.0s = 5.0s + 5.0s + 5.0s): *The Full Trilogy & Mega Promotion*
 ```text
-SCENE 1 (Hook + Hero)  ──>  SCENE 2 (Benefit / Vị ngon)  ──>  SCENE 3 (Mega Deal)  ──>  OUTRO (Match-to-Poster)
+SCENE 1 (5.0s)  ──[Fast Flash]──>  SCENE 2 (5.0s)  ──[Fast Flash]──>  SCENE 3 (5.0s)  ──>  OUTRO (1.2s)
+Hero Product 1                     Hero Product 2                     Hero Product 3       Match-to-Poster
 ```
-- **Phân bổ thời lượng linh hoạt dựa trên nội dung:** Ví dụ `5s + 6s + 5s + 1.5s Outro` hoặc `6s + 7s + 7s + 2.0s Outro`.
+- **Scene 1 (5.0s):** Nhịp 1 (Cutout Pop 0-0.5s) $\rightarrow$ Nhịp 2 (BG Reveal 0.4-1.4s) $\rightarrow$ Nhịp 3 (Sheen 1.4-4.5s) $\rightarrow$ Fast Flash 4.5-5.0s.
+- **Scene 2 (5.0s):** Nhịp 1 (Cutout Pop 0-0.5s) $\rightarrow$ Nhịp 2 (BG Reveal 0.4-1.4s) $\rightarrow$ Nhịp 3 (Sheen 1.4-4.5s) $\rightarrow$ Fast Flash 4.5-5.0s.
+- **Scene 3 (5.0s):** Nhịp 1 (Cutout Pop 0-0.5s) $\rightarrow$ Nhịp 2 (BG Reveal 0.4-1.4s) $\rightarrow$ Nhịp 3 (Sheen 1.4-3.8s) $\rightarrow$ Match-to-Poster Outro 3.8-5.0s.
 
 ---
 
