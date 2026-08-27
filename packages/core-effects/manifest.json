@@ -1,0 +1,913 @@
+{
+  "version": "1.0.0",
+  "total_shaders": 125,
+  "transitions": [
+    {
+      "id": "AdvancedMosaic",
+      "filename": "AdvancedMosaic.glsl",
+      "name": "AdvancedMosaic",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "BlockDissolve",
+      "filename": "BlockDissolve.glsl",
+      "name": "BlockDissolve",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "BookFlip",
+      "filename": "BookFlip.glsl",
+      "name": "BookFlip",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Bounce",
+      "filename": "Bounce.glsl",
+      "name": "Bounce",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "BowTieHorizontal",
+      "filename": "BowTieHorizontal.glsl",
+      "name": "BowTieHorizontal",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "BowTieVertical",
+      "filename": "BowTieVertical.glsl",
+      "name": "BowTieVertical",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "BowTieWithParameter",
+      "filename": "BowTieWithParameter.glsl",
+      "name": "BowTieWithParameter",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Box",
+      "filename": "Box.glsl",
+      "name": "Box",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "ButterflyWaveScrawler",
+      "filename": "ButterflyWaveScrawler.glsl",
+      "name": "ButterflyWaveScrawler",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "CircleCrop",
+      "filename": "CircleCrop.glsl",
+      "name": "CircleCrop",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "ColourDistance",
+      "filename": "ColourDistance.glsl",
+      "name": "ColourDistance",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "CrazyParametricFun",
+      "filename": "CrazyParametricFun.glsl",
+      "name": "CrazyParametricFun",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "CrossZoom",
+      "filename": "CrossZoom.glsl",
+      "name": "CrossZoom",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "DefocusBlur",
+      "filename": "DefocusBlur.glsl",
+      "name": "DefocusBlur",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Directional",
+      "filename": "Directional.glsl",
+      "name": "Directional",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "DirectionalScaled",
+      "filename": "DirectionalScaled.glsl",
+      "name": "DirectionalScaled",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "DoomScreenTransition",
+      "filename": "DoomScreenTransition.glsl",
+      "name": "DoomScreenTransition",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Dreamy",
+      "filename": "Dreamy.glsl",
+      "name": "Dreamy",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "DreamyZoom",
+      "filename": "DreamyZoom.glsl",
+      "name": "DreamyZoom",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Drop_Zone_Flicker",
+      "filename": "Drop_Zone_Flicker.glsl",
+      "name": "Drop_Zone_Flicker",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "EdgeTransition",
+      "filename": "EdgeTransition.glsl",
+      "name": "EdgeTransition",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "FilmBurn",
+      "filename": "FilmBurn.glsl",
+      "name": "FilmBurn",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Fold",
+      "filename": "Fold.glsl",
+      "name": "Fold",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "GlitchDisplace",
+      "filename": "GlitchDisplace.glsl",
+      "name": "GlitchDisplace",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "GlitchMemories",
+      "filename": "GlitchMemories.glsl",
+      "name": "GlitchMemories",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "GridFlip",
+      "filename": "GridFlip.glsl",
+      "name": "GridFlip",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "HSVfade",
+      "filename": "HSVfade.glsl",
+      "name": "HSVfade",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "HorizontalClose",
+      "filename": "HorizontalClose.glsl",
+      "name": "HorizontalClose",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "HorizontalOpen",
+      "filename": "HorizontalOpen.glsl",
+      "name": "HorizontalOpen",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "InvertedPageCurl",
+      "filename": "InvertedPageCurl.glsl",
+      "name": "InvertedPageCurl",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "LeftRight",
+      "filename": "LeftRight.glsl",
+      "name": "LeftRight",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "LinearBlur",
+      "filename": "LinearBlur.glsl",
+      "name": "LinearBlur",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Mosaic",
+      "filename": "Mosaic.glsl",
+      "name": "Mosaic",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Overexposure",
+      "filename": "Overexposure.glsl",
+      "name": "Overexposure",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "PolkaDotsCurtain",
+      "filename": "PolkaDotsCurtain.glsl",
+      "name": "PolkaDotsCurtain",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "PuzzleRight",
+      "filename": "PuzzleRight.glsl",
+      "name": "PuzzleRight",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Radial",
+      "filename": "Radial.glsl",
+      "name": "Radial",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Rectangle",
+      "filename": "Rectangle.glsl",
+      "name": "Rectangle",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "RectangleCrop",
+      "filename": "RectangleCrop.glsl",
+      "name": "RectangleCrop",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Revolve_Left",
+      "filename": "Revolve_Left.glsl",
+      "name": "Revolve_Left",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Rolls",
+      "filename": "Rolls.glsl",
+      "name": "Rolls",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "RotateScaleVanish",
+      "filename": "RotateScaleVanish.glsl",
+      "name": "RotateScaleVanish",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "SimpleFlip",
+      "filename": "SimpleFlip.glsl",
+      "name": "SimpleFlip",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "SimpleZoom",
+      "filename": "SimpleZoom.glsl",
+      "name": "SimpleZoom",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "SimpleZoomOut",
+      "filename": "SimpleZoomOut.glsl",
+      "name": "SimpleZoomOut",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Slides",
+      "filename": "Slides.glsl",
+      "name": "Slides",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "StarWipe",
+      "filename": "StarWipe.glsl",
+      "name": "StarWipe",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "StaticFade",
+      "filename": "StaticFade.glsl",
+      "name": "StaticFade",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "StereoViewer",
+      "filename": "StereoViewer.glsl",
+      "name": "StereoViewer",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "StripDatamoshGlitch",
+      "filename": "StripDatamoshGlitch.glsl",
+      "name": "StripDatamoshGlitch",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "Swirl",
+      "filename": "Swirl.glsl",
+      "name": "Swirl",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "TVStatic",
+      "filename": "TVStatic.glsl",
+      "name": "TVStatic",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "TilesWave",
+      "filename": "TilesWave.glsl",
+      "name": "TilesWave",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "TopBottom",
+      "filename": "TopBottom.glsl",
+      "name": "TopBottom",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "VerticalClose",
+      "filename": "VerticalClose.glsl",
+      "name": "VerticalClose",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "VerticalOpen",
+      "filename": "VerticalOpen.glsl",
+      "name": "VerticalOpen",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "WaterDrop",
+      "filename": "WaterDrop.glsl",
+      "name": "WaterDrop",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "ZoomInCircles",
+      "filename": "ZoomInCircles.glsl",
+      "name": "ZoomInCircles",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "ZoomLeftWipe",
+      "filename": "ZoomLeftWipe.glsl",
+      "name": "ZoomLeftWipe",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "ZoomRigthWipe",
+      "filename": "ZoomRigthWipe.glsl",
+      "name": "ZoomRigthWipe",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "angular",
+      "filename": "angular.glsl",
+      "name": "angular",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "burn",
+      "filename": "burn.glsl",
+      "name": "burn",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "burn0",
+      "filename": "burn0.glsl",
+      "name": "burn0",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "cannabisleaf",
+      "filename": "cannabisleaf.glsl",
+      "name": "cannabisleaf",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "chessboard",
+      "filename": "chessboard.glsl",
+      "name": "chessboard",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "circle",
+      "filename": "circle.glsl",
+      "name": "circle",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "circleopen",
+      "filename": "circleopen.glsl",
+      "name": "circleopen",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "colorphase",
+      "filename": "colorphase.glsl",
+      "name": "colorphase",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "coord-from-in",
+      "filename": "coord-from-in.glsl",
+      "name": "coord-from-in",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "crosshatch",
+      "filename": "crosshatch.glsl",
+      "name": "crosshatch",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "crosswarp",
+      "filename": "crosswarp.glsl",
+      "name": "crosswarp",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "cube",
+      "filename": "cube.glsl",
+      "name": "cube",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "directional-easing",
+      "filename": "directional-easing.glsl",
+      "name": "directional-easing",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "directionalwarp",
+      "filename": "directionalwarp.glsl",
+      "name": "directionalwarp",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "directionalwipe",
+      "filename": "directionalwipe.glsl",
+      "name": "directionalwipe",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "displacement",
+      "filename": "displacement.glsl",
+      "name": "displacement",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "dissolve",
+      "filename": "dissolve.glsl",
+      "name": "dissolve",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "doorway",
+      "filename": "doorway.glsl",
+      "name": "doorway",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "fade",
+      "filename": "fade.glsl",
+      "name": "fade",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "fadecolor",
+      "filename": "fadecolor.glsl",
+      "name": "fadecolor",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "fadegrayscale",
+      "filename": "fadegrayscale.glsl",
+      "name": "fadegrayscale",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "flyeye",
+      "filename": "flyeye.glsl",
+      "name": "flyeye",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "fragment",
+      "filename": "fragment.glsl",
+      "name": "fragment",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "heart",
+      "filename": "heart.glsl",
+      "name": "heart",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "hexagonalize",
+      "filename": "hexagonalize.glsl",
+      "name": "hexagonalize",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "kaleidoscope",
+      "filename": "kaleidoscope.glsl",
+      "name": "kaleidoscope",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "luma",
+      "filename": "luma.glsl",
+      "name": "luma",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "luminance_melt",
+      "filename": "luminance_melt.glsl",
+      "name": "luminance_melt",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "morph",
+      "filename": "morph.glsl",
+      "name": "morph",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "mosaic_transition",
+      "filename": "mosaic_transition.glsl",
+      "name": "mosaic_transition",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "multiply_blend",
+      "filename": "multiply_blend.glsl",
+      "name": "multiply_blend",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "old_tv_lost_signal",
+      "filename": "old_tv_lost_signal.glsl",
+      "name": "old_tv_lost_signal",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "parametric_glitch",
+      "filename": "parametric_glitch.glsl",
+      "name": "parametric_glitch",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "perlin",
+      "filename": "perlin.glsl",
+      "name": "perlin",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "pinwheel",
+      "filename": "pinwheel.glsl",
+      "name": "pinwheel",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "pixelize",
+      "filename": "pixelize.glsl",
+      "name": "pixelize",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "polar_function",
+      "filename": "polar_function.glsl",
+      "name": "polar_function",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "powerKaleido",
+      "filename": "powerKaleido.glsl",
+      "name": "powerKaleido",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "randomNoisex",
+      "filename": "randomNoisex.glsl",
+      "name": "randomNoisex",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "randomsquares",
+      "filename": "randomsquares.glsl",
+      "name": "randomsquares",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "ripple",
+      "filename": "ripple.glsl",
+      "name": "ripple",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "rotateTransition",
+      "filename": "rotateTransition.glsl",
+      "name": "rotateTransition",
+      "category": "3d_morph",
+      "default_duration": 0.5
+    },
+    {
+      "id": "rotate_scale_fade",
+      "filename": "rotate_scale_fade.glsl",
+      "name": "rotate_scale_fade",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "scale-in",
+      "filename": "scale-in.glsl",
+      "name": "scale-in",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "splitSlideInHorizontal",
+      "filename": "splitSlideInHorizontal.glsl",
+      "name": "splitSlideInHorizontal",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "splitSlideInOutHorizontal",
+      "filename": "splitSlideInOutHorizontal.glsl",
+      "name": "splitSlideInOutHorizontal",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "splitSlideInOutVertical",
+      "filename": "splitSlideInOutVertical.glsl",
+      "name": "splitSlideInOutVertical",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "splitSlideInVertical",
+      "filename": "splitSlideInVertical.glsl",
+      "name": "splitSlideInVertical",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "splitSlideOutHorizontal",
+      "filename": "splitSlideOutHorizontal.glsl",
+      "name": "splitSlideOutHorizontal",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "splitSlideOutVertical",
+      "filename": "splitSlideOutVertical.glsl",
+      "name": "splitSlideOutVertical",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "squareswire",
+      "filename": "squareswire.glsl",
+      "name": "squareswire",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "squeeze",
+      "filename": "squeeze.glsl",
+      "name": "squeeze",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "static_wipe",
+      "filename": "static_wipe.glsl",
+      "name": "static_wipe",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "swap",
+      "filename": "swap.glsl",
+      "name": "swap",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "tangentMotionBlur",
+      "filename": "tangentMotionBlur.glsl",
+      "name": "tangentMotionBlur",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    },
+    {
+      "id": "undulatingBurnOut",
+      "filename": "undulatingBurnOut.glsl",
+      "name": "undulatingBurnOut",
+      "category": "light_cinematic",
+      "default_duration": 0.5
+    },
+    {
+      "id": "wind",
+      "filename": "wind.glsl",
+      "name": "wind",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "windowblinds",
+      "filename": "windowblinds.glsl",
+      "name": "windowblinds",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "windowslice",
+      "filename": "windowslice.glsl",
+      "name": "windowslice",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "wipeDown",
+      "filename": "wipeDown.glsl",
+      "name": "wipeDown",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "wipeLeft",
+      "filename": "wipeLeft.glsl",
+      "name": "wipeLeft",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "wipeRight",
+      "filename": "wipeRight.glsl",
+      "name": "wipeRight",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "wipeUp",
+      "filename": "wipeUp.glsl",
+      "name": "wipeUp",
+      "category": "wipe_slice",
+      "default_duration": 0.5
+    },
+    {
+      "id": "x_axis_translation",
+      "filename": "x_axis_translation.glsl",
+      "name": "x_axis_translation",
+      "category": "creative",
+      "default_duration": 0.5
+    },
+    {
+      "id": "zoomInOut",
+      "filename": "zoomInOut.glsl",
+      "name": "zoomInOut",
+      "category": "motion_blur",
+      "default_duration": 0.5
+    }
+  ],
+  "filters": [
+    {
+      "id": "scanline_rgb_glitch",
+      "name": "Scanline RGB Glitch",
+      "category": "glitch",
+      "default_duration": 0.5
+    },
+    {
+      "id": "strobe_flash",
+      "name": "Strobe Flash Beat",
+      "category": "flash",
+      "default_duration": 0.8
+    },
+    {
+      "id": "specular_sheen",
+      "name": "Specular Light Sheen",
+      "category": "light",
+      "default_duration": 1.0
+    },
+    {
+      "id": "silhouette_burst",
+      "name": "Flash Blast Silhouette Burst",
+      "category": "flash",
+      "default_duration": 0.7
+    }
+  ],
+  "block_types": [
+    "kinetic_text_card",
+    "product_hero_showcase",
+    "strobe_flip_card",
+    "outro_cta_card"
+  ]
+}

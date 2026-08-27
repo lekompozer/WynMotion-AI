@@ -61,6 +61,9 @@ import { DynamicAnimationComposition } from './DynamicAnimationComposition';
 import { DynamicSceneData } from './DynamicSceneRenderer';
 import { TemplatesFlyoutTab } from './flyouts/TemplatesFlyoutTab';
 import { CaptionsFlyoutTab } from './flyouts/CaptionsFlyoutTab';
+import { EffectsFlyoutTab } from './flyouts/EffectsFlyoutTab';
+import { MultiTrackTimelineSlider } from './MultiTrackTimelineSlider';
+import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/types';
 import { CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -76,7 +79,7 @@ const BG_THEMES = [
 
 export type TextLangMode = 'vi' | 'en' | 'bilingual';
 export type TextPosition = 'top' | 'middle' | 'bottom';
-type BottomSheet = null | 'assets' | 'audio' | 'canvas' | 'templates' | 'captions';
+type BottomSheet = null | 'assets' | 'audio' | 'canvas' | 'templates' | 'captions' | 'effects';
 
 function formatTimecode(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -354,6 +357,79 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
   const totalDurationSec = durationInFrames / fps;
   const currentTimeSec = frame / fps;
+
+  const timelineTracks: TimelineTrack[] = useMemo(() => {
+    let accumTime = 0;
+    const mediaItems: TimelineItem[] = [];
+    const fxItems: TimelineItem[] = [];
+
+    scenes.forEach((s, idx) => {
+      const dur = getSceneDuration(s as any);
+      const st = accumTime;
+      const et = accumTime + dur;
+
+      mediaItems.push({
+        id: `media_${s.scene_id || idx + 1}`,
+        trackId: 'track_media',
+        trackType: 'video',
+        startTime: st,
+        endTime: et,
+        duration: dur,
+        title: s.title || `Scene ${idx + 1}`,
+        thumbnailUrl: s.image_url || (s as any).original_image_url,
+      });
+
+      const shaderName = (s as any).shader_name || (s as any).transition_out?.shader_name;
+      if (shaderName) {
+        const transDur = (s as any).transition_out?.duration || 0.5;
+        fxItems.push({
+          id: `fx_${s.scene_id || idx + 1}`,
+          trackId: 'track_fx',
+          trackType: 'transitions',
+          startTime: Math.max(0, et - transDur),
+          endTime: et,
+          duration: transDur,
+          title: shaderName,
+          shaderName: shaderName,
+        });
+      }
+
+      accumTime = et;
+    });
+
+    const captionItems: TimelineItem[] = (captionSegments || []).map((seg: any, idx) => {
+      const st = seg.start_time ?? seg.start ?? 0;
+      const et = seg.end_time ?? seg.end ?? (st + 1.5);
+      return {
+        id: `cap_${idx}`,
+        trackId: 'track_captions',
+        trackType: 'captions',
+        startTime: st,
+        endTime: et,
+        duration: Math.max(0.1, et - st),
+        title: seg.text || 'Phụ đề',
+      };
+    });
+
+    const audioItems: TimelineItem[] = [
+      {
+        id: 'bgm_main',
+        trackId: 'track_audio',
+        trackType: 'audio',
+        startTime: 0,
+        endTime: totalDurationSec,
+        duration: totalDurationSec,
+        title: '🎵 BGM & Voiceover Audio',
+      },
+    ];
+
+    return [
+      { id: 'track_media', type: 'video', name: 'Media Scenes', items: mediaItems },
+      { id: 'track_fx', type: 'transitions', name: 'FX & Transitions', items: fxItems },
+      { id: 'track_captions', type: 'captions', name: 'Auto Captions', items: captionItems },
+      { id: 'track_audio', type: 'audio', name: 'Audio Track', items: audioItems },
+    ];
+  }, [scenes, totalDurationSec, captionSegments]);
 
   // Active scene tracking based on frame
   useEffect(() => {
@@ -961,119 +1037,44 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           </div>
         </div>
 
-        {/* ── Playback Controller Row: Play on LEFT, Wide Interactive Scrubber on RIGHT ── */}
+        {/* ── Multi-Track Timeline Slider (CapCut Look & Feel with 100+ GLSL Shaders & Trimming) ── */}
+        <MultiTrackTimelineSlider
+          currentTime={currentTimeSec}
+          totalDuration={totalDurationSec}
+          isPlaying={isPlaying}
+          onPlayPause={togglePlay}
+          onSeek={(t) => seekTo(Math.round(t * 30))}
+          tracks={timelineTracks}
+          isMobile={true}
+          selectedItemId={activeScene ? `media_${activeScene.scene_id}` : null}
+          onSelectItem={(itemId) => {
+            if (itemId?.startsWith('media_')) {
+              const sId = parseInt(itemId.replace('media_', ''), 10);
+              if (!isNaN(sId)) {
+                const s = scenes.find((sc) => sc.scene_id === sId);
+                if (s && s.start_frame !== undefined) seekTo(s.start_frame);
+              }
+            }
+          }}
+          onOpenFXTab={() => setActiveBottomSheet('effects')}
+          onUpdateItemDuration={(itemId, newStart, newDur) => {
+            if (itemId.startsWith('fx_')) {
+              const sId = parseInt(itemId.replace('fx_', ''), 10);
+              updateScene(sId, {
+                transition_out: {
+                  shader_name: (scenes.find((s) => s.scene_id === sId) as any)?.shader_name || 'GlitchMemories',
+                  duration: Math.max(0.2, newDur),
+                },
+              } as any);
+              setSyncStatusMsg(`Đã cập nhật thời lượng chuyển cảnh: ${newDur.toFixed(2)}s!`);
+              setTimeout(() => setSyncStatusMsg(null), 2500);
+            }
+          }}
+        />
+
+        {/* ── Bottom Action Toolbar (6 Tabs) ── */}
         <div
-          className={`flex-shrink-0 flex items-center gap-4 px-4 py-2.5 border-t ${
-            isDark ? 'border-slate-800/80 bg-[#0F131C]' : 'border-slate-100 bg-white'
-          }`}
-        >
-          {/* Nút Play to, nổi bật bên trái */}
-          <button
-            type="button"
-            onClick={togglePlay}
-            className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/25 active:scale-90 transition-all cursor-pointer"
-          >
-            {isPlaying ? <Pause className="w-5 h-5 fill-slate-950" /> : <Play className="w-5 h-5 fill-slate-950 ml-0.5" />}
-          </button>
-
-          {/* Thanh trượt Scrubber dài mở rộng bên phải */}
-          <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
-            {/* Timecode Header */}
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-mono font-black tracking-tight ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
-                {formatTimecode(currentTimeSec)}
-              </span>
-              <span className={`text-[11px] font-mono font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {formatTimecode(totalDurationSec)}
-              </span>
-            </div>
-
-            {/* Interactive Progress Bar (Click / Drag to Seek) */}
-            <div
-              ref={scrubberTrackRef}
-              onPointerDown={handleScrubberPointerDown}
-              onPointerMove={handleScrubberPointerMove}
-              onPointerUp={handleScrubberPointerUp}
-              className="relative w-full h-4 flex items-center cursor-pointer touch-none select-none py-1 group"
-            >
-              {/* Background Track */}
-              <div className={`w-full h-2 rounded-full overflow-hidden transition-all ${isDark ? 'bg-slate-800 group-hover:bg-slate-700' : 'bg-slate-200'}`}>
-                {/* Active Progress Fill */}
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 shadow-sm"
-                  style={{
-                    width: totalDurationSec > 0 ? `${Math.min(100, Math.max(0, (currentTimeSec / totalDurationSec) * 100))}%` : '0%',
-                  }}
-                />
-              </div>
-
-              {/* Glowing Playhead Thumb Knob */}
-              <div
-                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.95)] pointer-events-none transition-transform group-hover:scale-125"
-                style={{
-                  left: totalDurationSec > 0 ? `calc(${Math.min(100, Math.max(0, (currentTimeSec / totalDurationSec) * 100))}% - 8px)` : '-8px',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Horizontal Scene Timeline Carousel ── */}
-        <div
-          className={`flex-shrink-0 border-t ${
-            isDark ? 'border-slate-800/80 bg-[#0A0D15]' : 'border-slate-100 bg-slate-50'
-          }`}
-        >
-          <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-none">
-            {scenes.map((s, idx) => {
-              const isActive = idx === activeSceneIndex;
-              const dur = getSceneDuration(s);
-              return (
-                <button
-                  key={s.scene_id || idx}
-                  type="button"
-                  onClick={() => {
-                    const sf = s.start_frame || 0;
-                    seekTo(sf);
-                  }}
-                  className={`flex-shrink-0 w-20 rounded-2xl border overflow-hidden transition-all active:scale-95 flex flex-col ${
-                    isActive
-                      ? 'border-cyan-400 shadow-md shadow-cyan-500/20 ring-2 ring-cyan-400/50'
-                      : isDark
-                      ? 'border-slate-700 bg-slate-800/60 hover:border-slate-500'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div
-                    className={`w-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}
-                    style={{ aspectRatio: '16/9' }}
-                  >
-                    {s.image_url ? (
-                      <img src={s.image_url} alt={s.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Layers className="w-3.5 h-3.5 text-slate-400" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-1 text-center">
-                    <span
-                      className={`text-[9px] font-bold block truncate ${
-                        isActive ? 'text-cyan-400' : isDark ? 'text-slate-300' : 'text-slate-700'
-                      }`}
-                    >
-                      S{idx + 1}: {Math.round(dur)}s
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Bottom Action Toolbar ── */}
-        <div
-          className={`flex-shrink-0 grid grid-cols-5 gap-1 px-2 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] ${
+          className={`flex-shrink-0 grid grid-cols-6 gap-1 px-1.5 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] ${
             isDark ? 'border-slate-800 bg-[#0F131C]' : 'border-slate-200 bg-white shadow-sm'
           }`}
         >
@@ -1081,8 +1082,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             { id: 'assets' as BottomSheet, icon: Folder, label: 'Assets', color: 'text-amber-400' },
             { id: 'audio' as BottomSheet, icon: Music, label: 'Sound', color: 'text-purple-400' },
             { id: 'canvas' as BottomSheet, icon: Sliders, label: 'Settings', color: 'text-cyan-400' },
-            { id: 'templates' as BottomSheet, icon: LayoutTemplate, label: 'FX', color: 'text-emerald-400' },
-            { id: 'captions' as BottomSheet, icon: Type, label: 'Captions', color: 'text-pink-400' },
+            { id: 'templates' as BottomSheet, icon: LayoutTemplate, label: 'Mẫu', color: 'text-emerald-400' },
+            { id: 'effects' as BottomSheet, icon: Sparkles, label: 'FX', color: 'text-pink-400' },
+            { id: 'captions' as BottomSheet, icon: Type, label: 'Captions', color: 'text-sky-400' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeBottomSheet === item.id;
@@ -1091,7 +1093,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 key={item.id}
                 type="button"
                 onClick={() => setActiveBottomSheet(isActive ? null : item.id)}
-                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all active:scale-95 min-w-0 ${
+                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-2xl transition-all active:scale-95 min-w-0 ${
                   isActive
                     ? `bg-slate-800/90 border border-slate-600 ${item.color} shadow-sm font-black`
                     : isDark
@@ -1099,8 +1101,8 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                     : 'text-slate-500 hover:text-slate-900 font-semibold'
                 }`}
               >
-                <Icon className="w-5 h-5 shrink-0" />
-                <span className="text-[10px] sm:text-xs leading-none truncate max-w-full hidden min-[340px]:block">
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="text-[10px] leading-none truncate max-w-full block">
                   {item.label}
                 </span>
               </button>
@@ -1930,6 +1932,40 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 onChangePresetStyle={setCaptionPresetStyle}
                 onTranscribeWhisper={handleTranscribeCaptions}
                 isTranscribing={isTranscribingCaptions}
+              />
+            </div>
+          )}
+
+          {/* FX TRANSITIONS & EFFECTS SHEET */}
+          {activeBottomSheet === 'effects' && (
+            <div className="space-y-4">
+              <EffectsFlyoutTab
+                onClose={() => setActiveBottomSheet(null)}
+                selectedSceneIndex={activeSceneIndex}
+                currentShaderName={
+                  activeScene ? (activeScene as any).shader_name || (activeScene as any).transition_out?.shader_name : undefined
+                }
+                onApplyTransition={(shaderName) => {
+                  if (activeScene) {
+                    updateScene(activeScene.scene_id, {
+                      transition_out: { shader_name: shaderName, duration: 0.5 },
+                      shader_name: shaderName,
+                    } as any);
+                  }
+                  setSyncStatusMsg(`Đã áp dụng chuyển cảnh: ${shaderName}!`);
+                  setTimeout(() => setSyncStatusMsg(null), 2500);
+                  setActiveBottomSheet(null);
+                }}
+                onApplyEffect={(effId) => {
+                  if (activeScene) {
+                    updateScene(activeScene.scene_id, {
+                      underlayer_effect: effId,
+                    } as any);
+                  }
+                  setSyncStatusMsg(`Đã áp dụng hiệu ứng: ${effId}!`);
+                  setTimeout(() => setSyncStatusMsg(null), 2500);
+                  setActiveBottomSheet(null);
+                }}
               />
             </div>
           )}
