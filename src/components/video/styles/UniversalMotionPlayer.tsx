@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 import { useCurrentFrame, useVideoConfig, interpolate } from '../RemotionEngine';
 import { GLSLTransitionCanvas } from './transitions/GLSLTransitionCanvas';
 
+import { RGBScanlineGlitchRenderer } from './RGBScanlineGlitchRenderer';
+
 export interface TimelineBlock {
   block_id: string;
   block_type: 'kinetic_text_card' | 'product_hero_showcase' | 'strobe_flip_card' | 'outro_cta_card';
@@ -12,6 +14,10 @@ export interface TimelineBlock {
   image_index?: number;
   motion_in?: string;
   underlayer_effect?: string;
+  typography_preset?: string;
+  solid_word?: string;
+  outline_word?: string;
+  visual_effect?: string;
   headline?: string;
   sub_caption?: string;
   strobe_text?: string;
@@ -83,14 +89,18 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
   const badgeText = activeBlock.badge_text || activeBlock.params?.badge || 'ƯU ĐÃI';
   const ctaButton = activeBlock.cta_button || activeBlock.params?.cta_button || '⚡ ĐẶT HÀNG NGAY ➔';
 
+  const solidWord = activeBlock.solid_word || (headline ? headline.split(' ')[0] : 'TRÀ');
+  const outlineWord = activeBlock.outline_word || (headline && headline.split(' ').length > 1 ? headline.split(' ').slice(1).join(' ') : 'BEJP');
+  const typoPreset = activeBlock.typography_preset || 'strobe_dual_solid_outline';
+
   // 1s / 1-2 Micro-effects oscillators
-  // 1. Sheen sweep progress across [0% .. 100%] every 1.2s
   const sheenProgress = interpolate((currentTime % 1.2) / 1.2, [0, 1], [-120, 220]);
-  // 2. Micro RGB glitch displacement every 0.8s
-  const isGlitchBeat = (currentTime % 0.8) < 0.12;
-  const glitchOffset = isGlitchBeat ? Math.sin(frame * 2.0) * 8 : 0;
-  // 3. Flash burst on block entrance
+  const isGlitchBeat = (currentTime % 0.8) < 0.15 || activeBlock.visual_effect === 'horizontal_scanline_rgb_glitch';
+  const glitchOffset = isGlitchBeat ? Math.sin(frame * 2.5) * 12 : 0;
   const entranceFlash = blockProgress < 0.1 ? interpolate(blockProgress, [0, 0.1], [0.85, 0]) : 0;
+
+  // Strobe Scale oscillation for Typography
+  const strobeScale = 1 + 0.05 * Math.sin(frame * 0.5);
 
   // Transition out calculation
   const transConfig = activeBlock.transition_out;
@@ -127,7 +137,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
-          1. KINETIC TEXT CARD BLOCK (Mở đầu / Visual Hook)
+          1. KINETIC TEXT CARD BLOCK (Mở đầu / Visual Hook - Ảnh 2 Typography)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'kinetic_text_card' && (
         <div
@@ -139,7 +149,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '0 30px',
+            padding: '0 20px',
             textAlign: 'center',
           }}
         >
@@ -147,48 +157,78 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
           <div
             style={{
               position: 'absolute',
-              width: '320px',
-              height: '320px',
+              width: '360px',
+              height: '360px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,0,85,0.45) 0%, rgba(255,230,0,0.15) 60%, transparent 80%)',
-              filter: 'blur(40px)',
+              background: 'radial-gradient(circle, rgba(255,0,85,0.5) 0%, rgba(255,230,0,0.2) 60%, transparent 80%)',
+              filter: 'blur(50px)',
               transform: `scale(${1 + 0.15 * Math.sin(frame * 0.5)})`,
               pointerEvents: 'none',
             }}
           />
 
+          {/* Strobe Dual Solid + Outline Typography (Ảnh 2) */}
           <div
             style={{
-              fontSize: '56px',
-              fontWeight: 900,
-              color: '#FFFFFF',
-              letterSpacing: '3px',
-              textTransform: 'uppercase',
-              textShadow: '0 0 35px rgba(255,255,255,0.8), 0 0 70px rgba(255,0,85,0.6)',
-              transform: `scale(${1 + 0.08 * Math.sin(frame * 0.45)}) translateX(${glitchOffset}px)`,
-              lineHeight: 1.1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: `scale(${strobeScale}) translateX(${glitchOffset}px)`,
               zIndex: 10,
             }}
           >
-            {headline || strobeText || 'SIÊU PHẨM MỚI'}
-          </div>
-
-          {subCaption && (
+            {/* Solid Upper Word */}
             <div
               style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: '#FFE600',
-                letterSpacing: '2px',
+                fontSize: '68px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '4px',
                 textTransform: 'uppercase',
-                marginTop: '16px',
-                textShadow: '0 2px 15px rgba(0,0,0,0.9)',
-                zIndex: 10,
+                lineHeight: 0.95,
+                textShadow: '0 10px 30px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.7)',
               }}
             >
-              {subCaption}
+              {solidWord}
             </div>
-          )}
+
+            {/* Hollow Outline Lower Word (Ảnh 2) */}
+            <div
+              style={{
+                fontSize: '62px',
+                fontWeight: 900,
+                WebkitTextStroke: '2.5px #FFFFFF',
+                color: 'transparent',
+                letterSpacing: '5px',
+                textTransform: 'uppercase',
+                lineHeight: 1.0,
+                marginTop: '4px',
+                textShadow: '0 10px 25px rgba(0,0,0,0.8)',
+              }}
+            >
+              {outlineWord}
+            </div>
+
+            {/* Subtitle Promo Ribbon */}
+            <div
+              style={{
+                fontSize: '14px',
+                fontWeight: 800,
+                color: '#FFE600',
+                letterSpacing: '3px',
+                textTransform: 'uppercase',
+                marginTop: '18px',
+                background: 'rgba(0,0,0,0.6)',
+                border: '1px solid rgba(255,230,0,0.4)',
+                padding: '4px 16px',
+                borderRadius: '20px',
+                textShadow: '0 2px 10px rgba(0,0,0,0.9)',
+              }}
+            >
+              {subCaption || strobeText || 'ƯU ĐÃI LỚN HÔM NAY'}
+            </div>
+          </div>
         </div>
       )}
 
@@ -232,7 +272,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. PRODUCT HERO SHOWCASE BLOCK (Thân bài Showcase 2.5D)
+          3. PRODUCT HERO SHOWCASE BLOCK (Thân bài Showcase 2.5D + Glitch Scanline Ảnh 3)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'product_hero_showcase' && (
         <div style={{ position: 'absolute', inset: 0 }}>
@@ -245,7 +285,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                 backgroundImage: `url(${prevImg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                filter: 'grayscale(90%) brightness(0.4) blur(2px)',
+                filter: 'grayscale(90%) brightness(0.35) blur(2px)',
                 transform: 'scale(1.02)',
               }}
             />
@@ -259,7 +299,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
               backgroundImage: `url(${currImg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              transform: `scale(${interpolate(blockProgress, [0, 1], [1.0, 1.05])})`,
+              transform: `scale(${interpolate(blockProgress, [0, 1], [1.0, 1.06])})`,
               filter:
                 activeBlock.underlayer_effect === 'grayscale_dim' && !prevImg
                   ? 'grayscale(50%) brightness(0.7) contrast(1.1)'
@@ -267,7 +307,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
             }}
           />
 
-          {/* Hero Cutout Push Layer with Sheen Sweep and RGB Glitch */}
+          {/* Hero Cutout Push Layer with Sheen Sweep or RGB Glitch (Ảnh 3) */}
           {currCut && (
             <div
               style={{
@@ -284,18 +324,26 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                 zIndex: 20,
               }}
             >
-              <img
-                src={currCut}
-                alt="Product Hero Object"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  filter: isGlitchBeat
-                    ? 'drop-shadow(4px 0 #FF0055) drop-shadow(-4px 0 #00E5FF) drop-shadow(0 25px 45px rgba(0,0,0,0.9))'
-                    : 'drop-shadow(0 25px 45px rgba(0,0,0,0.9))',
-                }}
-              />
+              {isGlitchBeat || activeBlock.visual_effect === 'horizontal_scanline_rgb_glitch' ? (
+                <RGBScanlineGlitchRenderer
+                  frame={frame}
+                  imageUrl={currCut}
+                  intensity={0.85}
+                  triggerGlitch={true}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              ) : (
+                <img
+                  src={currCut}
+                  alt="Product Hero Object"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    filter: 'drop-shadow(0 25px 45px rgba(0,0,0,0.9))',
+                  }}
+                />
+              )}
 
               {/* Metallic Light Sheen Sweep Overlay */}
               <div
@@ -358,7 +406,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          4. OUTRO BIG REVEAL & CTA BLOCK (Kết bài Outro CTA)
+          4. OUTRO BIG REVEAL & CTA BLOCK (Kết bài Outro CTA - Ảnh 2 Typography)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'outro_cta_card' && (
         <div style={{ position: 'absolute', inset: 0 }}>
@@ -380,7 +428,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)',
               zIndex: 30,
             }}
           />
@@ -388,9 +436,9 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
           <div
             style={{
               position: 'absolute',
-              bottom: '100px',
-              left: '30px',
-              right: '30px',
+              bottom: '80px',
+              left: '20px',
+              right: '20px',
               zIndex: 50,
               display: 'flex',
               flexDirection: 'column',
@@ -398,30 +446,57 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
               textAlign: 'center',
             }}
           >
-            {headline && (
+            {/* Outro Strobe Dual Typography (Ảnh 2) */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                transform: `scale(${strobeScale})`,
+                marginBottom: '14px',
+              }}
+            >
               <div
                 style={{
-                  fontSize: '40px',
+                  fontSize: '56px',
                   fontWeight: 900,
                   color: '#FFFFFF',
-                  letterSpacing: '2px',
+                  letterSpacing: '3px',
                   textTransform: 'uppercase',
-                  textShadow: '0 4px 25px rgba(0,0,0,0.95)',
-                  marginBottom: '12px',
+                  lineHeight: 0.95,
+                  textShadow: '0 8px 25px rgba(0,0,0,0.95)',
                 }}
               >
-                {headline}
+                {solidWord || 'TRÀ'}
               </div>
-            )}
+              <div
+                style={{
+                  fontSize: '50px',
+                  fontWeight: 900,
+                  WebkitTextStroke: '2.5px #FFFFFF',
+                  color: 'transparent',
+                  letterSpacing: '4px',
+                  textTransform: 'uppercase',
+                  lineHeight: 1.0,
+                  marginTop: '3px',
+                }}
+              >
+                {outlineWord || 'BEJP'}
+              </div>
+            </div>
 
             {subCaption && (
               <div
                 style={{
-                  fontSize: '16px',
-                  fontWeight: 700,
+                  fontSize: '14px',
+                  fontWeight: 800,
                   color: '#FFE600',
-                  letterSpacing: '1px',
-                  marginBottom: '16px',
+                  letterSpacing: '2px',
+                  marginBottom: '14px',
+                  background: 'rgba(0,0,0,0.5)',
+                  border: '1px solid rgba(255,230,0,0.35)',
+                  padding: '3px 14px',
+                  borderRadius: '16px',
                   textShadow: '0 2px 10px rgba(0,0,0,0.9)',
                 }}
               >
@@ -434,12 +509,12 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                 style={{
                   background: 'linear-gradient(135deg, #FF0055, #FFE600)',
                   color: '#000000',
-                  fontSize: '22px',
+                  fontSize: '18px',
                   fontWeight: 900,
-                  padding: '8px 26px',
+                  padding: '6px 22px',
                   borderRadius: '30px',
                   textTransform: 'uppercase',
-                  marginBottom: '16px',
+                  marginBottom: '14px',
                   boxShadow: '0 8px 25px rgba(255,0,85,0.4)',
                   transform: `scale(${1 + 0.05 * Math.sin(frame * 0.5)})`,
                 }}
@@ -452,9 +527,9 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
               style={{
                 background: '#FFFFFF',
                 color: '#000000',
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 900,
-                padding: '12px 36px',
+                padding: '10px 32px',
                 borderRadius: '40px',
                 textTransform: 'uppercase',
                 boxShadow: '0 12px 35px rgba(0,0,0,0.8), 0 0 30px rgba(255,255,255,0.7)',
@@ -482,18 +557,33 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. ACTIVE GLSL SHADER TRANSITION OVERLAY
+          5. ACTIVE GLSL SHADER TRANSITION OVERLAY (With Safe Fallback)
           ───────────────────────────────────────────────────────────── */}
       {isTransitioning && transConfig && nextImg && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 60 }}>
-          <GLSLTransitionCanvas
-            fromImage={currImg}
-            toImage={nextImg}
-            progress={transProgress}
-            glslSource={shadersMap[transConfig.shader_name] || ''}
-            width={width}
-            height={height}
-          />
+          {shadersMap[transConfig.shader_name] ? (
+            <GLSLTransitionCanvas
+              fromImage={currImg}
+              toImage={nextImg}
+              progress={transProgress}
+              glslSource={shadersMap[transConfig.shader_name] || ''}
+              width={width}
+              height={height}
+            />
+          ) : (
+            // Safe CSS Dissolve & Flash Fallback (Never white screen)
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url(${nextImg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: transProgress,
+                filter: `brightness(${1 + Math.sin(transProgress * Math.PI) * 0.4})`,
+              }}
+            />
+          )}
         </div>
       )}
     </div>
