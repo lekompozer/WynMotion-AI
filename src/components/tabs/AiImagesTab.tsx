@@ -37,13 +37,13 @@ import {
   GenerateImageResult,
 } from '@/services/imageService';
 
-type MainTab = 'generate' | 'edit' | 'inspiration';
+type MainTab = 'generate' | 'removebg' | 'edit' | 'inspiration';
 
 export const AiImagesTab: React.FC = () => {
   const { isVietnamese, isDark, setActiveTab, t } = useApp();
   const { refreshSubscription } = useWordaiAuth();
 
-  // Mode: 'generate' | 'edit' | 'inspiration'
+  // Mode: 'generate' | 'removebg' | 'edit' | 'inspiration'
   const [mainTab, setMainTab] = useState<MainTab>('generate');
 
   // ── Step 1: Generation Settings ──
@@ -65,6 +65,12 @@ export const AiImagesTab: React.FC = () => {
   );
   const [negativePrompt, setNegativePrompt] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // ── RemoveBG States ──
+  const [removeBgFile, setRemoveBgFile] = useState<File | null>(null);
+  const [removeBgPreview, setRemoveBgPreview] = useState('');
+  const [removeBgPrompt, setRemoveBgPrompt] = useState('');
+  const [removeBgAspectRatio, setRemoveBgAspectRatio] = useState<string>('original');
 
   // ── Editing States ──
   const [editImageUrl, setEditImageUrl] = useState('');
@@ -209,6 +215,33 @@ export const AiImagesTab: React.FC = () => {
     }
   };
 
+  // ── Remove Background ──
+  const handleRemoveBg = async () => {
+    if (!removeBgFile) {
+      alert(t('Vui lòng chọn ảnh cần tách nền', 'Please select an image to remove background'));
+      return;
+    }
+    setIsGenerating(true);
+    setResultImage(null);
+    try {
+      const res = await imageService.removeBackground({
+        file: removeBgFile,
+        prompt: removeBgPrompt.trim() || undefined,
+        aspect_ratio: removeBgAspectRatio === 'original' ? undefined : removeBgAspectRatio,
+      });
+      setResultImage({
+        image_url: res.cutout_url,
+        prompt_used: removeBgPrompt.trim() || 'AI RemoveBG Cutout',
+        aspect_ratio: (removeBgAspectRatio === 'original' ? '1:1' : removeBgAspectRatio) as any,
+      });
+      await refreshSubscription();
+    } catch (err: any) {
+      alert(err.message || t('Lỗi tách nền hình ảnh', 'Failed to remove background'));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // ── Download Image ──
   const handleDownload = async () => {
     if (!resultImage?.image_url) return;
@@ -251,7 +284,7 @@ export const AiImagesTab: React.FC = () => {
         <button
           type="button"
           onClick={() => setMainTab('generate')}
-          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1 transition-all ${
             mainTab === 'generate'
               ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md'
               : isDark
@@ -259,14 +292,29 @@ export const AiImagesTab: React.FC = () => {
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Palette className="w-4 h-4" />
-          <span>{t('Tạo Ảnh Mới', 'Generate')}</span>
+          <Palette className="w-3.5 h-3.5" />
+          <span>{t('Tạo Ảnh', 'Generate')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('removebg')}
+          className={`flex-1 py-2.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1 transition-all ${
+            mainTab === 'removebg'
+              ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-md'
+              : isDark
+              ? 'text-emerald-400 hover:text-white'
+              : 'text-emerald-600 hover:text-emerald-900'
+          }`}
+        >
+          <Scissors className="w-3.5 h-3.5" />
+          <span>{t('Tách Nền', 'Cutout')}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setMainTab('edit')}
-          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1 transition-all ${
             mainTab === 'edit'
               ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md'
               : isDark
@@ -274,14 +322,14 @@ export const AiImagesTab: React.FC = () => {
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Scissors className="w-4 h-4" />
-          <span>{t('Chỉnh Sửa', 'Edit')}</span>
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>{t('Sửa Ảnh', 'Edit')}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setMainTab('inspiration')}
-          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1 transition-all ${
             mainTab === 'inspiration'
               ? 'bg-gradient-to-r from-purple-400 to-violet-600 text-white shadow-md'
               : isDark
@@ -289,10 +337,170 @@ export const AiImagesTab: React.FC = () => {
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Compass className="w-4 h-4" />
+          <Compass className="w-3.5 h-3.5" />
           <span>{t('Cảm Hứng', 'Ideas')}</span>
         </button>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          MODE: REMOVE BG STUDIO
+      ═══════════════════════════════════════════════════════════ */}
+      {mainTab === 'removebg' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <div
+            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Scissors className="w-5 h-5 text-emerald-400" />
+                <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {t('AI Tách Nền / RemoveBG', 'AI Remove Background')}
+                </h3>
+              </div>
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                ✨ {t('Miễn Phí (0 Điểm)', 'Free (0 Pts)')}
+              </span>
+            </div>
+
+            <p className="text-xs opacity-75 leading-relaxed">
+              {t(
+                'Bóc tách chủ thể và sản phẩm sắc nét, giữ trọn vẹn nhãn mác, chi tiết và phông nền trong suốt 100%.',
+                'High-precision AI cutout, preserving subjects, labels, and clean transparent background.'
+              )}
+            </p>
+
+            {/* Upload Box */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400">
+                {t('Tải ảnh cần tách nền:', 'Upload Image:')}
+              </label>
+              {!removeBgPreview ? (
+                <label
+                  className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
+                    isDark
+                      ? 'bg-slate-800/40 border-slate-700 hover:border-emerald-500'
+                      : 'bg-slate-50 border-slate-300 hover:border-emerald-500'
+                  }`}
+                >
+                  <div className="flex flex-col items-center justify-center p-3 text-center">
+                    <Scissors className="w-6 h-6 text-emerald-400 mb-1" />
+                    <p className="text-xs font-bold">{t('Chọn ảnh cần tách nền', 'Select image')}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP (Max 15MB)</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setRemoveBgFile(file);
+                        const r = new FileReader();
+                        r.onloadend = () => setRemoveBgPreview(r.result as string);
+                        r.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              ) : (
+                <div className="relative rounded-2xl overflow-hidden border border-emerald-500/30 bg-black/40 p-2 flex items-center justify-center">
+                  <img
+                    src={removeBgPreview}
+                    alt="Preview"
+                    className="max-h-40 object-contain rounded-xl"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemoveBgFile(null);
+                      setRemoveBgPreview('');
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-black/70 hover:bg-red-600 text-white rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Prompt input */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400">
+                {t('Ghi chú chủ thể (Tùy chọn):', 'Subject Notes (Optional):')}
+              </label>
+              <textarea
+                value={removeBgPrompt}
+                onChange={(e) => setRemoveBgPrompt(e.target.value)}
+                rows={2}
+                placeholder={t('Ví dụ: Giữ nguyên chai dầu gội, nhãn dán...', 'e.g. Keep shampoo bottle, label...')}
+                className={`w-full px-3 py-2 rounded-xl text-xs leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400/30 transition-all ${
+                  isDark
+                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                }`}
+              />
+            </div>
+
+            {/* Aspect ratio */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400">
+                {t('Tỉ lệ khung hình:', 'Aspect Ratio:')}
+              </label>
+              <div className="grid grid-cols-6 gap-1.5 text-center">
+                {[
+                  { id: 'original', label: t('Gốc', 'Auto') },
+                  { id: '1:1', label: '1:1' },
+                  { id: '9:16', label: '9:16' },
+                  { id: '16:9', label: '16:9' },
+                  { id: '4:3', label: '4:3' },
+                  { id: '3:4', label: '3:4' },
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRemoveBgAspectRatio(r.id)}
+                    className={`py-1.5 rounded-xl text-[10px] font-bold border transition-all ${
+                      removeBgAspectRatio === r.id
+                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                        : isDark
+                        ? 'bg-slate-800 border-slate-700 text-slate-400'
+                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              type="button"
+              onClick={handleRemoveBg}
+              disabled={isGenerating || !removeBgFile}
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>
+                    {elapsedTime < 4
+                      ? t('AI đang phân tích yêu cầu...', 'AI is analyzing request...')
+                      : t('AI đang tách ảnh...', 'AI is processing cutout...')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Scissors className="w-5 h-5" />
+                  <span>{t('Tách Nền AI Ngay (Miễn Phí)', 'Remove Background (Free)')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════
           MODE 1: GENERATION STUDIO (Settings First)
@@ -770,11 +978,23 @@ export const AiImagesTab: React.FC = () => {
           </div>
 
           {/* Image Display */}
-          <div className="relative rounded-2xl overflow-hidden bg-black/40 border border-slate-700/50 group">
+          <div
+            className="relative rounded-2xl overflow-hidden bg-black/40 border border-slate-700/50 group flex items-center justify-center p-2"
+            style={{
+              backgroundImage: `
+                linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
+                linear-gradient(-45deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.06) 75%), 
+                linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.06) 75%)
+              `,
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+            }}
+          >
             <img
               src={resultImage.image_url}
               alt={resultImage.prompt_used || 'Generated Art'}
-              className="w-full h-auto max-h-[50vh] object-contain mx-auto"
+              className="w-full h-auto max-h-[50vh] object-contain mx-auto filter drop-shadow-xl"
             />
             {/* Zoom / Fullscreen Button */}
             <button

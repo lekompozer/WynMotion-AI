@@ -370,4 +370,34 @@ export const imageService = {
       file_id: data.file_id || data.id,
     };
   },
+
+  /**
+   * AI Remove Background (Cutout PNG)
+   */
+  async removeBackground(params: {
+    file: File;
+    prompt?: string;
+    aspect_ratio?: string;
+  }): Promise<{ cutout_url: string; original_url?: string; points_deducted: number }> {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('image', params.file);
+    if (params.prompt) formData.append('prompt', params.prompt);
+    if (params.aspect_ratio) formData.append('aspect_ratio', params.aspect_ratio);
+
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/edit/remove-bg`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tách nền ảnh');
+    return {
+      cutout_url: data.cutout_url,
+      original_url: data.original_url,
+      points_deducted: data.points_deducted || 3,
+    };
+  },
 };
+
