@@ -47,7 +47,7 @@ export const CAPCUT_GALLERY_TEMPLATES: CapCutGalleryItem[] = [
     category: 'Sản phẩm',
     duration: '15-60s',
     usageCount: '18,5K',
-    author: 'Gemini 3.7 Director',
+    author: 'WynAI Director',
     authorAvatar: '✨',
     coverUrl: '/templates/cover-poster-image.png',
     aspectClass: 'aspect-[4/5]',

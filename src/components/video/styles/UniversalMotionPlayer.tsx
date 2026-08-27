@@ -12,6 +12,11 @@ export interface TimelineBlock {
   image_index?: number;
   motion_in?: string;
   underlayer_effect?: string;
+  headline?: string;
+  sub_caption?: string;
+  strobe_text?: string;
+  badge_text?: string;
+  cta_button?: string;
   typography?: {
     headline?: string;
     sub_caption?: string;
@@ -30,6 +35,7 @@ export interface UniversalTimelineData {
   total_duration: number;
   aspect_ratio?: string;
   creative_concept?: string;
+  director_script?: string;
   timeline_blocks: TimelineBlock[];
 }
 
@@ -38,6 +44,7 @@ export interface UniversalMotionPlayerProps {
   productImages?: string[];
   productCutouts?: string[];
   shadersMap?: Record<string, string>; // shader_name -> GLSL code string
+  sceneStartSec?: number;
 }
 
 export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
@@ -45,11 +52,13 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
   productImages = [],
   productCutouts = [],
   shadersMap = {},
+  sceneStartSec = 0,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  const currentTime = frame / fps;
+  // Support continuous timing whether rendered in sequence or standalone
+  const currentTime = sceneStartSec + (frame / fps);
   const blocks = timeline?.timeline_blocks || [];
 
   // Find active block based on currentTime
@@ -57,7 +66,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
     return blocks.findIndex((b) => currentTime >= b.start_time && currentTime < b.end_time);
   }, [blocks, currentTime]);
 
-  const activeBlock = blocks[activeBlockIndex >= 0 ? activeBlockIndex : blocks.length - 1];
+  const activeBlock = blocks[activeBlockIndex >= 0 ? activeBlockIndex : (currentTime >= (blocks[blocks.length - 1]?.end_time || 15) ? blocks.length - 1 : 0)];
   const nextBlock = activeBlockIndex >= 0 && activeBlockIndex + 1 < blocks.length ? blocks[activeBlockIndex + 1] : null;
 
   if (!activeBlock) {
@@ -66,6 +75,22 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
 
   const blockDuration = Math.max(0.01, activeBlock.end_time - activeBlock.start_time);
   const blockProgress = Math.min(1, Math.max(0, (currentTime - activeBlock.start_time) / blockDuration));
+
+  // Extract typography fields cleanly with multi-tier fallbacks
+  const headline = activeBlock.headline || activeBlock.typography?.headline || activeBlock.params?.headline || activeBlock.params?.words?.[0] || '';
+  const subCaption = activeBlock.sub_caption || activeBlock.typography?.sub_caption || activeBlock.params?.sub_caption || activeBlock.params?.words?.[1] || '';
+  const strobeText = activeBlock.strobe_text || activeBlock.headline || activeBlock.params?.text || activeBlock.params?.words?.[0] || 'FLASH DEAL';
+  const badgeText = activeBlock.badge_text || activeBlock.params?.badge || 'ƯU ĐÃI';
+  const ctaButton = activeBlock.cta_button || activeBlock.params?.cta_button || '⚡ ĐẶT HÀNG NGAY ➔';
+
+  // 1s / 1-2 Micro-effects oscillators
+  // 1. Sheen sweep progress across [0% .. 100%] every 1.2s
+  const sheenProgress = interpolate((currentTime % 1.2) / 1.2, [0, 1], [-120, 220]);
+  // 2. Micro RGB glitch displacement every 0.8s
+  const isGlitchBeat = (currentTime % 0.8) < 0.12;
+  const glitchOffset = isGlitchBeat ? Math.sin(frame * 2.0) * 8 : 0;
+  // 3. Flash burst on block entrance
+  const entranceFlash = blockProgress < 0.1 ? interpolate(blockProgress, [0, 0.1], [0.85, 0]) : 0;
 
   // Transition out calculation
   const transConfig = activeBlock.transition_out;
@@ -88,6 +113,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
 
   const currImg = getImg(activeBlock.image_index);
   const currCut = getCut(activeBlock.image_index);
+  const prevImg = activeBlock.image_index && activeBlock.image_index > 0 ? getImg(activeBlock.image_index - 1) : null;
   const nextImg = nextBlock ? getImg(nextBlock.image_index) : '';
 
   return (
@@ -101,7 +127,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
-          1. KINETIC TEXT CARD BLOCK
+          1. KINETIC TEXT CARD BLOCK (Mở đầu / Visual Hook)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'kinetic_text_card' && (
         <div
@@ -113,37 +139,61 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '0 40px',
+            padding: '0 30px',
             textAlign: 'center',
           }}
         >
-          {activeBlock.params?.words?.map((word: string, i: number) => {
-            const wordsList = activeBlock.params?.words || [];
-            const wordProgress = Math.min(1, Math.max(0, (blockProgress * wordsList.length) - i));
-            if (wordProgress <= 0) return null;
-            return (
-              <div
-                key={i}
-                style={{
-                  fontSize: i === 0 ? '90px' : '50px',
-                  fontWeight: 900,
-                  color: i === 0 ? '#FFFFFF' : '#FF0055',
-                  letterSpacing: '4px',
-                  textTransform: 'uppercase',
-                  textShadow: '0 0 30px rgba(255,255,255,0.7)',
-                  transform: `scale(${1 + 0.05 * Math.sin(frame * 0.4)})`,
-                  marginTop: i > 0 ? '16px' : 0,
-                }}
-              >
-                {word}
-              </div>
-            );
-          })}
+          {/* Ambient Glow Aura */}
+          <div
+            style={{
+              position: 'absolute',
+              width: '320px',
+              height: '320px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255,0,85,0.45) 0%, rgba(255,230,0,0.15) 60%, transparent 80%)',
+              filter: 'blur(40px)',
+              transform: `scale(${1 + 0.15 * Math.sin(frame * 0.5)})`,
+              pointerEvents: 'none',
+            }}
+          />
+
+          <div
+            style={{
+              fontSize: '56px',
+              fontWeight: 900,
+              color: '#FFFFFF',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              textShadow: '0 0 35px rgba(255,255,255,0.8), 0 0 70px rgba(255,0,85,0.6)',
+              transform: `scale(${1 + 0.08 * Math.sin(frame * 0.45)}) translateX(${glitchOffset}px)`,
+              lineHeight: 1.1,
+              zIndex: 10,
+            }}
+          >
+            {headline || strobeText || 'SIÊU PHẨM MỚI'}
+          </div>
+
+          {subCaption && (
+            <div
+              style={{
+                fontSize: '22px',
+                fontWeight: 800,
+                color: '#FFE600',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                marginTop: '16px',
+                textShadow: '0 2px 15px rgba(0,0,0,0.9)',
+                zIndex: 10,
+              }}
+            >
+              {subCaption}
+            </div>
+          )}
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          2. STROBE FLIP CARD BLOCK (Trắng / Đen nghịch màu)
+          2. STROBE FLIP CARD BLOCK (Chớp giật Trắng/Đen nghịch màu)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'strobe_flip_card' && (
         (() => {
@@ -158,22 +208,23 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                padding: '0 40px',
+                padding: '0 30px',
                 textAlign: 'center',
               }}
             >
               <div
                 style={{
-                  fontSize: '70px',
+                  fontSize: '52px',
                   fontWeight: 900,
                   color: isWhitePhase ? '#000000' : '#FFFFFF',
-                  letterSpacing: '5px',
+                  letterSpacing: '4px',
                   textTransform: 'uppercase',
-                  lineHeight: 1.1,
-                  transform: `scale(${1 + 0.06 * Math.sin(frame * 0.6)})`,
+                  lineHeight: 1.15,
+                  transform: `scale(${1 + 0.06 * Math.sin(frame * 0.6)}) translateX(${glitchOffset}px)`,
+                  textShadow: isWhitePhase ? 'none' : '0 0 30px rgba(255,255,255,0.7)',
                 }}
               >
-                {activeBlock.params?.text || 'EXCLUSIVE'}
+                {strobeText || headline || 'MUA 1 TẶNG 1'}
               </div>
             </div>
           );
@@ -181,11 +232,26 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. PRODUCT HERO SHOWCASE BLOCK
+          3. PRODUCT HERO SHOWCASE BLOCK (Thân bài Showcase 2.5D)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'product_hero_showcase' && (
         <div style={{ position: 'absolute', inset: 0 }}>
-          {/* Background Layer */}
+          {/* Underlayer: Grayscale Dimmed Previous Object if stacking */}
+          {prevImg && activeBlock.underlayer_effect === 'grayscale_dim' && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url(${prevImg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'grayscale(90%) brightness(0.4) blur(2px)',
+                transform: 'scale(1.02)',
+              }}
+            />
+          )}
+
+          {/* Current Background Layer */}
           <div
             style={{
               position: 'absolute',
@@ -193,12 +259,15 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
               backgroundImage: `url(${currImg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              transform: `scale(${interpolate(blockProgress, [0, 1], [1.0, 1.06])})`,
-              filter: activeBlock.underlayer_effect === 'grayscale_dim' ? 'grayscale(60%) brightness(0.65) contrast(1.1)' : 'contrast(1.08) brightness(1.0)',
+              transform: `scale(${interpolate(blockProgress, [0, 1], [1.0, 1.05])})`,
+              filter:
+                activeBlock.underlayer_effect === 'grayscale_dim' && !prevImg
+                  ? 'grayscale(50%) brightness(0.7) contrast(1.1)'
+                  : 'contrast(1.08) brightness(1.0)',
             }}
           />
 
-          {/* Hero Cutout Push Layer */}
+          {/* Hero Cutout Push Layer with Sheen Sweep and RGB Glitch */}
           {currCut && (
             <div
               style={{
@@ -206,11 +275,11 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                 inset: 0,
                 transform:
                   activeBlock.motion_in === 'slide_from_right_lock_1to1'
-                    ? `translateX(${interpolate(Math.min(1, blockProgress / 0.2), [0, 1], [650, 0])}px)`
+                    ? `translateX(${interpolate(Math.min(1, blockProgress / 0.18), [0, 1], [550, 0]) + glitchOffset}px)`
                     : activeBlock.motion_in === 'slide_from_bottom_over_underlayer'
-                    ? `translateY(${interpolate(Math.min(1, blockProgress / 0.2), [0, 1], [450, 0])}px)`
-                    : 'none',
-                opacity: Math.min(1, blockProgress / 0.15),
+                    ? `translateY(${interpolate(Math.min(1, blockProgress / 0.18), [0, 1], [400, 0])}px) translateX(${glitchOffset}px)`
+                    : `scale(${interpolate(Math.min(1, blockProgress / 0.15), [0, 1], [0.85, 1.0])}) translateX(${glitchOffset}px)`,
+                opacity: Math.min(1, blockProgress / 0.12),
                 pointerEvents: 'none',
                 zIndex: 20,
               }}
@@ -222,41 +291,57 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  filter: 'drop-shadow(0 25px 45px rgba(0,0,0,0.9))',
+                  filter: isGlitchBeat
+                    ? 'drop-shadow(4px 0 #FF0055) drop-shadow(-4px 0 #00E5FF) drop-shadow(0 25px 45px rgba(0,0,0,0.9))'
+                    : 'drop-shadow(0 25px 45px rgba(0,0,0,0.9))',
+                }}
+              />
+
+              {/* Metallic Light Sheen Sweep Overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.7) 45%, rgba(255,255,255,0.9) 50%, transparent 55%)`,
+                  transform: `translateX(${sheenProgress}%)`,
+                  mixBlendMode: 'overlay',
+                  pointerEvents: 'none',
                 }}
               />
             </div>
           )}
 
-          {/* Apple Style Overlay Typography */}
-          {activeBlock.typography?.headline && (
+          {/* Apple Style Overlay Typography & Price Badge */}
+          {(headline || subCaption) && (
             <div
               style={{
                 position: 'absolute',
-                bottom: '140px',
-                left: '40px',
-                right: '40px',
+                bottom: '120px',
+                left: '30px',
+                right: '30px',
                 zIndex: 40,
                 pointerEvents: 'none',
               }}
             >
-              <div
-                style={{
-                  fontSize: '44px',
-                  fontWeight: 900,
-                  color: '#FFFFFF',
-                  letterSpacing: '2px',
-                  textTransform: 'uppercase',
-                  textShadow: '0 4px 20px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.8)',
-                  lineHeight: 1.1,
-                }}
-              >
-                {activeBlock.typography.headline}
-              </div>
-              {activeBlock.typography.sub_caption && (
+              {headline && (
                 <div
                   style={{
-                    fontSize: '24px',
+                    fontSize: '38px',
+                    fontWeight: 900,
+                    color: '#FFFFFF',
+                    letterSpacing: '2px',
+                    textTransform: 'uppercase',
+                    textShadow: '0 4px 20px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85)',
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {headline}
+                </div>
+              )}
+              {subCaption && (
+                <div
+                  style={{
+                    fontSize: '18px',
                     fontWeight: 700,
                     color: '#FFE600',
                     letterSpacing: '1px',
@@ -264,7 +349,7 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                     textShadow: '0 2px 10px rgba(0,0,0,0.9)',
                   }}
                 >
-                  {activeBlock.typography.sub_caption}
+                  {subCaption}
                 </div>
               )}
             </div>
@@ -273,10 +358,11 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          4. OUTRO BIG REVEAL & CTA BLOCK
+          4. OUTRO BIG REVEAL & CTA BLOCK (Kết bài Outro CTA)
           ───────────────────────────────────────────────────────────── */}
       {activeBlock.block_type === 'outro_cta_card' && (
         <div style={{ position: 'absolute', inset: 0 }}>
+          {/* Framed Poster Match with Smooth Zoom */}
           <div
             style={{
               position: 'absolute',
@@ -284,16 +370,27 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
               backgroundImage: `url(${currImg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              transform: `scale(${interpolate(blockProgress, [0, 1], [1.05, 1.02])})`,
-              filter: 'contrast(1.08) brightness(1.0)',
+              transform: `scale(${interpolate(blockProgress, [0, 1], [1.06, 1.01])})`,
+              filter: 'contrast(1.1) brightness(1.0)',
             }}
           />
+
+          {/* Glassmorphic Gradient Darkening Layer for Text Readability */}
           <div
             style={{
               position: 'absolute',
-              bottom: '120px',
-              left: '40px',
-              right: '40px',
+              inset: 0,
+              background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+              zIndex: 30,
+            }}
+          />
+
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '100px',
+              left: '30px',
+              right: '30px',
               zIndex: 50,
               display: 'flex',
               flexDirection: 'column',
@@ -301,51 +398,87 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
               textAlign: 'center',
             }}
           >
-            <div
-              style={{
-                fontSize: '46px',
-                fontWeight: 900,
-                color: '#FFFFFF',
-                letterSpacing: '2px',
-                textTransform: 'uppercase',
-                textShadow: '0 4px 20px rgba(0,0,0,0.95)',
-                marginBottom: '16px',
-              }}
-            >
-              {activeBlock.params?.headline || 'SPECIAL OFFER'}
-            </div>
-            {activeBlock.params?.badge && (
+            {headline && (
+              <div
+                style={{
+                  fontSize: '40px',
+                  fontWeight: 900,
+                  color: '#FFFFFF',
+                  letterSpacing: '2px',
+                  textTransform: 'uppercase',
+                  textShadow: '0 4px 25px rgba(0,0,0,0.95)',
+                  marginBottom: '12px',
+                }}
+              >
+                {headline}
+              </div>
+            )}
+
+            {subCaption && (
+              <div
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  color: '#FFE600',
+                  letterSpacing: '1px',
+                  marginBottom: '16px',
+                  textShadow: '0 2px 10px rgba(0,0,0,0.9)',
+                }}
+              >
+                {subCaption}
+              </div>
+            )}
+
+            {badgeText && (
               <div
                 style={{
                   background: 'linear-gradient(135deg, #FF0055, #FFE600)',
                   color: '#000000',
-                  fontSize: '30px',
+                  fontSize: '22px',
                   fontWeight: 900,
-                  padding: '10px 32px',
-                  borderRadius: '40px',
+                  padding: '8px 26px',
+                  borderRadius: '30px',
                   textTransform: 'uppercase',
-                  marginBottom: '18px',
+                  marginBottom: '16px',
+                  boxShadow: '0 8px 25px rgba(255,0,85,0.4)',
+                  transform: `scale(${1 + 0.05 * Math.sin(frame * 0.5)})`,
                 }}
               >
-                {activeBlock.params.badge}
+                {badgeText}
               </div>
             )}
+
             <div
               style={{
                 background: '#FFFFFF',
                 color: '#000000',
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: 900,
-                padding: '14px 44px',
-                borderRadius: '50px',
+                padding: '12px 36px',
+                borderRadius: '40px',
                 textTransform: 'uppercase',
                 boxShadow: '0 12px 35px rgba(0,0,0,0.8), 0 0 30px rgba(255,255,255,0.7)',
+                transform: `scale(${1 + 0.04 * Math.cos(frame * 0.4)})`,
               }}
             >
-              {activeBlock.params?.cta_button || '⚡ MUA NGAY ➔'}
+              {ctaButton}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Entrance Flash Burst Overlay */}
+      {entranceFlash > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: '#FFFFFF',
+            opacity: entranceFlash,
+            zIndex: 55,
+            pointerEvents: 'none',
+          }}
+        />
       )}
 
       {/* ─────────────────────────────────────────────────────────────

@@ -2176,6 +2176,18 @@ export const AiVideoTab: React.FC = () => {
             <div className={`p-1 rounded-2xl flex items-center border ${
               isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/70 border-slate-300/60'
             }`}>
+              {(visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') && (
+                <button
+                  type="button"
+                  onClick={() => setAudioMode('bgm' as any)}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                    (audioMode as any) === 'bgm' ? 'bg-gradient-to-r from-amber-400 to-rose-500 text-slate-950 shadow-md' : 'text-slate-400'
+                  }`}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>{t('Nhạc Beat Ads', 'Ad Beat Tracks')}</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setAudioMode('agent')}
@@ -2194,9 +2206,56 @@ export const AiVideoTab: React.FC = () => {
                 }`}
               >
                 <Upload className="h-4 w-4" />
-                <span>{t('Tải Lên Audio Có Sẵn', 'Upload Audio File')}</span>
+                <span>{t('Tải Lên Audio', 'Upload Audio')}</span>
               </button>
             </div>
+
+            {/* BGM Preset Selection for Ads */}
+            {((audioMode as any) === 'bgm' && (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase')) && (
+              <div className="space-y-3 p-4 rounded-3xl border border-amber-500/30 bg-amber-950/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎶</span>
+                    <span>{t('Chọn Nhạc Beat Thịnh Hành (AI Beat-Sync):', 'Select Trending Beat (AI Beat-Sync):')}</span>
+                  </label>
+                  {audioUrl && (
+                    <span className="text-[10px] font-bold text-emerald-400">✓ {t('Đã chọn', 'Selected')}</span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {[
+                    { id: 'chill_lofi', title: 'Phê La Chill Hop Beat', url: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/bgm_chill.mp3', duration: 15, tag: 'Thư giãn · Cafe', icon: '🥤' },
+                    { id: 'viral_phonk', title: 'TikTok Viral Phonk Drop', url: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/bgm_phonk.mp3', duration: 15, tag: 'Sôi động · Hot Trend', icon: '⚡' },
+                    { id: 'luxury_electro', title: 'Luxury Brand Electronic', url: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/bgm_luxury.mp3', duration: 15, tag: 'Sang trọng · Apple', icon: '✨' },
+                    { id: 'cinematic_drop', title: 'Cinematic Commercial Beat', url: 'https://static.wordai.pro/ai-generated-images/wynmotion/ddd110f2dc60_templates/bgm_cinematic.mp3', duration: 15, tag: 'Bom tấn · Đột phá', icon: '🎬' },
+                  ].map((bgm) => (
+                    <div
+                      key={bgm.id}
+                      onClick={() => {
+                        setAudioUrl(bgm.url);
+                        setAudioDurationSec(bgm.duration);
+                        setScriptText(prompt || bgm.title);
+                      }}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                        audioUrl === bgm.url
+                          ? 'border-amber-400 bg-amber-500/20 shadow-md ring-1 ring-amber-400/50'
+                          : isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">{bgm.icon}</span>
+                        <div>
+                          <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{bgm.title}</p>
+                          <p className="text-[10px] text-amber-500 font-semibold">{bgm.tag} · {bgm.duration}s</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-400 font-bold">▶</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {audioMode === 'agent' && visualStyle === 'dialogue_scene' ? (
               /* DUAL VOICE CARDS FOR DIALOGUE SCENE */
@@ -2742,6 +2801,33 @@ export const AiVideoTab: React.FC = () => {
                   >
                     <div className="text-sm font-black">{r.label}</div>
                     <div className="text-[10px] text-slate-400 mt-0.5">{r.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Duration Selector */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>{t('2. Thời Lượng Video Ads / Animation', '2. Video Duration')}</span>
+                </label>
+                <span className="text-xs font-bold text-amber-400">{audioDurationSec}s</span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {[10, 15, 20, 30, 60].map((dur) => (
+                  <button
+                    key={dur}
+                    type="button"
+                    onClick={() => setAudioDurationSec(dur)}
+                    className={`p-2.5 rounded-2xl border text-center transition-all ${
+                      audioDurationSec === dur
+                        ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400 font-black'
+                        : isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600 shadow-sm'
+                    }`}
+                  >
+                    <div className="text-xs font-black">{dur === 10 ? '⚡ 10s' : dur === 15 ? '🔥 15s' : dur === 20 ? '✨ 20s' : dur === 30 ? '💼 30s' : '💎 60s'}</div>
                   </button>
                 ))}
               </div>

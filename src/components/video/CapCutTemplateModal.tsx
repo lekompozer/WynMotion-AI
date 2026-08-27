@@ -74,12 +74,12 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     id: 'product_ads_motion',
     titleVi: 'Universal Product Ads Motion (Style 7)',
     titleEn: 'Universal Product Ads Motion (Style 7)',
-    descVi: 'Đạo diễn AI (Gemini 3.7 Flash) tự động sáng tạo kịch bản, phối hợp kho 125+ Shaders GLSL, bóc tách BiRefNet & bố cục linh hoạt 1-10 ảnh.',
-    descEn: 'Universal AI Motion Director (Gemini 3.7 Flash) with 125+ GLSL Shaders, BiRefNet packshot cutout & dynamic 1-10 photos layout.',
+    descVi: 'Đạo diễn chuyển động AI tự động sáng tạo kịch bản, phối hợp kho 125+ Shaders GLSL, tách nền sản phẩm chuẩn studio & bố cục linh hoạt 1-10 ảnh.',
+    descEn: 'Universal AI Motion Director with 125+ GLSL Shaders, studio packshot cutout & dynamic 1-10 photos layout.',
     durationSec: 15.0,
     videoUrl: '',
     bgmUrl: '',
-    badge: '💎 AI MOTION 15-60s',
+    badge: '💎 AI MOTION 10-60s',
     usageCount: '18.5K',
     maxImages: 10,
     defaultHookVi: 'SIÊU PHẨM MỚI',
@@ -88,8 +88,8 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     defaultSolidEn: 'ORDER',
     defaultOutlineVi: 'NOW',
     defaultOutlineEn: 'NOW',
-    defaultSloganVi: '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY',
-    defaultSloganEn: '⚡ DISCOVER THE BEST - ORDER NOW',
+    defaultSloganVi: '⚡ ĐẶT HÀNG NGAY - SỐ LƯỢNG CÓ HẠN',
+    defaultSloganEn: '⚡ LIMITED TIME OFFER - ORDER NOW',
   },
 };
 
@@ -120,7 +120,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   defaultAspectRatio = '9:16',
   onApply,
 }) => {
-  const { isVietnamese, t } = useApp();
+  const { isVietnamese } = useApp();
+  const t = (vi: string, en: string) => (isVietnamese ? vi : en);
 
   const template = templateId ? CAPCUT_ADS_TEMPLATES[templateId] : null;
 
@@ -139,6 +140,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const [outlineText, setOutlineText] = useState('');
   const [sloganText, setSloganText] = useState('');
   const [ctaText, setCtaText] = useState('ORDER NOW');
+  const [selectedDuration, setSelectedDuration] = useState<number>(15);
+  const [customAudioUrl, setCustomAudioUrl] = useState<string>('');
+  const [customAudioName, setCustomAudioName] = useState<string>('');
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -154,6 +159,9 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       setSloganText(isVietnamese ? template.defaultSloganVi : template.defaultSloganEn);
       setCtaText(template.id === 'ads_cinematic_showcase' ? 'ORDER NOW' : 'DISCOVER NOW');
       setProductImages([]);
+      setSelectedDuration(template.durationSec || 15);
+      setCustomAudioUrl(template.bgmUrl || '');
+      setCustomAudioName('');
     }
   }, [isOpen, templateId, isVietnamese, defaultAspectRatio]);
 
@@ -167,6 +175,34 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
         videoRef.current.play();
       }
       setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAudio(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await wynmotionService.uploadMedia(formData);
+      if (res?.url) {
+        setCustomAudioUrl(res.url);
+        setCustomAudioName(file.name);
+        try {
+          const audio = new Audio();
+          audio.src = res.url;
+          audio.onloadedmetadata = () => {
+            const dur = Math.min(60, Math.max(5, Math.round(audio.duration)));
+            setSelectedDuration(dur);
+          };
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.error('Audio upload failed:', err);
+    } finally {
+      setIsUploadingAudio(false);
     }
   };
 
@@ -200,8 +236,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       templateId: template.id,
       prompt: finalPrompt,
       productImages,
-      bgmUrl: template.bgmUrl,
-      durationSec: template.durationSec,
+      bgmUrl: customAudioUrl || template.bgmUrl,
+      durationSec: selectedDuration || template.durationSec,
       aspectRatio,
       hookText: hookText.trim() || undefined,
       ctaText: ctaText.trim() || undefined,
@@ -404,6 +440,74 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 </div>
               </div>
 
+              {/* Video Duration Selector */}
+              <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                  <span>⏱️ {t('Thời Lượng Video Ads', 'Video Ad Duration')}</span>
+                  <span className="text-[10px] text-cyan-300 font-bold">{selectedDuration}s</span>
+                </label>
+                <div className="grid grid-cols-5 gap-1.5 pt-1">
+                  {[10, 15, 20, 30, 60].map((dur) => (
+                    <button
+                      key={dur}
+                      type="button"
+                      onClick={() => setSelectedDuration(dur)}
+                      className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                        selectedDuration === dur
+                          ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md'
+                          : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      {dur === 10 ? '⚡ 10s' : dur === 15 ? '🔥 15s' : dur === 20 ? '✨ 20s' : dur === 30 ? '💼 30s' : '💎 60s'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Audio Track / Music Beat Selector */}
+              <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
+                    <span>🎵</span>
+                    <span>{t('Nhạc Nền / Audio (AI Phân Tích Beat-Sync)', 'Audio Track (AI Beat-Sync)')}</span>
+                  </label>
+                  {customAudioUrl && (
+                    <span className="text-[10px] text-emerald-400 font-bold">✓ Đã nạp ({selectedDuration}s)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomAudioUrl(template.bgmUrl);
+                      setCustomAudioName(t('Nhạc Mẫu Chuẩn (Beat Mặc Định)', 'Default Template Beat'));
+                      setSelectedDuration(15);
+                    }}
+                    className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all truncate border cursor-pointer ${
+                      customAudioUrl === template.bgmUrl
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                        : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+                    }`}
+                  >
+                    🎵 {t('Nhạc Mẫu (15s Beat)', 'Default Beat')}
+                  </button>
+                  <label className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center border border-dashed border-white/20 bg-white/5 hover:border-cyan-400 hover:text-cyan-300 cursor-pointer truncate">
+                    <span>📁 {isUploadingAudio ? t('Đang tải...', 'Uploading...') : t('Tải Audio Riêng', 'Upload Audio')}</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleAudioUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {customAudioName && (
+                  <p className="text-[11px] text-cyan-300 truncate">
+                    🎶 {customAudioName}
+                  </p>
+                )}
+              </div>
+
               {/* Product Images Slot */}
               <div className="space-y-2.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between">
@@ -425,8 +529,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     </div>
                     <p className="text-[11px] text-white/80 leading-relaxed">
                       {t(
-                        'Tải từ 1 đến 10 ảnh sản phẩm. Gemini 3.7 Flash tự động phối hợp 125+ Shaders GLSL, hiệu ứng Strobe Beat & Typography Apple đè lên video độc bản.',
-                        'Upload 1 to 10 product photos. Gemini 3.7 Flash will auto-orchestrate 125+ GLSL Shaders, Strobe Beats & Apple-style Typography overlay.'
+                        'Tải từ 1 đến 10 ảnh sản phẩm. AI tự động sáng tạo kịch bản, 125+ Shaders GLSL, hiệu ứng Strobe Beat & Typography chữ trắng đè lên video độc bản.',
+                        'Upload 1 to 10 product photos. AI will auto-orchestrate 125+ GLSL Shaders, Strobe Beats & typography overlay.'
                       )}
                     </p>
                   </div>
