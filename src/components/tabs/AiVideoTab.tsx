@@ -905,12 +905,12 @@ export const AiVideoTab: React.FC = () => {
       if (res && res.project) {
         let finalProject = res.project;
 
-        // ⏱️ Background Silent Polling up to 10 minutes (600s), pinging every 8-10s if status is processing/pending
+        // ⏱️ Background Silent Polling up to 10 minutes (600s), pinging every 1.5s if status is processing/pending
         if (finalProject && (finalProject.status === 'processing' || finalProject.status === 'queued' || finalProject.status === 'pending')) {
-          setCreationStatusMessage(isVietnamese ? 'Đang tạo hình ảnh & bóc tách vật thể SAM 2...' : 'Generating visuals & SAM 2 segmentation...');
+          setCreationStatusMessage(isVietnamese ? 'AI đang phân tích yêu cầu...' : 'AI is analyzing request...');
           const startTime = Date.now();
           const MAX_POLL_MS = 10 * 60 * 1000;
-          const POLL_INTERVAL_MS = 8000;
+          const POLL_INTERVAL_MS = 1500;
 
           while (Date.now() - startTime < MAX_POLL_MS) {
             await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
