@@ -2010,18 +2010,36 @@ function StudioInner({
                     : undefined
                 }
                 onApplyTransition={(shaderName) => {
-                  const st = snapToGrid(currentSec, 0.05);
+                  let targetIdx = typeof activeSceneId === 'number' ? activeSceneId - 1 : -1;
+                  if (targetIdx < 0 || targetIdx >= scenes.length) {
+                    targetIdx = scenes.findIndex((s) => {
+                      const sSt = s.start_sec !== undefined ? s.start_sec : (s.start_frame || 0) / fps;
+                      const sDur = s.duration_sec !== undefined ? s.duration_sec : (s.duration_frames || 150) / fps;
+                      return currentSec >= sSt && currentSec <= sSt + sDur;
+                    });
+                    if (targetIdx < 0) targetIdx = 0;
+                  }
+
+                  const targetScene = scenes[targetIdx] || scenes[0];
+                  const sStart = targetScene.start_sec !== undefined ? targetScene.start_sec : (targetScene.start_frame || 0) / fps;
+                  const sDur = targetScene.duration_sec !== undefined ? targetScene.duration_sec : (targetScene.duration_frames || 150) / fps;
+                  const boundarySec = sStart + sDur;
+
                   const dur = 0.8;
+                  // Center the transition right on the boundary between Scene i and Scene i+1
+                  const st = Math.max(0, snapToGrid(boundarySec - dur / 2, 0.05));
                   const et = Math.min(totalDurationSec, st + dur);
 
                   const hasOverlapTrack0 = timelineEffects.some(
                     (fx) => fx.trackIndex === 0 && ((st >= fx.startTime && st < fx.endTime) || (et > fx.startTime && et <= fx.endTime))
                   );
 
+                  const nextIdx = targetIdx + 1 < scenes.length ? targetIdx + 1 : targetIdx;
+
                   const newFx: CustomTimelineEffect = {
                     id: `fx_trans_${Date.now()}`,
                     effectId: shaderName,
-                    name: shaderName,
+                    name: `${shaderName} (S${targetIdx + 1} ➔ S${nextIdx + 1})`,
                     shaderName: shaderName,
                     trackIndex: hasOverlapTrack0 ? 1 : 0,
                     startTime: st,
@@ -2031,30 +2049,21 @@ function StudioInner({
 
                   setTimelineEffects((prev) => [...prev, newFx]);
 
-                  setScenes((prev) => {
-                    let targetIdx = typeof activeSceneId === 'number' ? activeSceneId - 1 : -1;
-                    if (targetIdx < 0 || targetIdx >= prev.length) {
-                      let accum = 0;
-                      targetIdx = prev.findIndex((s) => {
-                        const dur = (s.duration_frames || 150) / fps;
-                        const match = currentSec >= accum && currentSec <= accum + dur;
-                        accum += dur;
-                        return match;
-                      });
-                      if (targetIdx < 0) targetIdx = 0;
-                    }
-                    return prev.map((s, idx) => {
+                  setScenes((prev) =>
+                    prev.map((s, idx) => {
                       if (idx === targetIdx) {
                         return {
                           ...s,
-                          transition_out: { shader_name: shaderName, duration: 0.8 },
+                          transition_out: { shader_name: shaderName, duration: dur },
                           shader_name: shaderName,
                         };
                       }
                       return s;
-                    });
-                  });
-                  setSyncStatusMsg(`Đã thêm chuyển cảnh GLSL: ${shaderName} tại ${st.toFixed(1)}s (Track ${hasOverlapTrack0 ? 2 : 1})!`);
+                    })
+                  );
+
+                  seekTo(Math.round(Math.max(0, st - 0.2) * fps));
+                  setSyncStatusMsg(`Đã áp dụng chuyển cảnh ${shaderName} giữa Scene ${targetIdx + 1} và Scene ${nextIdx + 1}!`);
                   setTimeout(() => setSyncStatusMsg(null), 3000);
                 }}
                 onApplyEffect={(effId) => {

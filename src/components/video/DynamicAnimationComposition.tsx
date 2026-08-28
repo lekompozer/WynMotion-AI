@@ -98,14 +98,23 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
       {/* 125 GLSL Active WebGL Transitions Overlay */}
       {activeTransitions.map((fx) => {
         const transProg = Math.min(1.0, Math.max(0, (currentTime - fx.startTime) / Math.max(0.1, fx.duration)));
-        const currSceneIdx = scenes.findIndex((s) => {
+        const midTime = fx.startTime + fx.duration / 2;
+        let currSceneIdx = scenes.findIndex((s) => {
           const sSt = s.start_sec ?? ((s.start_frame || 0) / (fps || 30));
           const sDur = s.duration_sec ?? ((s.duration_frames || 150) / (fps || 30));
-          return fx.startTime >= sSt - 0.3 && fx.startTime <= sSt + sDur + 0.3;
+          return midTime >= sSt && midTime <= sSt + sDur + 0.1;
         });
+        if (currSceneIdx < 0) {
+          currSceneIdx = scenes.findIndex((s) => {
+            const sSt = s.start_sec ?? ((s.start_frame || 0) / (fps || 30));
+            const sDur = s.duration_sec ?? ((s.duration_frames || 150) / (fps || 30));
+            return fx.startTime <= sSt + sDur && fx.startTime + fx.duration >= sSt;
+          });
+        }
         const fromScene = scenes[currSceneIdx >= 0 ? currSceneIdx : 0];
-        const toScene =
-          scenes[currSceneIdx >= 0 && currSceneIdx + 1 < scenes.length ? currSceneIdx + 1 : currSceneIdx >= 0 ? currSceneIdx : 0];
+        const nextIdx =
+          currSceneIdx >= 0 && currSceneIdx + 1 < scenes.length ? currSceneIdx + 1 : currSceneIdx >= 0 ? currSceneIdx : 0;
+        const toScene = scenes[nextIdx];
         const fromImg = fromScene?.image_url || fromScene?.original_image_url || '/png-fox.png';
         const toImg = toScene?.image_url || toScene?.original_image_url || fromImg;
         const shaderName = fx.shaderName || fx.effectId || 'GlitchMemories';
@@ -114,7 +123,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
           'vec4 transition(vec2 uv) { return mix(getFromColor(uv), getToColor(uv), progress); }';
 
         return (
-          <div key={fx.id} className="absolute inset-0 w-full h-full z-30 pointer-events-none">
+          <div key={fx.id} className="absolute inset-0 w-full h-full z-40 pointer-events-none">
             <GLSLTransitionCanvas
               fromImage={fromImg}
               toImage={toImg}
