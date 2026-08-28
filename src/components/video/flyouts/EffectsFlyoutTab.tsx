@@ -5,6 +5,7 @@ import { X, Sparkles, Wand2, Search, Zap, Film, Layers, Check, Play, Flame, Refr
 import MANIFEST from '../../../../packages/core-effects/manifest.json';
 import { FULL_CORE_FILTERS, EFFECT_CATEGORIES } from '../../../../packages/core-effects/effectShaders';
 import { FoxLivePreviewBox } from './FoxLivePreviewBox';
+import { EffectCardThumbnail } from './EffectCardThumbnail';
 
 export interface EffectsFlyoutTabProps {
   onClose: () => void;
@@ -178,82 +179,35 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             ))}
           </div>
 
-          {/* Grid of 125 Shaders */}
-          <div className="grid grid-cols-2 gap-2 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          {/* Grid of 125 Shaders with Animated Thumbnails */}
+          <div className="grid grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
             {transitions.map((item) => {
               const isSelected = previewItem.name === item.id;
               return (
-                <div
+                <EffectCardThumbnail
                   key={item.id}
-                  onClick={() => {
+                  id={item.id}
+                  name={item.name}
+                  category={item.category}
+                  type="transition"
+                  duration={item.default_duration}
+                  isSelected={isSelected}
+                  onPreview={() => {
                     setPreviewItem({
                       type: 'transition',
                       name: item.id,
                       category: item.category,
                     });
                   }}
-                  className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group ${
-                    isSelected
-                      ? 'bg-purple-950/60 border-cyan-400 ring-2 ring-cyan-400/80 shadow-lg shadow-cyan-500/20'
-                      : 'bg-[#141724] border-[#252B3E] hover:border-purple-500/50 hover:bg-[#1A1F30]'
-                  }`}
-                  title="Bấm để thử nghiệm trực tiếp trên con cáo"
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="text-[10px] uppercase font-black tracking-wider text-purple-400 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/40">
-                      {item.category}
-                    </span>
-                    {isSelected && (
-                      <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-xs">
-                        🦊 Đang thử
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="my-2">
-                    <h4 className={`text-xs font-black transition-colors truncate ${isSelected ? 'text-cyan-300' : 'text-white group-hover:text-purple-300'}`}>
-                      {item.name}
-                    </h4>
-                    <p className="text-[10px] text-slate-400">Thời lượng: {item.default_duration}s</p>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewItem({
-                          type: 'transition',
-                          name: item.id,
-                          category: item.category,
-                        });
-                      }}
-                      className={`flex-1 py-1 text-[10px] font-black rounded-lg transition-all border ${
-                        isSelected
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                          : 'bg-[#181B28] text-slate-400 hover:text-white border-[#2A3045]'
-                      }`}
-                      title="Chạy hiệu ứng này trên con cáo"
-                    >
-                      🦊 Thử trên Cáo
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewItem({
-                          type: 'transition',
-                          name: item.id,
-                          category: item.category,
-                        });
-                        onApplyTransition(item.id);
-                      }}
-                      className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white rounded-lg text-[10px] font-black transition-all shadow-sm active:scale-95"
-                      title="Áp dụng chuyển cảnh này vào Timeline Video"
-                    >
-                      + Áp dụng
-                    </button>
-                  </div>
-                </div>
+                  onApply={() => {
+                    setPreviewItem({
+                      type: 'transition',
+                      name: item.id,
+                      category: item.category,
+                    });
+                    onApplyTransition(item.id);
+                  }}
+                />
               );
             })}
           </div>
@@ -285,7 +239,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                 onClick={() => setSelectedEffectCategory(cat.id)}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-lg whitespace-nowrap transition-all ${
                   selectedEffectCategory === cat.id
-                    ? 'bg-pink-600 text-white'
+                    ? 'bg-pink-600 text-white shadow-sm'
                     : 'bg-[#181B28] text-slate-400 hover:text-white border border-[#252B3E]'
                 }`}
               >
@@ -294,83 +248,37 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             ))}
           </div>
 
-          {/* List of 40 Filters */}
-          <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          {/* Grid of 40 Filters with Animated Thumbnails */}
+          <div className="grid grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
             {filteredEffects.map((eff) => {
               const isSelected = previewItem.name === eff.id;
               return (
-                <div
+                <EffectCardThumbnail
                   key={eff.id}
-                  onClick={() => {
+                  id={eff.id}
+                  name={eff.name}
+                  category={eff.tag}
+                  type="effect"
+                  icon={eff.icon}
+                  gradient={eff.gradient}
+                  duration={1.5}
+                  isSelected={isSelected}
+                  onPreview={() => {
                     setPreviewItem({
                       type: 'effect',
                       name: eff.id,
                       category: eff.tag,
                     });
                   }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer group ${
-                    isSelected
-                      ? 'bg-pink-950/60 border-cyan-400 ring-2 ring-cyan-400/80 shadow-lg shadow-cyan-500/20'
-                      : 'bg-[#141724] border-[#252B3E] hover:border-pink-500/50 hover:bg-[#1A1F30]'
-                  }`}
-                  title="Bấm để thử nghiệm hiệu ứng trên con cáo"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
-                        {eff.icon}
-                      </div>
-                      <div>
-                        <h4 className={`text-xs font-black transition-colors ${isSelected ? 'text-cyan-300' : 'text-white group-hover:text-pink-300'}`}>
-                          {eff.name}
-                        </h4>
-                        <span className="text-[10px] font-bold text-slate-400">{eff.tag}</span>
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-xs">
-                        🦊 Đang thử
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 leading-relaxed">{eff.desc}</p>
-
-                  <div className="mt-2.5 flex items-center justify-end gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewItem({
-                          type: 'effect',
-                          name: eff.id,
-                          category: eff.tag,
-                        });
-                      }}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all border ${
-                        isSelected
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                          : 'bg-[#181B28] text-slate-400 hover:text-white border-[#2A3045]'
-                      }`}
-                    >
-                      🦊 Thử trên Cáo
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewItem({
-                          type: 'effect',
-                          name: eff.id,
-                          category: eff.tag,
-                        });
-                        onApplyEffect && onApplyEffect(eff.id);
-                      }}
-                      className="px-3 py-1 bg-gradient-to-r from-pink-600 to-rose-600 hover:brightness-110 text-white rounded-lg text-[11px] font-black transition-all shadow-sm active:scale-95"
-                    >
-                      + Áp dụng vào Video
-                    </button>
-                  </div>
-                </div>
+                  onApply={() => {
+                    setPreviewItem({
+                      type: 'effect',
+                      name: eff.id,
+                      category: eff.tag,
+                    });
+                    onApplyEffect && onApplyEffect(eff.id);
+                  }}
+                />
               );
             })}
           </div>
