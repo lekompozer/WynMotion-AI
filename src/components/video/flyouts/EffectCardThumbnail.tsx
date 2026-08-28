@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Plus, Check } from 'lucide-react';
-import { GLSLTransitionCanvas } from '../styles/transitions/GLSLTransitionCanvas';
-import { ActiveEffectsOverlay, CustomTimelineEffect } from '../styles/ActiveEffectsOverlay';
-import { SHADERS_MAP } from '../../../../packages/core-effects/shadersMap';
 
 interface EffectCardThumbnailProps {
   id: string;
@@ -18,9 +15,6 @@ interface EffectCardThumbnailProps {
   onPreview: () => void;
   onApply: () => void;
 }
-
-const FOX_IMG = '/png-fox.png';
-const NEXT_SCENE_IMG = '/previews/next_scene_cover.png';
 
 export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
   id,
@@ -40,10 +34,10 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
   const animRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(Date.now());
 
-  // Loop animation for thumbnail (1.4s cycle)
+  // Loop animation progress bar indicator (1.2s cycle)
   useEffect(() => {
     let active = true;
-    const loopDuration = 1400; // 1.4s per loop
+    const loopDuration = 1200; // 1.2s per loop
 
     const tick = () => {
       if (!active) return;
@@ -59,23 +53,6 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
   }, []);
-
-  const glslSource =
-    type === 'transition'
-      ? SHADERS_MAP[id] || 'vec4 transition(vec2 uv) { return mix(getFromColor(uv), getToColor(uv), progress); }'
-      : undefined;
-
-  const effectList: CustomTimelineEffect[] = [
-    {
-      id: `thumb_${id}`,
-      effectId: id,
-      name,
-      trackIndex: 0,
-      startTime: 0,
-      endTime: 1.5,
-      duration: 1.5,
-    },
-  ];
 
   const handleApplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -100,35 +77,14 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
           : 'bg-[#131624] border-[#252A3D] hover:border-purple-500/60 hover:bg-[#181D30] hover:shadow-md'
       }`}
     >
-      {/* 1. ANIMATED THUMBNAIL CANVAS (Fox -> NEXT SCENE or Filter) */}
+      {/* 1. ANIMATED THUMBNAIL (Pre-rendered High-Performance GIF) */}
       <div className="relative w-full aspect-square bg-[#0F111E] overflow-hidden flex items-center justify-center">
-        {type === 'transition' ? (
-          <div className="relative w-full h-full">
-            <GLSLTransitionCanvas
-              fromImage={FOX_IMG}
-              toImage={NEXT_SCENE_IMG}
-              progress={progress}
-              glslSource={glslSource || ''}
-              width={160}
-              height={160}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </div>
-        ) : (
-          <div className="relative w-full h-full flex items-center justify-center bg-white p-2">
-            <img
-              src={FOX_IMG}
-              alt="Fox Thumbnail"
-              className="w-full h-full object-contain select-none pointer-events-none"
-            />
-            <ActiveEffectsOverlay
-              activeEffects={effectList}
-              currentTime={progress * 1.5}
-              currentFrame={Math.round(progress * 45)}
-              fps={30}
-            />
-          </div>
-        )}
+        <img
+          src={type === 'transition' ? `/previews/transitions/${id}.gif` : `/previews/effects/${id}.gif`}
+          alt={name}
+          className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+        />
 
         {/* Progress Bar Indicator at Bottom of Thumbnail */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
