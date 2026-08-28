@@ -1208,7 +1208,7 @@ export const AiVideoTab: React.FC = () => {
 
   const estimatedPoints = calculateProjectPoints(visualStyle, audioDurationSec);
 
-  // ── EARLY RETURN: Mobile Video Editor Studio ──
+  // ── EARLY RETURN: Mobile Video Editor Studio (Native iOS App) ──
   if (activeEditorProject) {
     return (
       <MobileVideoEditorStudio

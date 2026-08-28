@@ -72,7 +72,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-black text-white">FX & Transitions (125 GLSL + 40 Filters)</h3>
-            <p className="text-[11px] text-slate-400">Kho hiệu ứng PixiJS Filters, Three.js & GL-Transitions</p>
+            <p className="text-[11px] text-slate-400">Kho hiệu ứng chuyển cảnh và bộ lọc video</p>
           </div>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#1E2333]">
@@ -108,7 +108,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           }`}
         >
           <Zap className="w-3.5 h-3.5" />
-          Effects ({FULL_CORE_FILTERS.length} Pixi & ThreeJS)
+          Effects ({FULL_CORE_FILTERS.length || 40})
         </button>
       </div>
 

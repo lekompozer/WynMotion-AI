@@ -185,6 +185,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
   const [showAspectDropdown, setShowAspectDropdown] = useState(false);
+  const [showAudioLangDropdown, setShowAudioLangDropdown] = useState(false);
 
   // 2-Layer Text Controls
   const [showSceneCards, setShowSceneCards] = useState<boolean>(true);
@@ -852,10 +853,10 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       </header>
 
       {/* ═══════════════════════════════════════════════════════════
-          2. MAIN BODY: Large Remotion Canvas Stage + Controls
+          2. MAIN BODY: Large Remotion Canvas Stage + Controls (Scrollable)
       ═══════════════════════════════════════════════════════════ */}
       <div
-        className="flex-1 flex flex-col overflow-hidden relative"
+        className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden relative min-h-0 scrollbar-thin scrollbar-thumb-slate-700"
         onTouchStart={handleStageTouchStart}
         onTouchEnd={handleStageTouchEnd}
       >
@@ -867,7 +868,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         )}
 
         {/* Dynamic Remotion Stage */}
-        <div className="flex-1 flex items-center justify-center p-2 relative overflow-hidden bg-[#07080E]">
+        <div className="shrink-0 flex items-center justify-center p-2 relative overflow-hidden bg-[#07080E] min-h-[280px]">
           {/* Floating Compact Aspect Ratio Dropdown */}
           <div className="absolute top-3 right-3 z-30">
             <button
@@ -914,10 +915,10 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             style={{
               backgroundColor: bgColor,
               width: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? 'auto' : 'auto',
-              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '290px' : '380px',
+              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '280px' : '360px',
               height: aspectRatio === '16:9' ? 'auto' : '100%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
-              maxHeight: aspectRatio === '16:9' ? '54vh' : '52vh',
+              maxHeight: aspectRatio === '16:9' ? '46vh' : '44vh',
             }}
           >
             <DynamicAnimationComposition
@@ -1006,41 +1007,64 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           </div>
         </div>
 
-        {/* ── Audio Language & Sync Bar (Tap or Swipe Down to Open Audio Panel) ── */}
+        {/* ── Audio Language Dropdown & Sync Bar ── */}
         <div
           onClick={() => setActiveBottomSheet('audio')}
           className={`flex-shrink-0 flex items-center justify-between px-4 py-2 border-t cursor-pointer select-none transition-colors ${
             isDark ? 'border-slate-800/80 bg-[#0E111B] hover:bg-slate-900/90' : 'border-slate-100 bg-slate-50 hover:bg-slate-100'
           }`}
         >
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1">
-              <Music className="w-3 h-3 text-cyan-400" />
-              🎵 Audio:
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-cyan-400">
+              Audio:
             </span>
-            <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700" onClick={(e) => e.stopPropagation()}>
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
-                onClick={() => handleSelectAudioLang('vi')}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${
-                  activeAudioLang === 'vi'
-                    ? 'bg-cyan-400 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => setShowAudioLangDropdown((prev) => !prev)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 text-[11px] font-black text-white hover:bg-slate-700 transition-all shadow-sm"
               >
-                🇻🇳 VI
+                <span>{activeAudioLang === 'vi' ? '🇻🇳 VI' : '🇺🇸 EN'}</span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showAudioLangDropdown ? 'rotate-180' : ''}`} />
               </button>
-              <button
-                type="button"
-                onClick={() => handleSelectAudioLang('en')}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${
-                  activeAudioLang === 'en'
-                    ? 'bg-cyan-400 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                🇺🇸 EN
-              </button>
+
+              {showAudioLangDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowAudioLangDropdown(false)} />
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-[#121624]/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-1 flex flex-col gap-1 min-w-[150px] animate-in fade-in zoom-in-95 duration-150">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectAudioLang('vi');
+                        setShowAudioLangDropdown(false);
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black text-left flex items-center justify-between transition-all active:scale-95 ${
+                        activeAudioLang === 'vi'
+                          ? 'bg-cyan-400 text-slate-950 shadow-sm'
+                          : 'text-slate-200 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>🇻🇳 Tiếng Việt (VI)</span>
+                      {activeAudioLang === 'vi' && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectAudioLang('en');
+                        setShowAudioLangDropdown(false);
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black text-left flex items-center justify-between transition-all active:scale-95 ${
+                        activeAudioLang === 'en'
+                          ? 'bg-cyan-400 text-slate-950 shadow-sm'
+                          : 'text-slate-200 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>🇺🇸 English (EN)</span>
+                      {activeAudioLang === 'en' && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -1091,43 +1115,43 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             }
           }}
         />
+      </div>
 
-        {/* ── Bottom Action Toolbar (5 Tabs matching Web Editor) ── */}
-        <div
-          className={`flex-shrink-0 grid grid-cols-5 gap-1 px-2 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] ${
-            isDark ? 'border-slate-800 bg-[#0F131C]' : 'border-slate-200 bg-white shadow-sm'
-          }`}
-        >
-          {[
-            { id: 'assets' as BottomSheet, icon: Folder, label: 'Assets', color: 'text-amber-400' },
-            { id: 'audio' as BottomSheet, icon: Music, label: 'Sound', color: 'text-purple-400' },
-            { id: 'canvas' as BottomSheet, icon: Sliders, label: 'Settings', color: 'text-cyan-400' },
-            { id: 'effects' as BottomSheet, icon: Sparkles, label: 'FX', color: 'text-pink-400' },
-            { id: 'captions' as BottomSheet, icon: Type, label: 'Captions', color: 'text-sky-400' },
-          ].map((item) => {
-            const Icon = item.icon;
-            const isActive = activeBottomSheet === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveBottomSheet(isActive ? null : item.id)}
-                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-2xl transition-all active:scale-95 min-w-0 ${
-                  isActive
-                    ? `bg-slate-800/90 border border-slate-600 ${item.color} shadow-sm font-black`
-                    : isDark
-                    ? 'text-slate-400 hover:text-white font-semibold'
-                    : 'text-slate-500 hover:text-slate-900 font-semibold'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="text-[10px] leading-none truncate max-w-full block">
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      {/* ── Bottom Action Toolbar (5 Tabs Fixed at Bottom) ── */}
+      <div
+        className={`flex-shrink-0 grid grid-cols-5 gap-1 px-2 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] z-30 ${
+          isDark ? 'border-slate-800 bg-[#0F131C]' : 'border-slate-200 bg-white shadow-sm'
+        }`}
+      >
+        {[
+          { id: 'assets' as BottomSheet, icon: Folder, label: 'Assets', color: 'text-amber-400' },
+          { id: 'audio' as BottomSheet, icon: Music, label: 'Sound', color: 'text-purple-400' },
+          { id: 'canvas' as BottomSheet, icon: Sliders, label: 'Settings', color: 'text-cyan-400' },
+          { id: 'effects' as BottomSheet, icon: Sparkles, label: 'FX', color: 'text-pink-400' },
+          { id: 'captions' as BottomSheet, icon: Type, label: 'Captions', color: 'text-sky-400' },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = activeBottomSheet === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveBottomSheet(isActive ? null : item.id)}
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-2xl transition-all active:scale-95 min-w-0 ${
+                isActive
+                  ? `bg-slate-800/90 border border-slate-600 ${item.color} shadow-sm font-black`
+                  : isDark
+                  ? 'text-slate-400 hover:text-white font-semibold'
+                  : 'text-slate-500 hover:text-slate-900 font-semibold'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="text-[10px] leading-none truncate max-w-full block">
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════

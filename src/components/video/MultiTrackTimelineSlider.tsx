@@ -240,40 +240,39 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. MULTI-TRACKS SCROLL CONTAINER (Hàng Scene trên màn hình, các hàng khác cuộn dọc)
+          2. MULTI-TRACKS CONTAINER (Gấp đôi chiều cao mỗi hàng, cuộn theo toàn màn hình)
           ───────────────────────────────────────────────────────────── */}
       <div
         ref={scrollContainerRef}
         onClick={handleTimelineClick}
-        className="w-full overflow-x-auto overflow-y-auto relative bg-[#090B12] cursor-crosshair scrollbar-thin scrollbar-thumb-slate-700"
+        className="w-full overflow-x-auto relative bg-[#090B12] cursor-crosshair scrollbar-thin scrollbar-thumb-slate-700"
         style={{
-          maxHeight: isMobile ? '68px' : '150px',
-          minHeight: isMobile ? '68px' : '120px',
+          minHeight: isMobile ? '230px' : '260px',
         }}
       >
         <div className="relative py-2" style={{ width: `${totalWidth}px` }}>
-          <div className="h-4 border-b border-[#1E2232] relative flex items-end">
+          <div className="h-5 border-b border-[#1E2232] relative flex items-end">
             {rulerMarks.map((s) => (
               <div
                 key={s}
-                className="absolute text-[9px] font-mono text-slate-500 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                className="absolute text-[10px] font-mono text-slate-500 -translate-x-1/2 flex flex-col items-center pointer-events-none"
                 style={{ left: `${timeToPixels(s, zoom)}px` }}
               >
                 <span>{s}s</span>
-                <div className="w-[1px] h-1 bg-slate-700 mt-0.5" />
+                <div className="w-[1px] h-1.5 bg-slate-700 mt-0.5" />
               </div>
             ))}
           </div>
 
-          <div className="flex flex-col gap-1.5 py-1.5">
+          <div className="flex flex-col gap-2 py-2">
             {tracks.map((track) => (
               <div
                 key={track.id}
-                className={`relative rounded-lg bg-[#141724]/60 border border-[#1E2232]/80 flex items-center ${
-                  isMobile ? 'h-7' : 'h-9'
+                className={`relative rounded-xl bg-[#141724]/70 border border-[#1E2232]/90 flex items-center ${
+                  isMobile ? 'h-14' : 'h-16'
                 }`}
               >
-                <div className="absolute left-2 z-10 text-[10px] font-black uppercase text-slate-500 flex items-center gap-1 pointer-events-none">
+                <div className="absolute left-2.5 z-10 text-[10px] font-black uppercase text-slate-400/90 flex items-center gap-1 pointer-events-none bg-[#0D0F18]/80 px-1.5 py-0.5 rounded backdrop-blur-xs border border-white/5">
                   {track.type === 'video' && '🎬 Media'}
                   {track.type === 'transitions' && (track.id === 'track_fx_1' ? '⚡ FX 2 (Overlay)' : '⚡ FX Shaders')}
                   {track.type === 'captions' && '💬 Captions'}
@@ -282,7 +281,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 
                 {track.items.map((item) => {
                   const itemLeft = timeToPixels(item.startTime, zoom);
-                  const itemWidth = Math.max(16, timeToPixels(item.duration, zoom));
+                  const itemWidth = Math.max(20, timeToPixels(item.duration, zoom));
                   const isSelected = selectedItemId === item.id;
 
                   let bgGradient = 'from-blue-600 to-indigo-700';
@@ -303,8 +302,8 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                         e.stopPropagation();
                         onSelectItem?.(item.id);
                       }}
-                      className={`absolute top-0.5 bottom-0.5 rounded-md bg-gradient-to-r ${bgGradient} text-white flex items-center justify-between px-1.5 border shadow-sm transition-shadow group cursor-grab active:cursor-grabbing ${
-                        isSelected ? 'border-white ring-2 ring-cyan-400 shadow-cyan-500/30' : 'border-white/20 hover:border-white/60'
+                      className={`absolute top-1 bottom-1 rounded-xl bg-gradient-to-r ${bgGradient} text-white flex items-center justify-between px-2 border shadow-md transition-all group cursor-grab active:cursor-grabbing ${
+                        isSelected ? 'border-white ring-2 ring-cyan-400 shadow-cyan-500/40' : 'border-white/20 hover:border-white/60'
                       }`}
                       style={{
                         left: `${itemLeft}px`,
@@ -315,16 +314,18 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                       <div
                         onMouseDown={(e) => handleResizeStart(e, item, 'left')}
                         onTouchStart={(e) => handleResizeStart(e, item, 'left')}
-                        className="w-2.5 h-full -ml-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-white/40 rounded-l flex items-center justify-center transition-opacity z-20"
+                        className="w-3.5 h-full -ml-2 cursor-ew-resize opacity-80 group-hover:opacity-100 hover:bg-white/30 rounded-l-xl flex items-center justify-center transition-opacity z-20"
                         title="Kéo chỉnh thời lượng bắt đầu"
                       >
-                        <div className="w-0.5 h-3 bg-white/80 rounded" />
+                        <div className="w-1 h-5 bg-white/90 rounded-full shadow-sm" />
                       </div>
 
-                      <div className="flex-1 truncate px-1 text-[10px] font-black flex items-center gap-1 pointer-events-none">
-                        {track.type === 'transitions' && <RefreshCw className="w-2.5 h-2.5 shrink-0" />}
-                        <span className="truncate">{item.title}</span>
-                        <span className="text-[9px] opacity-75 font-mono ml-auto">({item.duration.toFixed(1)}s)</span>
+                      <div className="flex-1 truncate px-1.5 text-[11px] font-black flex flex-col justify-center pointer-events-none min-w-0">
+                        <div className="flex items-center gap-1 truncate">
+                          {track.type === 'transitions' && <RefreshCw className="w-3 h-3 shrink-0" />}
+                          <span className="truncate">{item.title}</span>
+                        </div>
+                        <span className="text-[9px] opacity-75 font-mono">({item.duration.toFixed(2)}s)</span>
                       </div>
 
                       {onDeleteItem && (
@@ -333,20 +334,20 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                             e.stopPropagation();
                             onDeleteItem(item.id);
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-rose-500/50 text-white rounded transition-opacity ml-1 z-20"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-500/60 text-white rounded-lg transition-opacity ml-1 z-20"
                           title="Xóa clip này"
                         >
-                          <Trash2 className="w-3 h-3 text-rose-200" />
+                          <Trash2 className="w-3.5 h-3.5 text-rose-200" />
                         </button>
                       )}
 
                       <div
                         onMouseDown={(e) => handleResizeStart(e, item, 'right')}
                         onTouchStart={(e) => handleResizeStart(e, item, 'right')}
-                        className="w-2.5 h-full -mr-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-white/40 rounded-r flex items-center justify-center transition-opacity z-20"
+                        className="w-3.5 h-full -mr-2 cursor-ew-resize opacity-80 group-hover:opacity-100 hover:bg-white/30 rounded-r-xl flex items-center justify-center transition-opacity z-20"
                         title="Kéo chỉnh thời lượng kết thúc"
                       >
-                        <div className="w-0.5 h-3 bg-white/80 rounded" />
+                        <div className="w-1 h-5 bg-white/90 rounded-full shadow-sm" />
                       </div>
                     </div>
                   );
@@ -359,8 +360,8 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
             className="absolute top-0 bottom-0 z-30 pointer-events-none flex flex-col items-center"
             style={{ left: `${playheadLeft}px` }}
           >
-            <div className="w-3 h-3 bg-cyan-400 rotate-45 -mt-1 shadow-lg shadow-cyan-400/50" />
-            <div className="w-[2px] flex-1 bg-cyan-400 shadow-md shadow-cyan-400/80" />
+            <div className="w-3.5 h-3.5 bg-cyan-400 rotate-45 -mt-1 shadow-lg shadow-cyan-400/60" />
+            <div className="w-[2px] flex-1 bg-cyan-400 shadow-md shadow-cyan-400/90" />
           </div>
         </div>
       </div>
