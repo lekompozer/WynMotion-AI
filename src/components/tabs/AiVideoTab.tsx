@@ -1437,19 +1437,16 @@ export const AiVideoTab: React.FC = () => {
           <div className="space-y-6">
             {/* Nhóm 3: Business Short Videos (Single card opening CapCut-style Masonry Gallery) */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">💼</span>
-                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-                  {isVietnamese ? 'Video Ngắn Doanh Nghiệp' : 'Business Short Videos'}
-                </h3>
-              </div>
+              <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                {isVietnamese ? 'Video Ngắn Doanh Nghiệp' : 'Business Short Videos'}
+              </h3>
               <div className="grid grid-cols-1 gap-2.5">
                 <button
                   onClick={() => setIsCapCutGalleryOpen(true)}
                   className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
                     isDark
-                      ? 'bg-slate-900/90 border-rose-900/40 text-white hover:border-rose-500/50 shadow-lg shadow-rose-950/20'
-                      : 'bg-white border-rose-200 text-slate-900 shadow-sm hover:border-rose-300'
+                      ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700 shadow-md'
+                      : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
@@ -1475,12 +1472,9 @@ export const AiVideoTab: React.FC = () => {
 
             {/* Nhóm 4: Video News 60s (Tin Tức & Điểm Tin) */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">📰</span>
-                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                  {isVietnamese ? 'Tin Tức & Điểm Tin 60s (Video News)' : '60s Video News & Daily Digest'}
-                </h3>
-              </div>
+              <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                {isVietnamese ? 'Tin Tức & Điểm Tin 60s (Video News)' : '60s Video News & Daily Digest'}
+              </h3>
               <div className="grid grid-cols-1 gap-2.5">
                 {NEWS_VIDEO_STYLES.map((style) => {
                   const Icon = style.icon;
@@ -1490,8 +1484,8 @@ export const AiVideoTab: React.FC = () => {
                       onClick={() => handleStartStudio(style.id)}
                       className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
                         isDark
-                          ? 'bg-slate-900/90 border-amber-900/40 text-white hover:border-amber-500/50 shadow-lg shadow-amber-950/20'
-                          : 'bg-white border-amber-200 text-slate-900 shadow-sm hover:border-amber-300'
+                          ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700 shadow-md'
+                          : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
                       }`}
                     >
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
