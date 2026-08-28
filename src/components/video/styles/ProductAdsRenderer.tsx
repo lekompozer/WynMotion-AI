@@ -180,9 +180,12 @@ export const ProductAdsRenderer: React.FC<ProductAdsRendererProps> = ({ scene })
         inset: 0,
         overflow: 'hidden',
         background: '#000000',
-        fontFamily: "'Impact', 'Montserrat', 'Arial Black', -apple-system, sans-serif",
+        fontFamily: "'Montserrat', 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif",
       }}
     >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Montserrat:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Plus+Jakarta+Sans:wght@700;800;900&display=swap');
+      `}</style>
       {/* ─────────────────────────────────────────────────────────────
           LAYER 1: Active Background Canvas (100% Canvas 1:1)
           ───────────────────────────────────────────────────────────── */}

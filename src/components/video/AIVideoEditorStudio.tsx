@@ -283,7 +283,7 @@ function StudioInner({
   }, [audioUrl, setAudioSrc]);
 
   const [activeSceneId, setActiveSceneId] = useState<string | number>(1);
-  const [activeFlyoutTab, setActiveFlyoutTab] = useState<'assets' | 'audio' | 'settings' | 'templates' | 'captions' | 'effects' | null>('assets');
+  const [activeFlyoutTab, setActiveFlyoutTab] = useState<'assets' | 'audio' | 'settings' | 'effects' | 'captions' | null>('assets');
   const [assetCategory, setAssetCategory] = useState<string>('All');
   const [searchAssetQuery, setSearchAssetQuery] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -850,21 +850,19 @@ function StudioInner({
           module_id: moduleId,
           slide_index: slideIndex,
           scene_id: sceneToRegenerate.scene_id,
-          prompt: regeneratePrompt,
-          aspect_ratio: aspectRatio,
+          user_prompt: regeneratePrompt.trim() || undefined,
           visual_style: visualStyle,
+          bg_color: bgColor,
         }),
       });
 
       if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || 'Could not regenerate scene');
+        throw new Error('Không thể tạo lại Scene');
       }
 
-      const data = await res.json();
-      if (data.scene) {
-        const updatedScenes = scenes.map((s) => (s.scene_id === sceneToRegenerate.scene_id ? data.scene : s));
-        updateScenesWithHistory(updatedScenes);
+      const result = await res.json();
+      if (result.success && result.scenes) {
+        updateScenesWithHistory(result.scenes);
         setSceneToRegenerate(null);
         alert(`Scene ${sceneToRegenerate.scene_id} đã được tạo lại thành công!`);
       }
@@ -1433,15 +1431,15 @@ function StudioInner({
           </button>
 
           <button
-            onClick={() => setActiveFlyoutTab(activeFlyoutTab === 'templates' ? null : 'templates')}
-            title="CapCut Templates & Effects"
+            onClick={() => setActiveFlyoutTab(activeFlyoutTab === 'effects' ? null : 'effects')}
+            title="FX & Transitions (100+ GLSL & Visual Filters)"
             className={`p-2 rounded-xl transition-all ${
-              activeFlyoutTab === 'templates'
-                ? 'bg-gradient-to-tr from-cyan-400 to-blue-600 text-slate-950 shadow-md font-bold'
+              activeFlyoutTab === 'effects'
+                ? 'bg-gradient-to-tr from-purple-500 to-pink-600 text-white shadow-md font-bold'
                 : 'text-slate-400 hover:text-white hover:bg-[#1E2333]'
             }`}
           >
-            <LayoutTemplate className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
           </button>
 
           <button
@@ -1454,18 +1452,6 @@ function StudioInner({
             }`}
           >
             <Type className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setActiveFlyoutTab(activeFlyoutTab === 'effects' ? null : 'effects')}
-            title="FX: Transitions (100+ GLSL) & Filters"
-            className={`p-2 rounded-xl transition-all ${
-              activeFlyoutTab === 'effects'
-                ? 'bg-gradient-to-tr from-purple-500 to-pink-600 text-white shadow-md font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-[#1E2333]'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
           </button>
         </div>
 
@@ -1947,34 +1933,7 @@ function StudioInner({
               </div>
             )}
 
-            {/* TAB 4: TEMPLATES & OVERLAYS */}
-            {activeFlyoutTab === 'templates' && (
-              <TemplatesFlyoutTab
-                onClose={() => setActiveFlyoutTab(null)}
-                onApplyTemplate={(tplId) => {
-                  setVisualStyle(tplId);
-                  setActiveFlyoutTab(null);
-                }}
-                currentTemplateId={visualStyle}
-                isVertical={aspectRatio === '9:16'}
-              />
-            )}
-
-            {/* TAB 5: AUTO-CAPTIONS AI */}
-            {activeFlyoutTab === 'captions' && (
-              <CaptionsFlyoutTab
-                onClose={() => setActiveFlyoutTab(null)}
-                audioUrl={selectedExportAudioUrl || remotionAudioSrc}
-                segments={captionSegments}
-                onChangeSegments={setCaptionSegments}
-                presetStyle={captionPresetStyle}
-                onChangePresetStyle={setCaptionPresetStyle}
-                onTranscribeWhisper={handleTranscribeCaptions}
-                isTranscribing={isTranscribingCaptions}
-              />
-            )}
-
-            {/* TAB 6: FX / TRANSITIONS (100+ GLSL) & FILTERS */}
+            {/* TAB 4: FX / TRANSITIONS (100+ GLSL) & FILTERS */}
             {activeFlyoutTab === 'effects' && (
               <EffectsFlyoutTab
                 onClose={() => setActiveFlyoutTab(null)}
@@ -2038,6 +1997,20 @@ function StudioInner({
                   setSyncStatusMsg(`Đã kích hoạt hiệu ứng: ${effId}!`);
                   setTimeout(() => setSyncStatusMsg(null), 3000);
                 }}
+              />
+            )}
+
+            {/* TAB 5: AUTO-CAPTIONS AI */}
+            {activeFlyoutTab === 'captions' && (
+              <CaptionsFlyoutTab
+                onClose={() => setActiveFlyoutTab(null)}
+                audioUrl={selectedExportAudioUrl || remotionAudioSrc}
+                segments={captionSegments}
+                onChangeSegments={setCaptionSegments}
+                presetStyle={captionPresetStyle}
+                onChangePresetStyle={setCaptionPresetStyle}
+                onTranscribeWhisper={handleTranscribeCaptions}
+                isTranscribing={isTranscribingCaptions}
               />
             )}
           </div>

@@ -17,15 +17,15 @@ export type CaptionPresetStyle =
 
 export interface CaptionWord {
   word: string;
-  start: number;
-  end: number;
+  start: number; // in seconds
+  end: number;   // in seconds
   probability?: number;
 }
 
 export interface CaptionSegment {
   id: number | string;
-  start: number;
-  end: number;
+  start: number; // in seconds
+  end: number;   // in seconds
   text: string;
   words?: CaptionWord[];
 }
@@ -63,9 +63,10 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
   uppercase = false,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, height } = useVideoConfig();
   const currentTime = frame / fps;
 
+  // Find active segment at currentTime
   const activeSegment = segments.find(
     (seg) => currentTime >= seg.start && currentTime <= seg.end + 0.1
   );
@@ -103,6 +104,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
 
   return (
     <div style={yPosStyle}>
+      {/* ─────────────────────────────────────────────────────────────
+          1. KARAOKE GLOW (Default CapCut Style)
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'karaoke_glow' && (
         <div
           style={{
@@ -110,7 +114,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             flexWrap: 'wrap',
             justifyContent: 'center',
             gap: '8px',
-            fontFamily: '"Impact", "Montserrat", "Arial Black", sans-serif',
+            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
             fontSize: `${fontSize}px`,
             fontWeight: 900,
             textTransform: uppercase ? 'uppercase' : 'none',
@@ -139,6 +143,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          2. SPRING BOUNCE
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'spring_bounce' && (
         <div
           style={{
@@ -146,7 +153,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             flexWrap: 'wrap',
             justifyContent: 'center',
             gap: '10px',
-            fontFamily: '"Montserrat", "Arial Black", sans-serif',
+            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
             fontSize: `${fontSize * 1.05}px`,
             fontWeight: 900,
             textTransform: uppercase ? 'uppercase' : 'none',
@@ -175,6 +182,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          3. CYBERPUNK NEON
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'cyberpunk_neon' && (
         <div
           style={{
@@ -210,6 +220,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          4. PILL BADGE
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'pill_badge' && (
         <div
           style={{
@@ -248,6 +261,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          5. COMIC SLANT
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'comic_slant' && (
         <div
           style={{
@@ -255,7 +271,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             flexWrap: 'wrap',
             justifyContent: 'center',
             gap: '10px',
-            fontFamily: '"Impact", "Anton", sans-serif',
+            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
             fontSize: `${fontSize * 1.15}px`,
             transform: 'rotate(-4deg)',
             textTransform: 'uppercase',
@@ -281,6 +297,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          6. MINIMAL GLASS BAR
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'minimal_bar' && (
         <div
           style={{
@@ -318,6 +337,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          7. GRADIENT WAVE
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'gradient_wave' && (
         <div
           style={{
@@ -353,6 +375,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          8. LUXURY SERIF ITALIC
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'fashion_serif' && (
         <div
           style={{
@@ -387,10 +412,13 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          9. NEWS FLASH (Big Center Word Pop)
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'news_flash' && (
         <div
           style={{
-            fontFamily: '"Impact", "Anton", sans-serif',
+            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
             fontSize: `${fontSize * 1.6}px`,
             fontWeight: 900,
             textTransform: 'uppercase',
@@ -409,6 +437,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         </div>
       )}
 
+      {/* ─────────────────────────────────────────────────────────────
+          10. TYPEWRITER CURSOR
+          ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'typewriter_cursor' && (
         <div
           style={{
