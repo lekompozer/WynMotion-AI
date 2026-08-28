@@ -3,6 +3,8 @@ import { Sequence, useRemotion, useCurrentFrame, useVideoConfig } from './Remoti
 import { DynamicSceneRenderer, DynamicSceneData } from './DynamicSceneRenderer';
 import { CapCutCaptionRenderer, CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
 import { ActiveEffectsOverlay, CustomTimelineEffect } from './styles/ActiveEffectsOverlay';
+import { GLSLTransitionCanvas } from './styles/transitions/GLSLTransitionCanvas';
+import { SHADERS_MAP } from '../../../packages/core-effects/shadersMap';
 
 interface DynamicAnimationCompositionProps {
   scenes?: DynamicSceneData[];
@@ -36,8 +38,12 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   const { fps } = useVideoConfig();
   const currentTime = frame / (fps || 30);
 
-  const activeEffects = (timelineEffects || []).filter(
-    (fx) => currentTime >= fx.startTime && currentTime <= fx.endTime
+  const activeVisualEffects = (timelineEffects || []).filter(
+    (fx) => !fx.id.startsWith('fx_trans_') && currentTime >= fx.startTime && currentTime <= fx.endTime
+  );
+
+  const activeTransitions = (timelineEffects || []).filter(
+    (fx) => (fx.id.startsWith('fx_trans_') || fx.shaderName) && currentTime >= fx.startTime && currentTime <= fx.endTime
   );
 
   if (!scenes || scenes.length === 0) {
@@ -67,7 +73,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
         flex: 1,
         width: '100%',
         height: '100%',
-        backgroundColor: bgColor || (visualStyle === 'vector_motion' ? '#0F172A' : '#FDFBF7'),
+        backgroundColor: bgColor || (visualStyle === 'vector_motion' ? '#0F172A' : '#000000'),
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -89,9 +95,39 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
         </Sequence>
       ))}
 
+      {/* 125 GLSL Active WebGL Transitions Overlay */}
+      {activeTransitions.map((fx) => {
+        const transProg = Math.min(1.0, Math.max(0, (currentTime - fx.startTime) / Math.max(0.1, fx.duration)));
+        const currSceneIdx = scenes.findIndex((s) => {
+          const sSt = s.start_sec ?? ((s.start_frame || 0) / (fps || 30));
+          const sDur = s.duration_sec ?? ((s.duration_frames || 150) / (fps || 30));
+          return fx.startTime >= sSt - 0.3 && fx.startTime <= sSt + sDur + 0.3;
+        });
+        const fromScene = scenes[currSceneIdx >= 0 ? currSceneIdx : 0];
+        const toScene =
+          scenes[currSceneIdx >= 0 && currSceneIdx + 1 < scenes.length ? currSceneIdx + 1 : currSceneIdx >= 0 ? currSceneIdx : 0];
+        const fromImg = fromScene?.image_url || fromScene?.original_image_url || '/png-fox.png';
+        const toImg = toScene?.image_url || toScene?.original_image_url || fromImg;
+        const shaderName = fx.shaderName || fx.effectId || 'GlitchMemories';
+        const shaderSource =
+          SHADERS_MAP[shaderName] ||
+          'vec4 transition(vec2 uv) { return mix(getFromColor(uv), getToColor(uv), progress); }';
+
+        return (
+          <div key={fx.id} className="absolute inset-0 w-full h-full z-30 pointer-events-none">
+            <GLSLTransitionCanvas
+              fromImage={fromImg}
+              toImage={toImg}
+              progress={transProg}
+              glslSource={shaderSource}
+            />
+          </div>
+        );
+      })}
+
       {/* Real-time Global Live Visual Effects Overlay */}
       <ActiveEffectsOverlay
-        activeEffects={activeEffects}
+        activeEffects={activeVisualEffects}
         currentTime={currentTime}
         currentFrame={frame}
         fps={fps}

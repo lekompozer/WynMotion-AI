@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Sparkles, Wand2, Search, Zap, Film, Layers, Check, Play, Flame, RefreshCw } from 'lucide-react';
 import MANIFEST from '../../../../packages/core-effects/manifest.json';
+import { FoxLivePreviewBox } from './FoxLivePreviewBox';
 
 export interface EffectsFlyoutTabProps {
   onClose: () => void;
@@ -98,55 +99,55 @@ export const CORE_FILTERS = [
   {
     id: 'kenburns_continuous_zoom',
     name: 'Ken-Burns Cinematic Slow Zoom',
-    tag: 'Cinematic Pacing',
-    desc: 'Zoom chậm mượt mà kết hợp nền Parallax tạo chiều sâu bất tận.',
-    icon: '🎥',
-    gradient: 'from-slate-500 to-zinc-700',
+    tag: 'Cinematic Camera',
+    desc: 'Góc máy zoom chậm mượt mà mang phong cách phim truyện Hollywood.',
+    icon: '🔍',
+    gradient: 'from-sky-500 to-cyan-600',
   },
   {
     id: 'grayscale_underlayer_push',
     name: 'Grayscale Underlayer Push',
-    tag: 'Commercial Stacking',
-    desc: 'Ảnh cũ hóa xám thu nhỏ làm nền, ảnh mới vọt lên từ tâm đè lên trên.',
-    icon: '🖼️',
-    gradient: 'from-gray-600 to-slate-800',
+    tag: 'F&B / Product Showcase',
+    desc: 'Đè nổi bật vật thể mới lên nền cũ đã mờ xám tương phản tuyệt đối.',
+    icon: '🖤',
+    gradient: 'from-slate-600 to-zinc-800',
   },
   {
     id: 'neon_cyber_glow',
-    name: 'Neon Nightclub Glow',
-    tag: 'Club / Party',
-    desc: 'Đèn viền Neon phát sáng tỏa hào quang đổi màu theo nhịp nhạc.',
+    name: 'Neon Cyberpunk Outline Glow',
+    tag: 'Glow / Cyber',
+    desc: 'Đèn viền Neon phát sáng nhấp nháy chuyển màu theo nhịp điệu bài hát.',
     icon: '💡',
-    gradient: 'from-pink-600 to-cyan-500',
+    gradient: 'from-cyan-400 to-fuchsia-600',
   },
   {
     id: 'liquid_wave_distortion',
-    name: 'Liquid Wave Ripple',
-    tag: 'Organic / F&B',
-    desc: 'Gợn sóng nước lăn tăn biến dạng bề mặt sản phẩm tươi mát.',
-    icon: '💧',
-    gradient: 'from-teal-400 to-cyan-600',
+    name: 'Liquid Ripple Wave Distortion',
+    tag: 'Organic / Water',
+    desc: 'Sóng nước gợn sóng biến dạng bề mặt sản phẩm độc đáo.',
+    icon: '🌊',
+    gradient: 'from-blue-600 to-teal-500',
   },
   {
     id: 'thermal_heatmap_matrix',
-    name: 'Thermal Spectral Matrix',
+    name: 'Thermal Matrix Heatmap',
     tag: 'Sci-Fi / Matrix',
-    desc: 'Bản đồ nhiệt quang phổ rực rỡ phong cách phim viễn tưởng.',
-    icon: '🌡️',
-    gradient: 'from-red-500 to-emerald-500',
+    desc: 'Bản đồ nhiệt quang phổ rực lửa quét qua góc quay.',
+    icon: '🔥',
+    gradient: 'from-red-600 to-amber-500',
   },
   {
     id: 'halftone_pop_art',
-    name: 'Halftone Pop-Art Dots',
-    tag: 'Comics / Retro',
-    desc: 'Chấm hạt in lưới truyện tranh phong cách Pop-Art nghệ thuật.',
+    name: 'Retro Halftone Pop-Art Grid',
+    tag: 'Comic / Poster',
+    desc: 'Chấm hạt in lưới truyện tranh phong cách Retro Pop-Art nổi bật.',
     icon: '🎨',
-    gradient: 'from-orange-500 to-red-600',
+    gradient: 'from-pink-600 to-yellow-500',
   },
   {
     id: 'film_grain_vintage',
-    name: 'Film Grain 35mm Hollywood',
-    tag: 'Film / Cinematic',
+    name: '35mm Film Grain Cinema Overlay',
+    tag: 'Vintage / Film',
     desc: 'Hạt phim nhựa 35mm hoài cổ Hollywood tăng chất lượng điện ảnh.',
     icon: '🎬',
     gradient: 'from-amber-600 to-stone-700',
@@ -163,6 +164,15 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'transitions' | 'effects'>('transitions');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [previewItem, setPreviewItem] = useState<{
+    type: 'transition' | 'effect';
+    name: string;
+    category?: string;
+  }>({
+    type: 'transition',
+    name: currentShaderName || 'GlitchMemories',
+    category: 'Glitch & Cyber',
+  });
 
   const transitions = useMemo(() => {
     const list = MANIFEST.transitions || [];
@@ -177,7 +187,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
   }, [searchQuery, selectedCategory]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-[#252B3E]">
         <div className="flex items-center gap-2">
@@ -185,8 +195,8 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">FX & Transitions (100+ GLSL)</h3>
-            <p className="text-[11px] text-slate-400">Kho thư viện chuyển cảnh & hiệu ứng chuẩn thế giới</p>
+            <h3 className="text-sm font-black text-white">FX & Transitions (125 GLSL)</h3>
+            <p className="text-[11px] text-slate-400">Kho thư viện chuyển cảnh & hiệu ứng chuẩn CapCut</p>
           </div>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#1E2333]">
@@ -194,10 +204,33 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
         </button>
       </div>
 
+      {/* ─────────────────────────────────────────────────────────────
+          1. FOX LIVE PREVIEW BOX (CAPCUT-STYLE INTERACTIVE CANVAS)
+          ───────────────────────────────────────────────────────────── */}
+      <FoxLivePreviewBox
+        currentType={previewItem.type}
+        currentName={previewItem.name}
+        currentCategory={previewItem.category}
+        onApply={() => {
+          if (previewItem.type === 'transition') {
+            onApplyTransition(previewItem.name);
+          } else {
+            onApplyEffect?.(previewItem.name);
+          }
+        }}
+      />
+
       {/* Switch Sub-Tabs: Transitions vs Effects */}
       <div className="flex bg-[#181B28] p-1 rounded-xl border border-[#252B3E]">
         <button
-          onClick={() => setActiveSubTab('transitions')}
+          onClick={() => {
+            setActiveSubTab('transitions');
+            setPreviewItem({
+              type: 'transition',
+              name: 'GlitchMemories',
+              category: 'Glitch & Cyber',
+            });
+          }}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSubTab === 'transitions'
               ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-md'
@@ -208,7 +241,14 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           Transitions ({MANIFEST.total_shaders || 125})
         </button>
         <button
-          onClick={() => setActiveSubTab('effects')}
+          onClick={() => {
+            setActiveSubTab('effects');
+            setPreviewItem({
+              type: 'effect',
+              name: 'horizontal_scanline_rgb_glitch',
+              category: 'Cyberpunk / Y2K',
+            });
+          }}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSubTab === 'effects'
               ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-md'
@@ -255,16 +295,30 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Grid of 125 Shaders */}
-          <div className="grid grid-cols-2 gap-2 max-h-[480px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-2 gap-2 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
             {transitions.map((item) => {
-              const isSelected = currentShaderName === item.id;
+              const isSelected = previewItem.name === item.id;
               return (
                 <div
                   key={item.id}
-                  onClick={() => onApplyTransition(item.id)}
+                  onMouseEnter={() =>
+                    setPreviewItem({
+                      type: 'transition',
+                      name: item.id,
+                      category: item.category,
+                    })
+                  }
+                  onClick={() => {
+                    setPreviewItem({
+                      type: 'transition',
+                      name: item.id,
+                      category: item.category,
+                    });
+                    onApplyTransition(item.id);
+                  }}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group ${
                     isSelected
-                      ? 'bg-purple-950/40 border-purple-500 shadow-lg shadow-purple-500/20'
+                      ? 'bg-purple-950/50 border-purple-400 ring-1 ring-purple-400 shadow-lg shadow-purple-500/20'
                       : 'bg-[#141724] border-[#252B3E] hover:border-purple-500/50 hover:bg-[#1A1F30]'
                   }`}
                 >
@@ -285,15 +339,20 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      setPreviewItem({
+                        type: 'transition',
+                        name: item.id,
+                        category: item.category,
+                      });
                       onApplyTransition(item.id);
                     }}
                     className={`w-full py-1 text-[11px] font-bold rounded-lg transition-all ${
                       isSelected
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-purple-600 text-white shadow-md'
                         : 'bg-[#202538] text-slate-300 group-hover:bg-purple-600 group-hover:text-white'
                     }`}
                   >
-                    {isSelected ? 'Đang chọn' : 'Áp dụng'}
+                    {isSelected ? 'Đang xem & Chọn' : 'Xem & Áp dụng'}
                   </button>
                 </div>
               );
@@ -306,32 +365,53 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           SUB-TAB 2: EFFECTS & FILTERS
           ───────────────────────────────────────────────────────────── */}
       {activeSubTab === 'effects' && (
-        <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
-          {CORE_FILTERS.map((eff) => (
-            <div
-              key={eff.id}
-              onClick={() => onApplyEffect && onApplyEffect(eff.id)}
-              className="p-3 rounded-xl bg-[#141724] border border-[#252B3E] hover:border-pink-500/50 hover:bg-[#1A1F30] transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-2.5 mb-1.5">
-                <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
-                  {eff.icon}
+        <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          {CORE_FILTERS.map((eff) => {
+            const isSelected = previewItem.name === eff.id;
+            return (
+              <div
+                key={eff.id}
+                onMouseEnter={() =>
+                  setPreviewItem({
+                    type: 'effect',
+                    name: eff.id,
+                    category: eff.tag,
+                  })
+                }
+                onClick={() => {
+                  setPreviewItem({
+                    type: 'effect',
+                    name: eff.id,
+                    category: eff.tag,
+                  });
+                  onApplyEffect && onApplyEffect(eff.id);
+                }}
+                className={`p-3 rounded-xl border transition-all cursor-pointer group ${
+                  isSelected
+                    ? 'bg-pink-950/40 border-pink-500 ring-1 ring-pink-400 shadow-lg shadow-pink-500/20'
+                    : 'bg-[#141724] border-[#252B3E] hover:border-pink-500/50 hover:bg-[#1A1F30]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
+                    {eff.icon}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-white group-hover:text-pink-300 transition-colors">
+                      {eff.name}
+                    </h4>
+                    <span className="text-[10px] font-bold text-slate-500">{eff.tag}</span>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-black text-white group-hover:text-pink-300 transition-colors">
-                    {eff.name}
-                  </h4>
-                  <span className="text-[10px] font-bold text-slate-500">{eff.tag}</span>
+                <p className="text-[11px] text-slate-400 leading-relaxed">{eff.desc}</p>
+                <div className="mt-2 flex justify-end">
+                  <button className="px-3 py-1 bg-[#202538] group-hover:bg-pink-600 text-slate-300 group-hover:text-white rounded-lg text-[11px] font-bold transition-all">
+                    Áp dụng hiệu ứng
+                  </button>
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">{eff.desc}</p>
-              <div className="mt-2 flex justify-end">
-                <button className="px-3 py-1 bg-[#202538] group-hover:bg-pink-600 text-slate-300 group-hover:text-white rounded-lg text-[11px] font-bold transition-all">
-                  Áp dụng hiệu ứng
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

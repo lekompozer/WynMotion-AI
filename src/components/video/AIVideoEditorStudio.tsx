@@ -304,6 +304,40 @@ function StudioInner({
   const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
   const [isTranscribingCaptions, setIsTranscribingCaptions] = useState(false);
   const [timelineEffects, setTimelineEffects] = useState<CustomTimelineEffect[]>([]);
+  const [selectedTimelineItemId, setSelectedTimelineItemId] = useState<string | null>(null);
+
+  const handleDeleteItem = (itemId: string) => {
+    if (itemId.startsWith('media_')) {
+      const sId = parseInt(itemId.replace('media_', ''), 10);
+      setScenes((prev) => {
+        if (prev.length <= 1) {
+          alert('Video cần có tối thiểu 1 phân cảnh.');
+          return prev;
+        }
+        return prev.filter((s, idx) => s.scene_id !== sId && idx + 1 !== sId);
+      });
+      setSelectedTimelineItemId(null);
+      setSyncStatusMsg('Đã xóa phân cảnh khỏi Timeline!');
+      setTimeout(() => setSyncStatusMsg(null), 2500);
+      return;
+    }
+
+    if (itemId.startsWith('fx_')) {
+      setTimelineEffects((prev) => prev.filter((fx) => fx.id !== itemId));
+      setSelectedTimelineItemId(null);
+      setSyncStatusMsg('Đã xóa hiệu ứng khỏi Timeline!');
+      setTimeout(() => setSyncStatusMsg(null), 2500);
+      return;
+    }
+
+    if (itemId.startsWith('cap_')) {
+      const capIdx = parseInt(itemId.replace('cap_', ''), 10);
+      setCaptionSegments((prev) => prev.filter((_, idx) => idx !== capIdx));
+      setSelectedTimelineItemId(null);
+      setSyncStatusMsg('Đã xóa đoạn phụ đề!');
+      setTimeout(() => setSyncStatusMsg(null), 2500);
+    }
+  };
 
   const handleTranscribeCaptions = async (targetAudioUrl: string, language: string) => {
     try {
@@ -2265,36 +2299,41 @@ function StudioInner({
             onPlayPause={togglePlay}
             onSeek={(t) => seekTo(Math.round(t * fps))}
             tracks={timelineTracks}
-            selectedItemId={typeof activeSceneId === 'number' ? `media_${activeSceneId}` : null}
+            selectedItemId={selectedTimelineItemId || (typeof activeSceneId === 'number' ? `media_${activeSceneId}` : null)}
             onSelectItem={(itemId) => {
+              setSelectedTimelineItemId(itemId);
               if (itemId?.startsWith('media_')) {
                 const sId = parseInt(itemId.replace('media_', ''), 10);
                 if (!isNaN(sId)) setActiveSceneId(sId);
               }
             }}
+            onDeleteItem={handleDeleteItem}
             onOpenFXTab={() => setActiveFlyoutTab('effects')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
-              // 1. Resize & Trim Media Scene Clip
+              // 1. Move & Resize Media Scene Clip (Independent Position & Duration with Gap Support)
               if (itemId.startsWith('media_')) {
                 const sId = parseInt(itemId.replace('media_', ''), 10);
-                setScenes((prev) => {
-                  let accumFrame = 0;
-                  return prev.map((s, idx) => {
+                setScenes((prev) =>
+                  prev.map((s, idx) => {
                     const match = (s.scene_id === sId) || (idx + 1 === sId);
-                    const newFrames = match ? Math.max(15, Math.round(newDur * fps)) : (s.duration_frames || 150);
-                    const updated = {
-                      ...s,
-                      start_frame: accumFrame,
-                      duration_frames: newFrames,
-                      start_sec: accumFrame / fps,
-                      duration_sec: newFrames / fps,
-                      end_sec: (accumFrame + newFrames) / fps,
-                    };
-                    accumFrame += newFrames;
-                    return updated;
-                  });
-                });
-                setSyncStatusMsg(`Đã cập nhật thời lượng Scene: ${newDur.toFixed(1)}s!`);
+                    if (match) {
+                      const safeStart = Math.max(0, newStart);
+                      const safeDur = Math.max(0.5, newDur);
+                      const startFrame = Math.round(safeStart * fps);
+                      const durFrames = Math.round(safeDur * fps);
+                      return {
+                        ...s,
+                        start_frame: startFrame,
+                        duration_frames: durFrames,
+                        start_sec: safeStart,
+                        duration_sec: safeDur,
+                        end_sec: safeStart + safeDur,
+                      };
+                    }
+                    return s;
+                  })
+                );
+                setSyncStatusMsg(`Đã cập nhật Scene: ${newStart.toFixed(1)}s (${newDur.toFixed(1)}s)!`);
                 setTimeout(() => setSyncStatusMsg(null), 2500);
                 return;
               }
