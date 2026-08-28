@@ -463,4 +463,58 @@ export const wynmotionService = {
     }
     return res.json();
   },
+
+  /**
+   * Fetch Dynamic Templates from Backend (No App Store Update Needed)
+   */
+  async getTemplates(params?: {
+    style?: string;
+    category?: string;
+    is_vip?: boolean;
+  }): Promise<{
+    success: boolean;
+    templates: Array<{
+      template_id: string;
+      visual_style: string;
+      category: string;
+      title_vi: string;
+      title_en?: string;
+      desc_vi: string;
+      desc_en?: string;
+      cover_url: string;
+      cover_ios_url?: string;
+      video_demo_url: string;
+      local_video_path?: string;
+      bgm_url?: string;
+      local_bgm_path?: string;
+      duration_sec: number;
+      max_images: number;
+      points_cost: number;
+      is_vip: boolean;
+      badge?: string;
+      usage_count?: string;
+      aspect_class?: string;
+      order?: number;
+      default_params?: any;
+    }>;
+    total: number;
+  }> {
+    try {
+      const headers = await getAuthHeaders();
+      const query = new URLSearchParams();
+      if (params?.style) query.append('style', params.style);
+      if (params?.category) query.append('category', params.category);
+      if (params?.is_vip !== undefined) query.append('is_vip', String(params.is_vip));
+
+      const res = await fetch(`${API_BASE_URL}/api/ai/motion/templates?${query.toString()}`, {
+        headers,
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn('Failed to fetch dynamic templates from API, using fallback:', err);
+    }
+    return { success: false, templates: [], total: 0 };
+  },
 };

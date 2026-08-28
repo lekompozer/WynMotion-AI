@@ -79,7 +79,7 @@ export const CAPCUT_CATEGORIES = [
 interface CapCutGalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectTemplate: (templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion') => void;
+  onSelectTemplate: (templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo') => void;
 }
 
 export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
@@ -89,10 +89,36 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('Dành cho bạn');
   const [searchQuery, setSearchQuery] = useState('');
+  const [templatesList, setTemplatesList] = useState<CapCutGalleryItem[]>(CAPCUT_GALLERY_TEMPLATES);
+
+  // Fetch dynamic templates from Backend API on mount
+  useEffect(() => {
+    let isMounted = true;
+    wynmotionService.getTemplates().then((res) => {
+      if (isMounted && res && res.success && res.templates && res.templates.length > 0) {
+        const mapped: CapCutGalleryItem[] = res.templates.map((t) => ({
+          id: t.template_id as any,
+          title: t.title_vi || t.title_en || t.template_id,
+          category: t.category || 'Sản phẩm',
+          duration: `${t.duration_sec}s`,
+          usageCount: t.usage_count || '50K',
+          author: t.is_vip ? 'Google VEO AI' : 'WynMotion AI',
+          authorAvatar: t.is_vip ? '👑' : '✨',
+          coverUrl: t.cover_ios_url || t.cover_url || '/templates/cover-animation-ads-image-ios.png',
+          aspectClass: t.aspect_class || 'aspect-[9/16]',
+          badge: t.badge || (t.is_vip ? '👑 VIP VEO 3.1' : undefined),
+        }));
+        setTemplatesList(mapped);
+      }
+    }).catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   if (!isOpen) return null;
 
-  const filteredTemplates = CAPCUT_GALLERY_TEMPLATES.filter((tpl) => {
+  const filteredTemplates = templatesList.filter((tpl) => {
     if (searchQuery.trim()) {
       return (
         tpl.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
