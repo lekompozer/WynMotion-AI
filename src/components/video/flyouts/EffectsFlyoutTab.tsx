@@ -301,59 +301,75 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
               return (
                 <div
                   key={item.id}
-                  onMouseEnter={() =>
-                    setPreviewItem({
-                      type: 'transition',
-                      name: item.id,
-                      category: item.category,
-                    })
-                  }
                   onClick={() => {
+                    // Click on card ONLY selects and tests on the Fox Canvas
                     setPreviewItem({
                       type: 'transition',
                       name: item.id,
                       category: item.category,
                     });
-                    onApplyTransition(item.id);
                   }}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group ${
                     isSelected
-                      ? 'bg-purple-950/50 border-purple-400 ring-1 ring-purple-400 shadow-lg shadow-purple-500/20'
+                      ? 'bg-purple-950/60 border-cyan-400 ring-2 ring-cyan-400/80 shadow-lg shadow-cyan-500/20'
                       : 'bg-[#141724] border-[#252B3E] hover:border-purple-500/50 hover:bg-[#1A1F30]'
                   }`}
+                  title="Bấm để thử nghiệm trực tiếp trên con cáo"
                 >
                   <div className="flex items-start justify-between">
                     <span className="text-[10px] uppercase font-black tracking-wider text-purple-400 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/40">
                       {item.category}
                     </span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                    {isSelected && (
+                      <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-xs">
+                        🦊 Đang thử
+                      </span>
+                    )}
                   </div>
 
                   <div className="my-2">
-                    <h4 className="text-xs font-black text-white group-hover:text-purple-300 transition-colors truncate">
+                    <h4 className={`text-xs font-black transition-colors truncate ${isSelected ? 'text-cyan-300' : 'text-white group-hover:text-purple-300'}`}>
                       {item.name}
                     </h4>
-                    <p className="text-[10px] text-slate-500">Duration: {item.default_duration}s</p>
+                    <p className="text-[10px] text-slate-400">Thời lượng: {item.default_duration}s</p>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewItem({
-                        type: 'transition',
-                        name: item.id,
-                        category: item.category,
-                      });
-                      onApplyTransition(item.id);
-                    }}
-                    className={`w-full py-1 text-[11px] font-bold rounded-lg transition-all ${
-                      isSelected
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-[#202538] text-slate-300 group-hover:bg-purple-600 group-hover:text-white'
-                    }`}
-                  >
-                    {isSelected ? 'Đang xem & Chọn' : 'Xem & Áp dụng'}
-                  </button>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewItem({
+                          type: 'transition',
+                          name: item.id,
+                          category: item.category,
+                        });
+                      }}
+                      className={`flex-1 py-1 text-[10px] font-black rounded-lg transition-all border ${
+                        isSelected
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                          : 'bg-[#181B28] text-slate-400 hover:text-white border-[#2A3045]'
+                      }`}
+                      title="Chạy hiệu ứng này trên con cáo"
+                    >
+                      🦊 Thử trên Cáo
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewItem({
+                          type: 'transition',
+                          name: item.id,
+                          category: item.category,
+                        });
+                        onApplyTransition(item.id);
+                      }}
+                      className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white rounded-lg text-[10px] font-black transition-all shadow-sm active:scale-95"
+                      title="Áp dụng chuyển cảnh này vào Timeline Video"
+                    >
+                      + Áp dụng
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -371,42 +387,74 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             return (
               <div
                 key={eff.id}
-                onMouseEnter={() =>
-                  setPreviewItem({
-                    type: 'effect',
-                    name: eff.id,
-                    category: eff.tag,
-                  })
-                }
                 onClick={() => {
+                  // Click on effect card ONLY previews on Fox
                   setPreviewItem({
                     type: 'effect',
                     name: eff.id,
                     category: eff.tag,
                   });
-                  onApplyEffect && onApplyEffect(eff.id);
                 }}
                 className={`p-3 rounded-xl border transition-all cursor-pointer group ${
                   isSelected
-                    ? 'bg-pink-950/40 border-pink-500 ring-1 ring-pink-400 shadow-lg shadow-pink-500/20'
+                    ? 'bg-pink-950/60 border-cyan-400 ring-2 ring-cyan-400/80 shadow-lg shadow-cyan-500/20'
                     : 'bg-[#141724] border-[#252B3E] hover:border-pink-500/50 hover:bg-[#1A1F30]'
                 }`}
+                title="Bấm để thử nghiệm hiệu ứng trên con cáo"
               >
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
-                    {eff.icon}
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
+                      {eff.icon}
+                    </div>
+                    <div>
+                      <h4 className={`text-xs font-black transition-colors ${isSelected ? 'text-cyan-300' : 'text-white group-hover:text-pink-300'}`}>
+                        {eff.name}
+                      </h4>
+                      <span className="text-[10px] font-bold text-slate-500">{eff.tag}</span>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-black text-white group-hover:text-pink-300 transition-colors">
-                      {eff.name}
-                    </h4>
-                    <span className="text-[10px] font-bold text-slate-500">{eff.tag}</span>
-                  </div>
+                  {isSelected && (
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-xs">
+                      🦊 Đang thử
+                    </span>
+                  )}
                 </div>
+
                 <p className="text-[11px] text-slate-400 leading-relaxed">{eff.desc}</p>
-                <div className="mt-2 flex justify-end">
-                  <button className="px-3 py-1 bg-[#202538] group-hover:bg-pink-600 text-slate-300 group-hover:text-white rounded-lg text-[11px] font-bold transition-all">
-                    Áp dụng hiệu ứng
+
+                <div className="mt-2.5 flex items-center justify-end gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewItem({
+                        type: 'effect',
+                        name: eff.id,
+                        category: eff.tag,
+                      });
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all border ${
+                      isSelected
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                        : 'bg-[#181B28] text-slate-400 hover:text-white border-[#2A3045]'
+                    }`}
+                  >
+                    🦊 Thử trên Cáo
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewItem({
+                        type: 'effect',
+                        name: eff.id,
+                        category: eff.tag,
+                      });
+                      onApplyEffect && onApplyEffect(eff.id);
+                    }}
+                    className="px-3 py-1 bg-gradient-to-r from-pink-600 to-rose-600 hover:brightness-110 text-white rounded-lg text-[11px] font-black transition-all shadow-sm active:scale-95"
+                  >
+                    + Áp dụng vào Video
                   </button>
                 </div>
               </div>
