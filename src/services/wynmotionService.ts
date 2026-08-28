@@ -429,4 +429,38 @@ export const wynmotionService = {
     }
     return res.json();
   },
+
+  /**
+   * VIP Feature: Google VEO 3.1 Animation Ads Image
+   */
+  async generateVeoAdsAnimation(params: {
+    image_url: string;
+    user_prompt?: string;
+    aspect_ratio?: '9:16' | '1:1' | '16:9';
+    duration_seconds?: 6 | 9 | 12;
+    force_create_poster?: boolean;
+  }): Promise<{
+    success: boolean;
+    project_id: string;
+    video_url: string;
+    duration_seconds: number;
+    points_deducted: number;
+    strategy_decision?: string;
+    synthesized_poster_url?: string;
+    brand_name?: string;
+    product_title?: string;
+    project: any;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/veo-animate-ads`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Lỗi tạo video VEO 3.1');
+    }
+    return res.json();
+  },
 };

@@ -997,8 +997,12 @@ export const AiVideoTab: React.FC = () => {
     setIsCreationMinimized(false);
     setCreationError(null);
     setCreationProgressPercent(15);
-    setCreationCountdownSec(300);
-    setCreationStatusMessage(isVietnamese ? '⚡ Đang khởi tạo video theo mẫu CapCut...' : '⚡ Launching CapCut template video...');
+    setCreationCountdownSec(600); // 10 minutes countdown
+    setCreationStatusMessage(
+      params.templateId === 'animation_ads_image_veo'
+        ? (isVietnamese ? '👑 Đang khởi tạo VEO 3.1 Ads Animation (VIP)...' : '👑 Launching VEO 3.1 Ads Animation (VIP)...')
+        : (isVietnamese ? '⚡ Đang khởi tạo video theo mẫu CapCut...' : '⚡ Launching CapCut template video...')
+    );
 
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     countdownIntervalRef.current = setInterval(() => {
@@ -1012,28 +1016,47 @@ export const AiVideoTab: React.FC = () => {
     }, 1000);
 
     try {
-      const chosenAspectRatio = params.aspectRatio || (aspectRatio === '16:9' ? '16:9' : '9:16');
-      const res = await wynmotionService.generateScenes({
-        title: params.prompt,
-        prompt: params.prompt,
-        script: params.prompt,
-        audio_url: params.bgmUrl,
-        duration_sec: params.durationSec,
-        aspect_ratio: chosenAspectRatio,
-        visual_style: params.templateId,
-        product_images: params.productImages.length > 0 ? params.productImages : undefined,
-        hook_text: params.hookText,
-        cta_text: params.ctaText,
-        language_code: selectedLang,
-        ...(params.solidText && { headline_solid: params.solidText }),
-        ...(params.outlineText && { headline_outline: params.outlineText }),
-        ...(params.sloganText && { sub_headline: params.sloganText }),
-      } as any);
+      const chosenAspectRatio = (params.aspectRatio || (aspectRatio === '16:9' ? '16:9' : '9:16')) as '9:16' | '1:1' | '16:9';
+      
+      let res: any;
+      if (params.templateId === 'animation_ads_image_veo') {
+        const firstImg = params.productImages[0] || '';
+        if (!firstImg) {
+          throw new Error(isVietnamese ? 'Vui lòng tải lên 1 ảnh Ads Poster để tạo animation VEO 3.1' : 'Please upload 1 Ads Poster image for VEO 3.1 animation');
+        }
+        res = await wynmotionService.generateVeoAdsAnimation({
+          image_url: firstImg,
+          user_prompt: params.prompt,
+          aspect_ratio: chosenAspectRatio,
+          duration_seconds: (params.durationSec || 12) as any,
+        });
+      } else {
+        res = await wynmotionService.generateScenes({
+          title: params.prompt,
+          prompt: params.prompt,
+          script: params.prompt,
+          audio_url: params.bgmUrl,
+          duration_sec: params.durationSec,
+          aspect_ratio: chosenAspectRatio,
+          visual_style: params.templateId,
+          product_images: params.productImages.length > 0 ? params.productImages : undefined,
+          hook_text: params.hookText,
+          cta_text: params.ctaText,
+          language_code: selectedLang,
+          ...(params.solidText && { headline_solid: params.solidText }),
+          ...(params.outlineText && { headline_outline: params.outlineText }),
+          ...(params.sloganText && { sub_headline: params.sloganText }),
+        } as any);
+      }
 
       if (res && res.project) {
         let finalProject = res.project;
         if (finalProject.status === 'processing' || finalProject.status === 'queued' || finalProject.status === 'pending') {
-          setCreationStatusMessage(isVietnamese ? 'Đang tạo hình ảnh & bóc tách vật thể SAM 2...' : 'Generating visuals & SAM 2 segmentation...');
+          setCreationStatusMessage(
+            params.templateId === 'animation_ads_image_veo'
+              ? (isVietnamese ? 'Google VEO 3.1 đang kết xuất video điện ảnh 60fps...' : 'Google VEO 3.1 is rendering 60fps cinematic video...')
+              : (isVietnamese ? 'Đang tạo hình ảnh & tính toán chuyển động AI...' : 'Generating visuals & AI motion calculations...')
+          );
           const startTime = Date.now();
           const MAX_POLL_MS = 10 * 60 * 1000;
           const POLL_INTERVAL_MS = 8000;

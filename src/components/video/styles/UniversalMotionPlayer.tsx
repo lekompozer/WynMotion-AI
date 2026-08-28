@@ -317,7 +317,9 @@ export const UniversalMotionPlayer: React.FC<UniversalMotionPlayerProps> = ({
                 position: 'absolute',
                 inset: 0,
                 transform:
-                  activeBlock.motion_in === 'slide_from_right_lock_1to1'
+                  activeBlock.motion_in === 'full_poster_zoom_in'
+                    ? `scale(${interpolate(blockProgress, [0, 1], [1.0, 1.08])})`
+                    : activeBlock.motion_in === 'slide_from_right_lock_1to1'
                     ? `translateX(${interpolate(Math.min(1, blockProgress / 0.18), [0, 1], [550, 0]) + glitchOffset}px)`
                     : activeBlock.motion_in === 'slide_from_bottom_over_underlayer'
                     ? `translateY(${interpolate(Math.min(1, blockProgress / 0.18), [0, 1], [400, 0])}px) translateX(${glitchOffset}px)`

@@ -6,7 +6,7 @@ import { wynmotionService } from '@/services/wynmotionService';
 import { Loader2 } from 'lucide-react';
 
 export interface CapCutTemplateData {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
+  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo';
   titleVi: string;
   titleEn: string;
   descVi: string;
@@ -28,6 +28,48 @@ export interface CapCutTemplateData {
 }
 
 export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
+  animation_ads_image_veo: {
+    id: 'animation_ads_image_veo',
+    titleVi: 'Animation Ads Image (Google VEO 3.1 VIP)',
+    titleEn: 'Animation Ads Image (Google VEO 3.1 VIP)',
+    descVi: 'Tải 1 ảnh Ads Poster → AI Gemini 3.7 & Google VEO 3.1 sinh video chuyển động điện ảnh siêu thực 6s/9s/12s chuẩn Hollywood.',
+    descEn: 'Upload 1 Ads Poster → Gemini 3.7 & Google VEO 3.1 generate hyper-realistic cinematic commercial animation video.',
+    durationSec: 12.0,
+    videoUrl: '',
+    bgmUrl: '',
+    badge: '👑 VIP VEO 3.1',
+    usageCount: '95.4K',
+    maxImages: 1,
+    defaultHookVi: 'SIÊU PHẨM MỚI',
+    defaultHookEn: 'NEW ARRIVAL',
+    defaultSolidVi: 'LUXURY',
+    defaultSolidEn: 'LUXURY',
+    defaultOutlineVi: 'EDITION',
+    defaultOutlineEn: 'EDITION',
+    defaultSloganVi: '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY',
+    defaultSloganEn: '⚡ EXPERIENCE LUXURY - ORDER NOW',
+  },
+  product_ads_motion: {
+    id: 'product_ads_motion',
+    titleVi: 'Universal Images Product Video',
+    titleEn: 'Universal Images Product Video',
+    descVi: 'Đạo diễn AI Gemini 3.7 tự do điều phối 125 Transitions GLSL & 40 Hiệu ứng thị giác theo nhịp beat (1-10 ảnh).',
+    descEn: 'Universal AI Motion Director with 125+ GLSL Shaders, 40 visual effects & dynamic 1-10 photos layout.',
+    durationSec: 15.0,
+    videoUrl: '',
+    bgmUrl: '',
+    badge: '💎 AI MOTION 10-60s',
+    usageCount: '88.5K',
+    maxImages: 10,
+    defaultHookVi: 'SIÊU PHẨM MỚI',
+    defaultHookEn: 'NEW ARRIVAL',
+    defaultSolidVi: 'ORDER',
+    defaultSolidEn: 'ORDER',
+    defaultOutlineVi: 'NOW',
+    defaultOutlineEn: 'NOW',
+    defaultSloganVi: '⚡ ĐẶT HÀNG NGAY - SỐ LƯỢNG CÓ HẠN',
+    defaultSloganEn: '⚡ LIMITED TIME OFFER - ORDER NOW',
+  },
   ads_strobe_teaser: {
     id: 'ads_strobe_teaser',
     titleVi: 'Strobe Teaser & Big Reveal',
@@ -39,7 +81,7 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/7fcf80645e11_templates/strobe_teaser_bgm.mp3',
     badge: '⚡ STROBE 11.7s',
     usageCount: '76.9K',
-    maxImages: 1,
+    maxImages: 3,
     defaultHookVi: 'SIÊU PHẨM MỚI',
     defaultHookEn: 'NEW ARRIVAL',
     defaultSolidVi: 'STAY',
@@ -51,8 +93,8 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
   },
   ads_cinematic_showcase: {
     id: 'ads_cinematic_showcase',
-    titleVi: 'Cinematic Showcase Reel',
-    titleEn: 'Cinematic Showcase Reel',
+    titleVi: 'Cinematic Menu Showcase 22s',
+    titleEn: 'Cinematic Menu Showcase 22s',
     descVi: 'Tải 1 ảnh Menu thực đơn → AI tự động quét 7 món ăn ngon mắt, hiệu ứng điện ảnh & Outro bìa Menu 3D.',
     descEn: 'Upload 1 Menu photo → AI automatically scans 7 dishes, cinematic food VFX & 3D Menu Outro.',
     durationSec: 22.0,
@@ -70,36 +112,15 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     defaultSloganVi: '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY',
     defaultSloganEn: '⚡ TASTE THE PERFECTION - ORDER NOW',
   },
-  product_ads_motion: {
-    id: 'product_ads_motion',
-    titleVi: 'Universal Product Ads Motion (Style 7)',
-    titleEn: 'Universal Product Ads Motion (Style 7)',
-    descVi: 'Đạo diễn chuyển động AI tự động sáng tạo kịch bản, phối hợp kho 125+ Shaders GLSL, tách nền sản phẩm chuẩn studio & bố cục linh hoạt 1-10 ảnh.',
-    descEn: 'Universal AI Motion Director with 125+ GLSL Shaders, studio packshot cutout & dynamic 1-10 photos layout.',
-    durationSec: 15.0,
-    videoUrl: '',
-    bgmUrl: '',
-    badge: '💎 AI MOTION 10-60s',
-    usageCount: '18.5K',
-    maxImages: 10,
-    defaultHookVi: 'SIÊU PHẨM MỚI',
-    defaultHookEn: 'NEW ARRIVAL',
-    defaultSolidVi: 'ORDER',
-    defaultSolidEn: 'ORDER',
-    defaultOutlineVi: 'NOW',
-    defaultOutlineEn: 'NOW',
-    defaultSloganVi: '⚡ ĐẶT HÀNG NGAY - SỐ LƯỢNG CÓ HẠN',
-    defaultSloganEn: '⚡ LIMITED TIME OFFER - ORDER NOW',
-  },
 };
 
 export interface CapCutTemplateModalProps {
-  templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | null;
+  templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo' | null;
   isOpen: boolean;
   onClose: () => void;
   defaultAspectRatio?: '9:16' | '16:9';
   onApply: (params: {
-    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
+    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo';
     prompt: string;
     productImages: string[];
     bgmUrl: string;
