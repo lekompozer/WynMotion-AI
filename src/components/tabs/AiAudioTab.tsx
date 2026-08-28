@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * AiAudioTab.tsx — WynMotion-AI iOS & Web Audio Studio
+ *
+ * 2-Step Architecture:
+ * - Step 1: Content & Language (Nội dung văn bản, AI Script Assistant & Chọn ngôn ngữ)
+ * - Step 2: Voice & Sound Configuration (Chọn Model, Giọng đọc vùng miền, Tốc độ, Sinh âm thanh & Player)
+ * - Theme Integration: Matching bottom navigation bar active color (#FF2D55 -> #FF4570)
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Mic,
@@ -21,7 +30,11 @@ import {
   Share2,
   Layers,
   ChevronRight,
+  ArrowLeft,
+  ArrowRight,
   FolderOpen,
+  Copy,
+  Zap,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -41,30 +54,23 @@ import {
   VoiceOption,
   AudioGenerateResponse,
 } from '@/services/audioService';
+import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
 
 type StudioTab = 'voice' | 'music';
+type AudioStep = 1 | 2;
 
 export const AiAudioTab: React.FC = () => {
   const { isVietnamese, isDark, setActiveTab, t } = useApp();
   const { refreshSubscription } = useWordaiAuth();
 
-  // Studio Mode: 'voice' | 'music'
+  // Studio Mode: 'voice' (Lồng tiếng) | 'music' (Tạo nhạc nền)
   const [studioTab, setStudioTab] = useState<StudioTab>('voice');
 
-  // ── Step 1: Voice Settings ──
+  // Wizard Step: 1 (Content & Language) | 2 (Voice & Generate)
+  const [currentStep, setCurrentStep] = useState<AudioStep>(1);
+
+  // ── Step 1: Content & Language States ──
   const [selectedLang, setSelectedLang] = useState<string>(isVietnamese ? 'vi' : 'en-US');
-  const [modelType, setModelType] = useState<'wynai' | 'gemini'>('wynai');
-  const [regionFilter, setRegionFilter] = useState<'all' | 'north' | 'central' | 'south'>('all');
-  const [selectedVoiceName, setSelectedVoiceName] = useState<string>('Phạm Tuyên');
-  const [readingStyle, setReadingStyle] = useState<string>('tu_nhien');
-  const [speakingRate, setSpeakingRate] = useState<number>(1.0);
-
-  // ── Step 1: Music Settings ──
-  const [selectedMusicStyle, setSelectedMusicStyle] = useState(MUSIC_STYLES[0]);
-  const [customMusicPrompt, setCustomMusicPrompt] = useState(MUSIC_STYLES[0].prompt);
-  const [negativeMusicPrompt, setNegativeMusicPrompt] = useState('');
-
-  // ── Step 2: Text / Script Input ──
   const [scriptText, setScriptText] = useState(
     isVietnamese
       ? 'Chào mừng bạn đến với WynMotion AI. Ứng dụng sáng tạo video hoạt họa và giọng đọc thông minh hàng đầu!'
@@ -73,6 +79,18 @@ export const AiAudioTab: React.FC = () => {
   const [isWritingScript, setIsWritingScript] = useState(false);
   const [scriptPromptIdea, setScriptPromptIdea] = useState('');
   const [showScriptAssistant, setShowScriptAssistant] = useState(false);
+
+  // Music Step 1 States
+  const [selectedMusicStyle, setSelectedMusicStyle] = useState(MUSIC_STYLES[0]);
+  const [customMusicPrompt, setCustomMusicPrompt] = useState(MUSIC_STYLES[0].prompt);
+  const [negativeMusicPrompt, setNegativeMusicPrompt] = useState('');
+
+  // ── Step 2: Voice Configuration States ──
+  const [modelType, setModelType] = useState<'wynai' | 'gemini'>('wynai');
+  const [regionFilter, setRegionFilter] = useState<'all' | 'north' | 'central' | 'south'>('all');
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>('Phạm Tuyên');
+  const [readingStyle, setReadingStyle] = useState<string>('tu_nhien');
+  const [speakingRate, setSpeakingRate] = useState<number>(1.0);
 
   // ── Generation State ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -86,6 +104,7 @@ export const AiAudioTab: React.FC = () => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-sync voice when language changes
@@ -101,7 +120,7 @@ export const AiAudioTab: React.FC = () => {
     }
   }, [selectedLang, modelType]);
 
-  // Audio event listeners
+  // Audio element listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -121,7 +140,7 @@ export const AiAudioTab: React.FC = () => {
     };
   }, [generatedAudio]);
 
-  // Timer for live generation duration
+  // Timer for live generation
   useEffect(() => {
     if (isGenerating) {
       setElapsedTime(0);
@@ -134,7 +153,7 @@ export const AiAudioTab: React.FC = () => {
     };
   }, [isGenerating]);
 
-  // Get current voice list
+  // Voice list calculation
   const getAvailableVoices = (): VoiceOption[] => {
     if (modelType === 'gemini') {
       return [...GEMINI_FEMALE_VOICES, ...GEMINI_MALE_VOICES];
@@ -148,9 +167,8 @@ export const AiAudioTab: React.FC = () => {
     return [...KOKORO_FEMALE_VOICES, ...KOKORO_MALE_VOICES];
   };
 
-  // Play / Pause toggle
-  const togglePlay = () => {
-    if (!audioRef.current || !generatedAudio?.audio_url) return;
+  const handleTogglePlay = () => {
+    if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -160,32 +178,16 @@ export const AiAudioTab: React.FC = () => {
     }
   };
 
-  // Seek audio
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    setCurrentTime(time);
-    if (audioRef.current) audioRef.current.currentTime = time;
-  };
-
-  // Volume toggle
-  const toggleMute = () => {
-    if (!audioRef.current) return;
-    if (isMuted) {
-      audioRef.current.volume = volume;
-      setIsMuted(false);
-    } else {
-      audioRef.current.volume = 0;
-      setIsMuted(true);
-    }
-  };
-
-  // ── AI Script Assistant ──
+  // AI Script Assistant
   const handleGenerateScriptWithAI = async () => {
-    if (!scriptPromptIdea.trim()) return;
-    setIsWritingScript(true);
+    if (!scriptPromptIdea.trim()) {
+      alert(t('Vui lòng nhập chủ đề kịch bản!', 'Please enter a script topic!'));
+      return;
+    }
     try {
+      setIsWritingScript(true);
       const generated = await audioService.generateScriptFromPrompt(
-        scriptPromptIdea.trim(),
+        scriptPromptIdea,
         selectedLang
       );
       if (generated) {
@@ -193,696 +195,701 @@ export const AiAudioTab: React.FC = () => {
         setShowScriptAssistant(false);
       }
     } catch (err: any) {
-      alert(err.message || t('Lỗi tạo kịch bản AI', 'Failed to generate script'));
+      alert(err.message || 'Lỗi tạo kịch bản với AI');
     } finally {
       setIsWritingScript(false);
     }
   };
 
-  // ── Voiceover Generation ──
-  const handleGenerateVoice = async () => {
-    if (!scriptText.trim()) {
-      alert(t('Vui lòng nhập văn bản cần đọc', 'Please enter text to synthesize'));
-      return;
-    }
-
-    setIsGenerating(true);
-    setGeneratedAudio(null);
-    setIsPlaying(false);
-
+  // Generate Audio Trigger
+  const handleGenerateAudio = async () => {
     try {
-      const res = await audioService.generateSpeech({
-        text: scriptText.trim(),
-        voice_name: selectedVoiceName,
-        language_code: selectedLang,
-        voice_engine: modelType,
-        reading_style: readingStyle,
-        speaking_rate: speakingRate,
-      });
+      setIsGenerating(true);
+      setGeneratedAudio(null);
 
-      setGeneratedAudio(res);
-      await refreshSubscription();
-    } catch (err: any) {
-      alert(err.message || t('Lỗi tạo giọng đọc AI', 'Failed to generate speech'));
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+      let res: AudioGenerateResponse;
 
-  // ── Music Generation ──
-  const handleGenerateMusic = async () => {
-    if (!customMusicPrompt.trim()) {
-      alert(t('Vui lòng nhập mô tả nhạc nền', 'Please enter music description'));
-      return;
-    }
+      if (studioTab === 'voice') {
+        if (!scriptText.trim()) {
+          alert(t('Vui lòng nhập văn bản cần đọc!', 'Please enter text to speak!'));
+          return;
+        }
 
-    setIsGenerating(true);
-    setGeneratedAudio(null);
-    setIsPlaying(false);
-
-    try {
-      const res = await audioService.generateMusic({
-        prompt: customMusicPrompt.trim(),
-        negative_prompt: negativeMusicPrompt.trim() || undefined,
-      });
-
-      if (res.audio_url) {
-        setGeneratedAudio({
-          audio_url: res.audio_url,
-          duration_sec: 30,
-          filename: 'wynmotion_bgm.wav',
+        res = await audioService.generateSpeech({
+          text: scriptText,
+          voice_name: selectedVoiceName,
+          language_code: selectedLang,
+          voice_engine: modelType,
+          reading_style: readingStyle,
+          speaking_rate: speakingRate,
         });
       } else {
-        alert(t('🎵 Đang tạo nhạc nền AI, vui lòng kiểm tra sau!', '🎵 Generating AI BGM, please check shortly!'));
+        if (!customMusicPrompt.trim()) {
+          alert(t('Vui lòng nhập mô tả phong cách nhạc!', 'Please enter music prompt!'));
+          return;
+        }
+        const musicRes = await audioService.generateMusic({
+          prompt: customMusicPrompt,
+          negative_prompt: negativeMusicPrompt || undefined,
+        });
+
+        if (!musicRes.audio_url) {
+          throw new Error(musicRes.message || 'Chưa nhận được file âm thanh');
+        }
+
+        res = {
+          audio_url: musicRes.audio_url,
+          duration_sec: 30,
+          filename: 'background_music.mp3',
+        };
       }
-      await refreshSubscription();
+
+      setGeneratedAudio(res);
+      refreshSubscription();
     } catch (err: any) {
-      alert(err.message || t('Lỗi tạo nhạc nền AI', 'Failed to generate music'));
+      console.error('Audio generation error:', err);
+      alert(err.message || t('Tạo âm thanh thất bại!', 'Failed to generate audio!'));
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // ── Download Audio ──
-  const handleDownload = () => {
-    if (!generatedAudio?.audio_url) return;
-    const a = document.createElement('a');
-    a.href = generatedAudio.audio_url;
-    a.download = generatedAudio.filename || 'wynmotion_audio.wav';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const formatTime = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const voiceList = getAvailableVoices();
+  const selectedLangObj = AUDIO_STUDIO_LANGUAGES.find((l) => l.code === selectedLang);
 
   return (
-    <div
-      className={`w-full max-w-xl mx-auto px-4 py-5 space-y-6 transition-colors duration-200 ${
-        isDark ? 'text-slate-100' : 'text-slate-900'
-      }`}
-    >
-      {/* Hidden audio element */}
-      {generatedAudio?.audio_url && (
-        <audio ref={audioRef} src={generatedAudio.audio_url} className="hidden" preload="auto" />
-      )}
-
-      {/* ─── TAB SWITCHER: VOICE (TTS) vs MUSIC (BGM) ─── */}
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 pt-2 pb-24 space-y-4">
+      {/* ─────────────────────────────────────────────────────────────
+          1. TOP STUDIO MODE TOGGLE (Voiceover vs Music Generator)
+          ───────────────────────────────────────────────────────────── */}
       <div
-        className={`p-1.5 rounded-3xl border flex items-center gap-1.5 shadow-sm ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        className={`p-1 rounded-2xl border flex items-center gap-1 backdrop-blur-xl ${
+          isDark ? 'bg-[#0E111A]/90 border-slate-800/80 shadow-md' : 'bg-white/90 border-slate-200 shadow-sm'
         }`}
       >
         <button
           type="button"
-          onClick={() => setStudioTab('voice')}
-          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all ${
+          onClick={() => {
+            setStudioTab('voice');
+            setCurrentStep(1);
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
             studioTab === 'voice'
-              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md'
+              ? isDark
+                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 scale-[1.02]'
+                : 'bg-black text-white shadow-sm scale-[1.02]'
               : isDark
               ? 'text-slate-400 hover:text-white'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Mic className="w-4 h-4" />
-          <span>{t('Lồng Tiếng AI (TTS)', 'AI Voiceover (TTS)')}</span>
+          <Mic className="w-3.5 h-3.5" />
+          <span>{t('Lồng Tiếng AI (Voiceover)', 'AI Voiceover')}</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setStudioTab('music')}
-          className={`flex-1 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all ${
+          onClick={() => {
+            setStudioTab('music');
+            setCurrentStep(1);
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
             studioTab === 'music'
-              ? 'bg-gradient-to-r from-purple-400 to-violet-600 text-white shadow-md'
+              ? isDark
+                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 scale-[1.02]'
+                : 'bg-black text-white shadow-sm scale-[1.02]'
               : isDark
               ? 'text-slate-400 hover:text-white'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Music2 className="w-4 h-4" />
-          <span>{t('Nhạc Nền AI (BGM)', 'AI Music & BGM')}</span>
+          <Music2 className="w-3.5 h-3.5" />
+          <span>{t('Tạo Nhạc Nền (BGM Generator)', 'BGM Music')}</span>
         </button>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════
-          VOICE STUDIO (TTS)
-      ═══════════════════════════════════════════════════════════ */}
-      {studioTab === 'voice' && (
-        <div className="space-y-5 animate-in fade-in duration-200">
-          {/* ─── STEP 1: CẤU HÌNH & GIỌNG ĐỌC (SETTINGS FIRST) ─── */}
+      {/* ─────────────────────────────────────────────────────────────
+          2. STEP PROGRESS INDICATOR (Step 1 -> Step 2)
+          ───────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setCurrentStep(1)}
+          className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all ${
+            currentStep === 1
+              ? isDark
+                ? 'bg-[#151928] border-rose-500/80 shadow-md shadow-rose-500/10'
+                : 'bg-white border-black shadow-sm'
+              : isDark
+              ? 'bg-[#0E111A] border-slate-800 opacity-60 hover:opacity-100'
+              : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100'
+          }`}
+        >
           <div
-            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+              currentStep === 1
+                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-sm'
+                : 'bg-slate-800 text-slate-400'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center">
-                  1
-                </span>
-                <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {t('Cấu Hình & Chọn Giọng Đọc', 'Voice & Language Settings')}
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400">
-                48kHz Studio
-              </span>
-            </div>
+            1
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">
+              {t('Bước 1', 'Step 1')}
+            </span>
+            <span className={`text-xs font-black truncate block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {studioTab === 'voice' ? t('Nội Dung & Ngôn Ngữ', 'Content & Language') : t('Ý Tưởng & Thể Loại', 'Style & Prompt')}
+            </span>
+          </div>
+        </button>
 
-            {/* 1.1: Language Selector Carousel */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                {t('1. Ngôn Ngữ', '1. Language')}
-              </label>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2">
-                {AUDIO_STUDIO_LANGUAGES.map((lang) => {
-                  const isSelected = selectedLang === lang.code;
-                  return (
+        <button
+          type="button"
+          onClick={() => {
+            if (studioTab === 'voice' && !scriptText.trim()) {
+              alert(t('Vui lòng nhập văn bản trước!', 'Please enter script first!'));
+              return;
+            }
+            setCurrentStep(2);
+          }}
+          className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all ${
+            currentStep === 2
+              ? isDark
+                ? 'bg-[#151928] border-rose-500/80 shadow-md shadow-rose-500/10'
+                : 'bg-white border-black shadow-sm'
+              : isDark
+              ? 'bg-[#0E111A] border-slate-800 opacity-60 hover:opacity-100'
+              : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100'
+          }`}
+        >
+          <div
+            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+              currentStep === 2
+                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-sm'
+                : 'bg-slate-800 text-slate-400'
+            }`}
+          >
+            2
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">
+              {t('Bước 2', 'Step 2')}
+            </span>
+            <span className={`text-xs font-black truncate block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {studioTab === 'voice' ? t('Giọng Đọc & Tạo Audio', 'Voice & Generate') : t('Tùy Chỉnh & Sinh Nhạc', 'Config & Render')}
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          3. STEP 1: CONTENT & LANGUAGE INPUT SCREEN
+          ───────────────────────────────────────────────────────────── */}
+      {currentStep === 1 && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {studioTab === 'voice' ? (
+            <>
+              {/* Language Selector Dropdown / Pills */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <Globe className="w-3 h-3 text-cyan-400" />
+                  <span>{t('Ngôn ngữ đọc (Language)', 'Language')}</span>
+                </label>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {AUDIO_STUDIO_LANGUAGES.map((lang) => (
                     <button
                       key={lang.code}
                       type="button"
                       onClick={() => setSelectedLang(lang.code)}
-                      className={`flex-shrink-0 px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 ${
-                        isSelected
-                          ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400 shadow-sm'
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                        selectedLang === lang.code
+                          ? isDark
+                            ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                            : 'bg-black text-white border-black'
                           : isDark
-                          ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                          : 'bg-slate-50 border-slate-200 text-slate-600'
+                          ? 'bg-[#121522] border-slate-800 text-slate-400 hover:text-white'
+                          : 'bg-slate-100 border-slate-200 text-slate-600'
                       }`}
                     >
-                      <span className="text-sm">{lang.flag}</span>
+                      <span>{lang.flag}</span>
                       <span>{lang.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 1.2: AI Voice Engine Switcher (WynAI vs Gemini) */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                {t('2. Mô Hình AI Voice', '2. AI Voice Engine')}
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setModelType('wynai')}
-                  className={`p-3 rounded-2xl border text-left transition-all ${
-                    modelType === 'wynai'
-                      ? 'bg-cyan-500/15 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/40'
-                      : isDark
-                      ? 'bg-slate-800/80 border-slate-700 text-slate-400'
-                      : 'bg-slate-50 border-slate-200 text-slate-600'
-                  }`}
-                >
-                  <div className="text-xs font-black flex items-center justify-between">
-                    <span>WynAI Audio (VieNeu)</span>
-                    {modelType === 'wynai' && <Check className="w-3.5 h-3.5 text-cyan-400" />}
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    {t('VieNeu 48kHz siêu thực · Kokoro 15+ tiếng', 'VieNeu 48kHz & Kokoro 15+ langs')}
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setModelType('gemini')}
-                  className={`p-3 rounded-2xl border text-left transition-all ${
-                    modelType === 'gemini'
-                      ? 'bg-purple-500/15 border-purple-400 text-purple-300 ring-1 ring-purple-400/40'
-                      : isDark
-                      ? 'bg-slate-800/80 border-slate-700 text-slate-400'
-                      : 'bg-slate-50 border-slate-200 text-slate-600'
-                  }`}
-                >
-                  <div className="text-xs font-black flex items-center justify-between">
-                    <span>Gemini AI Audio</span>
-                    {modelType === 'gemini' && <Check className="w-3.5 h-3.5 text-purple-400" />}
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    {t('30+ giọng tự nhiên đa cảm xúc', '30+ expressive natural voices')}
-                  </p>
-                </button>
-              </div>
-            </div>
-
-            {/* 1.3: Region Filter (for Vietnamese VieNeu) */}
-            {selectedLang === 'vi' && modelType === 'wynai' && (
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {t('3. Vùng Miền Giọng Đọc', '3. Vietnamese Region')}
-                </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { id: 'all' as const, label: t('Tất Cả', 'All') },
-                    { id: 'north' as const, label: t('Miền Bắc', 'North') },
-                    { id: 'central' as const, label: t('Miền Trung', 'Central') },
-                    { id: 'south' as const, label: t('Miền Nam', 'South') },
-                  ].map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setRegionFilter(r.id)}
-                      className={`py-2 rounded-xl text-[11px] font-bold border transition-all ${
-                        regionFilter === r.id
-                          ? 'bg-cyan-400 text-slate-950 border-cyan-300 shadow-sm'
-                          : isDark
-                          ? 'bg-slate-800 border-slate-700 text-slate-400'
-                          : 'bg-slate-50 border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      {r.label}
                     </button>
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* 1.4: Voice List Selection Grid */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                {t('4. Danh Sách Giọng Đọc', '4. Select Voice')}
-              </label>
-              <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                {voiceList.map((v) => {
-                  const isSelected = selectedVoiceName === v.code;
-                  return (
-                    <button
-                      key={v.code}
-                      type="button"
-                      onClick={() => setSelectedVoiceName(v.code)}
-                      className={`p-3 rounded-2xl border text-left transition-all active:scale-95 ${
-                        isSelected
-                          ? 'bg-cyan-500/15 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/40 shadow-sm'
+              {/* Text Input Box */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                    ✍️ {t('Văn bản kịch bản (Script)', 'Script Content')}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowScriptAssistant((p) => !p)}
+                    className="text-[10px] font-black text-cyan-400 hover:underline flex items-center gap-1"
+                  >
+                    <Wand2 className="w-3 h-3" />
+                    <span>{t('Trợ lý AI viết kịch bản', 'AI Script Assistant')}</span>
+                  </button>
+                </div>
+
+                {/* AI Script Assistant Pop-down */}
+                {showScriptAssistant && (
+                  <div
+                    className={`p-3 rounded-2xl border space-y-2 animate-in fade-in duration-150 ${
+                      isDark ? 'bg-[#141828] border-slate-700' : 'bg-slate-50 border-slate-300'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold text-slate-300">
+                      💡 {t('Nhập chủ đề để AI tự động viết kịch bản:', 'Enter topic for AI to write script:')}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={scriptPromptIdea}
+                        onChange={(e) => setScriptPromptIdea(e.target.value)}
+                        placeholder="Quảng cáo son môi cao cấp, tin tức công nghệ AI..."
+                        className={`flex-1 p-2 rounded-xl text-xs border focus:outline-none ${
+                          isDark ? 'bg-[#0E111A] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGenerateScriptWithAI}
+                        disabled={isWritingScript}
+                        className={`px-3 py-2 rounded-xl text-xs font-black transition-all ${
+                          isDark ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white' : 'bg-black text-white'
+                        }`}
+                      >
+                        {isWritingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('Viết AI', 'Write')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <textarea
+                  rows={6}
+                  value={scriptText}
+                  onChange={(e) => setScriptText(e.target.value)}
+                  placeholder={t(
+                    'Nhập đoạn văn bản cần chuyển thành giọng nói tại đây...',
+                    'Enter script text to convert to voice...'
+                  )}
+                  className={`w-full p-3.5 rounded-2xl text-xs leading-relaxed border transition-all resize-none focus:outline-none ${
+                    isDark
+                      ? 'bg-[#121522] border-slate-800 text-white placeholder-slate-500 focus:border-rose-500'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-black'
+                  }`}
+                />
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <span>{scriptText.length} {t('ký tự', 'chars')} (~{Math.max(1, Math.round(scriptText.length / 15))}s)</span>
+                  <span>{selectedLangObj?.flag} {selectedLangObj?.name}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Music Step 1: Prompt & Styles
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  🎵 {t('Phong cách nhạc thịnh hành', 'Trending Music Styles')}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {MUSIC_STYLES.map((style) => (
+                    <div
+                      key={style.id}
+                      onClick={() => {
+                        setSelectedMusicStyle(style);
+                        setCustomMusicPrompt(style.prompt);
+                      }}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all active:scale-98 ${
+                        selectedMusicStyle.id === style.id
+                          ? isDark
+                            ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-md shadow-rose-500/25'
+                            : 'bg-black text-white border-black'
                           : isDark
-                          ? 'bg-slate-800/70 border-slate-700 hover:border-slate-600 text-slate-300'
-                          : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                          ? 'bg-[#121522] border-slate-800 hover:border-slate-700 text-slate-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black truncate">{v.name}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
-                      </div>
-                      <div className="flex items-center justify-between text-[9px] text-slate-400 mt-1">
-                        <span className="truncate">{v.region}</span>
-                        {v.tag && (
-                          <span className="px-1.5 py-0.2 rounded-md bg-black/40 text-cyan-300 font-semibold flex-shrink-0">
-                            {v.tag}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 1.5: Reading Style & Speed */}
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/40">
-              {/* Reading style for VieNeu */}
-              {selectedLang === 'vi' && modelType === 'wynai' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400">
-                    {t('Phong cách đọc', 'Reading Style')}
-                  </label>
-                  <select
-                    value={readingStyle}
-                    onChange={(e) => setReadingStyle(e.target.value)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-cyan-400 ${
-                      isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  >
-                    {READING_STYLES.map((st) => (
-                      <option key={st.code} value={st.code}>
-                        {isVietnamese ? st.labelVi : st.labelEn}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Speaking speed */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold text-slate-400">
-                    {t('Tốc độ đọc', 'Speed')}
-                  </label>
-                  <span className="text-[10px] font-bold text-cyan-400">{speakingRate}x</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.75"
-                  max="1.5"
-                  step="0.25"
-                  value={speakingRate}
-                  onChange={(e) => setSpeakingRate(parseFloat(e.target.value))}
-                  className="w-full accent-cyan-400"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ─── STEP 2: NHẬP VĂN BẢN & TẠO AUDIO (TEXT & GENERATE) ─── */}
-          <div
-            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center">
-                  2
-                </span>
-                <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {t('Nội Dung Văn Bản Cần Đọc', 'Script & Narration Text')}
-                </h3>
-              </div>
-
-              {/* AI Auto-write button */}
-              <button
-                type="button"
-                onClick={() => setShowScriptAssistant((v) => !v)}
-                className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{t('AI Viết Hộ', 'AI Writer')}</span>
-              </button>
-            </div>
-
-            {/* AI Prompt Assistant Panel */}
-            {showScriptAssistant && (
-              <div
-                className={`p-3.5 rounded-2xl border space-y-2.5 animate-in slide-in-from-top-2 ${
-                  isDark ? 'bg-cyan-950/20 border-cyan-500/30' : 'bg-cyan-50 border-cyan-200'
-                }`}
-              >
-                <label className="text-[11px] font-bold text-cyan-400">
-                  {t('Nhập ý tưởng để AI viết kịch bản tự động:', 'Enter idea for AI to draft script:')}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={scriptPromptIdea}
-                    onChange={(e) => setScriptPromptIdea(e.target.value)}
-                    placeholder={t('Ví dụ: Giới thiệu khóa học tiếng Anh giao tiếp...', 'e.g. Intro for English course...')}
-                    className={`flex-1 px-3 py-2 rounded-xl text-xs border focus:outline-none focus:border-cyan-400 ${
-                      isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleGenerateScriptWithAI}
-                    disabled={isWritingScript || !scriptPromptIdea.trim()}
-                    className="px-3.5 py-2 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs flex items-center gap-1 disabled:opacity-50"
-                  >
-                    {isWritingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                    <span>{t('Tạo', 'Write')}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Textarea */}
-            <div className="space-y-1.5">
-              <textarea
-                value={scriptText}
-                onChange={(e) => setScriptText(e.target.value)}
-                rows={4}
-                maxLength={2000}
-                placeholder={t('Nhập văn bản cần chuyển thành giọng nói...', 'Enter text to synthesize...')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition-all ${
-                  isDark
-                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-                }`}
-              />
-              <div className="flex justify-between items-center text-[10px] text-slate-400 px-1">
-                <span>{selectedVoiceName} · {selectedLang}</span>
-                <span>{scriptText.length} / 2000 {t('ký tự', 'chars')}</span>
-              </div>
-            </div>
-
-            {/* Generate Action Button */}
-            <button
-              type="button"
-              onClick={handleGenerateVoice}
-              disabled={isGenerating || !scriptText.trim()}
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>{t(`Đang tạo giọng đọc AI (${elapsedTime}s)...`, `Generating speech (${elapsedTime}s)...`)}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  <span>{t('Tạo Giọng Đọc AI Ngay 🚀', 'Synthesize Voiceover 🚀')}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════
-          MUSIC STUDIO (BGM)
-      ═══════════════════════════════════════════════════════════ */}
-      {studioTab === 'music' && (
-        <div className="space-y-5 animate-in fade-in duration-200">
-          {/* ─── STEP 1: CẤU HÌNH PHONG CÁCH NHẠC (SETTINGS FIRST) ─── */}
-          <div
-            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-purple-400 text-white font-black text-xs flex items-center justify-center">
-                  1
-                </span>
-                <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {t('Chọn Thể Loại & Nhịp Điệu', 'Music Genre & Style')}
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400">
-                Lyria AI
-              </span>
-            </div>
-
-            {/* Music Style Cards */}
-            <div className="grid grid-cols-2 gap-2">
-              {MUSIC_STYLES.map((style) => {
-                const isSelected = selectedMusicStyle.id === style.id;
-                return (
-                  <button
-                    key={style.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedMusicStyle(style);
-                      setCustomMusicPrompt(style.prompt);
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition-all active:scale-95 ${
-                      isSelected
-                        ? 'bg-purple-500/15 border-purple-400 text-purple-300 ring-1 ring-purple-400/40 shadow-sm'
-                        : isDark
-                        ? 'bg-slate-800/70 border-slate-700 hover:border-slate-600 text-slate-300'
-                        : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black truncate">
-                        {isVietnamese ? style.labelVi : style.labelEn}
-                      </span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />}
+                      <div className="text-xs font-black">{isVietnamese ? style.labelVi : style.labelEn}</div>
+                      <div className="text-[10px] opacity-80 line-clamp-1 mt-0.5">{style.prompt}</div>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ─── STEP 2: MÔ TẢ PROMPT & TẠO NHẠC (TEXT & GENERATE) ─── */}
-          <div
-            className={`rounded-3xl p-5 border space-y-4 shadow-sm ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-purple-400 text-white font-black text-xs flex items-center justify-center">
-                2
-              </span>
-              <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {t('Mô Tả & Khởi Tạo Nhạc Nền', 'Music Prompt & Launch')}
-              </h3>
-            </div>
-
-            {/* Prompt Textarea */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400">
-                {t('Prompt chi tiết (nhạc cụ, cảm xúc, tempo):', 'Detailed prompt (instruments, mood, tempo):')}
-              </label>
-              <textarea
-                value={customMusicPrompt}
-                onChange={(e) => setCustomMusicPrompt(e.target.value)}
-                rows={3}
-                placeholder={t('Nhập mô tả nhạc nền bạn muốn...', 'Describe the background music you want...')}
-                className={`w-full px-4 py-3 rounded-2xl text-xs leading-relaxed border resize-none focus:outline-none focus:ring-2 focus:ring-purple-400/30 transition-all ${
-                  isDark
-                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-                }`}
-              />
-            </div>
-
-            {/* Negative Prompt (Optional) */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400">
-                {t('Loại trừ (Negative Prompt - tùy chọn):', 'Negative prompt (optional):')}
-              </label>
-              <input
-                type="text"
-                value={negativeMusicPrompt}
-                onChange={(e) => setNegativeMusicPrompt(e.target.value)}
-                placeholder={t('Ví dụ: vocals, harsh drums, distortion...', 'e.g. vocals, harsh drums...')}
-                className={`w-full px-4 py-2.5 rounded-xl text-xs border focus:outline-none focus:border-purple-400 ${
-                  isDark ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200'
-                }`}
-              />
-            </div>
-
-            {/* Generate Action Button */}
-            <button
-              type="button"
-              onClick={handleGenerateMusic}
-              disabled={isGenerating || !customMusicPrompt.trim()}
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-purple-500 via-violet-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>{t(`Đang tạo nhạc nền AI (${elapsedTime}s)...`, `Generating AI music (${elapsedTime}s)...`)}</span>
-                </>
-              ) : (
-                <>
-                  <Music2 className="w-5 h-5" />
-                  <span>{t('Tạo Nhạc Nền AI Ngay 🎵', 'Generate AI Music 🎵')}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════
-          RESULT AUDIO PLAYER & ACTIONS
-      ═══════════════════════════════════════════════════════════ */}
-      {generatedAudio?.audio_url && (
-        <div
-          className={`rounded-3xl p-5 border space-y-4 shadow-xl animate-in zoom-in-95 duration-200 ${
-            isDark
-              ? 'bg-gradient-to-br from-slate-900 to-[#121422] border-cyan-500/40 shadow-cyan-500/10'
-              : 'bg-gradient-to-br from-cyan-50/50 to-white border-cyan-300 shadow-cyan-500/5'
-          }`}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-cyan-400/20 text-cyan-400 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {t('Âm Thanh Đã Sẵn Sàng! 🎉', 'Audio Ready! 🎉')}
-                </h4>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  {studioTab === 'voice' ? `${selectedVoiceName} · ${selectedLang}` : 'WynMotion AI BGM'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 transition-colors"
-              title={t('Tải về', 'Download')}
-            >
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Interactive Player Controls */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3">
-              {/* Play / Pause button */}
-              <button
-                type="button"
-                onClick={togglePlay}
-                className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-400 to-blue-500 text-slate-950 flex items-center justify-center shadow-md shadow-cyan-500/25 active:scale-90 transition-all flex-shrink-0"
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5 fill-slate-950" />
-                ) : (
-                  <Play className="w-5 h-5 fill-slate-950 ml-0.5" />
-                )}
-              </button>
-
-              {/* Progress & Time */}
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 30}
-                  step="0.1"
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="w-full accent-cyan-400"
-                />
-                <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{formatTime(duration || generatedAudio.duration_sec || 0)}</span>
+                  ))}
                 </div>
               </div>
 
-              {/* Mute button */}
-              <button
-                type="button"
-                onClick={toggleMute}
-                className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors"
-              >
-                {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
-              </button>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  ✍️ {t('Mô tả nhạc nền (Music Prompt)', 'Music Prompt')}
+                </label>
+                <textarea
+                  rows={4}
+                  value={customMusicPrompt}
+                  onChange={(e) => setCustomMusicPrompt(e.target.value)}
+                  placeholder="Lo-fi hiphop beat, chill piano melody, relaxing atmosphere..."
+                  className={`w-full p-3.5 rounded-2xl text-xs leading-relaxed border transition-all resize-none focus:outline-none ${
+                    isDark
+                      ? 'bg-[#121522] border-slate-800 text-white placeholder-slate-500 focus:border-rose-500'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-black'
+                  }`}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Action Row */}
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/40">
+          {/* Action Button: Next to Step 2 */}
+          <button
+            type="button"
+            onClick={() => {
+              if (studioTab === 'voice' && !scriptText.trim()) {
+                alert(t('Vui lòng nhập văn bản kịch bản!', 'Please enter script!'));
+                return;
+              }
+              setCurrentStep(2);
+            }}
+            className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all shadow-xl active:scale-98 flex items-center justify-center gap-2 ${
+              isDark
+                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-rose-500/25'
+                : 'bg-black text-white'
+            }`}
+          >
+            <span>{studioTab === 'voice' ? t('Tiếp Tục Chọn Giọng Đọc (Bước 2)', 'Next: Configure Voice (Step 2)') : t('Tiếp Tục Sinh Nhạc (Bước 2)', 'Next: Configure & Render (Step 2)')}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          4. STEP 2: VOICE CONFIGURATION & GENERATION SCREEN
+          ───────────────────────────────────────────────────────────── */}
+      {currentStep === 2 && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {/* Back to Step 1 Button */}
+          <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={handleDownload}
-              className="py-2.5 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{t('Tải File Audio', 'Download WAV')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('library')}
-              className={`py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
+              onClick={() => setCurrentStep(1)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black transition-all active:scale-95 ${
                 isDark
-                  ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
-                  : 'border-slate-200 bg-white text-slate-700 shadow-sm'
+                  ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:text-white'
+                  : 'bg-slate-100 border-slate-200 text-slate-700'
               }`}
             >
-              <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{t('Xem Trong Thư Viện', 'Open in Library')}</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>{t('Quay lại chỉnh văn bản', 'Back to script')}</span>
+            </button>
+
+            <span className="text-[11px] font-mono text-slate-400">
+              {selectedLangObj?.flag} {selectedLangObj?.name}
+            </span>
+          </div>
+
+          {/* Script Summary Card */}
+          <div
+            className={`p-3 rounded-2xl border flex items-start gap-2.5 ${
+              isDark ? 'bg-[#121522] border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}
+          >
+            <Mic className="w-4 h-4 text-[#FF2D55] shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">
+                {t('Văn bản đã chọn', 'Script Preview')}
+              </span>
+              <p className="text-xs text-slate-200 line-clamp-2 mt-0.5 font-mono">
+                {studioTab === 'voice' ? scriptText : customMusicPrompt}
+              </p>
+            </div>
+          </div>
+
+          {studioTab === 'voice' ? (
+            <>
+              {/* Model Selection (WynAI Neural vs Gemini Audio) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  ⚡ {t('Công nghệ AI TTS', 'AI Voice Engine')}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'wynai' as const, name: 'WynAI Neural 48kHz', desc: 'VieNeu & Kokoro Studio' },
+                    { id: 'gemini' as const, name: 'Gemini Audio Flash', desc: 'Google Gemini Expressive' },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setModelType(m.id)}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        modelType === m.id
+                          ? isDark
+                            ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-md shadow-rose-500/25'
+                            : 'bg-black text-white border-black'
+                          : isDark
+                          ? 'bg-[#121522] border-slate-800 text-slate-300'
+                          : 'bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs font-black">{m.name}</div>
+                      <div className="text-[10px] opacity-80 mt-0.5">{m.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Region Filter for Vietnamese */}
+              {selectedLang === 'vi' && modelType === 'wynai' && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                    📍 {t('Vùng miền giọng đọc', 'Accent & Region')}
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { id: 'all' as const, label: 'Tất cả' },
+                      { id: 'north' as const, label: 'Miền Bắc' },
+                      { id: 'central' as const, label: 'Miền Trung' },
+                      { id: 'south' as const, label: 'Miền Nam' },
+                    ].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRegionFilter(r.id)}
+                        className={`py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                          regionFilter === r.id
+                            ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                            : isDark
+                            ? 'bg-[#121522] border-slate-800 text-slate-400'
+                            : 'bg-slate-100 border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Voice Cards Grid */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  🎙️ {t('Danh sách giọng đọc', 'Voice Character')}
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {getAvailableVoices().map((voice) => {
+                    const isSelected = selectedVoiceName === voice.name || selectedVoiceName === voice.code;
+                    return (
+                      <div
+                        key={voice.code}
+                        onClick={() => setSelectedVoiceName(voice.code)}
+                        className={`p-3 rounded-2xl border cursor-pointer transition-all active:scale-98 flex flex-col justify-between ${
+                          isSelected
+                            ? isDark
+                              ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-md shadow-rose-500/25'
+                              : 'bg-black text-white border-black'
+                            : isDark
+                            ? 'bg-[#121522] border-slate-800 text-slate-300 hover:border-slate-700'
+                            : 'bg-white border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black">{voice.name}</span>
+                          {voice.gender && (
+                            <span className="text-[9px] opacity-75 uppercase">
+                              {voice.gender === 'female' ? '♀ Nữ' : '♂ Nam'}
+                            </span>
+                          )}
+                        </div>
+                        {voice.region && <span className="text-[10px] opacity-80 mt-1">{voice.region}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Speed & Reading Style Sliders */}
+              <div
+                className={`p-3.5 rounded-2xl border space-y-3 ${
+                  isDark ? 'bg-[#121522] border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                {/* Reading Style */}
+                {selectedLang === 'vi' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400">🎭 {t('Phong cách đọc', 'Reading Style')}</label>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                      {READING_STYLES.map((st) => (
+                        <button
+                          key={st.code}
+                          type="button"
+                          onClick={() => setReadingStyle(st.code)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap border ${
+                            readingStyle === st.code
+                              ? 'bg-rose-500 text-white border-rose-500'
+                              : isDark
+                              ? 'bg-slate-800 border-slate-700 text-slate-300'
+                              : 'bg-white border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {isVietnamese ? st.labelVi : st.labelEn}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Speed Slider */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-slate-400">⚡ {t('Tốc độ đọc', 'Speaking Rate')}</span>
+                    <span className="text-rose-400 font-mono">{speakingRate}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    value={speakingRate}
+                    onChange={(e) => setSpeakingRate(parseFloat(e.target.value))}
+                    className="w-full accent-[#FF2D55] h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            // Music Step 2 Config
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400">🚫 {t('Loại trừ (Negative Prompt)', 'Negative Prompt')}</label>
+                <input
+                  type="text"
+                  value={negativeMusicPrompt}
+                  onChange={(e) => setNegativeMusicPrompt(e.target.value)}
+                  placeholder="vocals, distortion, noise, harsh beats..."
+                  className={`w-full p-2.5 rounded-xl text-xs border focus:outline-none ${
+                    isDark ? 'bg-[#121522] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Action Button: Generate Audio */}
+          <button
+            type="button"
+            onClick={handleGenerateAudio}
+            disabled={isGenerating}
+            className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all shadow-xl active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 ${
+              isDark
+                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-rose-500/30'
+                : 'bg-black text-white shadow-slate-900/20'
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{t('Đang tạo âm thanh AI...', 'Generating audio...')} ({elapsedTime}s)</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>{studioTab === 'voice' ? t('✨ Tạo Giọng Đọc AI Ngay', '✨ Generate AI Voice') : t('✨ Tạo Bản Nhạc Ngay', '✨ Generate Music Now')}</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          5. AUDIO PLAYER & RESULT CONTAINER (When Audio is Ready)
+          ───────────────────────────────────────────────────────────── */}
+      {generatedAudio?.audio_url && (
+        <div
+          className={`p-4 rounded-3xl border space-y-3 animate-in zoom-in-95 duration-200 ${
+            isDark ? 'bg-[#121522] border-slate-800 shadow-2xl' : 'bg-white border-slate-200 shadow-lg'
+          }`}
+        >
+          <audio ref={audioRef} src={generatedAudio.audio_url} preload="metadata" />
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" />
+              {t('Âm thanh đã sẵn sàng!', 'Audio ready!')}
+            </span>
+            <span className="text-[10px] font-mono text-slate-400">
+              {generatedAudio.duration_sec?.toFixed(1) || duration.toFixed(1)}s · 48kHz
+            </span>
+          </div>
+
+          {/* Player Controls Bar */}
+          <div className="flex items-center gap-3 bg-[#090B12] p-3 rounded-2xl border border-white/5">
+            <button
+              type="button"
+              onClick={handleTogglePlay}
+              className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+            >
+              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+            </button>
+
+            <div className="flex-1 space-y-1">
+              <input
+                type="range"
+                min={0}
+                max={duration || 1}
+                step={0.05}
+                value={currentTime}
+                onChange={(e) => {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = parseFloat(e.target.value);
+                    setCurrentTime(parseFloat(e.target.value));
+                  }
+                }}
+                className="w-full accent-[#FF2D55] h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>{currentTime.toFixed(1)}s</span>
+                <span>{(duration || generatedAudio.duration_sec || 0).toFixed(1)}s</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons: Download & Save */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                if (generatedAudio.audio_url) {
+                  await saveAndShareMedia(
+                    generatedAudio.audio_url,
+                    `wynmotion_audio_${Date.now()}.mp3`
+                  );
+                }
+              }}
+              className={`flex-1 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                isDark
+                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25'
+                  : 'bg-black text-white'
+              }`}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{t('Tải Về File MP3', 'Download MP3')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                if (generatedAudio.audio_url) {
+                  await saveAndShareMedia(
+                    generatedAudio.audio_url,
+                    `wynmotion_audio_${Date.now()}.mp3`
+                  );
+                }
+              }}
+              className={`px-4 py-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>{t('Chia Sẻ', 'Share')}</span>
             </button>
           </div>
         </div>
