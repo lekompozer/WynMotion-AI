@@ -1056,7 +1056,7 @@ export const AiVideoTab: React.FC = () => {
         let finalProject = res.project;
         if (finalProject.status === 'processing' || finalProject.status === 'queued' || finalProject.status === 'pending') {
           setCreationStatusMessage(
-            params.templateId === 'animation_ads_image_veo'
+            isVeo
               ? (isVietnamese ? 'Google VEO 3.1 đang kết xuất video điện ảnh 60fps...' : 'Google VEO 3.1 is rendering 60fps cinematic video...')
               : (isVietnamese ? 'Đang tạo hình ảnh & tính toán chuyển động AI...' : 'Generating visuals & AI motion calculations...')
           );

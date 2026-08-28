@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, X, Scissors, ArrowLeft } from 'lucide-react';
+import { wynmotionService } from '@/services/wynmotionService';
 
 export interface CapCutGalleryItem {
   id: string;
