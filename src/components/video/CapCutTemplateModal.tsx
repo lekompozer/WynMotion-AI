@@ -6,7 +6,7 @@ import { wynmotionService } from '@/services/wynmotionService';
 import { Loader2 } from 'lucide-react';
 
 export interface CapCutTemplateData {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo';
+  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo' | 'animation_ads_image_veo_2';
   titleVi: string;
   titleEn: string;
   descVi: string;
@@ -46,6 +46,27 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     defaultSolidEn: 'LUXURY',
     defaultOutlineVi: 'EDITION',
     defaultOutlineEn: 'EDITION',
+    defaultSloganVi: '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY',
+    defaultSloganEn: '⚡ EXPERIENCE LUXURY - ORDER NOW',
+  },
+  animation_ads_image_veo_2: {
+    id: 'animation_ads_image_veo_2',
+    titleVi: 'Animation Ads Image 6s (Cinematic Flow)',
+    titleEn: 'Animation Ads Image 6s (Cinematic Flow)',
+    descVi: 'Tải 1 ảnh Ads Poster → Google VEO 3.1 tạo video chuyển động điện ảnh mềm mại 6s chuẩn quảng cáo cao cấp.',
+    descEn: 'Upload 1 Ads Poster → Google VEO 3.1 creates smooth 6s cinematic commercial animation video.',
+    durationSec: 6.0,
+    videoUrl: '/templates/animation_ads_image_demo_2.mp4',
+    bgmUrl: '',
+    badge: '👑 VIP VEO 6s',
+    usageCount: '64.2K',
+    maxImages: 1,
+    defaultHookVi: 'SIÊU PHẨM MỚI',
+    defaultHookEn: 'NEW ARRIVAL',
+    defaultSolidVi: 'DISCOVER',
+    defaultSolidEn: 'DISCOVER',
+    defaultOutlineVi: 'NOW',
+    defaultOutlineEn: 'NOW',
     defaultSloganVi: '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY',
     defaultSloganEn: '⚡ EXPERIENCE LUXURY - ORDER NOW',
   },

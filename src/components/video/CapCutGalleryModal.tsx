@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Search, X, Scissors, ArrowLeft } from 'lucide-react';
 
 export interface CapCutGalleryItem {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo';
+  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo' | 'animation_ads_image_veo_2';
   title: string;
   category: string;
   duration: string;
@@ -21,13 +21,25 @@ export const CAPCUT_GALLERY_TEMPLATES: CapCutGalleryItem[] = [
     id: 'animation_ads_image_veo',
     title: 'Animation Ads Image (Google VEO 3.1 VIP)',
     category: 'Sản phẩm',
-    duration: '6s - 12s',
+    duration: '12.0s',
     usageCount: '95,4K',
     author: 'Google VEO AI',
     authorAvatar: '👑',
     coverUrl: '/templates/cover-animation-ads-image-ios.png',
     aspectClass: 'aspect-[9/16]',
     badge: '👑 VIP VEO 3.1',
+  },
+  {
+    id: 'animation_ads_image_veo_2',
+    title: 'Animation Ads Image 6s (Cinematic Flow)',
+    category: 'Sản phẩm',
+    duration: '6.0s',
+    usageCount: '64,2K',
+    author: 'Google VEO AI',
+    authorAvatar: '👑',
+    coverUrl: '/templates/cover-animation-ads-image-2-ios.png',
+    aspectClass: 'aspect-[9/16]',
+    badge: '👑 VIP VEO 6s',
   },
   {
     id: 'product_ads_motion',
