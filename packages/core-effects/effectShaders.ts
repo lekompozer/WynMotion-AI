@@ -1,402 +1,395 @@
 /**
- * 16 Authentic GLSL Shaders & Post-Processing Filters
+ * 40+ Authentic GLSL Shaders & Post-Processing Filters
  * Sourced from PixiJS Filters, Three.js PostProcessing, and Shadertoy
  */
 
-export interface EffectShaderDefinition {
+export interface EffectFilterItem {
   id: string;
   name: string;
-  category: string;
-  source: string;
-  fragmentShader: string;
+  category: 'glitch' | 'light' | 'distortion' | 'color' | 'camera';
+  tag: string;
+  desc: string;
+  icon: string;
+  gradient: string;
 }
 
-export const EFFECT_SHADERS: Record<string, string> = {
-  // 1. Scanline RGB Slicing Glitch (PixiJS GlitchFilter + CRTFilter)
-  horizontal_scanline_rgb_glitch: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
+export const EFFECT_CATEGORIES = [
+  { id: 'all', name: 'Tất cả' },
+  { id: 'glitch', name: 'Glitch & Retro' },
+  { id: 'light', name: 'Light & Glow' },
+  { id: 'distortion', name: 'Distortion & Blur' },
+  { id: 'color', name: 'Color & Art' },
+  { id: 'camera', name: 'Camera & Film' },
+];
 
-    float rand(vec2 co){
-      return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-    }
+export const FULL_CORE_FILTERS: EffectFilterItem[] = [
+  // ─── 1. GLITCH, RETRO & CYBER ───
+  {
+    id: 'horizontal_scanline_rgb_glitch',
+    name: 'Scanline RGB Slicing Glitch',
+    category: 'glitch',
+    tag: 'PixiJS Glitch + CRT',
+    desc: 'Cắt lát ngang đa tầng và lệch kênh màu Red/Cyan 3D với vạch quét CRT phosphor.',
+    icon: '⚡',
+    gradient: 'from-pink-500 to-rose-600',
+  },
+  {
+    id: 'vhs_retro_tape_noise',
+    name: 'VHS Retro Tape Static',
+    category: 'glitch',
+    tag: 'PixiJS OldFilm',
+    desc: 'Nhiễu hạt băng từ VHS cổ điển, vạch tuyết chạy dọc và quang sai màu analog.',
+    icon: '📼',
+    gradient: 'from-emerald-500 to-teal-600',
+  },
+  {
+    id: 'crt_monitor_curvature',
+    name: 'CRT Arcade Curved Screen',
+    category: 'glitch',
+    tag: 'PixiJS CRTFilter',
+    desc: 'Màn hình máy chơi game thùng CRT cong vòm, sọc quét dải ngang và lóe sáng cạnh.',
+    icon: '📺',
+    gradient: 'from-cyan-600 to-blue-700',
+  },
+  {
+    id: 'rgb_split_chromatic',
+    name: 'RGB Split Chromatic Aberration',
+    category: 'glitch',
+    tag: 'PixiJS RGBSplit',
+    desc: 'Tách rời 3 kênh màu Đỏ - Xanh lá - Xanh dương tạo hiệu ứng 3D Anaglyph.',
+    icon: '👓',
+    gradient: 'from-fuchsia-500 to-indigo-600',
+  },
+  {
+    id: 'pixel_mosaic_shatter',
+    name: 'Pixelate Mosaic 8-Bit',
+    category: 'glitch',
+    tag: 'PixiJS Pixelate',
+    desc: 'Phân rã vật thể thành các khối pixel vuông 8-bit retro rồi tái tạo sắc nét.',
+    icon: '🧱',
+    gradient: 'from-violet-500 to-fuchsia-600',
+  },
+  {
+    id: 'halftone_pop_art',
+    name: 'Retro Halftone Pop-Art Grid',
+    category: 'glitch',
+    tag: 'PixiJS DotFilter',
+    desc: 'Chấm hạt in lưới truyện tranh phong cách Retro Pop-Art nổi bật.',
+    icon: '🎨',
+    gradient: 'from-pink-600 to-yellow-500',
+  },
+  {
+    id: 'ascii_matrix_rain',
+    name: 'ASCII Code Matrix Terminal',
+    category: 'glitch',
+    tag: 'PixiJS AsciiFilter',
+    desc: 'Ma trận ký tự xanh lá cây rơi dòng lệnh hacker phong cách phim The Matrix.',
+    icon: '💻',
+    gradient: 'from-green-500 to-emerald-700',
+  },
+  {
+    id: 'cross_hatch_sketch',
+    name: 'Pencil Cross-Hatch Sketch',
+    category: 'glitch',
+    tag: 'PixiJS CrossHatch',
+    desc: 'Phác thảo nét vẽ bút chì gạch chéo nghệ thuật đen trắng.',
+    icon: '✏️',
+    gradient: 'from-slate-600 to-zinc-800',
+  },
 
-    void main() {
-      vec2 uv = _uv;
-      float sliceCount = 20.0;
-      float sliceIndex = floor(uv.y * sliceCount);
-      float sliceRand = rand(vec2(sliceIndex, floor(uTime * 15.0)));
-      
-      float shift = 0.0;
-      if (sliceRand > 0.65) {
-        shift = (rand(vec2(sliceIndex, uTime)) - 0.5) * 0.08 * sin(uTime * 10.0);
-      }
-      
-      float scanline = sin(uv.y * 600.0) * 0.12;
-      
-      vec4 colR = texture2D(uTexture, vec2(uv.x + shift + 0.015, uv.y));
-      vec4 colG = texture2D(uTexture, vec2(uv.x + shift, uv.y));
-      vec4 colB = texture2D(uTexture, vec2(uv.x + shift - 0.015, uv.y));
-      
-      vec3 finalCol = vec3(colR.r, colG.g, colB.b) - scanline;
-      gl_FragColor = vec4(finalCol, 1.0);
-    }
-  `,
+  // ─── 2. LIGHT & CINEMATIC GLOW ───
+  {
+    id: 'godray_volumetric_light',
+    name: 'Volumetric Sun Godrays',
+    category: 'light',
+    tag: 'PixiJS GodrayFilter',
+    desc: 'Tia sáng mặt trời rọi xuyên không gian tạo bầu không khí tráng lệ.',
+    icon: '☀️',
+    gradient: 'from-amber-400 to-orange-500',
+  },
+  {
+    id: 'advanced_bloom_dreamy',
+    name: 'Advanced HDR Bloom',
+    category: 'light',
+    tag: 'PixiJS BloomFilter',
+    desc: 'Ánh sáng tỏa hào quang mơ màng dịu ngọt cho các shot quay lãng mạn.',
+    icon: '🌸',
+    gradient: 'from-pink-400 to-purple-500',
+  },
+  {
+    id: 'neon_cyber_glow',
+    name: 'Neon Cyberpunk Outline Glow',
+    category: 'light',
+    tag: 'PixiJS GlowFilter',
+    desc: 'Đèn viền Neon phát sáng nhấp nháy chuyển màu theo nhịp điệu bài hát.',
+    icon: '💡',
+    gradient: 'from-cyan-400 to-fuchsia-600',
+  },
+  {
+    id: 'prism_rainbow_flare',
+    name: 'Prism Optical Lens Flare',
+    category: 'light',
+    tag: 'Shadertoy Anamorphic',
+    desc: 'Vệt lóa cầu vồng quang học góc ống kính máy quay điện ảnh Hollywood.',
+    icon: '🌈',
+    gradient: 'from-blue-500 to-purple-600',
+  },
+  {
+    id: 'golden_bokeh_particles',
+    name: 'Golden Bokeh Depth Particles',
+    category: 'light',
+    tag: 'Three.js BokehShader',
+    desc: 'Bụi vàng phát sáng lơ lửng bồng bềnh tạo cảm giác sang trọng đẳng cấp.',
+    icon: '✨',
+    gradient: 'from-amber-400 to-yellow-600',
+  },
+  {
+    id: 'specular_metallic_sheen',
+    name: 'Specular Light Sheen Apple',
+    category: 'light',
+    tag: 'Shadertoy Glare',
+    desc: 'Vệt sáng kim loại quét mượt mà qua bề mặt sản phẩm phong cách Apple.',
+    icon: '🌟',
+    gradient: 'from-cyan-400 to-blue-600',
+  },
+  {
+    id: 'strobe_flash_beat',
+    name: 'Strobe Flash EDM Beat',
+    category: 'light',
+    tag: 'Three.js StrobePass',
+    desc: 'Chớp nháy tương phản Trắng/Đen nghịch màu đập dồn theo nhịp bass.',
+    icon: '💥',
+    gradient: 'from-yellow-400 to-amber-600',
+  },
+  {
+    id: 'flash_blast_silhouette',
+    name: 'Solarize Nuclear Flash Blast',
+    category: 'light',
+    tag: 'Shadertoy Blast',
+    desc: 'Cú nổ bùng sáng chói lòa chuyển hóa vật thể thành khối màu sắc nét 100%.',
+    icon: '🔥',
+    gradient: 'from-purple-500 to-indigo-600',
+  },
+  {
+    id: 'night_vision_military',
+    name: 'Military Green Night Vision',
+    category: 'light',
+    tag: 'Three.js NightVision',
+    desc: 'Kính nhìn đêm quân đội màu xanh lá lân quang với hạt nhiễu và vạch đo.',
+    icon: '🪖',
+    gradient: 'from-lime-500 to-emerald-700',
+  },
 
-  // 2. Strobe Flash Beat (Three.js StrobePass)
-  strobe_flash_beat: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
+  // ─── 3. DISTORTION & MOTION BLUR ───
+  {
+    id: 'shockwave_water_ripple',
+    name: 'Expanding Shockwave Ripple',
+    category: 'distortion',
+    tag: 'PixiJS Shockwave',
+    desc: 'Vòng sóng xung kích lan tỏa từ tâm bóp méo hình ảnh theo sóng âm.',
+    icon: '🔘',
+    gradient: 'from-sky-500 to-indigo-600',
+  },
+  {
+    id: 'liquid_wave_distortion',
+    name: 'Liquid Ripple Wave Refraction',
+    category: 'distortion',
+    tag: 'PixiJS WaterDisplacement',
+    desc: 'Sóng nước gợn sóng biến dạng bề mặt sản phẩm tươi mát.',
+    icon: '🌊',
+    gradient: 'from-blue-600 to-teal-500',
+  },
+  {
+    id: 'twist_vortex_swirl',
+    name: 'Twist Vortex Swirl',
+    category: 'distortion',
+    tag: 'PixiJS TwistFilter',
+    desc: 'Vòng xoáy lốc xoáy vặn xoắn tâm điểm hình ảnh đầy ma mị.',
+    icon: '🌀',
+    gradient: 'from-purple-600 to-violet-800',
+  },
+  {
+    id: 'bulge_pinch_lens',
+    name: 'Bulge Pinch Fisheye Lens',
+    category: 'distortion',
+    tag: 'PixiJS BulgePinch',
+    desc: 'Ống kính mắt cá lồi hình cầu phóng đại trung tâm cực đại.',
+    icon: '🔮',
+    gradient: 'from-teal-400 to-cyan-600',
+  },
+  {
+    id: 'radial_zoom_warp',
+    name: 'Hyperdrive Zoom Blur Warp',
+    category: 'distortion',
+    tag: 'PixiJS ZoomBlur',
+    desc: 'Tia mờ phóng nhanh tốc độ ánh sáng vọt tới đối tượng.',
+    icon: '🚀',
+    gradient: 'from-rose-500 to-orange-600',
+  },
+  {
+    id: 'motion_blur_velocity',
+    name: 'Directional Motion Blur',
+    category: 'distortion',
+    tag: 'PixiJS MotionBlur',
+    desc: 'Vệt mờ chuyển động theo hướng ngang tạo cảm giác tốc độ cao.',
+    icon: '💨',
+    gradient: 'from-blue-500 to-indigo-700',
+  },
+  {
+    id: 'perspective_3d_float',
+    name: '3D Perspective Tilt Projection',
+    category: 'distortion',
+    tag: 'Three.js 3D Quad',
+    desc: 'Nghiêng góc 3D lơ lửng bồng bềnh tự nhiên kết hợp bóng đổ mặt sàn.',
+    icon: '📦',
+    gradient: 'from-indigo-500 to-sky-600',
+  },
+  {
+    id: 'water_puddle_reflection',
+    name: 'Puddle Mirror Reflection',
+    category: 'distortion',
+    tag: 'PixiJS Reflection',
+    desc: 'Mặt nước phản chiếu gợn sóng phía chân video như mặt hồ.',
+    icon: '🪞',
+    gradient: 'from-cyan-500 to-blue-600',
+  },
 
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float flash = step(0.5, fract(uTime * 6.0));
-      vec3 inverted = vec3(1.0) - base.rgb;
-      vec3 col = mix(base.rgb, inverted * 1.3, flash * 0.85);
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
+  // ─── 4. COLOR GRADING & FUTURISTIC ART ───
+  {
+    id: 'thermal_heatmap_matrix',
+    name: 'FLIR Predator Ironbow Heatmap',
+    category: 'color',
+    tag: 'Shadertoy Ironbow',
+    desc: 'Bản đồ nhiệt quang phổ rực lửa Sci-Fi phong cách phim Quái Thú Predator.',
+    icon: '🌡️',
+    gradient: 'from-red-600 to-amber-500',
+  },
+  {
+    id: 'duotone_cyber_pink_cyan',
+    name: 'Duotone Cyberpunk Tokyo',
+    category: 'color',
+    tag: 'PixiJS ColorMap',
+    desc: 'Hòa trộn 2 dải màu đối lập Hồng Neon và Xanh Cyan đậm chất đường phố Tokyo.',
+    icon: '🌆',
+    gradient: 'from-pink-500 to-cyan-500',
+  },
+  {
+    id: 'sobel_edge_neon_lines',
+    name: 'Sobel Neon Edge Glow',
+    category: 'color',
+    tag: 'PixiJS Convolution',
+    desc: 'Thuật toán dò biên Sobel làm phát sáng các đường nét viền vật thể neon.',
+    icon: '🕸️',
+    gradient: 'from-cyan-400 to-emerald-500',
+  },
+  {
+    id: 'technicolor_vintage_film',
+    name: 'Technicolor 3-Strip Cinema',
+    category: 'color',
+    tag: 'PixiJS ColorMatrix',
+    desc: 'Màu phim nhựa Technicolor thập niên 1950 đậm đà và rực rỡ.',
+    icon: '📽️',
+    gradient: 'from-amber-600 to-red-600',
+  },
+  {
+    id: 'polaroid_fade_warm',
+    name: 'Vintage Polaroid 1980s',
+    category: 'color',
+    tag: 'PixiJS ColorMatrix',
+    desc: 'Màu ảnh chụp lấy ngay Polaroid ấm áp, bạc màu hoài niệm.',
+    icon: '📸',
+    gradient: 'from-orange-400 to-rose-500',
+  },
+  {
+    id: 'lsd_psychedelic_shift',
+    name: 'Psychedelic Spectrum Shift',
+    category: 'color',
+    tag: 'PixiJS ColorMatrix',
+    desc: 'Dịch chuyển dải màu quang phổ liên tục tạo hiệu ứng ảo giác sống động.',
+    icon: '🍄',
+    gradient: 'from-purple-500 via-pink-500 to-yellow-400',
+  },
+  {
+    id: 'grayscale_underlayer_push',
+    name: 'Monochrome Luma Center Pop',
+    category: 'color',
+    tag: 'Three.js Luminance',
+    desc: 'Đè nổi bật vật thể mới lên nền cũ đã mờ xám tương phản tuyệt đối.',
+    icon: '🖤',
+    gradient: 'from-slate-600 to-zinc-800',
+  },
+  {
+    id: 'color_wash_tint',
+    name: 'Cinematic Amber Gold Wash',
+    category: 'color',
+    tag: 'PixiJS ColorOverlay',
+    desc: 'Phủ lớp tone màu hổ phách vàng hoàng hôn ấm áp lên toàn bộ cảnh quay.',
+    icon: '🌅',
+    gradient: 'from-amber-500 to-yellow-600',
+  },
 
-  // 3. Specular Metallic Sheen (Shadertoy Apple Glare)
-  specular_metallic_sheen: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float pos = fract(uTime * 0.8) * 3.0 - 1.0;
-      float diag = _uv.x * 0.7 + _uv.y * 0.3;
-      float dist = abs(diag - pos);
-      float sheen = smoothstep(0.18, 0.0, dist) * 0.85;
-      
-      vec3 col = base.rgb + vec3(sheen * 0.9, sheen * 0.95, sheen * 1.0);
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
-
-  // 4. Flash Blast Silhouette (Shadertoy Solarize Blast)
-  flash_blast_silhouette: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float blast = sin(uProgress * 3.14159);
-      float lum = dot(base.rgb, vec3(0.299, 0.587, 0.114));
-      
-      vec3 solar = abs(base.rgb * 2.0 - 1.0);
-      vec3 col = mix(base.rgb, solar + vec3(blast * 0.6), blast * 0.9);
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
-
-  // 5. VHS Retro Tape Noise (PixiJS OldFilm / CRTFilter)
-  vhs_retro_tape_noise: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    float hash(float n) { return fract(sin(n) * 43758.5453123); }
-
-    void main() {
-      vec2 uv = _uv;
-      float roll = fract(uv.y + uTime * 0.2);
-      float noise = hash(uv.x + uv.y * 100.0 + uTime) * 0.18;
-      
-      // Horizontal jitter
-      float jitter = (hash(floor(uv.y * 120.0) + uTime * 10.0) - 0.5) * 0.02;
-      uv.x += jitter;
-      
-      vec4 col = texture2D(uTexture, uv);
-      col.rgb += vec3(noise);
-      col.rgb *= 0.85 + 0.15 * sin(uv.y * 400.0); // Scanlines
-      
-      // Tape tracking bar
-      float bar = smoothstep(0.04, 0.0, abs(roll - 0.5));
-      col.rgb += vec3(bar * 0.25);
-      
-      gl_FragColor = col;
-    }
-  `,
-
-  // 6. Pixel Mosaic Shatter (PixiJS PixelateFilter)
-  pixel_mosaic_shatter: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      float pixelSize = 10.0 + abs(sin(uTime * 3.0)) * 40.0;
-      vec2 size = vec2(pixelSize, pixelSize);
-      vec2 uv = floor(_uv * 400.0 / size) * size / 400.0;
-      
-      vec4 col = texture2D(uTexture, uv);
-      // Subtle block edge grid
-      vec2 grid = fract(_uv * 400.0 / size);
-      if (grid.x < 0.08 || grid.y < 0.08) {
-        col.rgb *= 0.8;
-      }
-      gl_FragColor = col;
-    }
-  `,
-
-  // 7. Golden Bokeh Particles (Three.js BokehShader)
-  golden_bokeh_particles: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    float bokehOrb(vec2 uv, vec2 center, float radius) {
-      float d = length(uv - center);
-      return smoothstep(radius, radius * 0.4, d);
-    }
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      vec3 gold = vec3(1.0, 0.8, 0.2);
-      
-      float orb1 = bokehOrb(_uv, vec2(0.3 + sin(uTime * 0.7) * 0.1, 0.4 + cos(uTime * 0.5) * 0.2), 0.18);
-      float orb2 = bokehOrb(_uv, vec2(0.7 + cos(uTime * 0.9) * 0.15, 0.6 + sin(uTime * 0.8) * 0.2), 0.14);
-      float orb3 = bokehOrb(_uv, vec2(0.5 + sin(uTime * 1.2) * 0.2, 0.8 + cos(uTime * 1.0) * 0.1), 0.10);
-      
-      vec3 totalBokeh = (orb1 + orb2 + orb3) * gold * 0.7;
-      gl_FragColor = vec4(base.rgb + totalBokeh, base.a);
-    }
-  `,
-
-  // 8. Prism Optical Flare (Shadertoy Anamorphic Flare)
-  prism_rainbow_flare: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      vec2 center = vec2(0.5 + sin(uTime * 0.6) * 0.3, 0.4 + cos(uTime * 0.8) * 0.2);
-      vec2 dir = _uv - center;
-      float dist = length(dir);
-      
-      // Chromatic rainbow flare
-      float angle = atan(dir.y, dir.x);
-      vec3 rainbow = 0.5 + 0.5 * cos(angle * 3.0 + uTime * 2.0 + vec3(0.0, 2.0, 4.0));
-      float flare = smoothstep(0.7, 0.0, dist) * 0.55;
-      
-      // Anamorphic horizontal streak
-      float streak = smoothstep(0.04, 0.0, abs(dir.y)) * smoothstep(0.8, 0.0, abs(dir.x)) * 0.7;
-      
-      vec3 finalCol = base.rgb + rainbow * flare + vec3(streak * 0.9, streak * 0.95, streak * 1.0);
-      gl_FragColor = vec4(finalCol, base.a);
-    }
-  `,
-
-  // 9. 3D Perspective Tilt (Three.js Quad Projection)
-  perspective_3d_float: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec2 uv = _uv - 0.5;
-      float tiltX = sin(uTime * 1.5) * 0.15;
-      float tiltY = cos(uTime * 1.2) * 0.15;
-      
-      uv.x /= 1.0 + uv.y * tiltX;
-      uv.y /= 1.0 + uv.x * tiltY;
-      
-      uv += 0.5;
-      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-        gl_FragColor = vec4(0.05, 0.07, 0.12, 1.0);
-      } else {
-        gl_FragColor = texture2D(uTexture, uv);
-      }
-    }
-  `,
-
-  // 10. Ken-Burns Continuous Zoom (Three.js Cinematic Zoom)
-  kenburns_continuous_zoom: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      float zoom = 1.0 + (sin(uTime * 0.8) * 0.5 + 0.5) * 0.25;
-      vec2 pan = vec2(sin(uTime * 0.5) * 0.04, cos(uTime * 0.4) * 0.03);
-      vec2 uv = (_uv - 0.5) / zoom + 0.5 + pan;
-      
-      vec4 col = texture2D(uTexture, uv);
-      // Vignette
-      float vig = 1.0 - smoothstep(0.4, 0.9, length(_uv - 0.5));
-      col.rgb *= mix(0.75, 1.0, vig);
-      gl_FragColor = col;
-    }
-  `,
-
-  // 11. Grayscale Underlayer Push (Three.js Luminance Monochrome)
-  grayscale_underlayer_push: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float lum = dot(base.rgb, vec3(0.2126, 0.7152, 0.0722));
-      vec3 gray = vec3(lum);
-      
-      // Center spotlight
-      float dist = length(_uv - 0.5);
-      float spot = smoothstep(0.45, 0.15, dist);
-      
-      vec3 col = mix(gray * 0.7, base.rgb * 1.15, spot);
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
-
-  // 12. Neon Cyberpunk Outline Glow (PixiJS GlowFilter)
-  neon_cyber_glow: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float edgeDist = min(min(_uv.x, 1.0 - _uv.x), min(_uv.y, 1.0 - _uv.y));
-      float border = smoothstep(0.06, 0.0, edgeDist);
-      
-      vec3 neon = 0.5 + 0.5 * cos(uTime * 2.5 + vec3(0.0, 2.0, 4.0));
-      vec3 col = base.rgb + neon * border * 1.4;
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
-
-  // 13. Liquid Wave Distortion (PixiJS ShockwaveFilter / Water)
-  liquid_wave_distortion: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec2 uv = _uv;
-      float waveX = sin(uv.y * 18.0 + uTime * 4.0) * 0.025;
-      float waveY = cos(uv.x * 18.0 + uTime * 4.0) * 0.025;
-      uv += vec2(waveX, waveY);
-      
-      vec4 col = texture2D(uTexture, uv);
-      col.rgb += vec3(0.05, 0.1, 0.18) * (waveX + waveY) * 10.0;
-      gl_FragColor = col;
-    }
-  `,
-
-  // 14. Thermal Matrix Heatmap (Shadertoy FLIR Ironbow Heatmap)
-  thermal_heatmap_matrix: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    vec3 ironbow(float t) {
-      vec3 c0 = vec3(0.05, 0.02, 0.15);
-      vec3 c1 = vec3(0.5, 0.05, 0.6);
-      vec3 c2 = vec3(0.9, 0.2, 0.1);
-      vec3 c3 = vec3(1.0, 0.8, 0.1);
-      vec3 c4 = vec3(1.0, 1.0, 0.9);
-      
-      if (t < 0.25) return mix(c0, c1, t / 0.25);
-      if (t < 0.5) return mix(c1, c2, (t - 0.25) / 0.25);
-      if (t < 0.75) return mix(c2, c3, (t - 0.5) / 0.25);
-      return mix(c3, c4, (t - 0.75) / 0.25);
-    }
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float lum = dot(base.rgb, vec3(0.299, 0.587, 0.114));
-      vec3 heat = ironbow(lum);
-      
-      gl_FragColor = vec4(heat, base.a);
-    }
-  `,
-
-  // 15. Retro Halftone Pop-Art Grid (Three.js DotScreenShader / PixiJS DotFilter)
-  halftone_pop_art: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float lum = dot(base.rgb, vec3(0.299, 0.587, 0.114));
-      
-      float dotSize = 25.0;
-      vec2 grid = fract(_uv * dotSize) - 0.5;
-      float dist = length(grid);
-      float radius = (1.0 - lum) * 0.65;
-      
-      float isDot = step(dist, radius);
-      vec3 popBg = vec3(1.0, 0.88, 0.2); // Pop yellow
-      vec3 popDot = vec3(0.9, 0.1, 0.35); // Pop magenta
-      
-      vec3 col = mix(popBg, popDot, isDot);
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
-
-  // 16. 35mm Film Grain Cinema Overlay (Three.js FilmShader)
-  film_grain_vintage: `
-    precision highp float;
-    varying vec2 _uv;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-    uniform float uProgress;
-
-    float rand(vec2 co){
-      return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-    }
-
-    void main() {
-      vec4 base = texture2D(uTexture, _uv);
-      float noise = (rand(_uv + fract(uTime)) - 0.5) * 0.25;
-      
-      // Warm 35mm sepia tone
-      vec3 sepia = vec3(base.r * 1.1 + 0.05, base.g * 0.95, base.b * 0.8 - 0.05);
-      vec3 col = sepia + vec3(noise);
-      
-      // Cinematic Vignette
-      float vig = 1.0 - smoothstep(0.4, 0.85, length(_uv - 0.5));
-      col *= mix(0.7, 1.0, vig);
-      
-      gl_FragColor = vec4(col, base.a);
-    }
-  `,
-};
+  // ─── 5. CAMERA, LENS & DEPTH ───
+  {
+    id: 'tilt_shift_miniature',
+    name: 'Tilt-Shift Miniature Toy Town',
+    category: 'camera',
+    tag: 'PixiJS TiltShift',
+    desc: 'Làm mờ trên dưới tạo hiệu ứng thế giới đồ chơi thu nhỏ Miniature.',
+    icon: '🏙️',
+    gradient: 'from-teal-500 to-emerald-600',
+  },
+  {
+    id: 'kenburns_continuous_zoom',
+    name: 'Ken-Burns Documentary Zoom',
+    category: 'camera',
+    tag: 'Three.js Camera',
+    desc: 'Góc máy zoom chậm mượt mà mang phong cách phim truyện Hollywood.',
+    icon: '🔍',
+    gradient: 'from-sky-500 to-cyan-600',
+  },
+  {
+    id: 'film_grain_vintage',
+    name: '35mm Hollywood Film Grain',
+    category: 'camera',
+    tag: 'Three.js FilmShader',
+    desc: 'Hạt phim nhựa 35mm hoài cổ Hollywood tăng chất lượng điện ảnh.',
+    icon: '🎬',
+    gradient: 'from-amber-600 to-stone-700',
+  },
+  {
+    id: 'kaleidoscope_8x_mirror',
+    name: 'Kaleidoscope 8-Fold Mandala',
+    category: 'camera',
+    tag: 'Shadertoy Mandala',
+    desc: 'Kính vạn hoa đối xứng 8 cánh xoay tròn biến hóa ma thuật.',
+    icon: '💠',
+    gradient: 'from-violet-600 to-pink-500',
+  },
+  {
+    id: 'kawase_frosted_glass',
+    name: 'Kawase Frosted Blur Glass',
+    category: 'camera',
+    tag: 'PixiJS KawaseBlur',
+    desc: 'Mờ kính mờ cao cấp Apple Liquid Glassmorphism.',
+    icon: '🧊',
+    gradient: 'from-blue-400 to-slate-600',
+  },
+  {
+    id: 'vignette_dark_corner',
+    name: 'Cinematic Vignette Lens',
+    category: 'camera',
+    tag: 'Three.js Vignette',
+    desc: 'Tối 4 góc ống kính máy quay tập trung ánh nhìn vào trung tâm.',
+    icon: '🎯',
+    gradient: 'from-slate-700 to-black',
+  },
+  {
+    id: 'cartoon_outline_stroke',
+    name: 'Comic Book Line Outline',
+    category: 'camera',
+    tag: 'PixiJS OutlineFilter',
+    desc: 'Viền nét mực đen truyện tranh biến hình ảnh thành hoạt hình Anime.',
+    icon: '🗯️',
+    gradient: 'from-yellow-400 to-slate-900',
+  },
+];

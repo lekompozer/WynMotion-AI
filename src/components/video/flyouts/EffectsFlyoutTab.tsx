@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Sparkles, Wand2, Search, Zap, Film, Layers, Check, Play, Flame, RefreshCw } from 'lucide-react';
 import MANIFEST from '../../../../packages/core-effects/manifest.json';
+import { FULL_CORE_FILTERS, EFFECT_CATEGORIES } from '../../../../packages/core-effects/effectShaders';
 import { FoxLivePreviewBox } from './FoxLivePreviewBox';
 
 export interface EffectsFlyoutTabProps {
@@ -23,137 +24,6 @@ export const CATEGORIES = [
   { id: 'creative', name: 'Sáng tạo' },
 ];
 
-export const CORE_FILTERS = [
-  {
-    id: 'horizontal_scanline_rgb_glitch',
-    name: 'Scanline RGB Slicing Glitch',
-    tag: 'Cyberpunk / Y2K',
-    desc: 'Cắt lát ngang đa tầng và lệch kênh màu Red/Cyan 3D với vạch quét CRT (Ảnh 3).',
-    icon: '⚡',
-    gradient: 'from-pink-500 to-rose-600',
-  },
-  {
-    id: 'strobe_flash_beat',
-    name: 'Strobe Flash Beat',
-    tag: 'EDM / High-Energy',
-    desc: 'Chớp nháy tương phản Trắng/Đen nghịch màu đập dồn theo nhịp bass.',
-    icon: '✨',
-    gradient: 'from-yellow-400 to-amber-600',
-  },
-  {
-    id: 'specular_metallic_sheen',
-    name: 'Specular Light Sheen',
-    tag: 'Luxury / Commercial',
-    desc: 'Vệt sáng kim loại quét mượt mà qua bề mặt sản phẩm phong cách Apple.',
-    icon: '🌟',
-    gradient: 'from-cyan-400 to-blue-600',
-  },
-  {
-    id: 'flash_blast_silhouette',
-    name: 'Flash Blast Silhouette Burst',
-    tag: 'Big Reveal / Outro',
-    desc: 'Cú nổ bùng sáng chói lòa chuyển hóa vật thể thành khối màu sắc nét 100%.',
-    icon: '💥',
-    gradient: 'from-purple-500 to-indigo-600',
-  },
-  {
-    id: 'vhs_retro_tape_noise',
-    name: 'VHS Retro Tape Static',
-    tag: 'Vintage / Y2K',
-    desc: 'Nhiễu hạt băng từ VHS cổ điển, vạch tuyết chạy dọc và quang sai màu.',
-    icon: '📼',
-    gradient: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'pixel_mosaic_shatter',
-    name: 'Pixel Mosaic Shatter',
-    tag: 'Cyber / Glitch',
-    desc: 'Phân rã vật thể thành các khối pixel vuông rồi tái tạo sắc nét.',
-    icon: '🧱',
-    gradient: 'from-violet-500 to-fuchsia-600',
-  },
-  {
-    id: 'golden_bokeh_particles',
-    name: 'Golden Bokeh Particles',
-    tag: 'Luxury / Elegant',
-    desc: 'Bụi vàng phát sáng lơ lửng bồng bềnh tạo cảm giác sang trọng đẳng cấp.',
-    icon: '✨',
-    gradient: 'from-amber-400 to-yellow-600',
-  },
-  {
-    id: 'prism_rainbow_flare',
-    name: 'Prism Optical Flare',
-    tag: 'Cinematic Light',
-    desc: 'Vệt lóa cầu vồng quang học góc ống kính máy quay điện ảnh.',
-    icon: '🌈',
-    gradient: 'from-blue-500 to-purple-600',
-  },
-  {
-    id: 'perspective_3d_float',
-    name: '3D Perspective Tilt & Float',
-    tag: 'Motion / 3D Space',
-    desc: 'Nghiêng góc 3D lơ lửng bồng bềnh tự nhiên kết hợp bóng đổ mặt sàn.',
-    icon: '📦',
-    gradient: 'from-indigo-500 to-sky-600',
-  },
-  {
-    id: 'kenburns_continuous_zoom',
-    name: 'Ken-Burns Cinematic Slow Zoom',
-    tag: 'Cinematic Camera',
-    desc: 'Góc máy zoom chậm mượt mà mang phong cách phim truyện Hollywood.',
-    icon: '🔍',
-    gradient: 'from-sky-500 to-cyan-600',
-  },
-  {
-    id: 'grayscale_underlayer_push',
-    name: 'Grayscale Underlayer Push',
-    tag: 'F&B / Product Showcase',
-    desc: 'Đè nổi bật vật thể mới lên nền cũ đã mờ xám tương phản tuyệt đối.',
-    icon: '🖤',
-    gradient: 'from-slate-600 to-zinc-800',
-  },
-  {
-    id: 'neon_cyber_glow',
-    name: 'Neon Cyberpunk Outline Glow',
-    tag: 'Glow / Cyber',
-    desc: 'Đèn viền Neon phát sáng nhấp nháy chuyển màu theo nhịp điệu bài hát.',
-    icon: '💡',
-    gradient: 'from-cyan-400 to-fuchsia-600',
-  },
-  {
-    id: 'liquid_wave_distortion',
-    name: 'Liquid Ripple Wave Distortion',
-    tag: 'Organic / Water',
-    desc: 'Sóng nước gợn sóng biến dạng bề mặt sản phẩm độc đáo.',
-    icon: '🌊',
-    gradient: 'from-blue-600 to-teal-500',
-  },
-  {
-    id: 'thermal_heatmap_matrix',
-    name: 'Thermal Matrix Heatmap',
-    tag: 'Sci-Fi / Matrix',
-    desc: 'Bản đồ nhiệt quang phổ rực lửa quét qua góc quay.',
-    icon: '🔥',
-    gradient: 'from-red-600 to-amber-500',
-  },
-  {
-    id: 'halftone_pop_art',
-    name: 'Retro Halftone Pop-Art Grid',
-    tag: 'Comic / Poster',
-    desc: 'Chấm hạt in lưới truyện tranh phong cách Retro Pop-Art nổi bật.',
-    icon: '🎨',
-    gradient: 'from-pink-600 to-yellow-500',
-  },
-  {
-    id: 'film_grain_vintage',
-    name: '35mm Film Grain Cinema Overlay',
-    tag: 'Vintage / Film',
-    desc: 'Hạt phim nhựa 35mm hoài cổ Hollywood tăng chất lượng điện ảnh.',
-    icon: '🎬',
-    gradient: 'from-amber-600 to-stone-700',
-  },
-];
-
 export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
   onClose,
   onApplyTransition,
@@ -164,6 +34,8 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'transitions' | 'effects'>('transitions');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedEffectCategory, setSelectedEffectCategory] = useState('all');
+
   const [previewItem, setPreviewItem] = useState<{
     type: 'transition' | 'effect';
     name: string;
@@ -186,6 +58,18 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
     });
   }, [searchQuery, selectedCategory]);
 
+  const filteredEffects = useMemo(() => {
+    return FULL_CORE_FILTERS.filter((item) => {
+      const matchCat = selectedEffectCategory === 'all' || item.category === selectedEffectCategory;
+      const matchSearch =
+        !searchQuery.trim() ||
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.desc.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchCat && matchSearch;
+    });
+  }, [searchQuery, selectedEffectCategory]);
+
   return (
     <div className="space-y-3.5">
       {/* Header */}
@@ -195,8 +79,8 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">FX & Transitions (125 GLSL)</h3>
-            <p className="text-[11px] text-slate-400">Kho thư viện chuyển cảnh & hiệu ứng chuẩn CapCut</p>
+            <h3 className="text-sm font-black text-white">FX & Transitions (125 GLSL + 40 Filters)</h3>
+            <p className="text-[11px] text-slate-400">Kho hiệu ứng PixiJS Filters, Three.js & GL-Transitions</p>
           </div>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#1E2333]">
@@ -246,7 +130,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             setPreviewItem({
               type: 'effect',
               name: 'horizontal_scanline_rgb_glitch',
-              category: 'Cyberpunk / Y2K',
+              category: 'PixiJS Glitch + CRT',
             });
           }}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
@@ -256,7 +140,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           }`}
         >
           <Zap className="w-3.5 h-3.5" />
-          Effects & Filters ({CORE_FILTERS.length})
+          Effects ({FULL_CORE_FILTERS.length} Pixi & ThreeJS)
         </button>
       </div>
 
@@ -270,7 +154,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
-              placeholder="Tìm kiếm shader (Glitch, Zoom, Burn, Wipe, Swirl...)"
+              placeholder="Tìm kiếm 125 shader (Glitch, Zoom, Burn, Wipe, Swirl...)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#141724] border border-[#252B3E] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
@@ -302,7 +186,6 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                 <div
                   key={item.id}
                   onClick={() => {
-                    // Click on card ONLY selects and tests on the Fox Canvas
                     setPreviewItem({
                       type: 'transition',
                       name: item.id,
@@ -378,90 +261,122 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          SUB-TAB 2: EFFECTS & FILTERS
+          SUB-TAB 2: EFFECTS & FILTERS (FULL 40+ PIXI & THREEJS FILTERS)
           ───────────────────────────────────────────────────────────── */}
       {activeSubTab === 'effects' && (
-        <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
-          {CORE_FILTERS.map((eff) => {
-            const isSelected = previewItem.name === eff.id;
-            return (
-              <div
-                key={eff.id}
-                onClick={() => {
-                  // Click on effect card ONLY previews on Fox
-                  setPreviewItem({
-                    type: 'effect',
-                    name: eff.id,
-                    category: eff.tag,
-                  });
-                }}
-                className={`p-3 rounded-xl border transition-all cursor-pointer group ${
-                  isSelected
-                    ? 'bg-pink-950/60 border-cyan-400 ring-2 ring-cyan-400/80 shadow-lg shadow-cyan-500/20'
-                    : 'bg-[#141724] border-[#252B3E] hover:border-pink-500/50 hover:bg-[#1A1F30]'
+        <div className="space-y-3">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm 40+ hiệu ứng (Glitch, CRT, Godrays, Shockwave, Bloom...)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#141724] border border-[#252B3E] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-pink-500"
+            />
+          </div>
+
+          {/* Effect Category Filter Pills */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-700">
+            {EFFECT_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedEffectCategory(cat.id)}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg whitespace-nowrap transition-all ${
+                  selectedEffectCategory === cat.id
+                    ? 'bg-pink-600 text-white'
+                    : 'bg-[#181B28] text-slate-400 hover:text-white border border-[#252B3E]'
                 }`}
-                title="Bấm để thử nghiệm hiệu ứng trên con cáo"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
-                      {eff.icon}
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          {/* List of 40 Filters */}
+          <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+            {filteredEffects.map((eff) => {
+              const isSelected = previewItem.name === eff.id;
+              return (
+                <div
+                  key={eff.id}
+                  onClick={() => {
+                    setPreviewItem({
+                      type: 'effect',
+                      name: eff.id,
+                      category: eff.tag,
+                    });
+                  }}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer group ${
+                    isSelected
+                      ? 'bg-pink-950/60 border-cyan-400 ring-2 ring-cyan-400/80 shadow-lg shadow-cyan-500/20'
+                      : 'bg-[#141724] border-[#252B3E] hover:border-pink-500/50 hover:bg-[#1A1F30]'
+                  }`}
+                  title="Bấm để thử nghiệm hiệu ứng trên con cáo"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${eff.gradient} flex items-center justify-center text-base shadow-md`}>
+                        {eff.icon}
+                      </div>
+                      <div>
+                        <h4 className={`text-xs font-black transition-colors ${isSelected ? 'text-cyan-300' : 'text-white group-hover:text-pink-300'}`}>
+                          {eff.name}
+                        </h4>
+                        <span className="text-[10px] font-bold text-slate-400">{eff.tag}</span>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className={`text-xs font-black transition-colors ${isSelected ? 'text-cyan-300' : 'text-white group-hover:text-pink-300'}`}>
-                        {eff.name}
-                      </h4>
-                      <span className="text-[10px] font-bold text-slate-500">{eff.tag}</span>
-                    </div>
+                    {isSelected && (
+                      <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-xs">
+                        🦊 Đang thử
+                      </span>
+                    )}
                   </div>
-                  {isSelected && (
-                    <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-xs">
-                      🦊 Đang thử
-                    </span>
-                  )}
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed">{eff.desc}</p>
+
+                  <div className="mt-2.5 flex items-center justify-end gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewItem({
+                          type: 'effect',
+                          name: eff.id,
+                          category: eff.tag,
+                        });
+                      }}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all border ${
+                        isSelected
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                          : 'bg-[#181B28] text-slate-400 hover:text-white border-[#2A3045]'
+                      }`}
+                    >
+                      🦊 Thử trên Cáo
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewItem({
+                          type: 'effect',
+                          name: eff.id,
+                          category: eff.tag,
+                        });
+                        onApplyEffect && onApplyEffect(eff.id);
+                      }}
+                      className="px-3 py-1 bg-gradient-to-r from-pink-600 to-rose-600 hover:brightness-110 text-white rounded-lg text-[11px] font-black transition-all shadow-sm active:scale-95"
+                    >
+                      + Áp dụng vào Video
+                    </button>
+                  </div>
                 </div>
-
-                <p className="text-[11px] text-slate-400 leading-relaxed">{eff.desc}</p>
-
-                <div className="mt-2.5 flex items-center justify-end gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewItem({
-                        type: 'effect',
-                        name: eff.id,
-                        category: eff.tag,
-                      });
-                    }}
-                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all border ${
-                      isSelected
-                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                        : 'bg-[#181B28] text-slate-400 hover:text-white border-[#2A3045]'
-                    }`}
-                  >
-                    🦊 Thử trên Cáo
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewItem({
-                        type: 'effect',
-                        name: eff.id,
-                        category: eff.tag,
-                      });
-                      onApplyEffect && onApplyEffect(eff.id);
-                    }}
-                    className="px-3 py-1 bg-gradient-to-r from-pink-600 to-rose-600 hover:brightness-110 text-white rounded-lg text-[11px] font-black transition-all shadow-sm active:scale-95"
-                  >
-                    + Áp dụng vào Video
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 };
+
