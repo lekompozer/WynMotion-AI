@@ -2307,6 +2307,8 @@ function StudioInner({
                 if (!isNaN(sId)) setActiveSceneId(sId);
               }
             }}
+            zoomLevel={zoomLevel}
+            onZoomChange={setZoomLevel}
             onDeleteItem={handleDeleteItem}
             onOpenFXTab={() => setActiveFlyoutTab('effects')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {

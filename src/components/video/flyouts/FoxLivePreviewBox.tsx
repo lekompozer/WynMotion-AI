@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Zap, Play, RotateCcw, Check } from 'lucide-react';
+import { Sparkles, Zap, RotateCcw, Check, Play } from 'lucide-react';
 import { GLSLTransitionCanvas } from '../styles/transitions/GLSLTransitionCanvas';
 import { SHADERS_MAP } from '../../../../packages/core-effects/shadersMap';
 import { ActiveEffectsOverlay, CustomTimelineEffect } from '../styles/ActiveEffectsOverlay';
@@ -13,6 +13,38 @@ export interface FoxLivePreviewBoxProps {
   onApply: () => void;
 }
 
+// Generate a high-contrast real PNG data URL for Texture B in WebGL transitions
+const generateTextureBDataUrl = (): string => {
+  if (typeof document === 'undefined') return '/png-fox.png';
+  const canvas = document.createElement('canvas');
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '/png-fox.png';
+
+  // Draw vibrant dark slate background with neon cyan circle & badge
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(0, 0, 300, 300);
+
+  // Gradient circle
+  const grad = ctx.createRadialGradient(150, 150, 20, 150, 150, 140);
+  grad.addColorStop(0, '#38BDF8');
+  grad.addColorStop(1, '#6366F1');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(150, 150, 110, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '900 32px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('NEXT SCENE', 150, 150);
+
+  return canvas.toDataURL('image/png');
+};
+
 export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
   currentType,
   currentName,
@@ -20,30 +52,40 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
   onApply,
 }) => {
   const [progress, setProgress] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   const [appliedAnim, setAppliedAnim] = useState(false);
+  const [textureB, setTextureB] = useState<string>('/png-fox.png');
   const animFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(Date.now());
 
-  // Texture B: Stylized colored backdrop with secondary logo for crystal-clear transition visibility
   const FOX_IMG_A = '/png-fox.png';
-  // A secondary high-contrast texture to clearly demonstrate the transition from A to B
-  const FOX_IMG_B =
-    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="%230F172A"/><circle cx="200" cy="200" r="140" fill="%2338BDF8"/><text x="200" y="215" font-family="sans-serif" font-weight="900" font-size="36" fill="%23FFFFFF" text-anchor="middle">SCENE B</text></svg>';
 
-  const glslCode = SHADERS_MAP[currentName] || 'vec4 transition(vec2 uv) { return mix(getFromColor(uv), getToColor(uv), progress); }';
+  // Initialize Texture B
+  useEffect(() => {
+    try {
+      const bData = generateTextureBDataUrl();
+      setTextureB(bData);
+    } catch (e) {
+      setTextureB('/png-fox.png');
+    }
+  }, []);
 
-  // Smooth continuous looping preview animation (1.4s cycle)
+  const glslCode =
+    SHADERS_MAP[currentName] ||
+    'vec4 transition(vec2 uv) { return mix(getFromColor(uv), getToColor(uv), progress); }';
+
+  // Continuous looping animation with smooth cycle
   useEffect(() => {
     startTimeRef.current = Date.now();
 
     const loop = () => {
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      const cycleDuration = 1.4; // 1.4 seconds per loop
-      const cycle = elapsed % (cycleDuration + 0.4); // 0.4s pause at end
+      const cycleDuration = 1.3; // 1.3s transition duration
+      const pauseDuration = 0.4; // 0.4s pause at end
+      const totalCycle = cycleDuration + pauseDuration;
+      const currentCycleTime = elapsed % totalCycle;
 
-      if (cycle <= cycleDuration) {
-        setProgress(Math.min(1.0, cycle / cycleDuration));
+      if (currentCycleTime <= cycleDuration) {
+        setProgress(Math.min(1.0, currentCycleTime / cycleDuration));
       } else {
         setProgress(1.0);
       }
@@ -64,6 +106,11 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
     setTimeout(() => setAppliedAnim(false), 2000);
   };
 
+  const handleReplay = () => {
+    startTimeRef.current = Date.now();
+    setProgress(0);
+  };
+
   const previewEffectsList: CustomTimelineEffect[] = [
     {
       id: 'preview_fx',
@@ -77,22 +124,18 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
   ];
 
   return (
-    <div className="bg-gradient-to-br from-[#161928] to-[#0F111E] border border-[#2D334D] rounded-2xl p-3 shadow-xl relative overflow-hidden">
+    <div className="bg-gradient-to-br from-[#181C2E] to-[#0F111E] border border-[#2D334D] rounded-2xl p-3 shadow-xl relative overflow-hidden">
       {/* Ambient background glow */}
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/15 rounded-full blur-2xl pointer-events-none" />
 
       <div className="flex items-center gap-3">
         {/* 1. SQUARE WHITE CANVAS PREVIEW CONTAINER (105x105) */}
-        <div
-          className="relative w-[105px] h-[105px] shrink-0 rounded-xl overflow-hidden bg-white shadow-md border-2 border-purple-500/30 flex items-center justify-center group"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
+        <div className="relative w-[105px] h-[105px] shrink-0 rounded-xl overflow-hidden bg-white shadow-md border-2 border-purple-500/40 flex items-center justify-center group">
           {currentType === 'transition' ? (
             <div className="relative w-full h-full">
               <GLSLTransitionCanvas
                 fromImage={FOX_IMG_A}
-                toImage={FOX_IMG_B}
+                toImage={textureB}
                 progress={progress}
                 glslSource={glslCode}
                 width={210}
@@ -102,13 +145,11 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center bg-white">
-              {/* Image of Fox */}
               <img
                 src={FOX_IMG_A}
                 alt="Fox Preview"
                 className="w-full h-full object-contain p-1 select-none pointer-events-none"
               />
-              {/* Overlay Active Effect */}
               <ActiveEffectsOverlay
                 activeEffects={previewEffectsList}
                 currentTime={progress * 1.5}
@@ -119,7 +160,7 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
           )}
 
           {/* Live Progress Bar Indicator at Bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/30">
             <div
               className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-75"
               style={{ width: `${progress * 100}%` }}
@@ -127,19 +168,29 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
           </div>
 
           {/* Mini Live WebGL Badge */}
-          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[8px] font-black text-cyan-300 uppercase tracking-wider flex items-center gap-0.5">
+          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-[8px] font-black text-cyan-300 uppercase tracking-wider flex items-center gap-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping inline-block" />
-            Live
+            Live 🦊
           </div>
         </div>
 
         {/* 2. PREVIEW DETAILS & ACTION BUTTON */}
         <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-2">
           <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
-              {currentType === 'transition' ? <Sparkles className="w-3 h-3" /> : <Zap className="w-3 h-3 text-amber-400" />}
-              <span>{currentType === 'transition' ? 'GLSL Transition Preview' : 'Visual Effect Preview'}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+                {currentType === 'transition' ? <Sparkles className="w-3 h-3" /> : <Zap className="w-3 h-3 text-amber-400" />}
+                <span>{currentType === 'transition' ? 'GLSL Transition' : 'Visual Effect'}</span>
+              </div>
+              <button
+                onClick={handleReplay}
+                className="p-1 text-slate-400 hover:text-white rounded hover:bg-[#252B3E] transition-colors"
+                title="Chạy lại xem trước"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
             </div>
+
             <h4 className="text-xs font-black text-white truncate mt-0.5" title={currentName}>
               {currentName || 'GlitchMemories'}
             </h4>
@@ -147,7 +198,7 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
               <span className="px-2 py-0.5 rounded-full bg-[#1F2438] text-[10px] font-semibold text-slate-300 border border-[#2D334D] truncate max-w-[110px]">
                 {currentCategory}
               </span>
-              <span className="text-[10px] font-mono text-slate-400">{Math.round(progress * 100)}%</span>
+              <span className="text-[10px] font-mono text-cyan-400 font-bold">{Math.round(progress * 100)}%</span>
             </div>
           </div>
 
@@ -163,7 +214,7 @@ export const FoxLivePreviewBox: React.FC<FoxLivePreviewBoxProps> = ({
             {appliedAnim ? (
               <>
                 <Check className="w-3.5 h-3.5" />
-                <span>Đã áp dụng!</span>
+                <span>Đã áp dụng vào Video!</span>
               </>
             ) : (
               <>

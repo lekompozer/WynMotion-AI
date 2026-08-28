@@ -18,6 +18,8 @@ export interface MultiTrackTimelineSliderProps {
   selectedItemId?: string | null;
   onOpenFXTab?: () => void;
   isMobile?: boolean;
+  zoomLevel?: number;
+  onZoomChange?: (newZoom: number) => void;
 }
 
 export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> = ({
@@ -33,10 +35,22 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   selectedItemId,
   onOpenFXTab,
   isMobile = false,
+  zoomLevel,
+  onZoomChange,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const zoom = isMobile ? 35 : 60; // pixels per second
-  const totalWidth = Math.max(isMobile ? 360 : 800, totalDuration * zoom);
+  const [internalZoom, setInternalZoom] = React.useState<number>(1.2);
+  const activeZoom = zoomLevel !== undefined ? zoomLevel : internalZoom;
+
+  const handleZoomUpdate = (newVal: number) => {
+    const clamped = Math.max(0.5, Math.min(3.5, newVal));
+    setInternalZoom(clamped);
+    onZoomChange?.(clamped);
+  };
+
+  const basePixelsPerSec = isMobile ? 45 : 85;
+  const zoom = basePixelsPerSec * activeZoom; // Dynamic pixels per second scaling
+  const totalWidth = Math.max(isMobile ? 360 : 900, totalDuration * zoom);
 
   // Keyboard shortcut listener for Delete / Backspace
   useEffect(() => {
@@ -139,7 +153,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 
   // Rulers Marks
   const rulerMarks = [];
-  const step = totalDuration > 30 ? 2 : 1;
+  const step = activeZoom < 0.8 ? 2 : 1;
   for (let s = 0; s <= totalDuration; s += step) {
     rulerMarks.push(s);
   }
@@ -148,6 +162,9 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 
   return (
     <div className={`w-full bg-[#0D0F18] border-t border-[#1E2232] flex flex-col select-none ${isMobile ? 'text-xs' : 'text-sm'}`}>
+      {/* ─────────────────────────────────────────────────────────────
+          1. TOP CONTROL BAR (PLAY, TIMESTAMPS, ZOOM & DELETE ACTIONS)
+          ───────────────────────────────────────────────────────────── */}
       <div className={`flex items-center justify-between px-3 py-1.5 bg-[#121522] border-b border-[#1E2232] ${isMobile ? 'gap-1' : 'gap-4'}`}>
         <div className="flex items-center gap-2">
           <button
@@ -164,22 +181,52 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
           </div>
         </div>
 
+        {/* Center: Interactive Timeline Zoom Slider (CapCut-Style) */}
+        <div className="flex items-center gap-1.5 bg-[#090B12] px-2.5 py-1 rounded-xl border border-[#1E2232]">
+          <button
+            onClick={() => handleZoomUpdate(activeZoom - 0.2)}
+            className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
+            title="Thu nhỏ timeline (-)"
+          >
+            <ZoomOut className="w-3 h-3" />
+          </button>
+          <input
+            type="range"
+            min="0.5"
+            max="3.5"
+            step="0.1"
+            value={activeZoom}
+            onChange={(e) => handleZoomUpdate(parseFloat(e.target.value))}
+            className="w-20 sm:w-28 accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer"
+            title="Kéo để phóng to / thu nhỏ khung timeline"
+          />
+          <button
+            onClick={() => handleZoomUpdate(activeZoom + 0.2)}
+            className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
+            title="Phóng to timeline (+)"
+          >
+            <ZoomIn className="w-3 h-3" />
+          </button>
+          <span className="text-[10px] font-mono text-cyan-400 font-bold ml-1">{Math.round(activeZoom * 100)}%</span>
+        </div>
+
+        {/* Right: Selected Item Actions (Delete & Add FX) */}
         <div className="flex items-center gap-2">
           {selectedItemId && onDeleteItem && (
             <button
               onClick={() => onDeleteItem(selectedItemId)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[11px] font-bold transition-all shadow-xs"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-black transition-all shadow-md shadow-rose-600/30 active:scale-95 animate-pulse"
               title="Xóa clip/hiệu ứng đang chọn (Phím Delete/Backspace)"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Xóa</span>
+              <span>Xóa ({selectedItemId.split('_')[0]})</span>
             </button>
           )}
 
           {onOpenFXTab && (
             <button
               onClick={onOpenFXTab}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 text-[10px] font-bold transition-all"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white text-[10px] font-black transition-all shadow-sm"
             >
               <Sparkles className="w-3 h-3" />
               <span>+ Thêm FX</span>
