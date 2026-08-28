@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { X, Sparkles, Wand2, Search, Zap, Film, Layers, Check, Play, Flame, RefreshCw } from 'lucide-react';
+import { X, Sparkles, Search, Zap, RefreshCw } from 'lucide-react';
 import MANIFEST from '../../../../packages/core-effects/manifest.json';
 import { FULL_CORE_FILTERS, EFFECT_CATEGORIES } from '../../../../packages/core-effects/effectShaders';
-import { FoxLivePreviewBox } from './FoxLivePreviewBox';
 import { EffectCardThumbnail } from './EffectCardThumbnail';
 
 export interface EffectsFlyoutTabProps {
@@ -37,15 +36,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedEffectCategory, setSelectedEffectCategory] = useState('all');
 
-  const [previewItem, setPreviewItem] = useState<{
-    type: 'transition' | 'effect';
-    name: string;
-    category?: string;
-  }>({
-    type: 'transition',
-    name: currentShaderName || 'GlitchMemories',
-    category: 'Glitch & Cyber',
-  });
+  const [selectedItem, setSelectedItem] = useState<string>(currentShaderName || 'GlitchMemories');
 
   const transitions = useMemo(() => {
     const list = MANIFEST.transitions || [];
@@ -89,32 +80,12 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
         </button>
       </div>
 
-      {/* ─────────────────────────────────────────────────────────────
-          1. FOX LIVE PREVIEW BOX (CAPCUT-STYLE INTERACTIVE CANVAS)
-          ───────────────────────────────────────────────────────────── */}
-      <FoxLivePreviewBox
-        currentType={previewItem.type}
-        currentName={previewItem.name}
-        currentCategory={previewItem.category}
-        onApply={() => {
-          if (previewItem.type === 'transition') {
-            onApplyTransition(previewItem.name);
-          } else {
-            onApplyEffect?.(previewItem.name);
-          }
-        }}
-      />
-
       {/* Switch Sub-Tabs: Transitions vs Effects */}
       <div className="flex bg-[#181B28] p-1 rounded-xl border border-[#252B3E]">
         <button
           onClick={() => {
             setActiveSubTab('transitions');
-            setPreviewItem({
-              type: 'transition',
-              name: 'GlitchMemories',
-              category: 'Glitch & Cyber',
-            });
+            setSelectedItem('GlitchMemories');
           }}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSubTab === 'transitions'
@@ -128,11 +99,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
         <button
           onClick={() => {
             setActiveSubTab('effects');
-            setPreviewItem({
-              type: 'effect',
-              name: 'horizontal_scanline_rgb_glitch',
-              category: 'PixiJS Glitch + CRT',
-            });
+            setSelectedItem('horizontal_scanline_rgb_glitch');
           }}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSubTab === 'effects'
@@ -180,9 +147,9 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Grid of 125 Shaders with Animated Thumbnails */}
-          <div className="grid grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
             {transitions.map((item) => {
-              const isSelected = previewItem.name === item.id;
+              const isSelected = selectedItem === item.id;
               return (
                 <EffectCardThumbnail
                   key={item.id}
@@ -193,18 +160,10 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                   duration={item.default_duration}
                   isSelected={isSelected}
                   onPreview={() => {
-                    setPreviewItem({
-                      type: 'transition',
-                      name: item.id,
-                      category: item.category,
-                    });
+                    setSelectedItem(item.id);
                   }}
                   onApply={() => {
-                    setPreviewItem({
-                      type: 'transition',
-                      name: item.id,
-                      category: item.category,
-                    });
+                    setSelectedItem(item.id);
                     onApplyTransition(item.id);
                   }}
                 />
@@ -249,9 +208,9 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Grid of 40 Filters with Animated Thumbnails */}
-          <div className="grid grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
             {filteredEffects.map((eff) => {
-              const isSelected = previewItem.name === eff.id;
+              const isSelected = selectedItem === eff.id;
               return (
                 <EffectCardThumbnail
                   key={eff.id}
@@ -264,18 +223,10 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                   duration={1.5}
                   isSelected={isSelected}
                   onPreview={() => {
-                    setPreviewItem({
-                      type: 'effect',
-                      name: eff.id,
-                      category: eff.tag,
-                    });
+                    setSelectedItem(eff.id);
                   }}
                   onApply={() => {
-                    setPreviewItem({
-                      type: 'effect',
-                      name: eff.id,
-                      category: eff.tag,
-                    });
+                    setSelectedItem(eff.id);
                     onApplyEffect && onApplyEffect(eff.id);
                   }}
                 />
