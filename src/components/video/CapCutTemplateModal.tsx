@@ -136,12 +136,12 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
 };
 
 export interface CapCutTemplateModalProps {
-  templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo' | null;
+  template: any | null;
   isOpen: boolean;
   onClose: () => void;
   defaultAspectRatio?: '9:16' | '16:9';
   onApply: (params: {
-    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo';
+    template: any;
     prompt: string;
     productImages: string[];
     bgmUrl: string;
@@ -156,7 +156,7 @@ export interface CapCutTemplateModalProps {
 }
 
 export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
-  templateId,
+  template,
   isOpen,
   onClose,
   defaultAspectRatio = '9:16',
@@ -165,7 +165,17 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const { isVietnamese } = useApp();
   const t = (vi: string, en: string) => (isVietnamese ? vi : en);
 
-  const template = templateId ? CAPCUT_ADS_TEMPLATES[templateId] : null;
+  // Normalized template attributes supporting both snake_case API and camelCase legacy
+  const title = template ? (isVietnamese ? (template.title_vi || template.titleVi || template.title) : (template.title_en || template.titleEn || template.title)) : '';
+  const desc = template ? (isVietnamese ? (template.desc_vi || template.descVi) : (template.desc_en || template.descEn)) : '';
+  const durationSec = template ? (template.duration_sec || template.durationSec || 12) : 12;
+  const videoUrl = template ? (template.local_video_path || template.video_demo_url || template.videoUrl || '') : '';
+  const bgmUrl = template ? (template.local_bgm_path || template.bgm_url || template.bgmUrl || '') : '';
+  const maxImages = template ? (template.max_images || template.maxImages || (template.visual_style === 'animation_ads_image_veo' ? 1 : 10)) : 10;
+  const defaultHook = template?.default_params ? (isVietnamese ? template.default_params.hook_text_vi : template.default_params.hook_text_en) : (isVietnamese ? (template?.defaultHookVi || 'SIÊU PHẨM MỚI') : (template?.defaultHookEn || 'NEW ARRIVAL'));
+  const defaultSolid = template?.default_params ? (isVietnamese ? template.default_params.solid_text_vi : template.default_params.solid_text_en) : (isVietnamese ? (template?.defaultSolidVi || 'SPECIAL') : (template?.defaultSolidEn || 'SPECIAL'));
+  const defaultOutline = template?.default_params ? (isVietnamese ? template.default_params.outline_text_vi : template.default_params.outline_text_en) : (isVietnamese ? (template?.defaultOutlineVi || 'CHOICE') : (template?.defaultOutlineEn || 'CHOICE'));
+  const defaultSlogan = template?.default_params ? (isVietnamese ? template.default_params.slogan_vi : template.default_params.slogan_en) : (isVietnamese ? (template?.defaultSloganVi || '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY') : (template?.defaultSloganEn || '⚡ EXPERIENCE LUXURY - ORDER NOW'));
 
   // 3-step intuitive flow: preview -> fill_assets (Step 1) -> fill_texts (Step 2)
   const [step, setStep] = useState<'preview' | 'fill_assets' | 'fill_texts'>('preview');
@@ -194,18 +204,18 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       setStep('preview');
       setIsPlaying(true);
       setAspectRatio(defaultAspectRatio);
-      setPrompt(isVietnamese ? template.titleVi : template.titleEn);
-      setHookText(isVietnamese ? template.defaultHookVi : template.defaultHookEn);
-      setSolidText(isVietnamese ? template.defaultSolidVi : template.defaultSolidEn);
-      setOutlineText(isVietnamese ? template.defaultOutlineVi : template.defaultOutlineEn);
-      setSloganText(isVietnamese ? template.defaultSloganVi : template.defaultSloganEn);
-      setCtaText(template.id === 'ads_cinematic_showcase' ? 'ORDER NOW' : 'DISCOVER NOW');
+      setPrompt(title);
+      setHookText(defaultHook);
+      setSolidText(defaultSolid);
+      setOutlineText(defaultOutline);
+      setSloganText(defaultSlogan);
+      setCtaText('ORDER NOW');
       setProductImages([]);
-      setSelectedDuration(template.durationSec || 15);
-      setCustomAudioUrl(template.bgmUrl || '');
+      setSelectedDuration(durationSec);
+      setCustomAudioUrl(bgmUrl);
       setCustomAudioName('');
     }
-  }, [isOpen, templateId, isVietnamese, defaultAspectRatio]);
+  }, [isOpen, template, isVietnamese, defaultAspectRatio]);
 
   if (!isOpen || !template) return null;
 
@@ -263,7 +273,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
       const uploadedUrls = (await Promise.all(uploadPromises)).filter(Boolean) as string[];
       if (uploadedUrls.length > 0) {
-        setProductImages((prev) => [...prev, ...uploadedUrls].slice(0, template.maxImages));
+        setProductImages((prev) => [...prev, ...uploadedUrls].slice(0, maxImages));
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -273,13 +283,13 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   };
 
   const handleLaunchCreation = () => {
-    const finalPrompt = prompt.trim() || (isVietnamese ? template.titleVi : template.titleEn);
+    const finalPrompt = prompt.trim() || title;
     onApply({
-      templateId: template.id,
+      template,
       prompt: finalPrompt,
       productImages,
-      bgmUrl: customAudioUrl || template.bgmUrl,
-      durationSec: selectedDuration || template.durationSec,
+      bgmUrl: customAudioUrl || bgmUrl,
+      durationSec: selectedDuration || durationSec,
       aspectRatio,
       hookText: hookText.trim() || undefined,
       ctaText: ctaText.trim() || undefined,

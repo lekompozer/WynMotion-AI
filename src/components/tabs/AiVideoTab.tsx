@@ -328,7 +328,7 @@ export const AiVideoTab: React.FC = () => {
   const [hookText, setHookText] = useState('');
   const [priceText, setPriceText] = useState('ƯU ĐÃI');
   const [ctaText, setCtaText] = useState('MUA NGAY');
-  const [capcutModalTemplate, setCapcutModalTemplate] = useState<'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | null>(null);
+  const [capcutModalTemplate, setCapcutModalTemplate] = useState<any | null>(null);
   const [isCapCutGalleryOpen, setIsCapCutGalleryOpen] = useState(false);
 
   // Video News 60s States
@@ -974,7 +974,7 @@ export const AiVideoTab: React.FC = () => {
   };
 
   const handleApplyCapCutTemplate = async (params: {
-    templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
+    template: any;
     prompt: string;
     productImages: string[];
     bgmUrl: string;
@@ -992,6 +992,9 @@ export const AiVideoTab: React.FC = () => {
       return;
     }
 
+    const tpl = params.template || {};
+    const isVeo = tpl.visual_style === 'animation_ads_image_veo' || tpl.is_vip || (typeof tpl.template_id === 'string' && tpl.template_id.startsWith('animation_ads'));
+
     setIsCreatingProject(true);
     setIsCreationModalOpen(true);
     setIsCreationMinimized(false);
@@ -999,7 +1002,7 @@ export const AiVideoTab: React.FC = () => {
     setCreationProgressPercent(15);
     setCreationCountdownSec(600); // 10 minutes countdown
     setCreationStatusMessage(
-      (params.templateId === 'animation_ads_image_veo' || (params.templateId as string) === 'animation_ads_image_veo_2')
+      isVeo
         ? (isVietnamese ? '👑 Đang khởi tạo VEO 3.1 Ads Animation (VIP)...' : '👑 Launching VEO 3.1 Ads Animation (VIP)...')
         : (isVietnamese ? '⚡ Đang khởi tạo video theo mẫu CapCut...' : '⚡ Launching CapCut template video...')
     );
@@ -1019,7 +1022,7 @@ export const AiVideoTab: React.FC = () => {
       const chosenAspectRatio = (params.aspectRatio || (aspectRatio === '16:9' ? '16:9' : '9:16')) as '9:16' | '1:1' | '16:9';
       
       let res: any;
-      if (params.templateId === 'animation_ads_image_veo' || (params.templateId as string) === 'animation_ads_image_veo_2') {
+      if (isVeo) {
         const firstImg = params.productImages[0] || '';
         if (!firstImg) {
           throw new Error(isVietnamese ? 'Vui lòng tải lên 1 ảnh Ads Poster để tạo animation VEO 3.1' : 'Please upload 1 Ads Poster image for VEO 3.1 animation');
@@ -1028,7 +1031,7 @@ export const AiVideoTab: React.FC = () => {
           image_url: firstImg,
           user_prompt: params.prompt,
           aspect_ratio: chosenAspectRatio,
-          duration_seconds: (params.durationSec || 6) as any,
+          duration_seconds: (params.durationSec || 12) as any,
         });
       } else {
         res = await wynmotionService.generateScenes({
@@ -1038,7 +1041,7 @@ export const AiVideoTab: React.FC = () => {
           audio_url: params.bgmUrl,
           duration_sec: params.durationSec,
           aspect_ratio: chosenAspectRatio,
-          visual_style: params.templateId,
+          visual_style: tpl.visual_style || 'product_ads_motion',
           product_images: params.productImages.length > 0 ? params.productImages : undefined,
           hook_text: params.hookText,
           cta_text: params.ctaText,
@@ -1571,7 +1574,7 @@ export const AiVideoTab: React.FC = () => {
 
         {/* ── CapCut Fullscreen Preview & Instant Apply Modal in Home Mode ── */}
         <CapCutTemplateModal
-          templateId={capcutModalTemplate}
+          template={capcutModalTemplate}
           isOpen={Boolean(capcutModalTemplate)}
           defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
           onClose={() => setCapcutModalTemplate(null)}
@@ -3062,7 +3065,7 @@ export const AiVideoTab: React.FC = () => {
 
       {/* ── CapCut Fullscreen Preview & Instant Apply Modal ── */}
       <CapCutTemplateModal
-        templateId={capcutModalTemplate}
+        template={capcutModalTemplate}
         isOpen={Boolean(capcutModalTemplate)}
         defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
         onClose={() => setCapcutModalTemplate(null)}

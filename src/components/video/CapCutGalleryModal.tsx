@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Search, X, Scissors, ArrowLeft } from 'lucide-react';
 
 export interface CapCutGalleryItem {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo' | 'animation_ads_image_veo_2';
+  id: string;
   title: string;
   category: string;
   duration: string;
@@ -14,70 +14,8 @@ export interface CapCutGalleryItem {
   coverUrl: string;
   aspectClass: string;
   badge?: string;
+  rawTemplate?: any;
 }
-
-export const CAPCUT_GALLERY_TEMPLATES: CapCutGalleryItem[] = [
-  {
-    id: 'animation_ads_image_veo',
-    title: 'Animation Ads Image (Google VEO 3.1 VIP)',
-    category: 'Sản phẩm',
-    duration: '12.0s',
-    usageCount: '95,4K',
-    author: 'Google VEO AI',
-    authorAvatar: '👑',
-    coverUrl: '/templates/cover-animation-ads-image-ios.png',
-    aspectClass: 'aspect-[9/16]',
-    badge: '👑 VIP VEO 3.1',
-  },
-  {
-    id: 'animation_ads_image_veo_2',
-    title: 'Animation Ads Image 6s (Cinematic Flow)',
-    category: 'Sản phẩm',
-    duration: '6.0s',
-    usageCount: '64,2K',
-    author: 'Google VEO AI',
-    authorAvatar: '👑',
-    coverUrl: '/templates/cover-animation-ads-image-2-ios.png',
-    aspectClass: 'aspect-[9/16]',
-    badge: '👑 VIP VEO 6s',
-  },
-  {
-    id: 'product_ads_motion',
-    title: 'Universal Images Product Video',
-    category: 'Sản phẩm',
-    duration: '10s - 60s',
-    usageCount: '88,5K',
-    author: 'WynAI Director',
-    authorAvatar: '✨',
-    coverUrl: '/templates/cover-poster-image.png',
-    aspectClass: 'aspect-[4/5]',
-    badge: '1-10 Ảnh • 125 Shaders',
-  },
-  {
-    id: 'ads_strobe_teaser',
-    title: 'Strobe Teaser & Big Reveal',
-    category: 'Trending',
-    duration: '11.7s',
-    usageCount: '76,9K',
-    author: 'Meno Me',
-    authorAvatar: '⚡',
-    coverUrl: '/templates/cover-strobe-teaser.png',
-    aspectClass: 'aspect-[9/15]',
-    badge: 'Standard',
-  },
-  {
-    id: 'ads_cinematic_showcase',
-    title: 'Cinematic Menu Showcase 22s',
-    category: 'F&B',
-    duration: '22.0s',
-    usageCount: '41,2K',
-    author: 'WynMotion AI',
-    authorAvatar: '🍜',
-    coverUrl: '/templates/cover-cinematic-showcase.png',
-    aspectClass: 'aspect-[3/4]',
-    badge: 'Pro 60fps',
-  },
-];
 
 export const CAPCUT_CATEGORIES = [
   'Dành cho bạn',
@@ -91,7 +29,7 @@ export const CAPCUT_CATEGORIES = [
 interface CapCutGalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectTemplate: (templateId: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo') => void;
+  onSelectTemplate: (template: any) => void;
 }
 
 export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
@@ -101,15 +39,15 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('Dành cho bạn');
   const [searchQuery, setSearchQuery] = useState('');
-  const [templatesList, setTemplatesList] = useState<CapCutGalleryItem[]>(CAPCUT_GALLERY_TEMPLATES);
+  const [templatesList, setTemplatesList] = useState<CapCutGalleryItem[]>([]);
 
-  // Fetch dynamic templates from Backend API on mount
+  // Fetch dynamic templates directly from Backend API on mount
   useEffect(() => {
     let isMounted = true;
     wynmotionService.getTemplates().then((res) => {
       if (isMounted && res && res.success && res.templates && res.templates.length > 0) {
         const mapped: CapCutGalleryItem[] = res.templates.map((t) => ({
-          id: t.template_id as any,
+          id: t.template_id,
           title: t.title_vi || t.title_en || t.template_id,
           category: t.category || 'Sản phẩm',
           duration: `${t.duration_sec}s`,
@@ -119,6 +57,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
           coverUrl: t.cover_ios_url || t.cover_url || '/templates/cover-animation-ads-image-ios.png',
           aspectClass: t.aspect_class || 'aspect-[9/16]',
           badge: t.badge || (t.is_vip ? '👑 VIP VEO 3.1' : undefined),
+          rawTemplate: t,
         }));
         setTemplatesList(mapped);
       }
@@ -216,12 +155,12 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 
 function renderTemplateCard(
   item: CapCutGalleryItem,
-  onSelect: (id: CapCutGalleryItem['id']) => void
+  onSelect: (template: any) => void
 ) {
   return (
     <div
       key={item.id}
-      onClick={() => onSelect(item.id)}
+      onClick={() => onSelect(item.rawTemplate || item)}
       className="group cursor-pointer rounded-2xl overflow-hidden bg-slate-900/70 border border-slate-800/90 hover:border-rose-500/60 transition-all active:scale-[0.98] shadow-lg flex flex-col"
     >
       <div className={`relative w-full ${item.aspectClass} overflow-hidden bg-slate-950`}>
