@@ -169,8 +169,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const title = template ? (isVietnamese ? (template.title_vi || template.titleVi || template.title) : (template.title_en || template.titleEn || template.title)) : '';
   const desc = template ? (isVietnamese ? (template.desc_vi || template.descVi) : (template.desc_en || template.descEn)) : '';
   const durationSec = template ? (template.duration_sec || template.durationSec || 12) : 12;
-  const videoUrl = template ? (template.local_video_path || template.video_demo_url || template.videoUrl || '') : '';
-  const bgmUrl = template ? (template.local_bgm_path || template.bgm_url || template.bgmUrl || '') : '';
+  const videoUrl = template ? (template.video_demo_url || template.videoUrl || template.local_video_path || '') : '';
+  const bgmUrl = template ? (template.bgm_url || template.bgmUrl || template.local_bgm_path || '') : '';
+  const badge = template ? (template.badge || (template.is_vip ? '👑 VIP' : '💎 AI VIDEO')) : '💎 AI VIDEO';
+  const usageCount = template ? (template.usage_count || template.usageCount || '50K') : '50K';
   const maxImages = template ? (template.max_images || template.maxImages || (template.visual_style === 'animation_ads_image_veo' ? 1 : 10)) : 10;
   const defaultHook = template?.default_params ? (isVietnamese ? template.default_params.hook_text_vi : template.default_params.hook_text_en) : (isVietnamese ? (template?.defaultHookVi || 'SIÊU PHẨM MỚI') : (template?.defaultHookEn || 'NEW ARRIVAL'));
   const defaultSolid = template?.default_params ? (isVietnamese ? template.default_params.solid_text_vi : template.default_params.solid_text_en) : (isVietnamese ? (template?.defaultSolidVi || 'SPECIAL') : (template?.defaultSolidEn || 'SPECIAL'));
@@ -310,11 +312,11 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             ───────────────────────────────────────────────────────────── */}
         {step === 'preview' && (
           <div className="relative w-full h-full flex flex-col overflow-hidden bg-black">
-            {template.videoUrl ? (
+            {videoUrl ? (
               <>
                 {/* Ambient Blurred Video Background for Seamless Letterbox Filling */}
                 <video
-                  src={template.videoUrl}
+                  src={videoUrl}
                   autoPlay
                   loop
                   playsInline
@@ -326,7 +328,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 <div className="absolute inset-0 z-10 flex items-center justify-center">
                   <video
                     ref={videoRef}
-                    src={template.videoUrl}
+                    src={videoUrl}
                     autoPlay
                     loop
                     playsInline
@@ -342,9 +344,9 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   🎬
                 </div>
                 <div className="space-y-1.5 max-w-xs">
-                  <h4 className="text-base font-black text-white">{isVietnamese ? template.titleVi : template.titleEn}</h4>
+                  <h4 className="text-base font-black text-white">{title}</h4>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    {t(
+                    {desc || t(
                       'Mẫu quảng cáo thương hiệu 2.5D Parallax thuần Visual (60fps). Bấm nút bên dưới để tải ảnh sản phẩm và tạo video!',
                       '2.5D Parallax pure visual brand ads (60fps). Click button below to upload product images and create video!'
                     )}
@@ -361,10 +363,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-12 sm:pt-4 pb-3 bg-gradient-to-b from-black/85 via-black/40 to-transparent">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 shadow-lg">
-                  {template.badge}
+                  {badge}
                 </span>
                 <span className="text-[11px] font-bold text-white/90 drop-shadow">
-                  🔥 {template.usageCount} {t('lượt dùng', 'uses')}
+                  🔥 {usageCount} {t('lượt dùng', 'uses')}
                 </span>
               </div>
 

@@ -1119,7 +1119,7 @@ export const AiVideoTab: React.FC = () => {
   };
 
   // 7 Styles Organised into 3 Distinct Groups (Illustrative, Motion Explainer, Commercial Ads)
-  const ILLUSTRATIVE_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any; cover?: string; tag?: string }[] = [
+  const ILLUSTRATIVE_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any; cover?: string; tag?: string; isHot?: boolean }[] = [
     {
       id: 'whiteboard_stream_hand',
       title: isVietnamese ? 'Whiteboard Tay Vẽ' : 'Whiteboard Stream',
@@ -1127,6 +1127,7 @@ export const AiVideoTab: React.FC = () => {
       icon: WhiteboardStreamIcon,
       cover: '/assets/motion-styles/whiteboard_stream.jpg',
       tag: isVietnamese ? '🖋️ Bút Vẽ Tay' : '🖋️ Hand Drawn',
+      isHot: true,
     },
     {
       id: 'handdrawn_fast_doodle',
@@ -1146,7 +1147,7 @@ export const AiVideoTab: React.FC = () => {
     },
   ];
 
-  const MOTION_EXPLAINER_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any; cover?: string; tag?: string }[] = [
+  const MOTION_EXPLAINER_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any; cover?: string; tag?: string; isHot?: boolean }[] = [
     {
       id: 'apple_modern_motion',
       title: isVietnamese ? 'Apple UI Glassmorphism' : 'Modern Motion',
@@ -1170,26 +1171,27 @@ export const AiVideoTab: React.FC = () => {
       icon: ScienceExplainerIcon,
       cover: '/assets/motion-styles/science_explainer.jpg',
       tag: isVietnamese ? '🔬 Khoa Học' : '🔬 Science',
+      isHot: true,
     },
   ];
 
   const COMMERCIAL_ADS_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
     {
       id: 'product_ads_motion',
-      title: isVietnamese ? 'Quảng cáo Sản phẩm\n& Thương hiệu (Ads)' : 'Product & Brand\nCommercial Ads',
-      desc: isVietnamese ? 'Biến ảnh sản phẩm & poster thành video ads 60fps đỉnh cao, chữ giật nảy thu hút & sản phẩm 3D sống động' : 'High-converting 60fps commercial motion ads with 3D floating products & kinetic typography',
+      title: isVietnamese ? 'Video Doanh Nghiệp\n& Sản phẩm' : 'Business Short\n& Product Videos',
+      desc: isVietnamese ? 'Biến ảnh sản phẩm & poster thành video ngắn 60fps đỉnh cao, chữ giật nảy thu hút & sản phẩm 3D sống động' : 'High-converting 60fps business motion videos with 3D floating products & kinetic typography',
       icon: ProductAdsIcon,
     },
     {
       id: 'ads_strobe_teaser',
       title: isVietnamese ? 'Strobe Teaser\n& Big Reveal' : 'Strobe Teaser\n& Big Reveal',
-      desc: isVietnamese ? 'Đập chữ nhịp điệu nhanh, chớp nháy vi mô R-E-A-D-Y & hé lộ sản phẩm với typography 2 tầng đẳng cấp' : 'Fast-paced rhythmic strobe typography with READY letter-flash and cinematic reveal outro',
+      desc: isVietnamese ? 'Đập chữ nhịp điệu nhanh, chớp nháy vi mô R-E-A-D-Y & hé lộ thương hiệu với typography 2 tầng đẳng cấp' : 'Fast-paced rhythmic strobe typography with READY letter-flash and cinematic reveal outro',
       icon: StrobeTeaserIcon,
     },
     {
       id: 'ads_cinematic_showcase',
       title: isVietnamese ? 'Cinematic Showcase\nReel 22s' : 'Cinematic Showcase\nReel 22s',
-      desc: isVietnamese ? 'Video F&B / Sản phẩm 7 phân cảnh điện ảnh, khói sương, nguyên liệu bay 3D, chia 3 cột & nút đặt hàng' : '7-stage commercial reel with flare intro, smoke VFX, zero-gravity floating ingredients, 3-panel split & pulse CTA',
+      desc: isVietnamese ? 'Video doanh nghiệp / F&B 7 phân cảnh điện ảnh, khói sương, chia 3 cột & nút đặt hàng' : '7-stage commercial reel with flare intro, smoke VFX, zero-gravity floating elements, 3-panel split & CTA',
       icon: CinematicShowcaseIcon,
     },
   ];
@@ -1427,12 +1429,12 @@ export const AiVideoTab: React.FC = () => {
 
           {/* 7 AI Animation Styles in 3 categories (Clean text, Monochrome icons) */}
           <div className="space-y-6">
-            {/* Nhóm 3: Commercial & Brand Ads (Single card opening CapCut-style Masonry Gallery) */}
+            {/* Nhóm 3: Business Short Videos (Single card opening CapCut-style Masonry Gallery) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm">🔥</span>
+                <span className="text-sm">💼</span>
                 <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-                  {isVietnamese ? 'Quảng Cáo & Thương Hiệu' : 'Commercial & Brand Ads'}
+                  {isVietnamese ? 'Video Ngắn Doanh Nghiệp' : 'Business Short Videos'}
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
@@ -1452,13 +1454,13 @@ export const AiVideoTab: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isVietnamese ? 'Kho Mẫu Quảng Cáo & Thương Hiệu' : 'Commercial & Brand Ads Templates'}
+                        {isVietnamese ? 'Kho Mẫu Video Ngắn Doanh Nghiệp' : 'Business Short Video Templates'}
                       </div>
                     </div>
                     <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       {isVietnamese
-                        ? 'Strobe Teaser, Cinematic Menu 22s & Billboard 60fps đỉnh cao'
-                        : 'Strobe Teaser, Cinematic Showcase & Billboard motion templates'}
+                        ? 'Strobe Teaser, Cinematic Showcase 22s & Motion Video 60fps đỉnh cao'
+                        : 'Strobe Teaser, Cinematic Showcase 22s & 60fps Business Motion'}
                     </div>
                   </div>
                 </button>
@@ -1519,12 +1521,17 @@ export const AiVideoTab: React.FC = () => {
                     <button
                       key={style.id}
                       onClick={() => handleStartStudio(style.id)}
-                      className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
+                      className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
                         isDark
                           ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700'
                           : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
                       }`}
                     >
+                      {style.isHot && (
+                        <span className="absolute top-2 right-2 px-1 py-0.2 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[8px] uppercase tracking-wider shadow-sm animate-pulse">
+                          HOT
+                        </span>
+                      )}
                       {/* Big Monochrome Icon */}
                       <div className={`flex-1 flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
                         isDark ? 'text-white' : 'text-slate-900'
@@ -1556,12 +1563,17 @@ export const AiVideoTab: React.FC = () => {
                     <button
                       key={style.id}
                       onClick={() => handleStartStudio(style.id)}
-                      className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
+                      className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
                         isDark
                           ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700'
                           : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
                       }`}
                     >
+                      {style.isHot && (
+                        <span className="absolute top-2 right-2 px-1 py-0.2 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[8px] uppercase tracking-wider shadow-sm animate-pulse">
+                          HOT
+                        </span>
+                      )}
                       {/* Big Monochrome Icon */}
                       <div className={`flex-1 flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
                         isDark ? 'text-white' : 'text-slate-900'
@@ -1828,6 +1840,12 @@ export const AiVideoTab: React.FC = () => {
                             {st.tag}
                           </span>
                         )}
+                        {st.isHot && !isSelected && (
+                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[9px] uppercase tracking-wider shadow-md flex items-center gap-0.5 animate-pulse">
+                            <span>🔥</span>
+                            <span>HOT</span>
+                          </span>
+                        )}
                         {isSelected && (
                           <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#FF2D55] text-white font-black text-[9px]">
                             <Check className="h-2.5 w-2.5" />
@@ -1887,6 +1905,12 @@ export const AiVideoTab: React.FC = () => {
                         {st.tag && (
                           <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-pink-500/90 text-white font-black text-[9px] uppercase">
                             {st.tag}
+                          </span>
+                        )}
+                        {st.isHot && !isSelected && (
+                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[9px] uppercase tracking-wider shadow-md flex items-center gap-0.5 animate-pulse">
+                            <span>🔥</span>
+                            <span>HOT</span>
                           </span>
                         )}
                         {isSelected && (

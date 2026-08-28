@@ -28,7 +28,7 @@ export const CAPCUT_CATEGORIES = [
 ];
 
 export const TEMPLATE_LANGUAGES = [
-  { code: 'all', flag: '🌐', name: 'Tất cả ngôn ngữ', sub: 'All' },
+  { code: 'all', flag: '🌐', name: 'Tất cả ngôn ngữ', sub: 'All Languages' },
   { code: 'en', flag: '🇺🇸', name: 'English', sub: 'English' },
   { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt', sub: 'Vietnamese' },
   { code: 'zh', flag: '🇨🇳', name: '中文', sub: 'Chinese' },
@@ -55,7 +55,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
   onSelectTemplate,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('Dành cho bạn');
-  const [selectedLang, setSelectedLang] = useState('vi');
+  const [selectedLang, setSelectedLang] = useState('all');
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [templatesList, setTemplatesList] = useState<CapCutGalleryItem[]>([]);
@@ -71,11 +71,11 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
           category: t.category || 'Sản phẩm',
           duration: `${t.duration_sec}s`,
           usageCount: t.usage_count || '50K',
-          author: t.is_vip ? 'Google VEO AI' : 'WynMotion AI',
+          author: t.is_vip ? 'VIP Motion AI' : 'WynMotion AI',
           authorAvatar: t.is_vip ? '👑' : '✨',
           coverUrl: t.cover_ios_url || t.cover_url || '/templates/cover-animation-ads-image-ios.png',
-          aspectClass: t.aspect_class || 'aspect-[9/16]',
-          badge: t.badge || (t.is_vip ? '👑 VIP VEO 3.1' : undefined),
+          aspectClass: 'aspect-[9/16]',
+          badge: t.badge || (t.is_vip ? '👑 VIP 12s' : undefined),
           rawTemplate: t,
         }));
         setTemplatesList(mapped);
@@ -88,7 +88,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentLangObj = TEMPLATE_LANGUAGES.find((l) => l.code === selectedLang) || TEMPLATE_LANGUAGES[2];
+  const currentLangObj = TEMPLATE_LANGUAGES.find((l) => l.code === selectedLang) || TEMPLATE_LANGUAGES[0];
 
   const filteredTemplates = templatesList.filter((tpl) => {
     if (searchQuery.trim()) {
@@ -126,7 +126,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm kiếm mẫu CapCut..."
+            placeholder="Tìm kiếm mẫu..."
             className="w-full pl-9 pr-8 py-2 text-xs rounded-2xl bg-slate-900/90 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition-colors"
           />
           {searchQuery && (
@@ -161,7 +161,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
         })}
       </div>
 
-      {/* ── 2-COLUMN STAGGERED MASONRY GRID ── */}
+      {/* ── 2-COLUMN STAGGERED MASONRY GRID (EQUAL CARD HEIGHT & WIDTH) ── */}
       <div className="flex-1 overflow-y-auto px-3.5 py-4 pb-20">
         <div className="grid grid-cols-2 gap-3 items-start max-w-lg mx-auto">
           {/* COLUMN 1 (Starts at top) */}
@@ -171,7 +171,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 
           {/* COLUMN 2 (Starts with Language Selector Card, creating staggered offset) */}
           <div className="space-y-3.5">
-            {/* 🌐 12-Language Selector Filter Card */}
+            {/* 🌐 12-Language Selector Filter Card (Default All) */}
             <div className="relative rounded-2xl bg-gradient-to-br from-slate-900/95 to-slate-950 border border-teal-500/30 p-3 shadow-lg shadow-teal-950/20">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5 text-[11px] font-black text-teal-400 uppercase tracking-wider">
@@ -252,9 +252,10 @@ function renderTemplateCard(
     <div
       key={item.id}
       onClick={() => onSelect(item.rawTemplate || item)}
-      className="group cursor-pointer rounded-2xl overflow-hidden bg-slate-900/70 border border-slate-800/90 hover:border-rose-500/60 transition-all active:scale-[0.98] shadow-lg flex flex-col"
+      className="group cursor-pointer rounded-2xl overflow-hidden bg-slate-900/70 border border-slate-800/90 hover:border-rose-500/60 transition-all active:scale-[0.98] shadow-lg flex flex-col w-full"
     >
-      <div className={`relative w-full ${item.aspectClass} overflow-hidden bg-slate-950`}>
+      {/* Fixed uniform aspect-[9/16] container with max width & clean cover crop */}
+      <div className="relative w-full aspect-[9/16] overflow-hidden bg-slate-950">
         <img
           src={item.coverUrl}
           alt={item.title}
@@ -283,7 +284,7 @@ function renderTemplateCard(
         </div>
       </div>
 
-      <div className="p-2.5 space-y-1.5">
+      <div className="p-2.5 space-y-1.5 flex-1 flex flex-col justify-between">
         <h4 className="text-xs font-black text-white line-clamp-2 leading-snug group-hover:text-rose-400 transition-colors">
           {item.title}
         </h4>
