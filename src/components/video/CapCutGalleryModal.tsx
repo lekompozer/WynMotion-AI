@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Search, X, Scissors, ArrowLeft } from 'lucide-react';
 
 export interface CapCutGalleryItem {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion';
+  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo';
   title: string;
   category: string;
   duration: string;
@@ -17,6 +17,30 @@ export interface CapCutGalleryItem {
 }
 
 export const CAPCUT_GALLERY_TEMPLATES: CapCutGalleryItem[] = [
+  {
+    id: 'animation_ads_image_veo',
+    title: 'Animation Ads Image (Google VEO 3.1 VIP)',
+    category: 'Sản phẩm',
+    duration: '6s - 12s',
+    usageCount: '95,4K',
+    author: 'Google VEO AI',
+    authorAvatar: '👑',
+    coverUrl: '/templates/cover-animation-ads-image-ios.png',
+    aspectClass: 'aspect-[9/16]',
+    badge: '👑 VIP VEO 3.1',
+  },
+  {
+    id: 'product_ads_motion',
+    title: 'Universal Images Product Video',
+    category: 'Sản phẩm',
+    duration: '10s - 60s',
+    usageCount: '88,5K',
+    author: 'WynAI Director',
+    authorAvatar: '✨',
+    coverUrl: '/templates/cover-poster-image.png',
+    aspectClass: 'aspect-[4/5]',
+    badge: '1-10 Ảnh • 125 Shaders',
+  },
   {
     id: 'ads_strobe_teaser',
     title: 'Strobe Teaser & Big Reveal',
@@ -40,18 +64,6 @@ export const CAPCUT_GALLERY_TEMPLATES: CapCutGalleryItem[] = [
     coverUrl: '/templates/cover-cinematic-showcase.png',
     aspectClass: 'aspect-[3/4]',
     badge: 'Pro 60fps',
-  },
-  {
-    id: 'product_ads_motion',
-    title: 'Universal Product Ads Motion (Style 7)',
-    category: 'Sản phẩm',
-    duration: '15-60s',
-    usageCount: '18,5K',
-    author: 'WynAI Director',
-    authorAvatar: '✨',
-    coverUrl: '/templates/cover-poster-image.png',
-    aspectClass: 'aspect-[4/5]',
-    badge: '1-10 Ảnh • 125 Shaders',
   },
 ];
 
