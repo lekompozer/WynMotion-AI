@@ -59,6 +59,8 @@ import { EffectsFlyoutTab } from './flyouts/EffectsFlyoutTab';
 import { MultiTrackTimelineSlider } from './MultiTrackTimelineSlider';
 import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/types';
 import { CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
+import { CustomTimelineEffect } from './styles/ActiveEffectsOverlay';
+import { snapToGrid } from '../../../packages/timeline-core/math_timeline';
 import { wordaiAuth } from '@/lib/wordai-firebase';
 import { wynmotionService, MotionProject } from '@/services/wynmotionService';
 
@@ -301,6 +303,7 @@ function StudioInner({
   const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>([]);
   const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
   const [isTranscribingCaptions, setIsTranscribingCaptions] = useState(false);
+  const [timelineEffects, setTimelineEffects] = useState<CustomTimelineEffect[]>([]);
 
   const handleTranscribeCaptions = async (targetAudioUrl: string, language: string) => {
     try {
@@ -684,7 +687,8 @@ function StudioInner({
   const timelineTracks: TimelineTrack[] = useMemo(() => {
     let accumTime = 0;
     const mediaItems: TimelineItem[] = [];
-    const fxItems: TimelineItem[] = [];
+    const fxItems0: TimelineItem[] = [];
+    const fxItems1: TimelineItem[] = [];
 
     scenes.forEach((s, idx) => {
       const dur = (s.duration_frames || 150) / fps;
@@ -703,21 +707,40 @@ function StudioInner({
       });
 
       const shaderName = (s as any).shader_name || (s as any).transition_out?.shader_name;
-      if (shaderName) {
-        const transDur = (s as any).transition_out?.duration || 0.5;
-        fxItems.push({
-          id: `fx_${s.scene_id || idx + 1}`,
-          trackId: 'track_fx',
+      if (shaderName && !timelineEffects.some((fx) => fx.id === `fx_trans_${s.scene_id || idx + 1}`)) {
+        const transDur = (s as any).transition_out?.duration || 0.8;
+        fxItems0.push({
+          id: `fx_trans_${s.scene_id || idx + 1}`,
+          trackId: 'track_fx_0',
           trackType: 'transitions',
           startTime: Math.max(0, et - transDur),
           endTime: et,
           duration: transDur,
-          title: shaderName,
+          title: `⚡ ${shaderName}`,
           shaderName: shaderName,
         });
       }
 
       accumTime = et;
+    });
+
+    // Populate custom FX items into Track 0 or Track 1
+    timelineEffects.forEach((fx) => {
+      const item: TimelineItem = {
+        id: fx.id,
+        trackId: fx.trackIndex === 1 ? 'track_fx_1' : 'track_fx_0',
+        trackType: 'transitions',
+        startTime: fx.startTime,
+        endTime: fx.endTime,
+        duration: fx.duration,
+        title: `✨ ${fx.name || fx.effectId}`,
+        shaderName: fx.shaderName || fx.effectId,
+      };
+      if (fx.trackIndex === 1) {
+        fxItems1.push(item);
+      } else {
+        fxItems0.push(item);
+      }
     });
 
     const captionItems: TimelineItem[] = (captionSegments || []).map((seg: any, idx) => {
@@ -746,13 +769,22 @@ function StudioInner({
       },
     ];
 
-    return [
+    const tracksList: TimelineTrack[] = [
       { id: 'track_media', type: 'video', name: 'Media Scenes', items: mediaItems },
-      { id: 'track_fx', type: 'transitions', name: 'FX & Transitions', items: fxItems },
-      { id: 'track_captions', type: 'captions', name: 'Auto Captions', items: captionItems },
-      { id: 'track_audio', type: 'audio', name: 'Audio Track', items: audioItems },
+      { id: 'track_fx_0', type: 'transitions', name: 'FX Shaders 1', items: fxItems0 },
     ];
-  }, [scenes, fps, totalDurationSec, captionSegments]);
+
+    if (fxItems1.length > 0) {
+      tracksList.push({ id: 'track_fx_1', type: 'transitions', name: 'FX Shaders 2 (Hàng dưới)', items: fxItems1 });
+    }
+
+    tracksList.push(
+      { id: 'track_captions', type: 'captions', name: 'Auto Captions', items: captionItems },
+      { id: 'track_audio', type: 'audio', name: 'Audio Track', items: audioItems }
+    );
+
+    return tracksList;
+  }, [scenes, fps, totalDurationSec, captionSegments, timelineEffects]);
 
   // Handle click or drag on timeline scrubber
   const handleTimelineScrub = useCallback(
@@ -1944,6 +1976,27 @@ function StudioInner({
                     : undefined
                 }
                 onApplyTransition={(shaderName) => {
+                  const st = snapToGrid(currentSec, 0.05);
+                  const dur = 0.8;
+                  const et = Math.min(totalDurationSec, st + dur);
+
+                  const hasOverlapTrack0 = timelineEffects.some(
+                    (fx) => fx.trackIndex === 0 && ((st >= fx.startTime && st < fx.endTime) || (et > fx.startTime && et <= fx.endTime))
+                  );
+
+                  const newFx: CustomTimelineEffect = {
+                    id: `fx_trans_${Date.now()}`,
+                    effectId: shaderName,
+                    name: shaderName,
+                    shaderName: shaderName,
+                    trackIndex: hasOverlapTrack0 ? 1 : 0,
+                    startTime: st,
+                    endTime: et,
+                    duration: dur,
+                  };
+
+                  setTimelineEffects((prev) => [...prev, newFx]);
+
                   setScenes((prev) => {
                     let targetIdx = typeof activeSceneId === 'number' ? activeSceneId - 1 : -1;
                     if (targetIdx < 0 || targetIdx >= prev.length) {
@@ -1960,17 +2013,37 @@ function StudioInner({
                       if (idx === targetIdx) {
                         return {
                           ...s,
-                          transition_out: { shader_name: shaderName, duration: 0.5 },
+                          transition_out: { shader_name: shaderName, duration: 0.8 },
                           shader_name: shaderName,
                         };
                       }
                       return s;
                     });
                   });
-                  setSyncStatusMsg(`Đã áp dụng chuyển cảnh GLSL: ${shaderName}!`);
+                  setSyncStatusMsg(`Đã thêm chuyển cảnh GLSL: ${shaderName} tại ${st.toFixed(1)}s (Track ${hasOverlapTrack0 ? 2 : 1})!`);
                   setTimeout(() => setSyncStatusMsg(null), 3000);
                 }}
                 onApplyEffect={(effId) => {
+                  const st = snapToGrid(currentSec, 0.05);
+                  const dur = 2.0;
+                  const et = Math.min(totalDurationSec, st + dur);
+
+                  const hasOverlapTrack0 = timelineEffects.some(
+                    (fx) => fx.trackIndex === 0 && ((st >= fx.startTime && st < fx.endTime) || (et > fx.startTime && et <= fx.endTime))
+                  );
+
+                  const newFx: CustomTimelineEffect = {
+                    id: `fx_eff_${Date.now()}`,
+                    effectId: effId,
+                    name: effId.replace(/_/g, ' ').toUpperCase(),
+                    trackIndex: hasOverlapTrack0 ? 1 : 0,
+                    startTime: st,
+                    endTime: et,
+                    duration: dur,
+                  };
+
+                  setTimelineEffects((prev) => [...prev, newFx]);
+
                   setScenes((prev) => {
                     let targetIdx = typeof activeSceneId === 'number' ? activeSceneId - 1 : -1;
                     if (targetIdx < 0 || targetIdx >= prev.length) {
@@ -1994,7 +2067,7 @@ function StudioInner({
                       return s;
                     });
                   });
-                  setSyncStatusMsg(`Đã kích hoạt hiệu ứng: ${effId}!`);
+                  setSyncStatusMsg(`Đã kích hoạt hiệu ứng: ${effId} tại ${st.toFixed(1)}s (Track ${hasOverlapTrack0 ? 2 : 1})!`);
                   setTimeout(() => setSyncStatusMsg(null), 3000);
                 }}
               />
@@ -2055,6 +2128,7 @@ function StudioInner({
               subsPosY={subsPosY}
               captionSegments={captionSegments}
               captionPresetStyle={captionPresetStyle}
+              timelineEffects={timelineEffects}
             />
           </div>
         </main>
@@ -2200,25 +2274,71 @@ function StudioInner({
             }}
             onOpenFXTab={() => setActiveFlyoutTab('effects')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
-              if (itemId.startsWith('fx_')) {
-                const sId = parseInt(itemId.replace('fx_', ''), 10);
-                setScenes((prev) =>
-                  prev.map((s, idx) => {
+              // 1. Resize & Trim Media Scene Clip
+              if (itemId.startsWith('media_')) {
+                const sId = parseInt(itemId.replace('media_', ''), 10);
+                setScenes((prev) => {
+                  let accumFrame = 0;
+                  return prev.map((s, idx) => {
                     const match = (s.scene_id === sId) || (idx + 1 === sId);
-                    if (match) {
+                    const newFrames = match ? Math.max(15, Math.round(newDur * fps)) : (s.duration_frames || 150);
+                    const updated = {
+                      ...s,
+                      start_frame: accumFrame,
+                      duration_frames: newFrames,
+                      start_sec: accumFrame / fps,
+                      duration_sec: newFrames / fps,
+                      end_sec: (accumFrame + newFrames) / fps,
+                    };
+                    accumFrame += newFrames;
+                    return updated;
+                  });
+                });
+                setSyncStatusMsg(`Đã cập nhật thời lượng Scene: ${newDur.toFixed(1)}s!`);
+                setTimeout(() => setSyncStatusMsg(null), 2500);
+                return;
+              }
+
+              // 2. Resize & Move FX Item
+              if (itemId.startsWith('fx_')) {
+                setTimelineEffects((prev) =>
+                  prev.map((fx) => {
+                    if (fx.id === itemId) {
+                      const safeStart = Math.max(0, newStart);
+                      const safeDur = Math.max(0.2, newDur);
                       return {
-                        ...s,
-                        transition_out: {
-                          ...(s as any).transition_out,
-                          shader_name: (s as any).shader_name || (s as any).transition_out?.shader_name || 'GlitchMemories',
-                          duration: Math.max(0.2, newDur),
-                        },
+                        ...fx,
+                        startTime: safeStart,
+                        duration: safeDur,
+                        endTime: safeStart + safeDur,
                       };
                     }
-                    return s;
+                    return fx;
                   })
                 );
-                setSyncStatusMsg(`Đã cập nhật thời lượng chuyển cảnh: ${newDur.toFixed(2)}s!`);
+
+                if (itemId.startsWith('fx_trans_')) {
+                  const sId = parseInt(itemId.replace('fx_trans_', ''), 10);
+                  if (!isNaN(sId)) {
+                    setScenes((prev) =>
+                      prev.map((s, idx) => {
+                        const match = (s.scene_id === sId) || (idx + 1 === sId);
+                        if (match) {
+                          return {
+                            ...s,
+                            transition_out: {
+                              ...(s as any).transition_out,
+                              duration: Math.max(0.2, newDur),
+                            },
+                          };
+                        }
+                        return s;
+                      })
+                    );
+                  }
+                }
+
+                setSyncStatusMsg(`Đã cập nhật thời lượng FX: ${newDur.toFixed(1)}s!`);
                 setTimeout(() => setSyncStatusMsg(null), 2500);
               }
             }}

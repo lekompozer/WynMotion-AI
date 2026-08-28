@@ -1,9 +1,8 @@
-'use client';
-
 import React from 'react';
-import { Sequence, useRemotion } from './RemotionEngine';
+import { Sequence, useRemotion, useCurrentFrame, useVideoConfig } from './RemotionEngine';
 import { DynamicSceneRenderer, DynamicSceneData } from './DynamicSceneRenderer';
 import { CapCutCaptionRenderer, CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
+import { ActiveEffectsOverlay, CustomTimelineEffect } from './styles/ActiveEffectsOverlay';
 
 interface DynamicAnimationCompositionProps {
   scenes?: DynamicSceneData[];
@@ -12,11 +11,13 @@ interface DynamicAnimationCompositionProps {
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';
   subsPosY?: 'top' | 'middle' | 'bottom';
+  captionSegments?: CaptionSegment[];
+  captionPresetStyle?: CaptionPresetStyle;
+  timelineEffects?: CustomTimelineEffect[];
   swapSpeakers?: boolean;
   onCardClick?: () => void;
   onSubsClick?: () => void;
-  captionSegments?: CaptionSegment[];
-  captionPresetStyle?: CaptionPresetStyle;
+  showSubCard?: boolean;
 }
 
 export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionProps> = ({
@@ -26,13 +27,18 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   showWhisperSubs = true,
   cardPosY = 'middle',
   subsPosY = 'bottom',
-  swapSpeakers,
-  onCardClick,
-  onSubsClick,
   captionSegments = [],
   captionPresetStyle = 'karaoke_glow',
+  timelineEffects = [],
 }) => {
   const { bgColor } = useRemotion();
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const currentTime = frame / (fps || 30);
+
+  const activeEffects = (timelineEffects || []).filter(
+    (fx) => currentTime >= fx.startTime && currentTime <= fx.endTime
+  );
 
   if (!scenes || scenes.length === 0) {
     return (
@@ -82,6 +88,14 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
           />
         </Sequence>
       ))}
+
+      {/* Real-time Global Live Visual Effects Overlay */}
+      <ActiveEffectsOverlay
+        activeEffects={activeEffects}
+        currentTime={currentTime}
+        currentFrame={frame}
+        fps={fps}
+      />
 
       {/* CapCut Animated Caption Engine (Global Subtitle Layer) */}
       {showWhisperSubs && captionSegments && captionSegments.length > 0 && (
