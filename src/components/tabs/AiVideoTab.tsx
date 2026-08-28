@@ -247,6 +247,17 @@ export const AiVideoTab: React.FC = () => {
     setTimeout(() => setAuthToast({ visible: false, message: '' }), 3500);
   };
 
+  useEffect(() => {
+    const handleGoHome = () => {
+      setViewMode('home');
+      setActiveEditorProject(null);
+      setIsCapCutGalleryOpen(false);
+      setCapcutModalTemplate(null);
+    };
+    window.addEventListener('wynmotion:go-home', handleGoHome);
+    return () => window.removeEventListener('wynmotion:go-home', handleGoHome);
+  }, []);
+
   // Wizard Steps: 1 | 2 | 3.1 | 3.2 | 3.3 | 4
   type WizardStep = '1' | '2' | '3.1' | '3.2' | '3.3' | '4';
   const [wizardStep, setWizardStep] = useState<WizardStep>('1');
@@ -1108,45 +1119,57 @@ export const AiVideoTab: React.FC = () => {
   };
 
   // 7 Styles Organised into 3 Distinct Groups (Illustrative, Motion Explainer, Commercial Ads)
-  const ILLUSTRATIVE_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
+  const ILLUSTRATIVE_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any; cover?: string; tag?: string }[] = [
     {
       id: 'whiteboard_stream_hand',
-      title: isVietnamese ? 'Bảng vẽ\ntay' : 'Whiteboard\nStream',
-      desc: isVietnamese ? 'Nét vẽ tay Marker vector & bảng trắng' : 'Hand-drawn illustration & marker stream',
+      title: isVietnamese ? 'Whiteboard Tay Vẽ' : 'Whiteboard Stream',
+      desc: isVietnamese ? 'Vẽ nét phác thảo Notion-sketch trên nền giấy kem.' : 'Hand-drawn illustration & marker stream',
       icon: WhiteboardStreamIcon,
+      cover: '/assets/motion-styles/whiteboard_stream.jpg',
+      tag: isVietnamese ? '🖋️ Bút Vẽ Tay' : '🖋️ Hand Drawn',
     },
     {
       id: 'handdrawn_fast_doodle',
-      title: isVietnamese ? 'Phác họa\nnhanh' : 'Doodle\nQuick',
-      desc: isVietnamese ? 'Phác họa bút chì nhanh & vệt màu' : 'Fast sketch & doodle animation',
+      title: isVietnamese ? 'Phác Chì & Màu Nước' : 'Doodle Quick',
+      desc: isVietnamese ? 'Nét phác chì và loang màu nước pastel nghệ thuật.' : 'Fast sketch & doodle animation',
       icon: DoodleQuickIcon,
+      cover: '/assets/motion-styles/doodle_quick.jpg',
+      tag: isVietnamese ? '🎨 Màu Nước' : '🎨 Watercolor',
     },
     {
       id: 'character_animation',
-      title: isVietnamese ? 'Nhân vật\nhoạt hình' : 'Mascot &\nCharacter',
-      desc: isVietnamese ? 'Nhân vật & Cáo Mascot 3D dẫn chuyện' : 'Animated mascots, hosts & character scenes',
+      title: isVietnamese ? 'Mascot / Người Que' : 'Mascot & Character',
+      desc: isVietnamese ? 'Chú cáo WynMotion hoặc Người que dẫn chuyện.' : 'Animated mascots, hosts & character scenes',
       icon: CharacterAnimationIcon,
+      cover: '/assets/motion-styles/character_motion.jpg',
+      tag: isVietnamese ? '🦊 Mascot Cáo' : '🦊 Mascot Studio',
     },
   ];
 
-  const MOTION_EXPLAINER_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any }[] = [
+  const MOTION_EXPLAINER_STYLES: { id: MotionVisualStyle; title: string; desc: string; icon: any; cover?: string; tag?: string }[] = [
     {
       id: 'apple_modern_motion',
-      title: isVietnamese ? 'Chuyển động\nhiện đại' : 'Modern\nMotion',
-      desc: isVietnamese ? 'Thẻ kính kinetic & motion graphics 3D' : 'Glassmorphic cards & modern motion graphics',
+      title: isVietnamese ? 'Apple UI Glassmorphism' : 'Modern Motion',
+      desc: isVietnamese ? 'Thẻ kính mờ bán trong suốt và biểu đồ 3D.' : 'Glassmorphic cards & modern motion graphics',
       icon: AppleModernMotionIcon,
+      cover: '/assets/motion-styles/apple_motion.jpg',
+      tag: isVietnamese ? '✨ Apple UI' : '✨ Apple UI',
     },
     {
       id: 'dialogue_scene',
-      title: isVietnamese ? 'Hội thoại\n2 người' : 'Dialogue\nScene',
-      desc: isVietnamese ? 'Hội thoại 2 nhân vật & bong bóng thoại' : 'Two-character conversations & speech bubbles',
+      title: isVietnamese ? 'Hội Thoại 2 Người' : 'Dialogue Scene',
+      desc: isVietnamese ? 'Bong bóng lời thoại 2 người đối đáp tự nhiên.' : 'Two-character conversations & speech bubbles',
       icon: DialogueSceneIcon,
+      cover: '/assets/motion-styles/dialogue_scene.jpg',
+      tag: isVietnamese ? '💬 Hội Thoại' : '💬 Dialogue',
     },
     {
       id: 'science_explainer',
-      title: isVietnamese ? 'Diễn giải\nkhoa học' : 'Science\nExplainer',
-      desc: isVietnamese ? 'Sơ đồ, công thức & chuyển động khoa học' : 'Diagrams, formulas & scientific animations',
+      title: isVietnamese ? 'Khoa Học STEM' : 'Science Explainer',
+      desc: isVietnamese ? 'Lưới blueprint, công thức và tia quét laser.' : 'Diagrams, formulas & scientific animations',
       icon: ScienceExplainerIcon,
+      cover: '/assets/motion-styles/science_explainer.jpg',
+      tag: isVietnamese ? '🔬 Khoa Học' : '🔬 Science',
     },
   ];
 
@@ -1274,7 +1297,7 @@ export const AiVideoTab: React.FC = () => {
 
             {/* Templates Button — Frosted Glass with Translucent Blur */}
             <button
-              onClick={() => setActiveTab('library')}
+              onClick={() => setIsCapCutGalleryOpen(true)}
               className={`flex-1 group rounded-3xl p-5 border text-left shadow-lg active:scale-[0.98] transition-all flex flex-col justify-between h-38 ${
                 isDark
                   ? 'bg-slate-900/80 backdrop-blur-xl border border-white/10 hover:border-slate-700 text-white shadow-black/40'
@@ -1764,75 +1787,119 @@ export const AiVideoTab: React.FC = () => {
             </div>
 
             {/* Nhóm 1: Illustrative */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  {isVietnamese ? 'Minh Họa & Vẽ Tay' : 'Illustrative'}
-                </label>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5">
+            <div className="space-y-2.5">
+              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {isVietnamese ? 'Nhóm 1: Minh Họa & Bút Vẽ Tay' : 'Category 1: Illustrative & Hand Drawn'}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {ILLUSTRATIVE_STYLES.map((st) => {
                   const Icon = st.icon;
                   const isSelected = visualStyle === st.id;
                   return (
-                    <button
+                    <div
                       key={st.id}
-                      type="button"
                       onClick={() => setVisualStyle(st.id)}
-                      className={`p-3.5 rounded-2xl border-2 text-center transition-all flex flex-col items-center justify-between h-34 ${
+                      className={`group relative rounded-2xl overflow-hidden border-2 cursor-pointer transition-all flex flex-col ${
                         isSelected
-                          ? 'bg-cyan-500/10 border-cyan-400 shadow-md shadow-cyan-500/10'
-                          : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                          ? 'border-[#FF2D55] bg-gradient-to-b from-[#FF2D55]/15 to-transparent ring-2 ring-[#FF2D55]/40 shadow-xl scale-[1.01]'
+                          : isDark
+                          ? 'border-white/10 bg-black/40 hover:border-white/25 hover:bg-black/60'
+                          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="text-slate-900 dark:text-white my-1">
-                        <Icon size={36} />
+                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-black/50">
+                        {st.cover ? (
+                          <img
+                            src={st.cover}
+                            alt={st.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <Icon size={44} />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1424] via-transparent to-black/30" />
+                        {st.tag && (
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-amber-500/90 text-slate-950 font-black text-[9px] uppercase">
+                            {st.tag}
+                          </span>
+                        )}
+                        {isSelected && (
+                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#FF2D55] text-white font-black text-[9px]">
+                            <Check className="h-2.5 w-2.5" />
+                          </span>
+                        )}
                       </div>
-                      <div className="w-full">
-                        <div className={`text-[11px] font-normal leading-tight whitespace-pre-line text-center ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                          {st.title}
-                        </div>
+                      <div className="p-3 space-y-1 flex-1 flex flex-col justify-between">
+                        <h4 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{st.title}</h4>
+                        <p className={`text-[10px] line-clamp-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{st.desc}</p>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
 
             {/* Nhóm 2: Motion & Explainer */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  {isVietnamese ? 'Chuyển Động & Diễn Giải' : 'Motion & Explainer'}
-                </label>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5">
+            <div className="space-y-2.5">
+              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {isVietnamese ? 'Nhóm 2: Chuyển Động & Diễn Giải' : 'Category 2: Motion & Explainer'}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {MOTION_EXPLAINER_STYLES.map((st) => {
                   const Icon = st.icon;
                   const isSelected = visualStyle === st.id;
                   return (
-                    <button
+                    <div
                       key={st.id}
-                      type="button"
                       onClick={() => {
                         setVisualStyle(st.id);
                         if (st.id === 'dialogue_scene') setCharacterSubtype('pixar_3d');
                       }}
-                      className={`p-3.5 rounded-2xl border-2 text-center transition-all flex flex-col items-center justify-between h-34 ${
+                      className={`group relative rounded-2xl overflow-hidden border-2 cursor-pointer transition-all flex flex-col ${
                         isSelected
-                          ? 'bg-purple-500/10 border-purple-400 shadow-md shadow-purple-500/10'
-                          : isDark ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                          ? 'border-[#FF2D55] bg-gradient-to-b from-[#FF2D55]/15 to-transparent ring-2 ring-[#FF2D55]/40 shadow-xl scale-[1.01]'
+                          : isDark
+                          ? 'border-white/10 bg-black/40 hover:border-white/25 hover:bg-black/60'
+                          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="text-slate-900 dark:text-white my-1">
-                        <Icon size={36} />
+                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-black/50">
+                        {st.cover ? (
+                          <img
+                            src={st.cover}
+                            alt={st.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <Icon size={44} />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1424] via-transparent to-black/30" />
+                        {st.tag && (
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-pink-500/90 text-white font-black text-[9px] uppercase">
+                            {st.tag}
+                          </span>
+                        )}
+                        {isSelected && (
+                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#FF2D55] text-white font-black text-[9px]">
+                            <Check className="h-2.5 w-2.5" />
+                          </span>
+                        )}
                       </div>
-                      <div className="w-full">
-                        <div className={`text-[11px] font-normal leading-tight whitespace-pre-line text-center ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                          {st.title}
-                        </div>
+                      <div className="p-3 space-y-1 flex-1 flex flex-col justify-between">
+                        <h4 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{st.title}</h4>
+                        <p className={`text-[10px] line-clamp-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{st.desc}</p>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
