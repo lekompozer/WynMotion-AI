@@ -163,83 +163,93 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   return (
     <div className={`w-full bg-[#0D0F18] border-t border-[#1E2232] flex flex-col select-none ${isMobile ? 'text-xs' : 'text-sm'}`}>
       {/* ─────────────────────────────────────────────────────────────
-          1. TOP CONTROL BAR (PLAY, TIMESTAMPS, ZOOM & DELETE ACTIONS)
+          1. TOP CONTROL BAR (2 COMPACT ROWS: PLAY + TIME SCRUBBER | ZOOM % + TIMESTAMPS)
           ───────────────────────────────────────────────────────────── */}
-      <div className={`flex items-center justify-between px-3 py-1.5 bg-[#121522] border-b border-[#1E2232] ${isMobile ? 'gap-1' : 'gap-4'}`}>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col px-3 py-1.5 bg-[#121522] border-b border-[#1E2232] gap-1.5">
+        {/* ROW 1: Play/Pause Button + Time Scrubber Slider (+ Delete button if selected) */}
+        <div className="flex items-center gap-2.5 w-full">
           <button
             onClick={onPlayPause}
-            className="p-1.5 rounded-xl bg-gradient-to-tr from-cyan-400 to-blue-600 text-slate-950 hover:brightness-110 shadow-md font-bold transition-all"
+            className="p-1.5 rounded-xl bg-gradient-to-tr from-cyan-400 to-blue-600 text-slate-950 hover:brightness-110 shadow-md font-bold transition-all shrink-0 active:scale-95"
             title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}
           >
             {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
           </button>
+
+          {/* Interactive Time Scrubber Slider */}
+          <input
+            type="range"
+            min={0}
+            max={Math.max(0.1, totalDuration)}
+            step={0.02}
+            value={currentTime}
+            onChange={(e) => onSeek(parseFloat(e.target.value))}
+            className="flex-1 accent-cyan-400 h-1.5 bg-[#1F2438] rounded-lg cursor-pointer transition-all"
+            title="Kéo để tua nhanh thời gian phát"
+          />
+
+          {selectedItemId && onDeleteItem && (
+            <button
+              onClick={() => onDeleteItem(selectedItemId)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black transition-all shadow-md active:scale-95 shrink-0"
+              title="Xóa clip đang chọn"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Xóa</span>
+            </button>
+          )}
+        </div>
+
+        {/* ROW 2: Zoom Slider (%) + Dynamic Timestamp Indicator */}
+        <div className="flex items-center justify-between w-full pt-0.5">
+          {/* Zoom Controls */}
+          <div className="flex items-center gap-1.5 bg-[#090B12] px-2 py-0.5 rounded-xl border border-[#1E2232]">
+            <button
+              onClick={() => handleZoomUpdate(activeZoom - 0.2)}
+              className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
+              title="Thu nhỏ timeline (-)"
+            >
+              <ZoomOut className="w-3 h-3" />
+            </button>
+            <input
+              type="range"
+              min="0.5"
+              max="3.5"
+              step="0.1"
+              value={activeZoom}
+              onChange={(e) => handleZoomUpdate(parseFloat(e.target.value))}
+              className="w-16 sm:w-24 accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer"
+            />
+            <button
+              onClick={() => handleZoomUpdate(activeZoom + 0.2)}
+              className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
+              title="Phóng to timeline (+)"
+            >
+              <ZoomIn className="w-3 h-3" />
+            </button>
+            <span className="text-[10px] font-mono text-cyan-400 font-bold ml-1">{Math.round(activeZoom * 100)}%</span>
+          </div>
+
+          {/* Changing Timecode */}
           <div className="font-mono text-[11px] font-black tracking-wider text-slate-300">
             <span className="text-cyan-400">{formatTimestamp(currentTime)}</span>
             <span className="text-slate-500 mx-1">/</span>
             <span className="text-slate-400">{formatTimestamp(totalDuration)}</span>
           </div>
         </div>
-
-        {/* Center: Interactive Timeline Zoom Slider (CapCut-Style) */}
-        <div className="flex items-center gap-1.5 bg-[#090B12] px-2.5 py-1 rounded-xl border border-[#1E2232]">
-          <button
-            onClick={() => handleZoomUpdate(activeZoom - 0.2)}
-            className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
-            title="Thu nhỏ timeline (-)"
-          >
-            <ZoomOut className="w-3 h-3" />
-          </button>
-          <input
-            type="range"
-            min="0.5"
-            max="3.5"
-            step="0.1"
-            value={activeZoom}
-            onChange={(e) => handleZoomUpdate(parseFloat(e.target.value))}
-            className="w-20 sm:w-28 accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer"
-            title="Kéo để phóng to / thu nhỏ khung timeline"
-          />
-          <button
-            onClick={() => handleZoomUpdate(activeZoom + 0.2)}
-            className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
-            title="Phóng to timeline (+)"
-          >
-            <ZoomIn className="w-3 h-3" />
-          </button>
-          <span className="text-[10px] font-mono text-cyan-400 font-bold ml-1">{Math.round(activeZoom * 100)}%</span>
-        </div>
-
-        {/* Right: Selected Item Actions (Delete & Add FX) */}
-        <div className="flex items-center gap-2">
-          {selectedItemId && onDeleteItem && (
-            <button
-              onClick={() => onDeleteItem(selectedItemId)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-black transition-all shadow-md shadow-rose-600/30 active:scale-95 animate-pulse"
-              title="Xóa clip/hiệu ứng đang chọn (Phím Delete/Backspace)"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Xóa ({selectedItemId.split('_')[0]})</span>
-            </button>
-          )}
-
-          {onOpenFXTab && (
-            <button
-              onClick={onOpenFXTab}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white text-[10px] font-black transition-all shadow-sm"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>+ Thêm FX</span>
-            </button>
-          )}
-        </div>
       </div>
 
+      {/* ─────────────────────────────────────────────────────────────
+          2. MULTI-TRACKS SCROLL CONTAINER (Hàng Scene trên màn hình, các hàng khác cuộn dọc)
+          ───────────────────────────────────────────────────────────── */}
       <div
         ref={scrollContainerRef}
         onClick={handleTimelineClick}
-        className="w-full overflow-x-auto overflow-y-hidden relative bg-[#090B12] cursor-crosshair scrollbar-thin scrollbar-thumb-slate-700"
-        style={{ minHeight: isMobile ? '120px' : '150px' }}
+        className="w-full overflow-x-auto overflow-y-auto relative bg-[#090B12] cursor-crosshair scrollbar-thin scrollbar-thumb-slate-700"
+        style={{
+          maxHeight: isMobile ? '68px' : '150px',
+          minHeight: isMobile ? '68px' : '120px',
+        }}
       >
         <div className="relative py-2" style={{ width: `${totalWidth}px` }}>
           <div className="h-4 border-b border-[#1E2232] relative flex items-end">

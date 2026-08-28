@@ -434,12 +434,13 @@ export const AiVideoTab: React.FC = () => {
         if (d.aspectRatio) setAspectRatio(d.aspectRatio);
       }
 
-      // Check if navigated here from Library with a specific projectId to open
+      // Check if navigated here with a specific projectId (URL query, prop or sessionStorage)
       try {
-        const pendingProjectId = sessionStorage.getItem('wynmotion_open_project_id');
-        if (pendingProjectId) {
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const targetProjectId = urlParams?.get('projectId') || sessionStorage.getItem('wynmotion_open_project_id');
+        if (targetProjectId) {
           sessionStorage.removeItem('wynmotion_open_project_id');
-          openProjectInEditor(pendingProjectId);
+          openProjectInEditor(targetProjectId);
         }
       } catch {}
     } catch {}
@@ -1215,6 +1216,11 @@ export const AiVideoTab: React.FC = () => {
         onBack={() => {
           setActiveEditorProject(null);
           setIsStudioOpen(false);
+          if (typeof window !== 'undefined' && window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('projectId');
+            window.history.replaceState({}, '', url.toString());
+          }
         }}
       />
     );

@@ -1092,9 +1092,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           }}
         />
 
-        {/* ── Bottom Action Toolbar (6 Tabs) ── */}
+        {/* ── Bottom Action Toolbar (5 Tabs matching Web Editor) ── */}
         <div
-          className={`flex-shrink-0 grid grid-cols-6 gap-1 px-1.5 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] ${
+          className={`flex-shrink-0 grid grid-cols-5 gap-1 px-2 py-2 border-t pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.5rem)] ${
             isDark ? 'border-slate-800 bg-[#0F131C]' : 'border-slate-200 bg-white shadow-sm'
           }`}
         >
@@ -1102,7 +1102,6 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             { id: 'assets' as BottomSheet, icon: Folder, label: 'Assets', color: 'text-amber-400' },
             { id: 'audio' as BottomSheet, icon: Music, label: 'Sound', color: 'text-purple-400' },
             { id: 'canvas' as BottomSheet, icon: Sliders, label: 'Settings', color: 'text-cyan-400' },
-            { id: 'templates' as BottomSheet, icon: LayoutTemplate, label: 'Mẫu', color: 'text-emerald-400' },
             { id: 'effects' as BottomSheet, icon: Sparkles, label: 'FX', color: 'text-pink-400' },
             { id: 'captions' as BottomSheet, icon: Type, label: 'Captions', color: 'text-sky-400' },
           ].map((item) => {
@@ -1994,12 +1993,16 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
       {/* PROJECT INFO ACTION MODAL / SHEET */}
       {isSettingsSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsSettingsSheetOpen(false)} />
+        <div
+          className="fixed inset-0 z-[9999] flex items-end pointer-events-auto"
+          style={{ transform: 'translateZ(999px)', WebkitTransform: 'translateZ(999px)' }}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsSettingsSheetOpen(false)} />
           <div
-            className={`relative z-10 w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] ${
+            className={`relative z-[10000] w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] ${
               isDark ? 'bg-[#121624] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
             }`}
+            style={{ transform: 'translateZ(1000px)', WebkitTransform: 'translateZ(1000px)' }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -2059,9 +2062,12 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
       {/* EXPORT PROGRESS & NATIVE SAVE / SHARE MODAL */}
       {exportModalState?.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-auto"
+          style={{ transform: 'translateZ(999px)', WebkitTransform: 'translateZ(999px)' }}
+        >
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+            className="absolute inset-0 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
             onClick={() => {
               if (exportModalState.status === 'completed' || exportModalState.status === 'failed') {
                 setExportModalState(null);
@@ -2070,9 +2076,10 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           />
 
           <div
-            className={`relative z-10 w-full max-w-sm rounded-3xl p-6 shadow-2xl border animate-in zoom-in-95 duration-200 space-y-5 ${
+            className={`relative z-[10000] w-full max-w-sm rounded-3xl p-6 shadow-2xl border animate-in zoom-in-95 duration-200 space-y-5 ${
               isDark ? 'bg-gradient-to-b from-[#161d31] to-[#0d1222] border-slate-700/80 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}
+            style={{ transform: 'translateZ(1000px)', WebkitTransform: 'translateZ(1000px)' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -2317,12 +2324,22 @@ function BottomSheetOverlay({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-[9999] flex items-end pointer-events-auto"
+      style={{
+        transform: 'translateZ(999px)',
+        WebkitTransform: 'translateZ(999px)',
+      }}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
       <div
-        className={`relative z-10 w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] max-h-[82vh] overflow-y-auto ${
+        className={`relative z-[10000] w-full rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-full duration-200 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] max-h-[85vh] overflow-y-auto shadow-2xl ${
           isDark ? 'bg-[#101422] border-t border-slate-700' : 'bg-white border-t border-slate-200 shadow-2xl'
         }`}
+        style={{
+          transform: 'translateZ(1000px)',
+          WebkitTransform: 'translateZ(1000px)',
+        }}
       >
         <div className="w-12 h-1.5 rounded-full bg-slate-600/50 mx-auto -mt-1 mb-2" />
         {children}
