@@ -143,7 +143,12 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
       if (typeof Scene_8 !== 'undefined') return Scene_8;
       if (typeof Scene_9 !== 'undefined') return Scene_9;
       if (typeof Scene_10 !== 'undefined') return Scene_10;
+      if (typeof Scene !== 'undefined') return Scene;
+      if (typeof SceneComponent !== 'undefined') return SceneComponent;
       if (typeof DynamicSceneComponent !== 'undefined') return DynamicSceneComponent;
+      if (typeof DynamicScene !== 'undefined') return DynamicScene;
+      if (typeof STEMScene !== 'undefined') return STEMScene;
+      if (typeof ScienceScene !== 'undefined') return ScienceScene;
       return null;
       `
     );
@@ -218,29 +223,7 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     visualStyle === 'tech_ui' ||
     visualStyle === 'vector_motion';
 
-  const displaySummary = scene.summary_text || scene.voice_transcript || scene.title || 'Nội dung phân cảnh';
-  const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'WynMotion AI';
-  const secondaryKeywords = scene.highlight_keywords?.slice(1, 4) || [];
-
-  // 1. Modular Style Pipeline Renderers (Product Ads, Strobe Teaser, Dialogue, Science STEM, etc.)
-  const effectiveStyle = (scene as any).template_type || (scene as any).visual_style || visualStyle;
-  const ModularRenderer = getModularStyleRenderer(effectiveStyle) || getModularStyleRenderer(visualStyle);
-  if (ModularRenderer) {
-    return (
-      <ModularRenderer
-        scene={scene}
-        showSceneCards={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showSceneCards}
-        showWhisperSubs={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showWhisperSubs}
-        cardPosY={cardPosY}
-        subsPosY={subsPosY}
-        swapSpeakers={swapSpeakers}
-        onCardClick={onCardClick}
-        onSubsClick={onSubsClick}
-      />
-    );
-  }
-
-  // 2. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE FIRST
+  // 1. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE FIRST (for Science Explainer, Custom STEM/Geometry, etc.)
   const EvaluatedComponent = useMemo(() => {
     if (scene.code) {
       return evaluateDynamicSceneCode(scene.code, {
@@ -258,6 +241,56 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     try {
       return (
         <div
+          ref={containerRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: bgColor || '#060B18',
+          }}
+        >
+          <div
+            style={{
+              width: BASE_WIDTH,
+              height: BASE_HEIGHT,
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center',
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <EvaluatedComponent />
+          </div>
+        </div>
+      );
+    } catch (err) {
+      console.warn('Evaluated component render error, falling back to ModularRenderer:', err);
+    }
+  }
+
+  // 2. Modular Style Pipeline Renderers (Product Ads, Strobe Teaser, Dialogue, Science STEM template fallback, etc.)
+  const effectiveStyle = (scene as any).template_type || (scene as any).visual_style || visualStyle;
+  const ModularRenderer = getModularStyleRenderer(effectiveStyle) || getModularStyleRenderer(visualStyle);
+  if (ModularRenderer) {
+    return (
+      <ModularRenderer
+        scene={scene}
+        showSceneCards={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showSceneCards}
+        showWhisperSubs={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showWhisperSubs}
+        cardPosY={cardPosY}
+        subsPosY={subsPosY}
+        swapSpeakers={swapSpeakers}
+        onCardClick={onCardClick}
+        onSubsClick={onSubsClick}
+      />
+    );
+  }
           ref={containerRef}
           style={{
             width: '100%',
