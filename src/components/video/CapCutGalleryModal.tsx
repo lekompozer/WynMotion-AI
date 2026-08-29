@@ -18,13 +18,24 @@ export interface CapCutGalleryItem {
   rawTemplate?: any;
 }
 
-export const CAPCUT_CATEGORIES = [
-  'Dành cho bạn',
-  'Quảng cáo',
-  'Sản phẩm',
-  'Ẩm thực F&B',
-  'Trending',
-  'Thời trang',
+export interface CapCutCategoryConfig {
+  id: string;
+  nameVi: string;
+  nameEn: string;
+  styles: string[];
+  icon: string;
+}
+
+export const CAPCUT_CATEGORIES: CapCutCategoryConfig[] = [
+  { id: 'all', nameVi: 'Tất cả mẫu', nameEn: 'All Templates', styles: [], icon: '🔥' },
+  { id: 'business_ads', nameVi: 'Doanh Nghiệp & Ads', nameEn: 'Business & Ads', styles: ['product_ads_motion', 'ads_strobe_teaser', 'ads_cinematic_showcase', 'animation_ads_image_veo'], icon: '🏢' },
+  { id: 'video_news_60s', nameVi: 'Bản Tin 60s', nameEn: '60s Video News', styles: ['video_news_60s'], icon: '📰' },
+  { id: 'whiteboard_stream_hand', nameVi: 'Vẽ Bảng Trắng', nameEn: 'Whiteboard', styles: ['whiteboard_stream_hand'], icon: '✏️' },
+  { id: 'handdrawn_fast_doodle', nameVi: 'Phác Chì & Màu Nước', nameEn: 'Doodle Quick', styles: ['handdrawn_fast_doodle'], icon: '🎨' },
+  { id: 'dialogue_scene', nameVi: 'Hội Thoại 2 Người', nameEn: 'Dialogue Scene', styles: ['dialogue_scene'], icon: '💬' },
+  { id: 'character_animation', nameVi: 'Mascot & Nhân Vật', nameEn: 'Character & Mascot', styles: ['character_animation'], icon: '🦊' },
+  { id: 'science_explainer', nameVi: 'Khoa Học STEM', nameEn: 'Science STEM', styles: ['science_explainer'], icon: '🔬' },
+  { id: 'apple_modern_motion', nameVi: 'Apple UI Glass', nameEn: 'Modern Motion', styles: ['apple_modern_motion'], icon: '✨' },
 ];
 
 export const TEMPLATE_LANGUAGES = [
@@ -47,18 +58,37 @@ interface CapCutGalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTemplate: (template: any) => void;
+  initialCategory?: string;
+  onCreateBlankProject?: (styleId?: string) => void;
 }
 
 export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
   isOpen,
   onClose,
   onSelectTemplate,
+  initialCategory,
+  onCreateBlankProject,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState('Dành cho bạn');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(initialCategory || 'all');
   const [selectedLang, setSelectedLang] = useState('all');
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [templatesList, setTemplatesList] = useState<CapCutGalleryItem[]>([]);
+
+  // Update selectedCategory when initialCategory changes
+  useEffect(() => {
+    if (initialCategory) {
+      // Find matching category ID or map visual style
+      const matched = CAPCUT_CATEGORIES.find(
+        (c) => c.id === initialCategory || c.styles.includes(initialCategory)
+      );
+      if (matched) {
+        setSelectedCategoryId(matched.id);
+      } else {
+        setSelectedCategoryId('all');
+      }
+    }
+  }, [initialCategory, isOpen]);
 
   // Fetch dynamic templates directly from Backend API on mount
   useEffect(() => {
@@ -74,7 +104,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
           author: t.is_vip ? 'VIP Motion AI' : 'WynMotion AI',
           authorAvatar: t.is_vip ? '👑' : '✨',
           coverUrl: t.cover_ios_url || t.cover_url || '/templates/cover-animation-ads-image-ios.png',
-          aspectClass: 'aspect-[9/16]',
+          aspectClass: t.aspect_class || 'aspect-[9/16]',
           badge: t.badge || (t.is_vip ? '👑 VIP 12s' : undefined),
           rawTemplate: t,
         }));
@@ -89,19 +119,37 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
   if (!isOpen) return null;
 
   const currentLangObj = TEMPLATE_LANGUAGES.find((l) => l.code === selectedLang) || TEMPLATE_LANGUAGES[0];
+  const activeCatConfig = CAPCUT_CATEGORIES.find((c) => c.id === selectedCategoryId) || CAPCUT_CATEGORIES[0];
 
   const filteredTemplates = templatesList.filter((tpl) => {
+    const raw = tpl.rawTemplate || {};
+    const tplStyle = raw.visual_style || '';
+    const tplLang = raw.default_params?.language || 'all';
+
+    // 1. Search Query
     if (searchQuery.trim()) {
-      return (
-        tpl.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tpl.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const q = searchQuery.toLowerCase();
+      const matchSearch =
+        tpl.title.toLowerCase().includes(q) ||
+        tpl.category.toLowerCase().includes(q) ||
+        tplStyle.toLowerCase().includes(q);
+      if (!matchSearch) return false;
     }
-    if (selectedCategory === 'Dành cho bạn') return true;
-    if (selectedCategory === 'Quảng cáo' || selectedCategory === 'Sản phẩm') {
-      return tpl.category === 'Sản phẩm' || tpl.category === 'Trending';
+
+    // 2. Language Filter
+    if (selectedLang !== 'all') {
+      if (tplLang !== 'all' && tplLang !== selectedLang) {
+        return false;
+      }
     }
-    if (selectedCategory === 'Ẩm thực F&B') return tpl.category === 'F&B';
+
+    // 3. Category Filter
+    if (selectedCategoryId === 'all') return true;
+
+    if (activeCatConfig.styles.length > 0) {
+      return activeCatConfig.styles.includes(tplStyle);
+    }
+
     return true;
   });
 
@@ -143,23 +191,46 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
       {/* ── CATEGORY PILLS BAR ── */}
       <div className="px-4 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-none border-b border-slate-800/40 bg-[#090A10]">
         {CAPCUT_CATEGORIES.map((cat) => {
-          const isSelected = selectedCategory === cat;
+          const isSelected = selectedCategoryId === cat.id;
           return (
             <button
-              key={cat}
+              key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+              onClick={() => setSelectedCategoryId(cat.id)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                 isSelected
                   ? 'bg-white text-slate-950 shadow-md font-black'
                   : 'bg-slate-900/80 text-slate-400 border border-slate-800/60 hover:text-white'
               }`}
             >
-              {cat}
+              <span>{cat.icon}</span>
+              <span>{cat.nameVi}</span>
             </button>
           );
         })}
       </div>
+
+      {/* ── CREATE BLANK PROJECT BANNER FOR SELECTED STYLE ── */}
+      {selectedCategoryId !== 'all' && onCreateBlankProject && (
+        <div className="px-4 pt-3 pb-1 max-w-lg mx-auto w-full">
+          <button
+            type="button"
+            onClick={() => {
+              const targetStyle = activeCatConfig.styles[0] || selectedCategoryId;
+              onCreateBlankProject(targetStyle);
+            }}
+            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 text-xs font-bold flex items-center justify-between transition-all active:scale-[0.99] shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-base">{activeCatConfig.icon}</span>
+              <span>Tự tạo video mới với phong cách <strong>{activeCatConfig.nameVi}</strong></span>
+            </div>
+            <span className="text-[11px] px-2 py-0.5 rounded-lg bg-cyan-400 text-slate-950 font-black">
+              Bắt đầu →
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* ── 2-COLUMN STAGGERED MASONRY GRID (EQUAL CARD HEIGHT & WIDTH) ── */}
       <div className="flex-1 overflow-y-auto px-3.5 py-4 pb-20">

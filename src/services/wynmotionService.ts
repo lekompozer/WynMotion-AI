@@ -112,6 +112,7 @@ export interface MotionProject {
   script?: string;
   audio_url?: string;
   duration_sec: number;
+  fps?: number;
   aspect_ratio: '16:9' | '9:16' | '1:1';
   visual_style: MotionVisualStyle;
   character_subtype?: CharacterSubtype;
@@ -336,6 +337,9 @@ export const wynmotionService = {
     options?: {
       swap_speakers?: boolean;
       aspect_ratio?: string;
+      show_scene_cards?: boolean;
+      show_whisper_subs?: boolean;
+      force_rerender?: boolean;
     }
   ): Promise<{ success: boolean; job_id: string; message: string; mp4_url?: string; status?: string }> {
     const headers = await getAuthHeaders();
@@ -347,6 +351,9 @@ export const wynmotionService = {
         scenes,
         swap_speakers: options?.swap_speakers,
         aspect_ratio: options?.aspect_ratio,
+        show_scene_cards: options?.show_scene_cards,
+        show_whisper_subs: options?.show_whisper_subs,
+        force_rerender: options?.force_rerender,
       }),
     });
     const data = await res.json();
@@ -373,6 +380,13 @@ export const wynmotionService = {
     const data = await res.json();
     if (!res.ok) return { status: 'failed', error: data.detail };
     return data;
+  },
+
+  /**
+   * Poll export status alias
+   */
+  async pollExportStatus(jobId: string) {
+    return this.checkExportStatus(jobId);
   },
 
   /**

@@ -234,6 +234,7 @@ export const AiVideoTab: React.FC = () => {
 
   // Navigation mode: 'home' (CapCut Hub) vs 'studio' (Creation Flow)
   const [viewMode, setViewMode] = useState<'home' | 'studio'>('home');
+  const [selectedGalleryStyle, setSelectedGalleryStyle] = useState<string>('all');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -1015,6 +1016,30 @@ export const AiVideoTab: React.FC = () => {
     }
 
     const tpl = params.template || {};
+    const tplStyle = tpl.visual_style || 'product_ads_motion';
+
+    // For interactive narrative styles, prefill settings and launch Studio directly at Step 2
+    if (
+      tplStyle === 'whiteboard_stream_hand' ||
+      tplStyle === 'handdrawn_fast_doodle' ||
+      tplStyle === 'dialogue_scene' ||
+      tplStyle === 'video_news_60s' ||
+      tplStyle === 'science_explainer' ||
+      tplStyle === 'character_animation' ||
+      tplStyle === 'apple_modern_motion'
+    ) {
+      setVisualStyle(tplStyle);
+      if (params.aspectRatio) setAspectRatio(params.aspectRatio);
+      else if (tpl.default_params?.aspect_ratio) setAspectRatio(tpl.default_params.aspect_ratio);
+      if (tpl.title_vi || tpl.title_en) setPrompt(isVietnamese ? (tpl.title_vi || tpl.title_en) : (tpl.title_en || tpl.title_vi));
+      if (tpl.default_params?.language) setSelectedLang(tpl.default_params.language);
+      if (params.durationSec || tpl.duration_sec) setAudioDurationSec(Math.round(params.durationSec || tpl.duration_sec));
+      setCapcutModalTemplate(null);
+      setViewMode('studio');
+      setWizardStep('2');
+      return;
+    }
+
     const isVeo = tpl.visual_style === 'animation_ads_image_veo' || tpl.is_vip || (typeof tpl.template_id === 'string' && tpl.template_id.startsWith('animation_ads'));
 
     setIsCreatingProject(true);
@@ -1452,7 +1477,10 @@ export const AiVideoTab: React.FC = () => {
               </h3>
               <div className="grid grid-cols-1 gap-2.5">
                 <button
-                  onClick={() => setIsCapCutGalleryOpen(true)}
+                  onClick={() => {
+                    setSelectedGalleryStyle('business_ads');
+                    setIsCapCutGalleryOpen(true);
+                  }}
                   className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
                     isDark
                       ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700 shadow-md'
@@ -1491,7 +1519,10 @@ export const AiVideoTab: React.FC = () => {
                   return (
                     <button
                       key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
+                      onClick={() => {
+                        setSelectedGalleryStyle(style.id);
+                        setIsCapCutGalleryOpen(true);
+                      }}
                       className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
                         isDark
                           ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700 shadow-md'
@@ -1530,7 +1561,10 @@ export const AiVideoTab: React.FC = () => {
                   return (
                     <button
                       key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
+                      onClick={() => {
+                        setSelectedGalleryStyle(style.id);
+                        setIsCapCutGalleryOpen(true);
+                      }}
                       className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
                         isDark
                           ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700'
@@ -1572,7 +1606,10 @@ export const AiVideoTab: React.FC = () => {
                   return (
                     <button
                       key={style.id}
-                      onClick={() => handleStartStudio(style.id)}
+                      onClick={() => {
+                        setSelectedGalleryStyle(style.id);
+                        setIsCapCutGalleryOpen(true);
+                      }}
                       className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
                         isDark
                           ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700'
@@ -1611,6 +1648,11 @@ export const AiVideoTab: React.FC = () => {
         <CapCutGalleryModal
           isOpen={isCapCutGalleryOpen}
           onClose={() => setIsCapCutGalleryOpen(false)}
+          initialCategory={selectedGalleryStyle}
+          onCreateBlankProject={(styleId) => {
+            setIsCapCutGalleryOpen(false);
+            handleStartStudio((styleId as MotionVisualStyle) || 'product_ads_motion');
+          }}
           onSelectTemplate={(tplId) => {
             setIsCapCutGalleryOpen(false);
             setCapcutModalTemplate(tplId);

@@ -976,7 +976,12 @@ function StudioInner({
       // Step 1: Trigger backend export MP4 job
       let jobId: string | null = null;
       if (projectId) {
-        const expRes = await (wynmotionService as any).exportMP4(projectId, scenes);
+        const expRes = await (wynmotionService as any).exportMP4(projectId, scenes, {
+          aspect_ratio: chosenAspect,
+          show_scene_cards: showSceneCards,
+          show_whisper_subs: showWhisperSubs,
+          force_rerender: true,
+        });
         jobId = expRes.job_id;
       } else {
         const res = await fetch(`${API_BASE}/api/slides/animate/export-mp4`, {
