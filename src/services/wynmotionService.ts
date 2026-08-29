@@ -398,6 +398,7 @@ export const wynmotionService = {
     url?: string;
     text?: string;
     language?: string;
+    max_chars?: number;
     target_duration_sec?: number;
   }): Promise<{
     success: boolean;

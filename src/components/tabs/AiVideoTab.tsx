@@ -368,7 +368,8 @@ export const AiVideoTab: React.FC = () => {
       const res = await wynmotionService.summarizeNews({
         url: newsInputMode === 'url' ? newsUrlInput.trim() : undefined,
         text: newsInputMode === 'text' ? newsRawTextInput.trim() : undefined,
-        language: selectedLang.startsWith('vi') ? 'vi' : 'en',
+        language: selectedLang,
+        max_chars: maxChars || 500,
       });
 
       if (res.headline) setNewsHeadline(res.headline);
@@ -645,6 +646,13 @@ export const AiVideoTab: React.FC = () => {
           t('✨ Nước hoa Pháp hoàng gia lưu hương quyến rũ 24h - Ưu đãi giảm 50%', '✨ Royal French luxury perfume 24h long-lasting scent - 50% OFF deal'),
           t('👟 Giày sneaker thể thao siêu nhẹ chống nước dẫn đầu xu hướng', '👟 Ultra-light waterproof athletic sneakers leading the trend'),
         ];
+      case 'video_news_60s':
+        return [
+          t('📰 Thời sự & Quy hoạch: Hà Nội điều chỉnh 26.5 km đường sắt để mở rộng Quốc lộ 1A', '📰 News & Infrastructure: Hanoi relocates 26.5km of railway to expand National Highway 1A'),
+          t('🤖 Công nghệ & AI: Google và DeepSeek đồng loạt ra mắt mô hình AI thế hệ mới', '🤖 Tech & AI: Google and DeepSeek launch next-generation AI foundation models'),
+          t('📈 Kinh tế & Tài chính: Giá vàng thế giới và tỷ giá biến động mạnh đầu phiên sáng', '📈 Economy & Markets: Global gold prices and exchange rates surge in early trading session'),
+          t('🌍 Thế giới & Sự kiện: Hội nghị thượng đỉnh công bố các chính sách năng lượng xanh', '🌍 World News: Global climate summit announces new green energy transition policies'),
+        ];
       default:
         return [
           t('🌱 Mô phỏng chu trình quang hợp của cây xanh trong tự nhiên', '🌱 Simulate the photosynthesis process of green plants in nature'),
@@ -657,6 +665,8 @@ export const AiVideoTab: React.FC = () => {
 
   const getPromptPlaceholder = () => {
     switch (visualStyle) {
+      case 'video_news_60s':
+        return t('Ví dụ: Dán link bài báo ở trên hoặc nhập tóm tắt sự kiện thời sự, công nghệ, kinh tế, thể thao...', 'E.g., Paste article URL above or enter news event summary regarding tech, economy, politics, sports...');
       case 'whiteboard_stream_hand':
         return t('Ví dụ: Sơ đồ tư duy 5 bước quản lý thời gian hiệu quả, phác thảo từng mục trên bảng trắng...', 'E.g., 5-step time management mindmap sketched out on a whiteboard...');
       case 'handdrawn_fast_doodle':
@@ -2048,26 +2058,26 @@ export const AiVideoTab: React.FC = () => {
 
             {/* ── STYLE: VIDEO NEWS 60S (URL vs Raw Text) ── */}
             {visualStyle === 'video_news_60s' && (
-              <div className="space-y-4 p-4 rounded-3xl border border-amber-500/30 bg-amber-950/20">
+              <div className={`space-y-4 p-4 rounded-3xl border ${isDark ? 'border-slate-800 bg-[#121522]' : 'border-slate-200 bg-slate-50/80 shadow-sm'}`}>
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <label className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                     <span>📰</span>
                     <span>{t('Nguồn tin tức (Link bài báo hoặc dán văn bản)', 'News Source (Article URL or Raw Text)')}</span>
                   </label>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase">
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white uppercase shadow-sm">
                     Auto-60s
                   </span>
                 </div>
 
                 {/* Input Mode Switcher */}
-                <div className="flex bg-slate-900/80 p-1 rounded-2xl border border-slate-800">
+                <div className={`flex p-1 rounded-2xl border ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-200/70 border-slate-300/60'}`}>
                   <button
                     type="button"
                     onClick={() => setNewsInputMode('url')}
                     className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                       newsInputMode === 'url'
-                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 font-black'
+                        : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     🔗 {t('Dán Link Báo', 'Paste Article URL')}
@@ -2077,8 +2087,8 @@ export const AiVideoTab: React.FC = () => {
                     onClick={() => setNewsInputMode('text')}
                     className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                       newsInputMode === 'text'
-                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 font-black'
+                        : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     📝 {t('Dán Nội Dung / Điểm Tin', 'Paste Text / Digest')}
@@ -2092,10 +2102,12 @@ export const AiVideoTab: React.FC = () => {
                       value={newsUrlInput}
                       onChange={(e) => setNewsUrlInput(e.target.value)}
                       placeholder="https://vnexpress.net/... hoặc báo quốc tế"
-                      className="w-full px-4 py-3 text-xs rounded-2xl bg-slate-900 border border-slate-800 text-white font-medium focus:border-amber-400 focus:outline-none"
+                      className={`w-full px-4 py-3 text-xs rounded-2xl border font-medium focus:border-rose-500 focus:outline-none transition-colors ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 shadow-sm'
+                      }`}
                     />
                     <div className="text-[10px] text-slate-400">
-                      * Hỗ trợ VnExpress, Tuổi Trẻ, Zing, Dân Trí, TechCrunch, CNN, Reuters...
+                      * Hỗ trợ VnExpress, Tuổi Trẻ, Zing, Dân Trí, TechCrunch, CNN, Reuters, Bloomberg...
                     </div>
                   </div>
                 ) : (
@@ -2105,7 +2117,9 @@ export const AiVideoTab: React.FC = () => {
                       onChange={(e) => setNewsRawTextInput(e.target.value)}
                       rows={4}
                       placeholder={t('Dán bài báo hoặc gom nhiều mẩu tin ngắn để tổng hợp điểm tin 60s...', 'Paste news article or multiple news snippets for a 60s digest...')}
-                      className="w-full p-3.5 text-xs rounded-2xl bg-slate-900 border border-slate-800 text-white font-medium focus:border-amber-400 focus:outline-none resize-none"
+                      className={`w-full p-3.5 text-xs rounded-2xl border font-medium focus:border-rose-500 focus:outline-none resize-none transition-colors ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 shadow-sm'
+                      }`}
                     />
                   </div>
                 )}
@@ -2118,12 +2132,12 @@ export const AiVideoTab: React.FC = () => {
                   className={`w-full py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 ${
                     isSummarizingNews
                       ? 'bg-slate-800 text-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 shadow-lg shadow-amber-500/20 active:scale-[0.98]'
+                      : 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-rose-500/25 active:scale-[0.98]'
                   }`}
                 >
                   {isSummarizingNews ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
                       <span>{t('AI đang đọc & tóm tắt bản tin 60s...', 'AI summarizing news for 60s video...')}</span>
                     </>
                   ) : (
@@ -2136,13 +2150,13 @@ export const AiVideoTab: React.FC = () => {
 
                 {/* Extracted Headline & Ticker Preview */}
                 {newsHeadline && (
-                  <div className="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/40 space-y-2">
+                  <div className={`p-3.5 rounded-2xl border space-y-2 ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
                     <div className="flex items-center justify-between text-[10px] font-bold">
-                      <span className="text-amber-400 uppercase">TIÊU ĐỀ HEADLINE:</span>
+                      <span className="text-[#FF2D55] uppercase">TIÊU ĐỀ HEADLINE:</span>
                       <span className="text-slate-400">{newsCategory}</span>
                     </div>
-                    <div className="text-xs font-black text-white">{newsHeadline}</div>
-                    <div className="text-[10px] text-amber-300/90 truncate pt-1 border-t border-slate-800">
+                    <div className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{newsHeadline}</div>
+                    <div className="text-[10px] text-rose-400/90 truncate pt-1 border-t border-slate-800/60">
                       ⚡ Ticker: {newsTickerText}
                     </div>
                   </div>
@@ -3112,7 +3126,7 @@ export const AiVideoTab: React.FC = () => {
                 else if (wizardStep === '3.2') setWizardStep('3.3');
                 else if (wizardStep === '3.3') setWizardStep('4');
               }}
-              className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 font-black text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-[#FF2D55] to-[#FF4570] hover:from-rose-500 hover:to-pink-600 text-white font-black text-sm shadow-lg shadow-rose-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
             >
               <span>{t('Tiếp tục', 'Continue')}</span>
               <ArrowRight className="w-4 h-4" />
