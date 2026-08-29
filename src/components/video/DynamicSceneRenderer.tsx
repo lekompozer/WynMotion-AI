@@ -72,12 +72,19 @@ export interface DynamicSceneData {
       reveal?: { startMs: number; durationMs: number };
     }>;
   };
+  source_badge_text?: string;
+  source_badge_pos_x?: number;
+  source_badge_pos_y?: number;
+  caption_pos_y?: number;
+  ticker_text?: string;
+  source_domain?: string;
+  whisper_segments?: any[];
   hide_text?: boolean;
 }
 
 export interface DynamicSceneRendererProps {
   scene: DynamicSceneData;
-  visualStyle?: 'handdrawn_fast_doodle' | 'whiteboard_stream_hand' | 'apple_modern_motion' | 'character_animation' | 'tech_ui' | 'dialogue_scene' | 'science_explainer' | 'product_ads_motion' | string;
+  visualStyle?: 'handdrawn_fast_doodle' | 'whiteboard_stream_hand' | 'apple_modern_motion' | 'character_animation' | 'tech_ui' | 'dialogue_scene' | 'science_explainer' | 'product_ads_motion' | 'video_news_60s' | 'news_video' | string;
   showSceneCards?: boolean;
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';
@@ -85,6 +92,7 @@ export interface DynamicSceneRendererProps {
   swapSpeakers?: boolean;
   onCardClick?: () => void;
   onSubsClick?: () => void;
+  onUpdateScene?: (updatedScene: Partial<DynamicSceneData>) => void;
 }
 
 import { transform } from 'sucrase';
@@ -164,6 +172,7 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   swapSpeakers = false,
   onCardClick,
   onSubsClick,
+  onUpdateScene,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -460,6 +469,289 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
             >
               <span>WynRise AI</span>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // STYLE 3.5: 60S VIDEO NEWS & BREAKING NEWS (Smooth Ken Burns, Draggable Source Badge & 20% Bottom Captions)
+  // ─────────────────────────────────────────────────────────────
+  if (visualStyle === 'video_news_60s' || visualStyle === 'news_video' || visualStyle === 'breaking_news' || visualStyle === 'video_news') {
+    const rawImage = scene.image_url || scene.original_image_url || '/png-fox.png';
+    const progress = Math.min(1.0, Math.max(0, frame / Math.max(1, duration)));
+    const smoothScale = 1.0 + 0.07 * progress;
+
+    const sourceDomain = (scene.source_domain || 'VNEXPRESS').toUpperCase();
+    const defaultBadgeText = scene.source_badge_text || `TIN MỚI TỪ ${sourceDomain}`;
+    const badgeX = scene.source_badge_pos_x ?? 5;
+    const badgeY = scene.source_badge_pos_y ?? 5;
+    const captionY = scene.caption_pos_y ?? 20;
+    const tickerText = scene.ticker_text || `Nguồn ${sourceDomain} • Cập nhật liên tục 24/7`;
+
+    // Calculate active caption segment
+    const currentTimeSec = (frame / fps);
+    let activeCaption = scene.summary_text || scene.voice_transcript || displaySummary || '';
+    if (scene.whisper_segments && Array.isArray(scene.whisper_segments) && scene.whisper_segments.length > 0) {
+      const matchSeg = scene.whisper_segments.find((s: any) => currentTimeSec >= s.start && currentTimeSec <= s.end);
+      if (matchSeg?.text) {
+        activeCaption = matchSeg.text;
+      }
+    }
+
+    const badgeOpacity = frame < 15 ? frame / 15 : frame > (fps * 4.5) ? Math.max(0, 1 - (frame - fps * 4.5) / 20) : 1;
+
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#05070F',
+          position: 'relative',
+          overflow: 'hidden',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          userSelect: 'none',
+        }}
+      >
+        {/* 1. Background Image with Smooth Ken Burns Zoom */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: '-5%',
+            width: '110%',
+            height: '110%',
+            transform: `scale(${smoothScale.toFixed(4)})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.05s linear',
+          }}
+        >
+          <img
+            src={rawImage}
+            alt="News Visual"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+        </div>
+
+        {/* 2. Cinematic Vignette Gradient */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.3) 65%, rgba(0,0,0,0.92) 100%)',
+            pointerEvents: 'none',
+            zIndex: 10,
+          }}
+        />
+
+        {/* 3. Draggable & Editable Top Source Badge */}
+        <div
+          onPointerDown={(e) => {
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initPosX = badgeX;
+            const initPosY = badgeY;
+            const containerRect = e.currentTarget.parentElement?.getBoundingClientRect();
+
+            const onMove = (moveEv: PointerEvent) => {
+              if (!containerRect) return;
+              const deltaXPct = ((moveEv.clientX - startX) / containerRect.width) * 100;
+              const deltaYPct = ((moveEv.clientY - startY) / containerRect.height) * 100;
+              const nextX = Math.max(1, Math.min(80, Math.round(initPosX + deltaXPct)));
+              const nextY = Math.max(1, Math.min(85, Math.round(initPosY + deltaYPct)));
+              onUpdateScene?.({ source_badge_pos_x: nextX, source_badge_pos_y: nextY });
+            };
+
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+            };
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+          }}
+          style={{
+            position: 'absolute',
+            top: `${badgeY}%`,
+            left: `${badgeX}%`,
+            zIndex: 30,
+            cursor: 'grab',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: 'rgba(12, 14, 24, 0.9)',
+            border: '1.5px solid rgba(255, 255, 255, 0.25)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            padding: isPortrait ? '8px 16px' : '10px 20px',
+            borderRadius: 16,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+            opacity: badgeOpacity,
+            transition: 'opacity 0.2s ease',
+          }}
+        >
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              backgroundColor: '#FF2D55',
+              borderRadius: '50%',
+              display: 'inline-block',
+              boxShadow: '0 0 10px #FF2D55',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => {
+              const newText = e.currentTarget.innerText.trim();
+              if (newText) onUpdateScene?.({ source_badge_text: newText });
+            }}
+            style={{
+              color: '#FFFFFF',
+              fontSize: isPortrait ? 13 : 15,
+              fontWeight: 900,
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+              outline: 'none',
+              cursor: 'text',
+            }}
+          >
+            {defaultBadgeText}
+          </span>
+        </div>
+
+        {/* 4. Sentence Captions at 20% from Bottom (Nền đen chữ trắng, bo góc) */}
+        {!scene.hide_text && (
+          <div
+            onPointerDown={(e) => {
+              const startY = e.clientY;
+              const initPosY = captionY;
+              const containerRect = e.currentTarget.parentElement?.getBoundingClientRect();
+
+              const onMove = (moveEv: PointerEvent) => {
+                if (!containerRect) return;
+                const deltaYPct = -((moveEv.clientY - startY) / containerRect.height) * 100;
+                const nextY = Math.max(8, Math.min(60, Math.round(initPosY + deltaYPct)));
+                onUpdateScene?.({ caption_pos_y: nextY });
+              };
+
+              const onUp = () => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+              };
+
+              window.addEventListener('pointermove', onMove);
+              window.addEventListener('pointerup', onUp);
+            }}
+            style={{
+              position: 'absolute',
+              bottom: `${captionY}%`,
+              left: '5%',
+              right: '5%',
+              zIndex: 40,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'ns-resize',
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-block',
+                backgroundColor: 'rgba(5, 7, 15, 0.92)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                color: '#FFFFFF',
+                padding: isPortrait ? '14px 24px' : '16px 32px',
+                borderRadius: isPortrait ? 20 : 24,
+                fontSize: isPortrait ? 18 : 22,
+                fontWeight: 900,
+                lineHeight: 1.4,
+                textAlign: 'center',
+                maxWidth: '92%',
+                boxShadow: '0 16px 48px rgba(0, 0, 0, 0.7)',
+                wordBreak: 'break-word',
+              }}
+            >
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const newText = e.currentTarget.innerText.trim();
+                  if (newText) onUpdateScene?.({ summary_text: newText, voice_transcript: newText });
+                }}
+                style={{ outline: 'none', cursor: 'text' }}
+              >
+                {activeCaption}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Bottom Breaking News Ticker Bar */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: isPortrait ? 44 : 52,
+            backgroundColor: '#0F121E',
+            borderTop: '2px solid #FF2D55',
+            display: 'flex',
+            alignItems: 'center',
+            overflow: 'hidden',
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FF2D55',
+              color: '#FFFFFF',
+              fontSize: isPortrait ? 11 : 13,
+              fontWeight: 900,
+              padding: isPortrait ? '0 12px' : '0 18px',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px',
+              flexShrink: 0,
+            }}
+          >
+            <span>⚡ BẢN TIN NÓNG</span>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              color: '#E2E8F0',
+              fontSize: isPortrait ? 12 : 14,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              paddingLeft: 14,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            <span
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const newText = e.currentTarget.innerText.trim();
+                if (newText) onUpdateScene?.({ ticker_text: newText });
+              }}
+              style={{ outline: 'none', cursor: 'text' }}
+            >
+              {tickerText}
+            </span>
           </div>
         </div>
       </div>

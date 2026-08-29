@@ -20,6 +20,7 @@ interface DynamicAnimationCompositionProps {
   onCardClick?: () => void;
   onSubsClick?: () => void;
   showSubCard?: boolean;
+  onUpdateScene?: (sceneId: string | number, updated: Partial<DynamicSceneData>) => void;
 }
 
 export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionProps> = ({
@@ -32,6 +33,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   captionSegments = [],
   captionPresetStyle = 'karaoke_glow',
   timelineEffects = [],
+  onUpdateScene,
 }) => {
   const { bgColor } = useRemotion();
   const frame = useCurrentFrame();
@@ -91,6 +93,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
             showWhisperSubs={captionSegments.length > 0 ? false : showWhisperSubs}
             cardPosY={cardPosY}
             subsPosY={subsPosY}
+            onUpdateScene={(updated) => onUpdateScene?.(scene.scene_id, updated)}
           />
         </Sequence>
       ))}

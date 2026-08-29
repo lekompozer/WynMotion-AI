@@ -2127,6 +2127,46 @@ function StudioInner({
                 onChangePresetStyle={setCaptionPresetStyle}
                 onTranscribeWhisper={handleTranscribeCaptions}
                 isTranscribing={isTranscribingCaptions}
+                visualStyle={visualStyle}
+                sourceBadgeText={scenes[typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0]?.source_badge_text || scenes[0]?.source_badge_text || 'TIN MỚI TỪ VNEXPRESS'}
+                onChangeSourceBadgeText={(txt) => {
+                  const sIdx = typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0;
+                  setScenes((prev) =>
+                    prev.map((s, idx) =>
+                      idx === sIdx || !s.source_badge_text ? { ...s, source_badge_text: txt } : s
+                    )
+                  );
+                }}
+                sourceBadgePosX={scenes[typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0]?.source_badge_pos_x ?? scenes[0]?.source_badge_pos_x ?? 5}
+                onChangeSourceBadgePosX={(x) => {
+                  const sIdx = typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0;
+                  setScenes((prev) =>
+                    prev.map((s, idx) => (idx === sIdx ? { ...s, source_badge_pos_x: x } : s))
+                  );
+                }}
+                sourceBadgePosY={scenes[typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0]?.source_badge_pos_y ?? scenes[0]?.source_badge_pos_y ?? 5}
+                onChangeSourceBadgePosY={(y) => {
+                  const sIdx = typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0;
+                  setScenes((prev) =>
+                    prev.map((s, idx) => (idx === sIdx ? { ...s, source_badge_pos_y: y } : s))
+                  );
+                }}
+                captionPosY={scenes[typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0]?.caption_pos_y ?? scenes[0]?.caption_pos_y ?? 20}
+                onChangeCaptionPosY={(y) => {
+                  const sIdx = typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0;
+                  setScenes((prev) =>
+                    prev.map((s, idx) => (idx === sIdx ? { ...s, caption_pos_y: y } : s))
+                  );
+                }}
+                tickerText={scenes[typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0]?.ticker_text || scenes[0]?.ticker_text || '⚡ BẢN TIN NÓNG • Cập nhật liên tục 24/7'}
+                onChangeTickerText={(txt) => {
+                  const sIdx = typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0;
+                  setScenes((prev) =>
+                    prev.map((s, idx) =>
+                      idx === sIdx || !s.ticker_text ? { ...s, ticker_text: txt } : s
+                    )
+                  );
+                }}
               />
             )}
           </div>
@@ -2172,6 +2212,11 @@ function StudioInner({
               captionSegments={captionSegments}
               captionPresetStyle={captionPresetStyle}
               timelineEffects={timelineEffects}
+              onUpdateScene={(sceneId, updated) => {
+                setScenes((prev) =>
+                  prev.map((s) => (s.scene_id === sceneId ? { ...s, ...updated } : s))
+                );
+              }}
             />
           </div>
         </main>

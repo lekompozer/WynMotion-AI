@@ -81,9 +81,14 @@ export interface MotionScene {
   }>;
   duration_sec?: number;
   start_time_sec?: number;
-  end_time_sec?: number;
   swap_speakers?: boolean;
   bubble_custom_layout?: any;
+  source_badge_text?: string;
+  source_badge_pos_x?: number;
+  source_badge_pos_y?: number;
+  caption_pos_y?: number;
+  ticker_text?: string;
+  source_domain?: string;
 }
 
 export interface DialogueTurn {
