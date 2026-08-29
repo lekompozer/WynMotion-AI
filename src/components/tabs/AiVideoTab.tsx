@@ -2269,22 +2269,13 @@ export const AiVideoTab: React.FC = () => {
               </div>
             )}
 
-            {/* ── 3. STYLE 4: CHARACTER MASCOT (Full Character vs Stickman) ── */}
+            {/* ── 3. STYLE 4: CHARACTER MASCOT (Custom Character vs Stickman) ── */}
             {visualStyle === 'character_animation' && (
               <div className="space-y-2 p-4 rounded-3xl border border-cyan-500/30 bg-cyan-950/20">
                 <label className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                  {t('Kiểu nhân vật dẫn chuyện', 'Character Subtype')}
+                  {t('Kiểu nhân vật hoạt hình', 'Character Type')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCharacterSubtype('full_character')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
-                      characterSubtype === 'full_character' ? 'bg-cyan-500 text-slate-950 border-cyan-400' : 'bg-slate-900 border-slate-800 text-slate-400'
-                    }`}
-                  >
-                    🦊 Mascot Cáo 3D Pixar
-                  </button>
                   <button
                     type="button"
                     onClick={() => setCharacterSubtype('stickman')}
@@ -2293,6 +2284,15 @@ export const AiVideoTab: React.FC = () => {
                     }`}
                   >
                     🏃 Người Que (Stickman)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCharacterSubtype('full_character')}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
+                      characterSubtype === 'full_character' ? 'bg-cyan-500 text-slate-950 border-cyan-400' : 'bg-slate-900 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    ✨ Nhân vật tùy chỉnh (Theo mô tả)
                   </button>
                 </div>
               </div>

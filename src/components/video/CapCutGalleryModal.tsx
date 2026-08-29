@@ -37,7 +37,7 @@ export const CAPCUT_CATEGORIES: CapCutCategoryConfig[] = [
   { id: 'whiteboard_stream_hand', nameVi: 'Vẽ Bảng Trắng', nameEn: 'Whiteboard', styles: ['whiteboard_stream_hand'], icon: '✏️' },
   { id: 'handdrawn_fast_doodle', nameVi: 'Phác Chì & Màu Nước', nameEn: 'Doodle Quick', styles: ['handdrawn_fast_doodle'], icon: '🎨' },
   { id: 'dialogue_scene', nameVi: 'Hội Thoại 2 Người', nameEn: 'Dialogue Scene', styles: ['dialogue_scene'], icon: '💬' },
-  { id: 'character_animation', nameVi: 'Mascot & Nhân Vật', nameEn: 'Character & Mascot', styles: ['character_animation'], icon: '🦊' },
+  { id: 'character_animation', nameVi: 'Mascot & Người Que', nameEn: 'Stickman & Mascot', styles: ['character_animation'], icon: '🏃' },
   { id: 'apple_modern_motion', nameVi: 'Apple UI Glass', nameEn: 'Modern Motion', styles: ['apple_modern_motion'], icon: '✨' },
 ];
 
