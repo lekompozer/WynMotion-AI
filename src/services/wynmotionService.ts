@@ -33,6 +33,7 @@ export type MotionVisualStyle =
   | 'product_ads_motion'
   | 'ads_strobe_teaser'
   | 'ads_cinematic_showcase'
+  | 'animation_ads_image_veo'
   | 'video_news_60s';
 
 export type CharacterSubtype =

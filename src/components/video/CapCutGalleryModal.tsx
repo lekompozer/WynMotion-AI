@@ -28,13 +28,16 @@ export interface CapCutCategoryConfig {
 
 export const CAPCUT_CATEGORIES: CapCutCategoryConfig[] = [
   { id: 'all', nameVi: 'Tất cả mẫu', nameEn: 'All Templates', styles: [], icon: '🔥' },
-  { id: 'business_ads', nameVi: 'Doanh Nghiệp & Ads', nameEn: 'Business & Ads', styles: ['product_ads_motion', 'ads_strobe_teaser', 'ads_cinematic_showcase', 'animation_ads_image_veo'], icon: '🏢' },
+  { id: 'animation_ads_image_veo', nameVi: 'Animation Ads (VEO 3.1)', nameEn: 'Animation Ads (VEO 3.1)', styles: ['animation_ads_image_veo'], icon: '👑' },
+  { id: 'ads_strobe_teaser', nameVi: 'Strobe Teaser', nameEn: 'Strobe Teaser', styles: ['ads_strobe_teaser'], icon: '⚡' },
+  { id: 'ads_cinematic_showcase', nameVi: 'Menu Thực Đơn (F&B)', nameEn: 'Cinematic Menu (F&B)', styles: ['ads_cinematic_showcase'], icon: '🍔' },
+  { id: 'product_ads_motion', nameVi: 'AI Motion Director', nameEn: 'AI Motion Director', styles: ['product_ads_motion'], icon: '🛍️' },
+  { id: 'science_explainer', nameVi: 'Khoa Học STEM', nameEn: 'Science STEM', styles: ['science_explainer'], icon: '🔬' },
   { id: 'video_news_60s', nameVi: 'Bản Tin 60s', nameEn: '60s Video News', styles: ['video_news_60s'], icon: '📰' },
   { id: 'whiteboard_stream_hand', nameVi: 'Vẽ Bảng Trắng', nameEn: 'Whiteboard', styles: ['whiteboard_stream_hand'], icon: '✏️' },
   { id: 'handdrawn_fast_doodle', nameVi: 'Phác Chì & Màu Nước', nameEn: 'Doodle Quick', styles: ['handdrawn_fast_doodle'], icon: '🎨' },
   { id: 'dialogue_scene', nameVi: 'Hội Thoại 2 Người', nameEn: 'Dialogue Scene', styles: ['dialogue_scene'], icon: '💬' },
   { id: 'character_animation', nameVi: 'Mascot & Nhân Vật', nameEn: 'Character & Mascot', styles: ['character_animation'], icon: '🦊' },
-  { id: 'science_explainer', nameVi: 'Khoa Học STEM', nameEn: 'Science STEM', styles: ['science_explainer'], icon: '🔬' },
   { id: 'apple_modern_motion', nameVi: 'Apple UI Glass', nameEn: 'Modern Motion', styles: ['apple_modern_motion'], icon: '✨' },
 ];
 
