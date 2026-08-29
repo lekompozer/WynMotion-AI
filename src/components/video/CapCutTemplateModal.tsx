@@ -425,7 +425,29 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
               {/* Big Use Template Button (App Signature Cyan-Blue Gradient) */}
               <button
-                onClick={() => setStep('fill_assets')}
+                onClick={() => {
+                  const isNarrativeStyle =
+                    template?.visual_style === 'science_explainer' ||
+                    template?.visual_style === 'video_news_60s' ||
+                    template?.visual_style === 'whiteboard_stream_hand' ||
+                    template?.visual_style === 'handdrawn_fast_doodle' ||
+                    template?.visual_style === 'dialogue_scene' ||
+                    template?.visual_style === 'character_animation' ||
+                    template?.visual_style === 'apple_modern_motion';
+
+                  if (isNarrativeStyle) {
+                    onApply({
+                      template,
+                      prompt: title,
+                      productImages: [],
+                      bgmUrl,
+                      durationSec,
+                      aspectRatio,
+                    });
+                  } else {
+                    setStep('fill_assets');
+                  }
+                }}
                 className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 shadow-xl shadow-cyan-500/25 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>⚡</span>

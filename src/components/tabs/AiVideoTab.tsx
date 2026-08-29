@@ -755,9 +755,15 @@ export const AiVideoTab: React.FC = () => {
       setVisualStyle(initialStyle);
       if (initialStyle === 'dialogue_scene') {
         setCharacterSubtype('pixar_3d');
+        setAudioMode('agent');
+      } else if (initialStyle === 'science_explainer') {
+        setScriptStyle('scientific');
+        setMaxChars(1100);
       }
+      setWizardStep('2');
+    } else {
+      setWizardStep('1');
     }
-    setWizardStep('1');
     setViewMode('studio');
     setIsStudioOpen(true);
   };
@@ -1031,11 +1037,37 @@ export const AiVideoTab: React.FC = () => {
       setVisualStyle(tplStyle);
       if (params.aspectRatio) setAspectRatio(params.aspectRatio);
       else if (tpl.default_params?.aspect_ratio) setAspectRatio(tpl.default_params.aspect_ratio);
-      if (tpl.title_vi || tpl.title_en) setPrompt(isVietnamese ? (tpl.title_vi || tpl.title_en) : (tpl.title_en || tpl.title_vi));
+
+      const prefPrompt = isVietnamese ? (tpl.title_vi || tpl.title_en || '') : (tpl.title_en || tpl.title_vi || '');
+      if (prefPrompt) setPrompt(prefPrompt);
+
       if (tpl.default_params?.language) setSelectedLang(tpl.default_params.language);
       if (params.durationSec || tpl.duration_sec) setAudioDurationSec(Math.round(params.durationSec || tpl.duration_sec));
+
+      if (tplStyle === 'science_explainer') {
+        if (tpl.default_params?.science_domain) setScienceDomain(tpl.default_params.science_domain);
+        setScriptStyle('scientific');
+        setMaxChars(1100);
+      } else if (tplStyle === 'video_news_60s') {
+        if (tpl.default_params?.article_url) {
+          setNewsInputMode('url');
+          setNewsUrlInput(tpl.default_params.article_url);
+        }
+        if (tpl.default_params?.source_domain) setNewsCategory(tpl.default_params.source_domain);
+        if (tpl.default_params?.ticker_text) setNewsTickerText(tpl.default_params.ticker_text);
+        if (tpl.default_params?.voice_speaker) setSelectedVoiceName(tpl.default_params.voice_speaker);
+      } else if (tplStyle === 'dialogue_scene') {
+        setCharacterSubtype('pixar_3d');
+        setAudioMode('agent');
+        if (tpl.default_params?.speaker_a_name) setSpeakerA((prev) => ({ ...prev, name: tpl.default_params.speaker_a_name }));
+        if (tpl.default_params?.speaker_b_name) setSpeakerB((prev) => ({ ...prev, name: tpl.default_params.speaker_b_name }));
+      } else if (tplStyle === 'character_animation') {
+        if (tpl.default_params?.character_subtype) setCharacterSubtype(tpl.default_params.character_subtype);
+      }
+
       setCapcutModalTemplate(null);
       setViewMode('studio');
+      setIsStudioOpen(true);
       setWizardStep('2');
       return;
     }
