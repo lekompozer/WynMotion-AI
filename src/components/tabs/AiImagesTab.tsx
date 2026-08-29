@@ -62,7 +62,8 @@ type MainViewMode = 'tools' | 'removebg' | 'inspiration';
 interface ToolConfig {
   id: ImageEndpoint;
   icon: typeof Camera;
-  iconBg: string;
+  iconBg: string;     // semi-transparent bg e.g. 'bg-blue-500/12'
+  iconColor: string;  // icon color e.g. 'text-blue-500'
   nameVi: string;
   nameEn: string;
   badgeVi: string;
@@ -72,126 +73,137 @@ interface ToolConfig {
   type: 'generation' | 'editing';
 }
 
+// Web-parity order: matches GeminiImageModal.tsx endpoint order exactly
 const CUSTOM_TOOLS: ToolConfig[] = [
   {
     id: 'photorealistic',
     icon: Camera,
-    iconBg: 'from-blue-500 to-indigo-600',
+    iconBg: 'bg-blue-500/12',
+    iconColor: 'text-blue-500',
     nameVi: 'Chân Thực',
     nameEn: 'Photorealistic',
     badgeVi: 'Camera 8K',
     badgeEn: '8K Camera',
-    descVi: 'Tạo ảnh chụp chân dung, phong cảnh sắc nét như máy ảnh DSLR 8K',
-    descEn: 'Ultra-detailed camera portraits and realistic scenes',
+    descVi: 'Tạo ảnh chân thực như chụp bằng máy ảnh thật',
+    descEn: 'Create photorealistic images like real photos',
     type: 'generation',
   },
   {
     id: 'stylized',
     icon: Palette,
-    iconBg: 'from-purple-500 to-pink-600',
+    iconBg: 'bg-fuchsia-500/12',
+    iconColor: 'text-fuchsia-500',
     nameVi: 'Cách Điệu',
     nameEn: 'Stylized Art',
     badgeVi: '3D & Anime',
     badgeEn: '3D & Anime',
-    descVi: '3D Pixar, Anime, Màu nước, Tranh sơn dầu, Flat Art sáng tạo',
-    descEn: '3D character renders, anime illustrations and watercolor',
+    descVi: 'Tạo ảnh với phong cách nghệ thuật (anime, watercolor...)',
+    descEn: 'Create images with artistic styles (anime, watercolor...)',
     type: 'generation',
   },
   {
     id: 'logo',
     icon: Type,
-    iconBg: 'from-amber-500 to-orange-600',
-    nameVi: 'Logo & Icon',
-    nameEn: 'Logo & Icon',
+    iconBg: 'bg-amber-500/12',
+    iconColor: 'text-amber-500',
+    nameVi: 'Logo & Typography',
+    nameEn: 'Logo & Typography',
     badgeVi: 'Vector Pro',
     badgeEn: 'Vector Pro',
-    descVi: 'Thiết kế nhận diện thương hiệu, biểu tượng vector và icon app',
-    descEn: 'Modern brand identity, vector logos and clean icons',
+    descVi: 'Tạo logo thương hiệu và biểu tượng',
+    descEn: 'Create brand logos and icons',
     type: 'generation',
-  },
-  {
-    id: 'background',
-    icon: ImageIcon,
-    iconBg: 'from-emerald-500 to-teal-600',
-    nameVi: 'Hình Nền',
-    nameEn: 'Background',
-    badgeVi: 'Wallpaper 4K',
-    badgeEn: '4K Wallpaper',
-    descVi: 'Tạo phông nền, texture, thiên nhiên, kiến trúc và Sci-Fi',
-    descEn: 'Stunning 4K wallpapers, landscape and studio textures',
-    type: 'generation',
-  },
-  {
-    id: 'mockup',
-    icon: Package,
-    iconBg: 'from-rose-500 to-red-600',
-    nameVi: 'Mockup',
-    nameEn: 'Mockup',
-    badgeVi: 'Sản Phẩm',
-    badgeEn: 'Product Ad',
-    descVi: 'Ghép sản phẩm lên bao bì, áo thun, poster và không gian thực',
-    descEn: 'Place products on packaging, apparel and studio scenes',
-    type: 'generation',
-  },
-  {
-    id: 'sequential',
-    icon: Film,
-    iconBg: 'from-cyan-500 to-blue-600',
-    nameVi: 'Chuỗi Ảnh',
-    nameEn: 'Sequential',
-    badgeVi: 'Storyboard',
-    badgeEn: 'Storyboard',
-    descVi: 'Tạo storyboard, truyện tranh nhiều khung hình giữ nguyên nhân vật',
-    descEn: 'Multi-frame storytelling with character consistency',
-    type: 'generation',
-  },
-  {
-    id: 'style-transfer',
-    icon: Wand2,
-    iconBg: 'from-fuchsia-500 to-purple-600',
-    nameVi: 'Đổi Phong Cách',
-    nameEn: 'Style Transfer',
-    badgeVi: 'Filter AI',
-    badgeEn: 'AI Filter',
-    descVi: 'Biến ảnh thật thành tranh vẽ nghệ thuật, hoạt hình anime',
-    descEn: 'Transform photos into artistic paintings or 3D cartoon',
-    type: 'editing',
   },
   {
     id: 'object-edit',
     icon: Edit3,
-    iconBg: 'from-violet-500 to-indigo-600',
+    iconBg: 'bg-violet-500/12',
+    iconColor: 'text-violet-500',
     nameVi: 'Sửa Vật Thể',
     nameEn: 'Object Edit',
     badgeVi: 'Thay Thế',
     badgeEn: 'Smart Replace',
-    descVi: 'Đổi trang phục, đổi màu xe, thêm bớt đối tượng theo câu lệnh',
-    descEn: 'Replace clothing, objects, colors and elements with text',
-    type: 'editing',
-  },
-  {
-    id: 'inpainting',
-    icon: Scissors,
-    iconBg: 'from-pink-500 to-rose-600',
-    nameVi: 'Inpainting',
-    nameEn: 'Inpainting',
-    badgeVi: 'Vẽ Chi Tiết',
-    badgeEn: 'Fill Detail',
-    descVi: 'Xóa vật thể thừa hoặc vẽ thêm chi tiết vào khu vực mong muốn',
-    descEn: 'Erase unwanted items or fill new elements precisely',
+    descVi: 'Chỉnh sửa đối tượng cụ thể trong ảnh',
+    descEn: 'Edit specific objects in image',
     type: 'editing',
   },
   {
     id: 'composition',
     icon: Layers,
-    iconBg: 'from-sky-500 to-cyan-600',
+    iconBg: 'bg-emerald-500/12',
+    iconColor: 'text-emerald-500',
     nameVi: 'Ghép Cảnh',
-    nameEn: 'Composition',
+    nameEn: 'Advanced Composition',
     badgeVi: 'Đa Lớp 3D',
     badgeEn: 'Multi-Layer',
-    descVi: 'Hòa trộn chủ thể và phông nền với ánh sáng và bóng đổ tự nhiên',
-    descEn: 'Blend subject and background with unified realistic lighting',
+    descVi: 'Kết hợp nhiều ảnh thành một composition',
+    descEn: 'Combine multiple images into one composition',
     type: 'editing',
+  },
+  {
+    id: 'sequential',
+    icon: Film,
+    iconBg: 'bg-red-500/12',
+    iconColor: 'text-red-500',
+    nameVi: 'Chuỗi Ảnh',
+    nameEn: 'Sequential Art',
+    badgeVi: 'Storyboard',
+    badgeEn: 'Storyboard',
+    descVi: 'Tạo storyboard và comic panels',
+    descEn: 'Create storyboards and comic panels',
+    type: 'generation',
+  },
+  {
+    id: 'mockup',
+    icon: Package,
+    iconBg: 'bg-cyan-500/12',
+    iconColor: 'text-cyan-500',
+    nameVi: 'Product Mockup',
+    nameEn: 'Product Mockup',
+    badgeVi: 'Sản Phẩm',
+    badgeEn: 'Product Ad',
+    descVi: 'Tạo mockup sản phẩm cho marketing',
+    descEn: 'Create product mockups for marketing',
+    type: 'generation',
+  },
+  {
+    id: 'style-transfer',
+    icon: Wand2,
+    iconBg: 'bg-purple-500/12',
+    iconColor: 'text-purple-500',
+    nameVi: 'Đổi Phong Cách',
+    nameEn: 'Style Transfer',
+    badgeVi: 'Filter AI',
+    badgeEn: 'AI Filter',
+    descVi: 'Chuyển ảnh thành phong cách nghệ thuật khác',
+    descEn: 'Transform image to different artistic style',
+    type: 'editing',
+  },
+  {
+    id: 'inpainting',
+    icon: Scissors,
+    iconBg: 'bg-rose-500/12',
+    iconColor: 'text-rose-500',
+    nameVi: 'Inpainting',
+    nameEn: 'Inpainting',
+    badgeVi: 'Vẽ Chi Tiết',
+    badgeEn: 'Fill Detail',
+    descVi: 'Thêm, xóa hoặc thay thế phần tử trong ảnh',
+    descEn: 'Add, remove or replace elements in image',
+    type: 'editing',
+  },
+  {
+    id: 'background',
+    icon: ImageIcon,
+    iconBg: 'bg-green-500/12',
+    iconColor: 'text-green-500',
+    nameVi: 'Hình Nền',
+    nameEn: 'Background',
+    badgeVi: 'Wallpaper 4K',
+    badgeEn: '4K Wallpaper',
+    descVi: 'Tạo background cho UI và wallpaper',
+    descEn: 'Create backgrounds for UI and wallpapers',
+    type: 'generation',
   },
 ];
 
@@ -472,65 +484,83 @@ export const AiImagesTab: React.FC = () => {
       {mainView === 'tools' && (
         <div className="space-y-4">
           {!selectedTool ? (
-            // ── Grid View: 10 Square Tool Cards ──
-            <div className="space-y-3.5 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between px-1">
-                <div>
-                  <h2 className={`text-sm font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {t('Bộ Công Cụ AI Images (10 Endpoint)', 'AI Image Suite (10 Endpoints)')}
-                  </h2>
-                  <p className="text-[11px] text-slate-400">
-                    {t('Chạm vào một công cụ để tùy chỉnh tham số và tạo ảnh', 'Tap a tool to configure parameters and generate')}
-                  </p>
+            // ── Grid View: 10 Tool Cards — Web parity (GeminiImageModal style) ──
+            <div className="space-y-4 animate-in fade-in duration-200">
+
+              {/* ── Glass Container: header + grid (matches web rounded-[30px] glass panel) ── */}
+              <div
+                className={`rounded-[30px] border p-4 sm:p-5 backdrop-blur-2xl ${
+                  isDark
+                    ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                    : 'border-white/80 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.60)]'
+                }`}
+              >
+                {/* Header: Sparkles gradient icon + CUSTOM TOOLS label + title */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-11 w-11 rounded-[18px] bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 flex items-center justify-center shadow-lg shrink-0">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className={`text-xs uppercase tracking-[0.24em] ${
+                      isDark ? 'text-fuchsia-200/70' : 'text-fuchsia-700/70'
+                    }`}>
+                      Custom Tools
+                    </p>
+                    <h3 className={`text-lg sm:text-xl font-semibold ${
+                      isDark ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {t('10 AI tools studio', '10 AI tools studio')}
+                    </h3>
+                  </div>
                 </div>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/15 text-[#FF2D55] border border-rose-500/30">
-                  10 Tools
-                </span>
-              </div>
 
-              {/* 2-Row Grid: 5 columns on desktop / 2 rows on mobile */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
-                {CUSTOM_TOOLS.map((tool) => {
-                  const Icon = tool.icon;
-                  return (
-                    <div
-                      key={tool.id}
-                      onClick={() => handleSelectTool(tool.id)}
-                      className={`group relative aspect-square p-3.5 rounded-2xl border flex flex-col justify-between items-center text-center cursor-pointer transition-all duration-200 active:scale-95 ${
-                        isDark
-                          ? 'bg-[#121522] border-slate-800/90 hover:border-rose-500/60 hover:bg-[#171B2C] shadow-lg shadow-black/40'
-                          : 'bg-white border-slate-200 hover:border-black hover:shadow-md'
-                      }`}
-                    >
-                      {/* Top Badge */}
-                      <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800/70 text-slate-300 border border-slate-700">
-                        {isVietnamese ? tool.badgeVi : tool.badgeEn}
-                      </span>
-
-                      {/* Icon in Gradient Circle */}
-                      <div
-                        className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${tool.iconBg} flex items-center justify-center text-white shadow-md shadow-black/30 group-hover:scale-110 transition-transform`}
+                {/* Tool Cards Grid: 2 cols mobile / 5 cols sm+ — matching web xl:grid-cols-5 */}
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">
+                  {CUSTOM_TOOLS.map((tool) => {
+                    const Icon = tool.icon;
+                    const isSelected = selectedTool === tool.id;
+                    return (
+                      <button
+                        key={tool.id}
+                        type="button"
+                        onClick={() => handleSelectTool(tool.id)}
+                        className={`relative overflow-hidden rounded-[26px] border p-4 text-left transition-all duration-200 active:scale-95 ${
+                          isSelected
+                            ? isDark
+                              ? 'border-cyan-400/45 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.28),0_24px_48px_rgba(0,0,0,0.22)]'
+                              : 'border-cyan-300 bg-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_18px_34px_rgba(15,23,42,0.08)]'
+                            : isDark
+                              ? 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
+                              : 'border-white/80 bg-white/80 hover:bg-white'
+                        }`}
                       >
-                        <Icon className="w-6 h-6" />
-                      </div>
-
-                      {/* Title & Type */}
-                      <div className="w-full">
-                        <h3 className={`text-xs font-black truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {/* Icon — semi-transparent bg matching web iconBg pattern */}
+                        <div className={`w-12 h-12 rounded-2xl mb-3 flex items-center justify-center ${tool.iconBg}`}>
+                          <Icon className={`w-6 h-6 ${tool.iconColor}`} />
+                        </div>
+                        {/* Title */}
+                        <p className={`text-sm font-semibold ${
+                          isDark ? 'text-white' : 'text-slate-900'
+                        }`}>
                           {isVietnamese ? tool.nameVi : tool.nameEn}
-                        </h3>
-                        <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
+                        </p>
+                        {/* Description */}
+                        <p className={`mt-2 text-xs leading-5 ${
+                          isDark ? 'text-white/65' : 'text-gray-600'
+                        }`}>
                           {isVietnamese ? tool.descVi : tool.descEn}
                         </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Quick Inspiration Presets Strip */}
-              <div className="pt-2 space-y-2">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1">
+              {/* Quick Inspiration Presets Strip — outside glass container */}
+              <div className="space-y-2">
+                <span className={`text-[11px] font-black uppercase tracking-wider px-1 ${
+                  isDark ? 'text-slate-400' : 'text-slate-500'
+                }`}>
                   💡 {t('Gợi ý Prompt phổ biến', 'Popular Prompt Presets')}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -543,16 +573,22 @@ export const AiImagesTab: React.FC = () => {
                       }}
                       className={`p-3 rounded-2xl border cursor-pointer transition-all active:scale-98 flex items-start gap-2.5 ${
                         isDark
-                          ? 'bg-[#121522] border-slate-800 hover:border-slate-700'
+                          ? 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06]'
                           : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <Sparkles className="w-4 h-4 text-[#FF2D55] shrink-0 mt-0.5" />
+                      <Sparkles className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        isDark ? 'text-fuchsia-400' : 'text-fuchsia-600'
+                      }`} />
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-black text-slate-200 truncate">
+                        <div className={`text-xs font-semibold truncate ${
+                          isDark ? 'text-white' : 'text-slate-800'
+                        }`}>
                           {isVietnamese ? preset.labelVi : preset.labelEn}
                         </div>
-                        <div className="text-[11px] text-slate-400 line-clamp-2 mt-0.5 font-mono">
+                        <div className={`text-[11px] line-clamp-2 mt-0.5 font-mono ${
+                          isDark ? 'text-slate-400' : 'text-slate-500'
+                        }`}>
                           {preset.prompt}
                         </div>
                       </div>
