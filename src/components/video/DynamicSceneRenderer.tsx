@@ -223,6 +223,10 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     visualStyle === 'tech_ui' ||
     visualStyle === 'vector_motion';
 
+  const displaySummary = scene.summary_text || scene.voice_transcript || scene.title || 'Nội dung phân cảnh';
+  const primaryKeyword = scene.highlight_keywords?.[0] || scene.title || 'WynMotion AI';
+  const secondaryKeywords = scene.highlight_keywords?.slice(1, 4) || [];
+
   // 1. TRY EVALUATING DYNAMIC AI-GENERATED SCENE CODE FIRST (for Science Explainer, Custom STEM/Geometry, etc.)
   const EvaluatedComponent = useMemo(() => {
     if (scene.code) {
@@ -290,40 +294,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         onSubsClick={onSubsClick}
       />
     );
-  }
-          ref={containerRef}
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: bgColor || '#060B18',
-          }}
-        >
-          <div
-            style={{
-              width: BASE_WIDTH,
-              height: BASE_HEIGHT,
-              transform: `scale(${scale})`,
-              transformOrigin: 'center center',
-              position: 'absolute',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            <EvaluatedComponent />
-          </div>
-        </div>
-      );
-    } catch (e) {
-      console.warn('EvaluatedComponent render error:', e);
-    }
   }
 
   // Position styles for 2 Layers
