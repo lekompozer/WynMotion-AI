@@ -47,6 +47,84 @@ export type ImageEndpoint =
 
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
 
+export interface PhotorealisticRequest {
+  prompt: string;
+  lighting?: 'Natural' | 'Studio' | 'Cinematic' | 'Golden Hour' | '';
+  camera_angle?: 'Wide Angle' | 'Macro' | 'Drone View' | 'Eye Level' | '';
+  aspect_ratio: AspectRatio;
+  negative_prompt?: string;
+}
+
+export interface StylizedRequest {
+  prompt: string;
+  style_preset: 'Anime' | 'Watercolor' | 'Oil Painting' | 'Flat Design' | '3D Render' | 'Sticker Art';
+  sticker_mode?: boolean;
+  aspect_ratio: AspectRatio;
+}
+
+export interface LogoRequest {
+  brand_name: string;
+  tagline?: string;
+  industry: string;
+  style: 'Modern' | 'Minimalist' | 'Vintage' | 'Luxury';
+  color_palette?: string;
+  visual_elements?: string;
+  aspect_ratio: AspectRatio;
+}
+
+export interface BackgroundRequest {
+  theme: string;
+  minimalist_mode?: boolean;
+  negative_space_position?: 'Center' | 'Left' | 'Right' | 'Top';
+  color_mood?: 'Dark' | 'Light' | 'Pastel' | 'Vibrant';
+  aspect_ratio: AspectRatio;
+}
+
+export interface MockupRequest {
+  scene_description: string;
+  placement_type: 'Tabletop' | 'Model Wearing' | 'Outdoor' | 'Studio Backdrop';
+  aspect_ratio: AspectRatio;
+}
+
+export interface SequentialRequest {
+  story_script: string;
+  panel_count: number;
+  style: 'Comic Book' | 'Manga' | 'Storyboard Sketch';
+  aspect_ratio: AspectRatio;
+}
+
+export interface StyleTransferRequest {
+  target_style: string;
+  strength?: number;
+  preserve_structure?: boolean;
+  aspect_ratio: AspectRatio;
+  negative_prompt?: string;
+}
+
+export interface ObjectEditRequest {
+  target_object: string;
+  modification: string;
+  preserve_background?: boolean;
+  aspect_ratio: AspectRatio;
+  negative_prompt?: string;
+}
+
+export interface InpaintingRequest {
+  prompt: string;
+  action: 'add' | 'remove' | 'replace';
+  blend_mode?: 'natural' | 'seamless' | 'artistic';
+  aspect_ratio: AspectRatio;
+  negative_prompt?: string;
+}
+
+export interface CompositionRequest {
+  prompt: string;
+  composition_style?: 'realistic' | 'artistic' | 'professional' | 'collage';
+  lighting_adjustment?: boolean;
+  aspect_ratio: AspectRatio;
+  negative_prompt?: string;
+}
+
 export interface GenerateImageResult {
   image_url: string;
   file_id?: string;
