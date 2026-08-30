@@ -1,0 +1,97 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-08-30T12:00:00Z",
+  "cdn_base_url": "https://cdn.wynmotion.com/music",
+  "categories": [
+    {
+      "id": "future-bass",
+      "nameVi": "Future Bass & Sôi Động",
+      "nameEn": "Future Bass & Upbeat",
+      "descVi": "Âm thanh sôi động, beat drop bùng nổ, phù hợp video năng động, quảng cáo",
+      "descEn": "Energetic Future Bass beats with powerful drops, perfect for promo and reels",
+      "icon": "Zap",
+      "track_count": 118
+    },
+    {
+      "id": "relax",
+      "nameVi": "Nhạc Nhẹ Nhàng & Chill",
+      "nameEn": "Relax & Chill",
+      "descVi": "Giai điệu thư giãn, Lo-fi chill, acoustic nhẹ nhàng phù hợp vlog, podcast, khoa học",
+      "descEn": "Peaceful Lo-fi, acoustic and ambient tunes suitable for vlogs and storytelling",
+      "icon": "Coffee",
+      "track_count": 29
+    },
+    {
+      "id": "songs",
+      "nameVi": "Nhạc Có Lời & Rap - EDM",
+      "nameEn": "Vocal Songs & Rap-EDM",
+      "descVi": "Nhạc có giọng hát, vocal bắt tai, rap lyrical và EDM nhịp độ nhanh",
+      "descEn": "Catchy vocal hooks, energetic rap and modern vocal EDM tracks",
+      "icon": "Mic",
+      "track_count": 51
+    }
+  ],
+  "total_tracks": 198,
+  "tracks": [
+    {
+      "id": "track_future-bass_001",
+      "title": "Hold On To Me",
+      "artist": "Lost Scripture",
+      "category": "future-bass",
+      "category_name_vi": "Future Bass & Sôi Động",
+      "category_name_en": "Future Bass & Upbeat",
+      "bpm": 128,
+      "total_duration_sec": 168.52,
+      "highlight_start_sec": 64.0,
+      "original_filename": "20886885-lost-scripture-hold-on-to-me-royalty-free-music-170297.mp3",
+      "durations": {
+        "15s": { "url": "https://cdn.wynmotion.com/music/future-bass/track_future-bass_001_15s.mp3", "duration_sec": 15.0, "label": "15 Giây" },
+        "30s": { "url": "https://cdn.wynmotion.com/music/future-bass/track_future-bass_001_30s.mp3", "duration_sec": 30.0, "label": "30 Giây" },
+        "45s": { "url": "https://cdn.wynmotion.com/music/future-bass/track_future-bass_001_45s.mp3", "duration_sec": 45.0, "label": "45 Giây" },
+        "60s": { "url": "https://cdn.wynmotion.com/music/future-bass/track_future-bass_001_60s.mp3", "duration_sec": 60.0, "label": "1 Phút" },
+        "90s": { "url": "https://cdn.wynmotion.com/music/future-bass/track_future-bass_001_90s.mp3", "duration_sec": 90.0, "label": "1p30s" },
+        "full": { "url": "https://cdn.wynmotion.com/music/future-bass/track_future-bass_001_full.mp3", "duration_sec": 168.52, "label": "Full Track" }
+      }
+    },
+    {
+      "id": "track_relax_001",
+      "title": "Devotion",
+      "artist": "Alana Jordan",
+      "category": "relax",
+      "category_name_vi": "Nhạc Nhẹ Nhàng & Chill",
+      "category_name_en": "Relax & Chill",
+      "bpm": 85,
+      "total_duration_sec": 192.98,
+      "highlight_start_sec": 88.16,
+      "original_filename": "alanajordan-devotion-538734.mp3",
+      "durations": {
+        "15s": { "url": "https://cdn.wynmotion.com/music/relax/track_relax_001_15s.mp3", "duration_sec": 15.0, "label": "15 Giây" },
+        "30s": { "url": "https://cdn.wynmotion.com/music/relax/track_relax_001_30s.mp3", "duration_sec": 30.0, "label": "30 Giây" },
+        "45s": { "url": "https://cdn.wynmotion.com/music/relax/track_relax_001_45s.mp3", "duration_sec": 45.0, "label": "45 Giây" },
+        "60s": { "url": "https://cdn.wynmotion.com/music/relax/track_relax_001_60s.mp3", "duration_sec": 60.0, "label": "1 Phút" },
+        "90s": { "url": "https://cdn.wynmotion.com/music/relax/track_relax_001_90s.mp3", "duration_sec": 90.0, "label": "1p30s" },
+        "full": { "url": "https://cdn.wynmotion.com/music/relax/track_relax_001_full.mp3", "duration_sec": 192.98, "label": "Full Track" }
+      }
+    },
+    {
+      "id": "track_songs_001",
+      "title": "Mind On Fire",
+      "artist": "Rahul Sapkal",
+      "category": "songs",
+      "category_name_vi": "Nhạc Có Lời & Rap - EDM",
+      "category_name_en": "Vocal Songs & Rap-EDM",
+      "bpm": 135,
+      "total_duration_sec": 153.98,
+      "highlight_start_sec": 18.72,
+      "original_filename": "rahulsapkal-mind-on-fire-fast-motivational-rap-lyrical-hip-hop-beat-504011.mp3",
+      "durations": {
+        "15s": { "url": "https://cdn.wynmotion.com/music/songs/track_songs_001_15s.mp3", "duration_sec": 15.0, "label": "15 Giây" },
+        "30s": { "url": "https://cdn.wynmotion.com/music/songs/track_songs_001_30s.mp3", "duration_sec": 30.0, "label": "30 Giây" },
+        "45s": { "url": "https://cdn.wynmotion.com/music/songs/track_songs_001_45s.mp3", "duration_sec": 45.0, "label": "45 Giây" },
+        "60s": { "url": "https://cdn.wynmotion.com/music/songs/track_songs_001_60s.mp3", "duration_sec": 60.0, "label": "1 Phút" },
+        "90s": { "url": "https://cdn.wynmotion.com/music/songs/track_songs_001_90s.mp3", "duration_sec": 90.0, "label": "1p30s" },
+        "full": { "url": "https://cdn.wynmotion.com/music/songs/track_songs_001_full.mp3", "duration_sec": 153.98, "label": "Full Track" }
+      }
+    }
+  ]
+}
