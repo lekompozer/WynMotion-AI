@@ -1,17 +1,85 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bell, LogIn, ChevronRight, User as UserIcon } from 'lucide-react';
+import { Bell, LogIn, ChevronRight, User as UserIcon, Mic } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { ProfileSidePanel } from './ProfileSidePanel';
 
 export const AppHeader: React.FC = () => {
-  const { isDark, t } = useApp();
+  const { isDark, activeTab, isVietnamese, t } = useApp();
   const { user } = useWordaiAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Dynamic Header title, subtitle, and icon per tab
+  const getHeaderInfo = () => {
+    if (activeTab === 'audio') {
+      return {
+        title: 'AI Audio Studio',
+        subtitle: isVietnamese
+          ? 'Tạo giọng đọc & nhạc nền AI trong một studio'
+          : 'Create AI voice and AI background music in one studio',
+        icon: (
+          <div className="relative w-9 h-9 rounded-2xl bg-gradient-to-br from-fuchsia-500 via-pink-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0 border border-fuchsia-400/30">
+            <Mic className="w-5 h-5 text-white" />
+          </div>
+        ),
+      };
+    }
+
+    if (activeTab === 'images') {
+      return {
+        title: 'AI Images Studio',
+        subtitle: isVietnamese
+          ? 'Tạo và chỉnh sửa ảnh bằng AI'
+          : 'Create and edit images with AI',
+        icon: (
+          <div className="relative w-9 h-9 rounded-2xl overflow-hidden shadow-sm flex-shrink-0 flex items-center justify-center">
+            <img
+              src="https://www.wynai.pro/logo%20AI%20Image%20Studio.png"
+              alt="AI Images Studio"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        ),
+      };
+    }
+
+    if (activeTab === 'library') {
+      return {
+        title: 'WynMotion',
+        subtitle: t('Thư Viện Đám Mây', 'Cloud Library'),
+        icon: (
+          <div className="relative w-9 h-9 rounded-2xl overflow-hidden shadow-sm border border-cyan-400/30 flex-shrink-0">
+            <img
+              src="/assets/mascot-logo.jpg"
+              alt="WynMotion"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ),
+      };
+    }
+
+    // Default: 'video' (Studio)
+    return {
+      title: 'WynMotion',
+      subtitle: t('AI Studio', 'AI Studio'),
+      icon: (
+        <div className="relative w-9 h-9 rounded-2xl overflow-hidden shadow-sm border border-cyan-400/30 flex-shrink-0">
+          <img
+            src="/assets/mascot-logo.jpg"
+            alt="WynMotion"
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ),
+    };
+  };
+
+  const headerInfo = getHeaderInfo();
 
   return (
     <>
@@ -27,21 +95,15 @@ export const AppHeader: React.FC = () => {
       >
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
 
-          {/* ── Left: App Icon + Brand Name ── */}
+          {/* ── Left: App Icon + Dynamic Brand Name & Subtitle ── */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative w-9 h-9 rounded-2xl overflow-hidden shadow-sm border border-cyan-400/30 flex-shrink-0">
-              <img
-                src="/assets/mascot-logo.jpg"
-                alt="WynMotion"
-                className="w-full h-full object-cover"
-              />
-            </div>
+            {headerInfo.icon}
             <div className="min-w-0">
-              <h1 className={`text-[17px] font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                WynMotion
+              <h1 className={`text-[17px] font-black tracking-tight leading-none truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {headerInfo.title}
               </h1>
-              <p className="text-[11px] font-medium text-slate-400 leading-tight mt-0.5">
-                {t('AI Studio', 'AI Studio')}
+              <p className={`text-[11px] font-medium leading-tight mt-0.5 truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {headerInfo.subtitle}
               </p>
             </div>
           </div>

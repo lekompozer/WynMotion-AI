@@ -4,10 +4,11 @@
  * AiImagesTab.tsx — WynMotion-AI iOS & Mobile Image Studio
  *
  * Full Parity with Web GeminiImageModal (Studio + 10 Tools + Remove BG):
- * - Studio View with Design Prompt, Consistent History (Session), Extra Images, Preview Canvas & Pixabay Inspiration
- * - 10 Tools Grid matching Web exactly (No clutter badges, clean w-12 icon boxes, 2-line descriptions, exact tool order)
- * - Header with https://www.wynai.pro/logo%20AI%20Image%20Studio.png + "AI Images Studio"
- * - Full parity with Web APIs and parameters
+ * - Clean top tab navigation directly under global AppHeader
+ * - 100% Light & Dark Theme adaptive colors (Header, Consistent History, Session Picker, Character/Object, Inspiration, Form Inputs)
+ * - Studio View with Design Prompt, Session Management, Extra Images, and Pixabay Inspiration
+ * - 10 Tools Grid matching Web layout without clutter badges
+ * - Streamlined RemoveBG (accepts PNG, JPG, JPEG, WEBP at original aspect ratio & resolution)
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -36,7 +37,6 @@ import {
   FolderOpen,
   Trash2,
   Search,
-  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -86,9 +86,8 @@ interface PixabayImage {
   tags: string;
 }
 
-// Exact Web 10 Tools order & definition matching Image 3
+// Exact Web 10 Tools order & definition
 const CUSTOM_TOOLS: ToolConfig[] = [
-  // 1. Photorealistic
   {
     id: 'photorealistic',
     icon: Camera,
@@ -100,7 +99,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Create photorealistic images like real photos',
     type: 'generation',
   },
-  // 2. Stylized Art
   {
     id: 'stylized',
     icon: Palette,
@@ -112,7 +110,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Create images with artistic styles (anime, watercolor...)',
     type: 'generation',
   },
-  // 3. Logo & Typography
   {
     id: 'logo',
     icon: Type,
@@ -124,7 +121,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Create brand logos and icons',
     type: 'generation',
   },
-  // 4. Object Edit
   {
     id: 'object-edit',
     icon: Edit3,
@@ -136,7 +132,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Edit specific objects in image',
     type: 'editing',
   },
-  // 5. Advanced Composition
   {
     id: 'composition',
     icon: Layers,
@@ -148,7 +143,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Combine multiple images into one composition',
     type: 'editing',
   },
-  // 6. Sequential Art
   {
     id: 'sequential',
     icon: Film,
@@ -160,7 +154,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Create storyboards and comic panels',
     type: 'generation',
   },
-  // 7. Product Mockup
   {
     id: 'mockup',
     icon: Package,
@@ -172,7 +165,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Create product mockups for marketing',
     type: 'generation',
   },
-  // 8. Style Transfer
   {
     id: 'style-transfer',
     icon: Wand2,
@@ -184,7 +176,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Transform image to different artistic style',
     type: 'editing',
   },
-  // 9. Inpainting
   {
     id: 'inpainting',
     icon: Scissors,
@@ -196,7 +187,6 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     descEn: 'Add, remove or replace elements in image',
     type: 'editing',
   },
-  // 10. Background
   {
     id: 'background',
     icon: ImageIcon,
@@ -244,7 +234,7 @@ export const AiImagesTab: React.FC = () => {
   const extraImagesRef = useRef<HTMLInputElement>(null);
   const sessionFileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Pixabay Inspiration State (Inside Studio) ──
+  // ── Pixabay Inspiration State ──
   const [inspirationTab, setInspirationTab] = useState<string>('ai-images');
   const [pixabayQuery, setPixabayQuery] = useState('');
   const [pixabayImages, setPixabayImages] = useState<PixabayImage[]>([]);
@@ -277,35 +267,7 @@ export const AiImagesTab: React.FC = () => {
   const [logoVisualElements, setLogoVisualElements] = useState('');
   const [logoAspectRatio, setLogoAspectRatio] = useState<AspectRatio>('1:1');
 
-  // ── Tool 4: Background Form State ──
-  const [bgTheme, setBgTheme] = useState('');
-  const [bgMinimalistMode, setBgMinimalistMode] = useState(false);
-  const [bgNegativeSpace, setBgNegativeSpace] = useState<'Center' | 'Left' | 'Right' | 'Top'>('Center');
-  const [bgColorMood, setBgColorMood] = useState<'Dark' | 'Light' | 'Pastel' | 'Vibrant'>('Dark');
-  const [bgAspectRatio, setBgAspectRatio] = useState<AspectRatio>('16:9');
-
-  // ── Tool 5: Mockup Form State ──
-  const [mockupScene, setMockupScene] = useState('');
-  const [mockupPlacement, setMockupPlacement] = useState<'Tabletop' | 'Model Wearing' | 'Outdoor' | 'Studio Backdrop'>('Tabletop');
-  const [mockupAspectRatio, setMockupAspectRatio] = useState<AspectRatio>('4:3');
-
-  // ── Tool 6: Sequential Form State ──
-  const [seqScript, setSeqScript] = useState('');
-  const [seqPanelCount, setSeqPanelCount] = useState(2);
-  const [seqStyle, setSeqStyle] = useState<'Comic Book' | 'Manga' | 'Storyboard Sketch'>('Comic Book');
-  const [seqAspectRatio, setSeqAspectRatio] = useState<AspectRatio>('16:9');
-
-  // ── Tool 7: Style Transfer Form State ──
-  const [stImageFile, setStImageFile] = useState<File | null>(null);
-  const [stImagePreview, setStImagePreview] = useState<string | null>(null);
-  const [stTargetStyle, setStTargetStyle] = useState('Van Gogh');
-  const [stStrength, setStStrength] = useState(80);
-  const [stPreserveStructure, setStPreserveStructure] = useState(true);
-  const [stAspectRatio, setStAspectRatio] = useState<AspectRatio>('1:1');
-  const [stNegativePrompt, setStNegativePrompt] = useState('');
-  const stFileInputRef = useRef<HTMLInputElement>(null);
-
-  // ── Tool 8: Object Edit Form State ──
+  // ── Tool 4: Object Edit Form State ──
   const [oeImageFile, setOeImageFile] = useState<File | null>(null);
   const [oeImagePreview, setOeImagePreview] = useState<string | null>(null);
   const [oeTargetObject, setOeTargetObject] = useState('');
@@ -314,6 +276,40 @@ export const AiImagesTab: React.FC = () => {
   const [oeAspectRatio, setOeAspectRatio] = useState<AspectRatio>('1:1');
   const [oeNegativePrompt, setOeNegativePrompt] = useState('');
   const oeFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Tool 5: Composition Form State ──
+  const [compBaseFile, setCompBaseFile] = useState<File | null>(null);
+  const [compBasePreview, setCompBasePreview] = useState<string | null>(null);
+  const [compOverlayFiles, setCompOverlayFiles] = useState<File[]>([]);
+  const [compOverlayPreviews, setCompOverlayPreviews] = useState<string[]>([]);
+  const [compPrompt, setCompPrompt] = useState('');
+  const [compStyle, setCompStyle] = useState<'realistic' | 'artistic' | 'professional' | 'collage'>('realistic');
+  const [compLightingAdj, setCompLightingAdj] = useState(true);
+  const [compAspectRatio, setCompAspectRatio] = useState<AspectRatio>('1:1');
+  const [compNegativePrompt, setCompNegativePrompt] = useState('');
+  const compBaseInputRef = useRef<HTMLInputElement>(null);
+  const compOverlayInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Tool 6: Sequential Form State ──
+  const [seqScript, setSeqScript] = useState('');
+  const [seqPanelCount, setSeqPanelCount] = useState(2);
+  const [seqStyle, setSeqStyle] = useState<'Comic Book' | 'Manga' | 'Storyboard Sketch'>('Comic Book');
+  const [seqAspectRatio, setSeqAspectRatio] = useState<AspectRatio>('16:9');
+
+  // ── Tool 7: Mockup Form State ──
+  const [mockupScene, setMockupScene] = useState('');
+  const [mockupPlacement, setMockupPlacement] = useState<'Tabletop' | 'Model Wearing' | 'Outdoor' | 'Studio Backdrop'>('Tabletop');
+  const [mockupAspectRatio, setMockupAspectRatio] = useState<AspectRatio>('4:3');
+
+  // ── Tool 8: Style Transfer Form State ──
+  const [stImageFile, setStImageFile] = useState<File | null>(null);
+  const [stImagePreview, setStImagePreview] = useState<string | null>(null);
+  const [stTargetStyle, setStTargetStyle] = useState('Van Gogh');
+  const [stStrength, setStStrength] = useState(80);
+  const [stPreserveStructure, setStPreserveStructure] = useState(true);
+  const [stAspectRatio, setStAspectRatio] = useState<AspectRatio>('1:1');
+  const [stNegativePrompt, setStNegativePrompt] = useState('');
+  const stFileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Tool 9: Inpainting Form State ──
   const [inImageFile, setInImageFile] = useState<File | null>(null);
@@ -328,24 +324,16 @@ export const AiImagesTab: React.FC = () => {
   const inFileInputRef = useRef<HTMLInputElement>(null);
   const inMaskInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Tool 10: Composition Form State ──
-  const [compBaseFile, setCompBaseFile] = useState<File | null>(null);
-  const [compBasePreview, setCompBasePreview] = useState<string | null>(null);
-  const [compOverlayFiles, setCompOverlayFiles] = useState<File[]>([]);
-  const [compOverlayPreviews, setCompOverlayPreviews] = useState<string[]>([]);
-  const [compPrompt, setCompPrompt] = useState('');
-  const [compStyle, setCompStyle] = useState<'realistic' | 'artistic' | 'professional' | 'collage'>('realistic');
-  const [compLightingAdj, setCompLightingAdj] = useState(true);
-  const [compAspectRatio, setCompAspectRatio] = useState<AspectRatio>('1:1');
-  const [compNegativePrompt, setCompNegativePrompt] = useState('');
-  const compBaseInputRef = useRef<HTMLInputElement>(null);
-  const compOverlayInputRef = useRef<HTMLInputElement>(null);
+  // ── Tool 10: Background Form State ──
+  const [bgTheme, setBgTheme] = useState('');
+  const [bgMinimalistMode, setBgMinimalistMode] = useState(false);
+  const [bgNegativeSpace, setBgNegativeSpace] = useState<'Center' | 'Left' | 'Right' | 'Top'>('Center');
+  const [bgColorMood, setBgColorMood] = useState<'Dark' | 'Light' | 'Pastel' | 'Vibrant'>('Dark');
+  const [bgAspectRatio, setBgAspectRatio] = useState<AspectRatio>('16:9');
 
-  // ── RemoveBG State ──
+  // ── Streamlined RemoveBG State (PNG, JPG, JPEG, WEBP) ──
   const [removeBgFile, setRemoveBgFile] = useState<File | null>(null);
   const [removeBgPreview, setRemoveBgPreview] = useState<string | null>(null);
-  const [removeBgPrompt, setRemoveBgPrompt] = useState('');
-  const [removeBgAspectRatio, setRemoveBgAspectRatio] = useState('original');
   const removeBgInputRef = useRef<HTMLInputElement>(null);
 
   // ── Output & Lightbox State ──
@@ -676,64 +664,6 @@ export const AiImagesTab: React.FC = () => {
           });
           break;
 
-        case 'background':
-          if (bgTheme.trim().length < 10) {
-            alert(t('Chủ đề background cần tối thiểu 10 ký tự!', 'Theme needs at least 10 characters!'));
-            setIsGenerating(false);
-            return;
-          }
-          res = await imageService.generateBackground({
-            theme: bgTheme.trim(),
-            minimalist_mode: bgMinimalistMode,
-            negative_space_position: bgMinimalistMode ? bgNegativeSpace : undefined,
-            color_mood: bgColorMood,
-            aspect_ratio: bgAspectRatio,
-          });
-          break;
-
-        case 'mockup':
-          if (mockupScene.trim().length < 10) {
-            alert(t('Mô tả sản phẩm và bối cảnh cần tối thiểu 10 ký tự!', 'Description needs at least 10 characters!'));
-            setIsGenerating(false);
-            return;
-          }
-          res = await imageService.generateMockup({
-            scene_description: mockupScene.trim(),
-            placement_type: mockupPlacement,
-            aspect_ratio: mockupAspectRatio,
-          });
-          break;
-
-        case 'sequential':
-          if (seqScript.trim().length < 10) {
-            alert(t('Kịch bản truyện cần tối thiểu 10 ký tự!', 'Story script needs at least 10 characters!'));
-            setIsGenerating(false);
-            return;
-          }
-          res = await imageService.generateSequential({
-            story_script: seqScript.trim(),
-            panel_count: seqPanelCount,
-            style: seqStyle,
-            aspect_ratio: seqAspectRatio,
-          });
-          break;
-
-        case 'style-transfer':
-          if (!stImageFile || !stTargetStyle.trim()) {
-            alert(t('Vui lòng tải ảnh gốc và chọn phong cách đích!', 'Please upload original image & select target style!'));
-            setIsGenerating(false);
-            return;
-          }
-          res = await imageService.editStyleTransfer({
-            image_file: stImageFile,
-            target_style: stTargetStyle.trim(),
-            strength: stStrength,
-            preserve_structure: stPreserveStructure,
-            aspect_ratio: stAspectRatio,
-            negative_prompt: stNegativePrompt.trim() || undefined,
-          });
-          break;
-
         case 'object-edit':
           if (!oeImageFile || !oeTargetObject.trim() || !oeModification.trim()) {
             alert(t('Vui lòng tải ảnh gốc, nhập đối tượng và mô tả chỉnh sửa!', 'Please fill in original image, target object and modification!'));
@@ -747,23 +677,6 @@ export const AiImagesTab: React.FC = () => {
             preserve_background: oePreserveBg,
             aspect_ratio: oeAspectRatio,
             negative_prompt: oeNegativePrompt.trim() || undefined,
-          });
-          break;
-
-        case 'inpainting':
-          if (!inImageFile || !inPrompt.trim()) {
-            alert(t('Vui lòng tải ảnh gốc và nhập mô tả vùng vẽ!', 'Please upload image and enter prompt!'));
-            setIsGenerating(false);
-            return;
-          }
-          res = await imageService.editInpainting({
-            image_file: inImageFile,
-            mask_file: inMaskFile || undefined,
-            prompt: inPrompt.trim(),
-            action: inAction,
-            blend_mode: inBlendMode,
-            aspect_ratio: inAspectRatio,
-            negative_prompt: inNegativePrompt.trim() || undefined,
           });
           break;
 
@@ -784,6 +697,81 @@ export const AiImagesTab: React.FC = () => {
           });
           break;
 
+        case 'sequential':
+          if (seqScript.trim().length < 10) {
+            alert(t('Kịch bản truyện cần tối thiểu 10 ký tự!', 'Story script needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.generateSequential({
+            story_script: seqScript.trim(),
+            panel_count: seqPanelCount,
+            style: seqStyle,
+            aspect_ratio: seqAspectRatio,
+          });
+          break;
+
+        case 'mockup':
+          if (mockupScene.trim().length < 10) {
+            alert(t('Mô tả sản phẩm và bối cảnh cần tối thiểu 10 ký tự!', 'Description needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.generateMockup({
+            scene_description: mockupScene.trim(),
+            placement_type: mockupPlacement,
+            aspect_ratio: mockupAspectRatio,
+          });
+          break;
+
+        case 'style-transfer':
+          if (!stImageFile || !stTargetStyle.trim()) {
+            alert(t('Vui lòng tải ảnh gốc và chọn phong cách đích!', 'Please upload original image & select target style!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.editStyleTransfer({
+            image_file: stImageFile,
+            target_style: stTargetStyle.trim(),
+            strength: stStrength,
+            preserve_structure: stPreserveStructure,
+            aspect_ratio: stAspectRatio,
+            negative_prompt: stNegativePrompt.trim() || undefined,
+          });
+          break;
+
+        case 'inpainting':
+          if (!inImageFile || !inPrompt.trim()) {
+            alert(t('Vui lòng tải ảnh gốc và nhập mô tả vùng vẽ!', 'Please upload image and enter prompt!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.editInpainting({
+            image_file: inImageFile,
+            mask_file: inMaskFile || undefined,
+            prompt: inPrompt.trim(),
+            action: inAction,
+            blend_mode: inBlendMode,
+            aspect_ratio: inAspectRatio,
+            negative_prompt: inNegativePrompt.trim() || undefined,
+          });
+          break;
+
+        case 'background':
+          if (bgTheme.trim().length < 10) {
+            alert(t('Chủ đề background cần tối thiểu 10 ký tự!', 'Theme needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.generateBackground({
+            theme: bgTheme.trim(),
+            minimalist_mode: bgMinimalistMode,
+            negative_space_position: bgMinimalistMode ? bgNegativeSpace : undefined,
+            color_mood: bgColorMood,
+            aspect_ratio: bgAspectRatio,
+          });
+          break;
+
         default:
           throw new Error('Unknown tool');
       }
@@ -798,6 +786,7 @@ export const AiImagesTab: React.FC = () => {
     }
   };
 
+  // ── Streamlined RemoveBG (No Aspect Ratio / Prompt needed) ──
   const handleExecuteRemoveBg = async () => {
     if (!removeBgFile) {
       alert(t('Vui lòng tải ảnh cần xóa nền!', 'Please upload an image!'));
@@ -808,8 +797,6 @@ export const AiImagesTab: React.FC = () => {
       setResultImage(null);
       const res = await imageService.removeBackground({
         file: removeBgFile,
-        prompt: removeBgPrompt || undefined,
-        aspect_ratio: removeBgAspectRatio !== 'original' ? removeBgAspectRatio : undefined,
       });
       setResultImage({
         image_url: res.cutout_url,
@@ -830,28 +817,7 @@ export const AiImagesTab: React.FC = () => {
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 pt-1 pb-24 space-y-4">
       {/* ─────────────────────────────────────────────────────────────
-          1. UNIFIED APP HEADER (Logo + AI Images Studio + Subtitle)
-          ───────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-1 py-1">
-        <div className="flex items-center gap-3 min-w-0">
-          <img
-            src="https://www.wynai.pro/logo%20AI%20Image%20Studio.png"
-            alt="AI Images Studio"
-            className="w-11 h-11 sm:w-12 sm:h-12 object-contain shrink-0"
-          />
-          <div className="min-w-0">
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight truncate">
-              AI Images Studio
-            </h2>
-            <p className="text-[11px] sm:text-xs text-slate-400 leading-tight truncate">
-              {t('Tạo và chỉnh sửa ảnh bằng AI', 'Create and edit images with AI')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          2. TAB NAVIGATION SWITCHER (Studio | Tools | RemoveBG)
+          1. TAB NAVIGATION SWITCHER (Studio | 10 Tools | RemoveBG)
           ───────────────────────────────────────────────────────────── */}
       <div
         className={`p-1 rounded-2xl border flex items-center gap-1 backdrop-blur-xl ${
@@ -917,16 +883,16 @@ export const AiImagesTab: React.FC = () => {
       />
 
       {/* ─────────────────────────────────────────────────────────────
-          3. VIEW MODE 1: STUDIO (Exact Web Parity — Image 1 Layout)
+          2. VIEW MODE 1: STUDIO (Web Parity & Light/Dark Theme)
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'studio' && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {/* Top Card: DESIGN PROMPT (Matching Image 1 on Web) */}
+          {/* Top Card: DESIGN PROMPT */}
           <div
             className={`rounded-[28px] border p-4 sm:p-5 space-y-3 backdrop-blur-2xl ${
               isDark
                 ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                : 'border-white/80 bg-white/75 shadow-lg'
+                : 'border-slate-200 bg-white shadow-sm'
             }`}
           >
             <div>
@@ -940,13 +906,13 @@ export const AiImagesTab: React.FC = () => {
                 className={`w-full resize-none rounded-2xl border px-3.5 py-3 text-xs sm:text-sm outline-none transition-all ${
                   isDark
                     ? 'border-white/10 bg-white/[0.04] text-white placeholder:text-white/35 focus:border-cyan-400/60'
-                    : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-cyan-500'
+                    : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-cyan-500'
                 }`}
                 placeholder="Enter your ideas or upload images to get started."
               />
             </div>
 
-            {/* Bottom bar inside Design Prompt Card: Extra + 16:9 + Send Button */}
+            {/* Controls Bar: Extra + 16:9 + Send Button */}
             <div className="flex items-center justify-between gap-2 pt-1">
               <div className="flex items-center gap-2">
                 {/* Extra Button */}
@@ -956,7 +922,7 @@ export const AiImagesTab: React.FC = () => {
                   className={`h-10 px-3.5 rounded-2xl font-semibold text-xs border transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
                     isDark
                       ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white'
-                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-900'
+                      : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5 shrink-0" />
@@ -971,7 +937,7 @@ export const AiImagesTab: React.FC = () => {
                 {/* 16:9 Dropdown */}
                 <div
                   className={`h-10 rounded-2xl border px-3 flex items-center gap-1.5 relative transition-all ${
-                    isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'
+                    isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-300 bg-white text-slate-800'
                   }`}
                 >
                   <ImageIcon className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-300' : 'text-cyan-600'}`} />
@@ -980,13 +946,13 @@ export const AiImagesTab: React.FC = () => {
                     onChange={(e) => setStudioAspectRatio(e.target.value)}
                     className="bg-transparent outline-none text-xs font-semibold appearance-none cursor-pointer pr-4"
                   >
-                    <option value="16:9" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>16:9</option>
-                    <option value="1:1" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>1:1</option>
-                    <option value="9:16" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>9:16</option>
-                    <option value="4:3" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>4:3</option>
-                    <option value="3:4" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>3:4</option>
-                    <option value="3:2" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>3:2</option>
-                    <option value="2:3" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>2:3</option>
+                    <option value="16:9" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>16:9</option>
+                    <option value="1:1" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>1:1</option>
+                    <option value="9:16" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>9:16</option>
+                    <option value="4:3" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>4:3</option>
+                    <option value="3:4" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>3:4</option>
+                    <option value="3:2" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>3:2</option>
+                    <option value="2:3" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>2:3</option>
                   </select>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 pointer-events-none -ml-3" />
                 </div>
@@ -1010,7 +976,7 @@ export const AiImagesTab: React.FC = () => {
               </button>
             </div>
 
-            {/* Status Footer Line */}
+            {/* Status Footer */}
             <div className={`pt-1 flex items-center gap-3 text-[11px] ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
               <span>Session: {currentSession?.title || 'None'}</span>
               <span>•</span>
@@ -1018,14 +984,14 @@ export const AiImagesTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Middle Section: SESSION & EXTRA IMAGES (Image 1 Layout) */}
+          {/* Middle Section: SESSION & EXTRA IMAGES */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* 1. SESSION Card (Consistent History) */}
             <div
               className={`rounded-[28px] border p-4 space-y-3 backdrop-blur-2xl ${
                 isDark
                   ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                  : 'border-white/80 bg-white/75 shadow-lg'
+                  : 'border-slate-200 bg-white shadow-sm'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -1033,14 +999,16 @@ export const AiImagesTab: React.FC = () => {
                   <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
                     SESSION
                   </p>
-                  <h3 className="text-sm font-bold text-white mt-0.5">{t('Lịch sử nhất quán', 'Consistent History')}</h3>
+                  <h3 className={`text-sm font-bold mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {t('Lịch sử nhất quán', 'Consistent History')}
+                  </h3>
                 </div>
                 <button
                   type="button"
                   onClick={handleCreateNewSession}
                   disabled={isSessionLoading}
                   className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1 active:scale-95 ${
-                    isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-800'
+                    isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800'
                   }`}
                 >
                   <Plus className="w-3 h-3" />
@@ -1048,31 +1016,31 @@ export const AiImagesTab: React.FC = () => {
                 </button>
               </div>
 
-              {/* Session Selector Dropdown if Sessions exist */}
+              {/* Session Selector Dropdown */}
               {allSessions.length > 0 && (
                 <div className={`rounded-xl border overflow-hidden ${isDark ? 'border-white/10 bg-black/30' : 'border-slate-200 bg-slate-50'}`}>
                   <button
                     type="button"
                     onClick={() => setShowSessionPicker(!showSessionPicker)}
-                    className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-white"
+                    className={`w-full px-3 py-2 flex items-center justify-between text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <FolderOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <FolderOpen className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
                       <span className="truncate">{currentSession?.title || t('Chọn session...', 'Select session...')}</span>
                     </div>
                     <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSessionPicker ? 'rotate-180' : ''}`} />
                   </button>
                   {showSessionPicker && (
-                    <div className={`border-t divide-y max-h-36 overflow-y-auto ${isDark ? 'border-white/10 divide-white/5' : 'border-slate-200 divide-slate-200'}`}>
+                    <div className={`border-t divide-y max-h-36 overflow-y-auto ${isDark ? 'border-white/10 divide-white/5 bg-[#0E111A]' : 'border-slate-200 divide-slate-100 bg-white shadow-md'}`}>
                       {allSessions.map((s) => (
                         <button
                           key={s.session_id}
                           type="button"
                           onClick={() => loadSessionDetail(s.session_id)}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between ${
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between transition-colors ${
                             currentSession?.session_id === s.session_id
-                              ? 'bg-cyan-500/15 text-cyan-300 font-bold'
-                              : 'text-slate-300 hover:bg-white/5'
+                              ? isDark ? 'bg-cyan-500/15 text-cyan-300 font-bold' : 'bg-cyan-50 text-cyan-800 font-bold'
+                              : isDark ? 'text-slate-300 hover:bg-white/5' : 'text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           <span className="truncate">{s.title}</span>
@@ -1085,7 +1053,7 @@ export const AiImagesTab: React.FC = () => {
               )}
 
               {/* UPLOAD REFERENCES Sub-card */}
-              <div className={`rounded-2xl border p-3 ${isDark ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'}`}>
+              <div className={`rounded-2xl border p-3 ${isDark ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
                 <p className={`text-[10px] uppercase tracking-widest font-black mb-2 ${isDark ? 'text-fuchsia-300' : 'text-fuchsia-700'}`}>
                   {t('UPLOAD THAM CHIẾU', 'UPLOAD REFERENCES')}
                 </p>
@@ -1098,8 +1066,8 @@ export const AiImagesTab: React.FC = () => {
                     }}
                     className={`py-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1 active:scale-95 ${
                       uploadRoleForRef === 'character'
-                        ? 'border-violet-500/50 bg-violet-500/20 text-violet-200'
-                        : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                        ? isDark ? 'border-violet-500/50 bg-violet-500/20 text-violet-200' : 'border-violet-400 bg-violet-100 text-violet-800 font-bold'
+                        : isDark ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     👤 {t('Nhân vật', 'Character')}
@@ -1112,8 +1080,8 @@ export const AiImagesTab: React.FC = () => {
                     }}
                     className={`py-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1 active:scale-95 ${
                       uploadRoleForRef === 'object'
-                        ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-200'
-                        : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                        ? isDark ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-200' : 'border-cyan-400 bg-cyan-100 text-cyan-800 font-bold'
+                        : isDark ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     📦 {t('Đối tượng', 'Object')}
@@ -1124,10 +1092,10 @@ export const AiImagesTab: React.FC = () => {
               {/* Session Images Display / Empty State */}
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {!currentSession || currentSession.images?.length === 0 ? (
-                  <div className={`rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-50'}`}>
-                    <FolderOpen className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-60" />
-                    <p className="text-xs font-bold text-white/80">{t('Chưa có session', 'No session yet')}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">
+                  <div className={`rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-50/50'}`}>
+                    <FolderOpen className="w-8 h-8 mx-auto mb-2 text-slate-400 opacity-60" />
+                    <p className={`text-xs font-bold ${isDark ? 'text-white/80' : 'text-slate-800'}`}>{t('Chưa có session', 'No session yet')}</p>
+                    <p className={`text-[10px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                       {t('Tạo session mới để bắt đầu chuỗi ảnh nhất quán.', 'Create a new session to start a consistent image series.')}
                     </p>
                   </div>
@@ -1138,8 +1106,8 @@ export const AiImagesTab: React.FC = () => {
                       onClick={() => setActivePreviewUrl(img.file_url)}
                       className={`group rounded-xl border p-2 flex items-center gap-2.5 cursor-pointer transition-all ${
                         activePreviewUrl === img.file_url
-                          ? 'border-cyan-400/50 bg-cyan-400/10'
-                          : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                          ? isDark ? 'border-cyan-400/50 bg-cyan-400/10' : 'border-cyan-400 bg-cyan-50'
+                          : isDark ? 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]' : 'border-slate-200 bg-white hover:bg-slate-50'
                       }`}
                     >
                       <div className="w-11 h-11 rounded-lg overflow-hidden bg-black/40 shrink-0">
@@ -1147,11 +1115,11 @@ export const AiImagesTab: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                          img.role === 'character' ? 'bg-violet-500/20 text-violet-300' : img.role === 'object' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-emerald-500/20 text-emerald-300'
+                          img.role === 'character' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300' : img.role === 'object' ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                         }`}>
                           {img.role === 'character' ? 'Character' : img.role === 'object' ? 'Object' : 'Generated'}
                         </span>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        <p className={`text-[11px] truncate mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           {img.prompt || 'Reference image'}
                         </p>
                       </div>
@@ -1174,7 +1142,7 @@ export const AiImagesTab: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleDeleteCurrentSession}
-                  className="w-full py-2 rounded-xl text-[11px] font-semibold border border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 flex items-center justify-center gap-1 transition-all"
+                  className="w-full py-2 rounded-xl text-[11px] font-semibold border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 flex items-center justify-center gap-1 transition-all"
                 >
                   <Trash2 className="w-3 h-3" />
                   <span>{t('Xóa session', 'Delete session')}</span>
@@ -1182,19 +1150,19 @@ export const AiImagesTab: React.FC = () => {
               )}
             </div>
 
-            {/* 2. EXTRA IMAGES Card (Image 1 Layout) */}
+            {/* 2. EXTRA IMAGES Card */}
             <div
               className={`rounded-[28px] border p-4 space-y-3 backdrop-blur-2xl ${
                 isDark
                   ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                  : 'border-white/80 bg-white/75 shadow-lg'
+                  : 'border-slate-200 bg-white shadow-sm'
               }`}
             >
               <div>
                 <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-fuchsia-300' : 'text-fuchsia-700'}`}>
                   EXTRA IMAGES
                 </p>
-                <h4 className="text-xs font-semibold text-slate-400 mt-0.5">
+                <h4 className={`text-xs font-semibold mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                   {t('Chỉ dùng 1 lần — không lưu vào session', 'One-time only — not saved to session')}
                 </h4>
               </div>
@@ -1203,7 +1171,7 @@ export const AiImagesTab: React.FC = () => {
                 type="button"
                 onClick={() => extraImagesRef.current?.click()}
                 className={`w-full py-2.5 rounded-2xl text-xs font-bold border transition-all active:scale-[0.98] ${
-                  isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-800'
+                  isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800'
                 }`}
               >
                 {t('Thêm ảnh', 'Add images')}
@@ -1211,12 +1179,12 @@ export const AiImagesTab: React.FC = () => {
 
               <div className="flex flex-wrap gap-2 min-h-[90px]">
                 {extraImages.length === 0 ? (
-                  <div className={`w-full rounded-2xl border border-dashed p-4 text-center text-[11px] ${isDark ? 'border-white/10 text-white/40' : 'border-slate-200 text-slate-400'}`}>
+                  <div className={`w-full rounded-2xl border border-dashed p-4 text-center text-[11px] ${isDark ? 'border-white/10 text-white/40' : 'border-slate-200 text-slate-500'}`}>
                     {t('Thêm ảnh cho lần generate hiện tại.', 'Add images for this current generation.')}
                   </div>
                 ) : (
                   extraImageUrls.map((url, idx) => (
-                    <div key={idx} className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 group">
+                    <div key={idx} className="relative h-14 w-14 rounded-xl overflow-hidden border border-slate-700/50 group">
                       <img src={url} alt="Extra" className="h-full w-full object-cover" />
                       <button
                         type="button"
@@ -1238,12 +1206,12 @@ export const AiImagesTab: React.FC = () => {
               className={`rounded-[28px] border p-4 backdrop-blur-2xl ${
                 isDark
                   ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                  : 'border-white/80 bg-white/75 shadow-lg'
+                  : 'border-slate-200 bg-white shadow-sm'
               }`}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                <span className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
                   {t('Ảnh xem trước', 'Studio Preview')}
                 </span>
                 <div className="flex gap-2">
@@ -1252,7 +1220,9 @@ export const AiImagesTab: React.FC = () => {
                     onClick={async () => {
                       await saveAndShareMedia(activePreviewUrl, `wynmotion_studio_${Date.now()}.png`);
                     }}
-                    className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 active:scale-95"
+                    className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
+                      isDark ? 'border-white/10 bg-white/5 text-white hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-800'
+                    }`}
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -1266,13 +1236,15 @@ export const AiImagesTab: React.FC = () => {
                       });
                       setIsLightboxOpen(true);
                     }}
-                    className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 active:scale-95"
+                    className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
+                      isDark ? 'border-white/10 bg-white/5 text-white hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-800'
+                    }`}
                   >
                     <Maximize2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-              <div className="relative rounded-2xl overflow-hidden max-h-[360px] flex items-center justify-center bg-black/60 border border-white/10">
+              <div className="relative rounded-2xl overflow-hidden max-h-[360px] flex items-center justify-center bg-black/60 border border-slate-700/50">
                 <img
                   src={activePreviewUrl}
                   alt="Studio Render"
@@ -1290,12 +1262,12 @@ export const AiImagesTab: React.FC = () => {
             </div>
           )}
 
-          {/* Bottom Card: INSPIRATION (Browse inspiration — Image 1 Layout) */}
+          {/* Bottom Card: INSPIRATION */}
           <div
             className={`rounded-[30px] border p-4 sm:p-5 backdrop-blur-2xl ${
               isDark
                 ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                : 'border-white/80 bg-white/72 shadow-lg'
+                : 'border-slate-200 bg-white shadow-sm'
             }`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -1304,10 +1276,12 @@ export const AiImagesTab: React.FC = () => {
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-amber-200/70' : 'text-amber-700/70'}`}>
+                  <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-amber-200/70' : 'text-amber-700'}`}>
                     INSPIRATION
                   </p>
-                  <h3 className="text-base sm:text-lg font-bold text-white">{t('Tìm ảnh cảm hứng', 'Browse inspiration')}</h3>
+                  <h3 className={`text-base sm:text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {t('Tìm ảnh cảm hứng', 'Browse inspiration')}
+                  </h3>
                 </div>
               </div>
 
@@ -1328,7 +1302,7 @@ export const AiImagesTab: React.FC = () => {
                   }}
                   placeholder={t('Tìm kiếm thêm...', 'Search more...')}
                   className={`h-9 w-full pl-8 pr-3 rounded-2xl border text-xs outline-none transition-all ${
-                    isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-violet-400/60' : 'border-slate-200 bg-white text-slate-900'
+                    isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-violet-400/60' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-violet-500'
                   }`}
                 />
               </div>
@@ -1343,10 +1317,8 @@ export const AiImagesTab: React.FC = () => {
                   onClick={() => setInspirationTab(tab.id)}
                   className={`h-8 px-3.5 rounded-2xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all border ${
                     inspirationTab === tab.id
-                      ? 'border-violet-500/60 bg-violet-500/20 text-violet-200 shadow-sm'
-                      : isDark
-                      ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-                      : 'border-slate-200 bg-white text-slate-600'
+                      ? isDark ? 'border-violet-500/60 bg-violet-500/20 text-violet-200 shadow-sm' : 'border-violet-400 bg-violet-100 text-violet-800 font-bold'
+                      : isDark ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   {isVietnamese ? tab.vi : tab.en}
@@ -1363,7 +1335,7 @@ export const AiImagesTab: React.FC = () => {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
                   {pixabayImages.map((img, idx) => (
-                    <div key={img.id} className="group relative rounded-2xl overflow-hidden aspect-square border border-white/10 bg-black/40">
+                    <div key={img.id} className="group relative rounded-2xl overflow-hidden aspect-square border border-slate-700/40 bg-black/40">
                       <img
                         src={img.previewURL}
                         alt={img.tags}
@@ -1408,7 +1380,9 @@ export const AiImagesTab: React.FC = () => {
                         fetchPixabay(pixabayQuery.trim() || activeTab.query, pixabayPage + 1, true);
                       }}
                       disabled={isPixabayLoadingMore}
-                      className="h-9 px-5 rounded-2xl text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all flex items-center gap-1.5"
+                      className={`h-9 px-5 rounded-2xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                        isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
+                      }`}
                     >
                       {isPixabayLoadingMore ? (
                         <>
@@ -1428,18 +1402,18 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          4. VIEW MODE 2: 10 CUSTOM TOOLS (Exact Web Parity — Image 3)
+          3. VIEW MODE 2: 10 CUSTOM TOOLS (Clean Cards & Light Theme)
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'tools' && (
         <div className="space-y-4">
           {!selectedTool ? (
-            // ── Grid View: 10 Tool Cards — Clean & Exact Web Layout (Image 3) ──
+            // ── Grid View: 10 Tool Cards — Clean & Exact Web Layout ──
             <div className="space-y-4 animate-in fade-in duration-200">
               <div
                 className={`rounded-[30px] border p-4 sm:p-5 backdrop-blur-2xl ${
                   isDark
                     ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                    : 'border-white/80 bg-white/72 shadow-lg'
+                    : 'border-slate-200 bg-white shadow-sm'
                 }`}
               >
                 <div className="flex items-center gap-3 mb-5">
@@ -1448,7 +1422,7 @@ export const AiImagesTab: React.FC = () => {
                   </div>
                   <div>
                     <p className={`text-xs uppercase tracking-[0.24em] font-black ${
-                      isDark ? 'text-fuchsia-200/70' : 'text-fuchsia-700/70'
+                      isDark ? 'text-fuchsia-200/70' : 'text-fuchsia-700'
                     }`}>
                       CUSTOM TOOLS
                     </p>
@@ -1471,7 +1445,7 @@ export const AiImagesTab: React.FC = () => {
                         className={`group relative rounded-[26px] border p-4 text-left transition-all duration-200 flex flex-col justify-between aspect-square active:scale-95 ${
                           isDark
                             ? 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                            : 'border-slate-200/80 bg-white/80 hover:border-slate-300 hover:bg-white shadow-sm'
+                            : 'border-slate-200/80 bg-slate-50/70 hover:border-slate-300 hover:bg-white shadow-xs'
                         }`}
                       >
                         <div>
@@ -1494,7 +1468,7 @@ export const AiImagesTab: React.FC = () => {
               </div>
             </div>
           ) : (
-            // ── Dedicated Tool Screen With Glowing Header & Form ──
+            // ── Dedicated Tool Screen ──
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
               {/* Back Button */}
               <div>
@@ -1502,7 +1476,7 @@ export const AiImagesTab: React.FC = () => {
                   type="button"
                   onClick={() => setSelectedTool(null)}
                   className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 ${
-                    isDark ? 'bg-[#121522] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    isDark ? 'bg-[#121522] border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-800'
                   }`}
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
@@ -1510,12 +1484,12 @@ export const AiImagesTab: React.FC = () => {
                 </button>
               </div>
 
-              {/* Glowing Tool Header with Tag, Title & Full Description */}
+              {/* Glowing Tool Header */}
               <div
                 className={`rounded-[30px] border p-4 sm:p-6 backdrop-blur-2xl ${
                   isDark
                     ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                    : 'border-white/80 bg-white/75 shadow-lg'
+                    : 'border-slate-200 bg-white shadow-sm'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row items-start gap-4 mb-5">
@@ -1543,14 +1517,14 @@ export const AiImagesTab: React.FC = () => {
                 {/* Form Container */}
                 <div
                   className={`rounded-[24px] border p-4 sm:p-5 space-y-4 ${
-                    isDark ? 'border-white/10 bg-black/30' : 'border-slate-200 bg-white/90'
+                    isDark ? 'border-white/10 bg-black/30' : 'border-slate-200 bg-slate-50/60'
                   }`}
                 >
                   {/* ────────────────── TOOL 1: PHOTOREALISTIC ────────────────── */}
                   {selectedTool === 'photorealistic' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                        <label className={`text-xs font-bold flex items-center justify-between mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <span>{t('Mô tả chi tiết cảnh', 'Detailed Scene Description')} <span className="text-rose-500">*</span></span>
                           <span className="text-[10px] text-slate-400">{photoPrompt.length}/500</span>
                         </label>
@@ -1564,21 +1538,21 @@ export const AiImagesTab: React.FC = () => {
                             'Example: A vintage 1960s red convertible car parked on a coastal highway during sunset...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('Kiểu ánh sáng (Tùy chọn)', 'Lighting (Optional)')}
                           </label>
                           <select
                             value={photoLighting}
                             onChange={(e) => setPhotoLighting(e.target.value)}
                             className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
                             }`}
                           >
                             <option value="">{t('-- Chọn ánh sáng --', '-- Select lighting --')}</option>
@@ -1590,14 +1564,14 @@ export const AiImagesTab: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('Góc máy (Tùy chọn)', 'Camera Angle (Optional)')}
                           </label>
                           <select
                             value={photoCameraAngle}
                             onChange={(e) => setPhotoCameraAngle(e.target.value)}
                             className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
                             }`}
                           >
                             <option value="">{t('-- Chọn góc máy --', '-- Select camera angle --')}</option>
@@ -1610,7 +1584,7 @@ export const AiImagesTab: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -1624,7 +1598,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -1634,7 +1608,7 @@ export const AiImagesTab: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                        <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           {t('Negative Prompt (Những gì cần tránh - Tùy chọn)', 'Negative Prompt (Optional)')}
                         </label>
                         <input
@@ -1643,7 +1617,7 @@ export const AiImagesTab: React.FC = () => {
                           onChange={(e) => setPhotoNegativePrompt(e.target.value)}
                           placeholder="Ví dụ: blur, distortion, low quality, watermark"
                           className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
                           }`}
                         />
                       </div>
@@ -1654,7 +1628,7 @@ export const AiImagesTab: React.FC = () => {
                   {selectedTool === 'stylized' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                        <label className={`text-xs font-bold flex items-center justify-between mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <span>{t('Mô tả đối tượng cần vẽ', 'Object Description')} <span className="text-rose-500">*</span></span>
                           <span className="text-[10px] text-slate-400">{stylizedPrompt.length}/500</span>
                         </label>
@@ -1668,20 +1642,20 @@ export const AiImagesTab: React.FC = () => {
                             'Example: A cute red panda eating bamboo in a forest during autumn...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                        <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           {t('Phong cách nghệ thuật', 'Art Style')} <span className="text-rose-500">*</span>
                         </label>
                         <select
                           value={stylizedStyle}
                           onChange={(e) => setStylizedStyle(e.target.value as any)}
                           className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
                           }`}
                         >
                           <option value="Anime">Anime</option>
@@ -1701,13 +1675,13 @@ export const AiImagesTab: React.FC = () => {
                           onChange={(e) => setStylizedStickerMode(e.target.checked)}
                           className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
                         />
-                        <label htmlFor="stk-mode" className="text-xs font-bold text-slate-300 cursor-pointer">
+                        <label htmlFor="stk-mode" className={`text-xs font-bold cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                           {t('Chế độ sticker (nền trắng, đường viền rõ nét)', 'Sticker mode (white background, clean outlines)')}
                         </label>
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -1721,7 +1695,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -1736,7 +1710,7 @@ export const AiImagesTab: React.FC = () => {
                   {selectedTool === 'logo' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                        <label className={`text-xs font-bold flex items-center justify-between mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <span>{t('Tên thương hiệu', 'Brand Name')} <span className="text-rose-500">*</span></span>
                           <span className="text-[10px] text-slate-400">{logoBrandName.length}/50</span>
                         </label>
@@ -1747,14 +1721,14 @@ export const AiImagesTab: React.FC = () => {
                           maxLength={50}
                           placeholder={t('Ví dụ: TechFlow, WynMotion', 'Example: TechFlow, WynMotion')}
                           className={`w-full p-2.5 rounded-xl text-xs outline-none border ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('Khẩu hiệu (Tùy chọn)', 'Tagline (Optional)')}
                           </label>
                           <input
@@ -1763,13 +1737,13 @@ export const AiImagesTab: React.FC = () => {
                             onChange={(e) => setLogoTagline(e.target.value)}
                             placeholder="Ví dụ: Innovation in Motion"
                             className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
                             }`}
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('Ngành nghề', 'Industry')} <span className="text-rose-500">*</span>
                           </label>
                           <input
@@ -1778,7 +1752,7 @@ export const AiImagesTab: React.FC = () => {
                             onChange={(e) => setLogoIndustry(e.target.value)}
                             placeholder="Ví dụ: Tech Startup, Coffee Shop"
                             className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
                             }`}
                           />
                         </div>
@@ -1786,14 +1760,14 @@ export const AiImagesTab: React.FC = () => {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('Phong cách logo', 'Logo Style')} <span className="text-rose-500">*</span>
                           </label>
                           <select
                             value={logoStyle}
                             onChange={(e) => setLogoStyle(e.target.value as any)}
                             className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
                             }`}
                           >
                             <option value="Modern">{t('Hiện đại (Modern)', 'Modern')}</option>
@@ -1804,7 +1778,7 @@ export const AiImagesTab: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          <label className={`text-[11px] font-bold mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('Bảng màu (Tùy chọn)', 'Color Palette (Optional)')}
                           </label>
                           <input
@@ -1813,29 +1787,14 @@ export const AiImagesTab: React.FC = () => {
                             onChange={(e) => setLogoColorPalette(e.target.value)}
                             placeholder="Ví dụ: Cyan & Violet Gradient"
                             className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
                             }`}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                          {t('Chi tiết hình ảnh mong muốn (Tùy chọn)', 'Visual Elements (Optional)')}
-                        </label>
-                        <input
-                          type="text"
-                          value={logoVisualElements}
-                          onChange={(e) => setLogoVisualElements(e.target.value)}
-                          placeholder="Ví dụ: Geometric waves, AI node connections"
-                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -1849,7 +1808,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -1866,7 +1825,7 @@ export const AiImagesTab: React.FC = () => {
                       <input
                         ref={oeFileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
@@ -1879,7 +1838,7 @@ export const AiImagesTab: React.FC = () => {
                       />
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Ảnh gốc cần chỉnh sửa', 'Original Image')} <span className="text-rose-500">*</span>
                         </label>
                         {oeImagePreview ? (
@@ -1901,17 +1860,17 @@ export const AiImagesTab: React.FC = () => {
                             type="button"
                             onClick={() => oeFileInputRef.current?.click()}
                             className={`w-full py-7 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
+                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-white hover:border-violet-500'
                             }`}
                           >
                             <Upload className="w-6 h-6 text-violet-400" />
-                            <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
+                            <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
                           </button>
                         )}
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Đối tượng cần sửa trong ảnh', 'Target Object')} <span className="text-rose-500">*</span>
                         </label>
                         <input
@@ -1921,13 +1880,13 @@ export const AiImagesTab: React.FC = () => {
                           maxLength={100}
                           placeholder={t('Ví dụ: Chiếc áo thun, Kính râm, Chiếc xe màu trắng...', 'Example: The t-shirt, The sunglasses, The white car...')}
                           className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Mô tả hành động / thay đổi chi tiết', 'Modification Description')} <span className="text-rose-500">*</span>
                         </label>
                         <textarea
@@ -1940,7 +1899,7 @@ export const AiImagesTab: React.FC = () => {
                             'Example: Change into a black leather jacket with shiny metallic zipper...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
@@ -1953,13 +1912,13 @@ export const AiImagesTab: React.FC = () => {
                           onChange={(e) => setOePreserveBg(e.target.checked)}
                           className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
                         />
-                        <label htmlFor="oe-bg" className="text-xs font-bold text-slate-300 cursor-pointer">
+                        <label htmlFor="oe-bg" className={`text-xs font-bold cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                           {t('Giữ nguyên tuyệt đối phần nền còn lại', 'Preserve background unchanged')}
                         </label>
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -1973,7 +1932,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -1990,7 +1949,7 @@ export const AiImagesTab: React.FC = () => {
                       <input
                         ref={compBaseInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
@@ -2005,7 +1964,7 @@ export const AiImagesTab: React.FC = () => {
                         ref={compOverlayInputRef}
                         type="file"
                         multiple
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
                         className="hidden"
                         onChange={(e) => {
                           const files = Array.from(e.target.files || []);
@@ -2019,7 +1978,7 @@ export const AiImagesTab: React.FC = () => {
                       />
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Ảnh nền cơ sở (Base Image)', 'Base Background Image')} <span className="text-rose-500">*</span>
                         </label>
                         {compBasePreview ? (
@@ -2041,31 +2000,31 @@ export const AiImagesTab: React.FC = () => {
                             type="button"
                             onClick={() => compBaseInputRef.current?.click()}
                             className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
-                              isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                              isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-white hover:border-emerald-500'
                             }`}
                           >
                             <Upload className="w-5 h-5 text-emerald-400" />
-                            <span className="text-[11px] font-bold text-white">{t('Tải ảnh nền cơ sở (Base Image)', 'Upload Base Image')}</span>
+                            <span className={`text-[11px] font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('Tải ảnh nền cơ sở (Base Image)', 'Upload Base Image')}</span>
                           </button>
                         )}
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-bold text-white">
+                          <label className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {t('Ảnh lớp phủ ghép vào (Tối đa 5 ảnh)', 'Overlay Images (Max 5)')}
                           </label>
                           <button
                             type="button"
                             onClick={() => compOverlayInputRef.current?.click()}
-                            className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-0.5"
+                            className="text-[10px] font-bold text-emerald-500 hover:underline flex items-center gap-0.5"
                           >
                             <Plus className="w-3 h-3" /> {t('Thêm ảnh', 'Add Image')}
                           </button>
                         </div>
                         <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none min-h-[50px]">
                           {compOverlayPreviews.length === 0 ? (
-                            <span className="text-[11px] text-slate-500 italic py-2">{t('Chưa có ảnh lớp phủ nào', 'No overlay images yet')}</span>
+                            <span className={`text-[11px] italic py-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('Chưa có ảnh lớp phủ nào', 'No overlay images yet')}</span>
                           ) : (
                             compOverlayPreviews.map((url, idx) => (
                               <div key={idx} className="relative h-12 w-12 shrink-0 rounded-xl overflow-hidden border border-emerald-500/30">
@@ -2088,7 +2047,7 @@ export const AiImagesTab: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Mô tả bố cục ghép ảnh', 'Composition Description')} <span className="text-rose-500">*</span>
                         </label>
                         <textarea
@@ -2100,46 +2059,13 @@ export const AiImagesTab: React.FC = () => {
                             'Example: Place overlay subject onto right side of base background with sunset lighting match...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Phong cách bố cục', 'Composition Style')}
-                          </label>
-                          <select
-                            value={compStyle}
-                            onChange={(e) => setCompStyle(e.target.value as any)}
-                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            <option value="realistic">{t('Chân thực (Realistic)', 'Realistic')}</option>
-                            <option value="artistic">{t('Nghệ thuật (Artistic)', 'Artistic')}</option>
-                            <option value="professional">{t('Chuyên nghiệp (Professional)', 'Professional')}</option>
-                            <option value="collage">{t('Collage sáng tạo', 'Collage')}</option>
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-6">
-                          <input
-                            type="checkbox"
-                            id="comp-light"
-                            checked={compLightingAdj}
-                            onChange={(e) => setCompLightingAdj(e.target.checked)}
-                            className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
-                          />
-                          <label htmlFor="comp-light" className="text-xs font-bold text-slate-300 cursor-pointer">
-                            {t('Tự động khớp ánh sáng', 'Match lighting')}
-                          </label>
-                        </div>
-                      </div>
-
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -2153,7 +2079,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -2168,7 +2094,7 @@ export const AiImagesTab: React.FC = () => {
                   {selectedTool === 'sequential' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                        <label className={`text-xs font-bold flex items-center justify-between mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <span>{t('Mô tả câu chuyện / kịch bản chuỗi', 'Story Script')} <span className="text-rose-500">*</span></span>
                           <span className="text-[10px] text-slate-400">{seqScript.length}/500</span>
                         </label>
@@ -2182,46 +2108,13 @@ export const AiImagesTab: React.FC = () => {
                             'Example: A detective in the rain in a dark alley. He spots a mysterious symbol on the wall and pulls out his scanner...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 items-center">
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Số lượng panels', 'Panel Count')} ({seqPanelCount})
-                          </label>
-                          <input
-                            type="range"
-                            min={1}
-                            max={4}
-                            value={seqPanelCount}
-                            onChange={(e) => setSeqPanelCount(parseInt(e.target.value))}
-                            className="w-full accent-[#FF2D55] cursor-pointer"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Phong cách nghệ thuật', 'Art Style')} <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            value={seqStyle}
-                            onChange={(e) => setSeqStyle(e.target.value as any)}
-                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            <option value="Comic Book">Comic Book</option>
-                            <option value="Manga">Manga</option>
-                            <option value="Storyboard Sketch">Storyboard Sketch</option>
-                          </select>
-                        </div>
-                      </div>
-
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -2235,7 +2128,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -2250,7 +2143,7 @@ export const AiImagesTab: React.FC = () => {
                   {selectedTool === 'mockup' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                        <label className={`text-xs font-bold flex items-center justify-between mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <span>{t('Mô tả sản phẩm và bối cảnh', 'Product & Scene Description')} <span className="text-rose-500">*</span></span>
                           <span className="text-[10px] text-slate-400">{mockupScene.length}/300</span>
                         </label>
@@ -2264,31 +2157,13 @@ export const AiImagesTab: React.FC = () => {
                             'Example: A sleek modern smartphone placed on a wooden desk with a coffee mug and indoor plant...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                          {t('Kiểu đặt sản phẩm', 'Placement Type')} <span className="text-rose-500">*</span>
-                        </label>
-                        <select
-                          value={mockupPlacement}
-                          onChange={(e) => setMockupPlacement(e.target.value as any)}
-                          className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        >
-                          <option value="Tabletop">{t('Trên bàn (Tabletop)', 'Tabletop')}</option>
-                          <option value="Model Wearing">{t('Người mẫu mang / mặc (Model Wearing)', 'Model Wearing')}</option>
-                          <option value="Outdoor">{t('Ngoài trời (Outdoor)', 'Outdoor')}</option>
-                          <option value="Studio Backdrop">{t('Phông studio chuyên nghiệp (Studio Backdrop)', 'Studio Backdrop')}</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -2302,7 +2177,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -2319,7 +2194,7 @@ export const AiImagesTab: React.FC = () => {
                       <input
                         ref={stFileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
@@ -2332,7 +2207,7 @@ export const AiImagesTab: React.FC = () => {
                       />
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Ảnh gốc cần chuyển phong cách', 'Original Image')} <span className="text-rose-500">*</span>
                         </label>
                         {stImagePreview ? (
@@ -2354,17 +2229,17 @@ export const AiImagesTab: React.FC = () => {
                             type="button"
                             onClick={() => stFileInputRef.current?.click()}
                             className={`w-full py-7 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
+                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-white hover:border-purple-500'
                             }`}
                           >
                             <Upload className="w-6 h-6 text-purple-400" />
-                            <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
+                            <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
                           </button>
                         )}
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Chọn phong cách đích', 'Target Style Preset')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-3 gap-1.5">
@@ -2378,7 +2253,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-500 shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-300'
-                                  : 'bg-slate-100 border-slate-200 text-slate-700'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {pst.name}
@@ -2388,49 +2263,7 @@ export const AiImagesTab: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                          {t('Hoặc nhập mô tả phong cách tùy chỉnh', 'Or custom style description')}
-                        </label>
-                        <input
-                          type="text"
-                          value={stTargetStyle}
-                          onChange={(e) => setStTargetStyle(e.target.value)}
-                          placeholder="Ví dụ: Van Gogh Starry Night with thick oil strokes"
-                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                          {t('Độ mạnh áp dụng phong cách', 'Strength')} ({stStrength}%)
-                        </label>
-                        <input
-                          type="range"
-                          min={10}
-                          max={100}
-                          value={stStrength}
-                          onChange={(e) => setStStrength(parseInt(e.target.value))}
-                          className="w-full accent-[#FF2D55] cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2.5 py-1">
-                        <input
-                          type="checkbox"
-                          id="st-pres"
-                          checked={stPreserveStructure}
-                          onChange={(e) => setStPreserveStructure(e.target.checked)}
-                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
-                        />
-                        <label htmlFor="st-pres" className="text-xs font-bold text-slate-300 cursor-pointer">
-                          {t('Giữ nguyên bố cục và cấu trúc ảnh gốc', 'Preserve structure of original image')}
-                        </label>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -2444,7 +2277,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -2461,7 +2294,7 @@ export const AiImagesTab: React.FC = () => {
                       <input
                         ref={inFileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
@@ -2489,7 +2322,7 @@ export const AiImagesTab: React.FC = () => {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs font-bold text-white mb-1.5 block">
+                          <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {t('Ảnh gốc', 'Original Image')} <span className="text-rose-500">*</span>
                           </label>
                           {inImagePreview ? (
@@ -2511,17 +2344,17 @@ export const AiImagesTab: React.FC = () => {
                               type="button"
                               onClick={() => inFileInputRef.current?.click()}
                               className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
-                                isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                                isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-white hover:border-teal-500'
                               }`}
                             >
                               <Upload className="w-5 h-5 text-teal-400" />
-                              <span className="text-[11px] font-bold text-white">{t('Tải ảnh gốc', 'Upload Image')}</span>
+                              <span className={`text-[11px] font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('Tải ảnh gốc', 'Upload Image')}</span>
                             </button>
                           )}
                         </div>
 
                         <div>
-                          <label className="text-xs font-bold text-white mb-1.5 block">
+                          <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {t('Ảnh Mask (Tùy chọn)', 'Mask PNG (Optional)')}
                           </label>
                           {inMaskPreview ? (
@@ -2543,7 +2376,7 @@ export const AiImagesTab: React.FC = () => {
                               type="button"
                               onClick={() => inMaskInputRef.current?.click()}
                               className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
-                                isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                                isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-white hover:border-slate-400'
                               }`}
                             >
                               <Upload className="w-5 h-5 text-slate-500" />
@@ -2554,7 +2387,7 @@ export const AiImagesTab: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Mô tả những gì cần vẽ vào vùng chọn', 'Prompt')} <span className="text-rose-500">*</span>
                         </label>
                         <textarea
@@ -2566,49 +2399,13 @@ export const AiImagesTab: React.FC = () => {
                             'Example: Add a modern smartwatch onto the model wrist...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Hành động', 'Action')} <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            value={inAction}
-                            onChange={(e) => setInAction(e.target.value as any)}
-                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            <option value="add">{t('Thêm đối tượng (Add)', 'Add')}</option>
-                            <option value="remove">{t('Xóa đối tượng (Remove)', 'Remove')}</option>
-                            <option value="replace">{t('Thay thế đối tượng (Replace)', 'Replace')}</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Kiểu hòa trộn', 'Blend Mode')}
-                          </label>
-                          <select
-                            value={inBlendMode}
-                            onChange={(e) => setInBlendMode(e.target.value as any)}
-                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            <option value="natural">{t('Tự nhiên (Natural)', 'Natural')}</option>
-                            <option value="seamless">{t('Mịn màng liền mạch (Seamless)', 'Seamless')}</option>
-                            <option value="artistic">{t('Nghệ thuật (Artistic)', 'Artistic')}</option>
-                          </select>
-                        </div>
-                      </div>
-
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -2622,7 +2419,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -2637,7 +2434,7 @@ export const AiImagesTab: React.FC = () => {
                   {selectedTool === 'background' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                        <label className={`text-xs font-bold flex items-center justify-between mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           <span>{t('Chủ đề background', 'Background Theme')} <span className="text-rose-500">*</span></span>
                           <span className="text-[10px] text-slate-400">{bgTheme.length}/200</span>
                         </label>
@@ -2648,7 +2445,7 @@ export const AiImagesTab: React.FC = () => {
                           maxLength={200}
                           placeholder={t('Ví dụ: Thành phố cyberpunk về đêm, Thiên nhiên rừng thông sương mù...', 'Example: Cyberpunk city at night, Foggy pine forest...')}
                           className={`w-full p-2.5 rounded-xl text-xs outline-none border ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500'
                           }`}
                         />
                       </div>
@@ -2661,53 +2458,13 @@ export const AiImagesTab: React.FC = () => {
                           onChange={(e) => setBgMinimalistMode(e.target.checked)}
                           className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
                         />
-                        <label htmlFor="bg-min" className="text-xs font-bold text-slate-300 cursor-pointer">
+                        <label htmlFor="bg-min" className={`text-xs font-bold cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                           {t('Chế độ tối giản (có không gian trống để đặt chữ)', 'Minimalist mode (with negative space for text)')}
                         </label>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        {bgMinimalistMode && (
-                          <div>
-                            <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                              {t('Vị trí không gian trống', 'Negative Space Position')}
-                            </label>
-                            <select
-                              value={bgNegativeSpace}
-                              onChange={(e) => setBgNegativeSpace(e.target.value as any)}
-                              className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                                isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                              }`}
-                            >
-                              <option value="Center">{t('Giữa', 'Center')}</option>
-                              <option value="Left">{t('Bên trái', 'Left')}</option>
-                              <option value="Right">{t('Bên phải', 'Right')}</option>
-                              <option value="Top">{t('Phía trên', 'Top')}</option>
-                            </select>
-                          </div>
-                        )}
-
-                        <div className={bgMinimalistMode ? '' : 'col-span-2'}>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Tông màu chủ đạo', 'Color Mood')}
-                          </label>
-                          <select
-                            value={bgColorMood}
-                            onChange={(e) => setBgColorMood(e.target.value as any)}
-                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            <option value="Dark">{t('Tối & Bí ẩn (Dark)', 'Dark')}</option>
-                            <option value="Light">{t('Sáng & Tinh tế (Light)', 'Light')}</option>
-                            <option value="Pastel">{t('Pastel dịu nhẹ (Pastel)', 'Pastel')}</option>
-                            <option value="Vibrant">{t('Rực rỡ nổi bật (Vibrant)', 'Vibrant')}</option>
-                          </select>
-                        </div>
-                      </div>
-
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
+                        <label className={`text-xs font-bold mb-1.5 block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
                         </label>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -2721,7 +2478,7 @@ export const AiImagesTab: React.FC = () => {
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               {ratio}
@@ -2763,34 +2520,46 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. VIEW MODE 3: REMOVE BACKGROUND TOOL
+          4. VIEW MODE 3: STREAMLINED REMOVE BACKGROUND TOOL
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'removebg' && (
         <div
-          className={`p-4 rounded-3xl border space-y-4 animate-in fade-in duration-200 ${
-            isDark ? 'bg-[#121522] border-slate-800' : 'bg-white border-slate-200'
+          className={`p-4 sm:p-5 rounded-3xl border space-y-4 animate-in fade-in duration-200 ${
+            isDark ? 'bg-[#121522] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-teal-500/10 text-teal-400">
-              <Scissors className="w-5 h-5" />
+          {/* Info Banner */}
+          <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-2 ${
+            isDark ? 'bg-teal-950/30 border-teal-500/20 text-teal-300' : 'bg-teal-50 border-teal-200 text-teal-800'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-teal-500/10 text-teal-500">
+                <Scissors className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className={`text-xs sm:text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{t('AI Tách Nền Trong Suốt', 'AI Background Remover')}</h3>
+                <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {t('Tách chủ thể độ phân giải gốc 100% Alpha PNG', 'Extract subject with 100% transparent PNG alpha')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-black text-white">{t('AI Tách Nền Trong Suốt', 'AI Background Remover')}</h3>
-              <p className="text-[11px] text-slate-400">
-                {t('Tách chủ thể cực nét, trả về ảnh PNG trong suốt độ phân giải gốc', 'Extract subject with precision PNG transparent cutout')}
-              </p>
-            </div>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-sm shrink-0">
+              {t('✨ Miễn Phí', '✨ Free')}
+            </span>
           </div>
 
           <input
             ref={removeBgInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/jpg"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
+                if (file.size > 20 * 1024 * 1024) {
+                  alert(t('File không được vượt quá 20MB', 'File size must not exceed 20MB'));
+                  return;
+                }
                 setRemoveBgFile(file);
                 setRemoveBgPreview(URL.createObjectURL(file));
               }
@@ -2799,15 +2568,15 @@ export const AiImagesTab: React.FC = () => {
           />
 
           {removeBgPreview ? (
-            <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-64 flex items-center justify-center bg-black/40">
-              <img src={removeBgPreview} alt="Target" className="max-h-64 object-contain" />
+            <div className="relative rounded-2xl overflow-hidden border border-teal-500/30 max-h-64 flex items-center justify-center bg-black/40 p-2">
+              <img src={removeBgPreview} alt="Target" className="max-h-64 object-contain rounded-xl" />
               <button
                 type="button"
                 onClick={() => {
                   setRemoveBgFile(null);
                   setRemoveBgPreview(null);
                 }}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white"
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-black/70 text-white hover:bg-rose-500 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2817,12 +2586,14 @@ export const AiImagesTab: React.FC = () => {
               type="button"
               onClick={() => removeBgInputRef.current?.click()}
               className={`w-full py-10 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
+                isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50 hover:border-teal-500 hover:bg-teal-50/40'
               }`}
             >
-              <Upload className="w-8 h-8 text-teal-400" />
-              <span className="text-xs font-black text-white">{t('Tải Ảnh Cần Xóa Nền', 'Upload Image to Cutout')}</span>
-              <span className="text-[10px] text-slate-500">PNG, JPG, WEBP lên đến 20MB</span>
+              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-400 flex items-center justify-center mb-1">
+                <Upload className="w-6 h-6" />
+              </div>
+              <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('Tải Ảnh Cần Xóa Nền', 'Upload Image to Cutout')}</span>
+              <span className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>PNG, JPG, JPEG, WEBP (Tối đa 20MB)</span>
             </button>
           )}
 
@@ -2852,7 +2623,7 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          6. RESULT CARD & LIGHTBOX PREVIEW
+          5. RESULT CARD & LIGHTBOX PREVIEW
           ───────────────────────────────────────────────────────────── */}
       {resultImage?.image_url && (
         <div
@@ -2861,14 +2632,14 @@ export const AiImagesTab: React.FC = () => {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+            <span className="text-xs font-black text-emerald-500 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
               {t('Tạo ảnh hoàn tất!', 'Image generated successfully!')}
             </span>
             <button
               type="button"
               onClick={() => setIsLightboxOpen(true)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg"
             >
               <Maximize2 className="w-4 h-4" />
             </button>
@@ -2876,12 +2647,22 @@ export const AiImagesTab: React.FC = () => {
 
           <div
             onClick={() => setIsLightboxOpen(true)}
-            className="relative rounded-2xl overflow-hidden border border-slate-800 bg-black/60 cursor-pointer group flex items-center justify-center"
+            className="relative rounded-2xl overflow-hidden border border-slate-700/50 cursor-pointer group flex items-center justify-center p-3"
+            style={{
+              backgroundImage: `
+                linear-gradient(45deg, rgba(128,128,128,0.12) 25%, transparent 25%), 
+                linear-gradient(-45deg, rgba(128,128,128,0.12) 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, rgba(128,128,128,0.12) 75%), 
+                linear-gradient(-45deg, transparent 75%, rgba(128,128,128,0.12) 75%)
+              `,
+              backgroundSize: '16px 16px',
+              backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px',
+            }}
           >
             <img
               src={resultImage.image_url}
               alt="Generated AI"
-              className="w-full max-h-96 object-contain group-hover:scale-[1.02] transition-transform duration-300"
+              className="w-full max-h-96 object-contain group-hover:scale-[1.02] transition-transform duration-300 filter drop-shadow-xl"
             />
           </div>
 
