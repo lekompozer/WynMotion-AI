@@ -446,7 +446,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
         </div>
 
         {/* Track List Section */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2.5 pb-28">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2.5 pb-60">
           {filteredTracks.length === 0 ? (
             <div className="py-16 text-center">
               <Music className="w-12 h-12 mx-auto mb-3 text-slate-500 opacity-50" />
@@ -603,20 +603,62 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
-            STICKY BOTTOM MEDIA PLAYER (Positioned right above nav bar)
-            With Seek bar, Time counters, Play/Pause, Back & Next buttons
+            STICKY BOTTOM MEDIA PLAYER (Taller, 3-Row Spacious Design)
+            Row 1: Track Title & Info + Action Buttons
+            Row 2: Scrubber Bar & Live Timers
+            Row 3: Large Centered Controls (Back - Play/Pause - Next)
             ───────────────────────────────────────────────────────────── */}
         {currentPlayingTrack && (
           <div
-            className={`absolute bottom-0 left-0 right-0 z-30 border-t shadow-2xl backdrop-blur-2xl transition-all animate-in slide-in-from-bottom-2 duration-200 flex flex-col ${
+            className={`absolute bottom-0 left-0 right-0 z-30 border-t shadow-2xl backdrop-blur-2xl transition-all animate-in slide-in-from-bottom-3 duration-200 flex flex-col p-4 sm:p-5 space-y-3 ${
               isDark
-                ? 'bg-[#090B12]/95 border-purple-500/20 text-white shadow-purple-950/40'
-                : 'bg-slate-900/95 border-slate-800 text-white shadow-black/30'
+                ? 'bg-[#090B12]/95 border-purple-500/25 text-white shadow-purple-950/60'
+                : 'bg-slate-900/95 border-slate-800 text-white shadow-black/40'
             }`}
           >
-            {/* Top Scrubber Bar & Live Time Counter */}
-            <div className="px-4 pt-2 pb-1 flex items-center gap-2.5">
-              <span className="text-[10px] font-mono text-slate-400 shrink-0 w-8 text-right">
+            {/* ROW 1: Track Info & Action Buttons (Tách biệt lên phía trên) */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-purple-500/30">
+                  <Music className={`w-5 h-5 sm:w-6 sm:h-6 ${isPlaying ? 'animate-pulse' : ''}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black truncate text-white">
+                      {currentPlayingTrack.title}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500/20 text-pink-400 border border-pink-500/30 shrink-0">
+                      {currentPlayingDurationKey}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
+                    👤 {currentPlayingTrack.artist} • {currentPlayingTrack.bpm} BPM •{' '}
+                    {isVietnamese ? currentPlayingTrack.category_name_vi : currentPlayingTrack.category_name_en}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Close Player Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    audioRef.current?.pause();
+                    setIsPlaying(false);
+                    setCurrentPlayingTrackId(null);
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-all active:scale-90"
+                  title={t('Đóng player', 'Close player')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* ROW 2: Scrubber Bar & Live Time Counter (Hàng trượt riêng biệt) */}
+            <div className="flex items-center gap-3 px-1">
+              <span className="text-xs font-mono font-bold text-pink-400 shrink-0 w-9 text-right">
                 {formatTime(currentTime)}
               </span>
 
@@ -633,114 +675,55 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                   onMouseUp={() => setIsSeeking(false)}
                   onTouchStart={() => setIsSeeking(true)}
                   onTouchEnd={() => setIsSeeking(false)}
-                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                  className="w-full h-2 bg-slate-700/80 rounded-lg appearance-none cursor-pointer accent-pink-500"
                   style={{
                     background: `linear-gradient(to right, #ec4899 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.15) ${(currentTime / (duration || 1)) * 100}%)`,
                   }}
                 />
               </div>
 
-              <span className="text-[10px] font-mono text-slate-400 shrink-0 w-8 text-left">
+              <span className="text-xs font-mono font-bold text-slate-400 shrink-0 w-9 text-left">
                 {formatTime(duration)}
               </span>
             </div>
 
-            {/* Bottom Controls Row */}
-            <div className="px-4 pb-3 pt-0.5 flex items-center justify-between gap-3">
-              {/* Left Track Info */}
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-md">
-                  <Music className={`w-5 h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold truncate text-white">{currentPlayingTrack.title}</p>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-pink-500/20 text-pink-400 shrink-0">
-                      {currentPlayingDurationKey}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 truncate">
-                    👤 {currentPlayingTrack.artist} • {currentPlayingTrack.bpm} BPM
-                  </p>
-                </div>
-              </div>
+            {/* ROW 3: Spacious Centered Navigation Controls (Back - Play/Pause - Next) */}
+            <div className="flex items-center justify-center gap-5 pt-1">
+              {/* Previous Button */}
+              <button
+                type="button"
+                onClick={handlePrevTrack}
+                disabled={filteredTracks.length <= 1}
+                className="w-11 h-11 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-200 hover:text-white active:scale-90 disabled:opacity-30 transition-all shadow-sm"
+                title={t('Bài trước đó', 'Previous track')}
+              >
+                <SkipBack className="w-5 h-5 fill-current" />
+              </button>
 
-              {/* Center Controls: Back - Play/Pause - Next (According to active filtered list) */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                {/* Previous Button */}
-                <button
-                  type="button"
-                  onClick={handlePrevTrack}
-                  disabled={filteredTracks.length <= 1}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
-                  title={t('Bài trước đó', 'Previous track')}
-                >
-                  <SkipBack className="w-4 h-4 fill-current" />
-                </button>
-
-                {/* Play / Pause Center Glowing Button */}
-                <button
-                  type="button"
-                  onClick={() => handleTogglePlay(currentPlayingTrack, currentPlayingDurationKey)}
-                  className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-pink-500/30 active:scale-95 transition-all"
-                  title={isPlaying ? 'Pause' : 'Play'}
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                </button>
-
-                {/* Next Button */}
-                <button
-                  type="button"
-                  onClick={handleNextTrack}
-                  disabled={filteredTracks.length <= 1}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
-                  title={t('Bài kế tiếp', 'Next track')}
-                >
-                  <SkipForward className="w-4 h-4 fill-current" />
-                </button>
-              </div>
-
-              {/* Right Quick Actions */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                {onSelectTrackForVideo && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const durObj =
-                        currentPlayingTrack.durations[
-                          currentPlayingDurationKey as keyof typeof currentPlayingTrack.durations
-                        ] ||
-                        currentPlayingTrack.durations['30s'] ||
-                        currentPlayingTrack.durations['full'];
-                      if (durObj) {
-                        onSelectTrackForVideo(
-                          durObj.url,
-                          `${currentPlayingTrack.title} (${currentPlayingDurationKey})`
-                        );
-                        onClose();
-                      }
-                    }}
-                    className="h-8 px-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-xs flex items-center gap-1 shadow active:scale-95"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>{t('Gắn Vào Video', 'Attach')}</span>
-                  </button>
+              {/* Play / Pause Glowing Center Button */}
+              <button
+                type="button"
+                onClick={() => handleTogglePlay(currentPlayingTrack, currentPlayingDurationKey)}
+                className="w-13 h-13 sm:w-14 sm:h-14 rounded-3xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white flex items-center justify-center shadow-xl shadow-pink-500/40 active:scale-95 transition-all"
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? (
+                  <Pause className="w-6 h-6 fill-current" />
+                ) : (
+                  <Play className="w-6 h-6 fill-current ml-1" />
                 )}
+              </button>
 
-                {/* Close Player */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    audioRef.current?.pause();
-                    setIsPlaying(false);
-                    setCurrentPlayingTrackId(null);
-                  }}
-                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center"
-                  title={t('Đóng player', 'Close player')}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              {/* Next Button */}
+              <button
+                type="button"
+                onClick={handleNextTrack}
+                disabled={filteredTracks.length <= 1}
+                className="w-11 h-11 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-200 hover:text-white active:scale-90 disabled:opacity-30 transition-all shadow-sm"
+                title={t('Bài kế tiếp', 'Next track')}
+              >
+                <SkipForward className="w-5 h-5 fill-current" />
+              </button>
             </div>
           </div>
         )}
