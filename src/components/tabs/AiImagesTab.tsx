@@ -5,12 +5,13 @@
  *
  * Full Parity with Web GeminiImageModal (Studio + 10 Tools + Remove BG):
  * - Studio View with Session Management, Character & Object Reference uploads, and History
- * - Extra & Aspect Ratio dropdown (with ChevronDown) in 1 horizontal row
- * - Plan ID hidden on Mobile/iOS Studio
- * - 10 Custom Tools rendered in 2-row square cards layout with dedicated forms
+ * - 1-row Extra & Aspect Ratio dropdown (with ChevronDown) & Plan ID hidden on iOS
+ * - 10 Dedicated Tool Forms with:
+ *   1. Glowing header card with Tag (GENERATION TOOL / EDITING TOOL), Title, and full Description line
+ *   2. Rich field-level controls (Photorealistic, Stylized, Logo, Background, Mockup, Sequential, Style Transfer, Object Edit, Inpainting, Composition)
+ *   3. File upload dropzones for editing tools with preview, delete, and validation
  * - Seamless Remove Background tool
  * - Generation Lightbox & Share Sheet
- * - Harmonized Theme: Active buttons/selects use bottom-nav gradient (#FF2D55 -> #FF4570)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -43,7 +44,6 @@ import {
   imageService,
   ImageEndpoint,
   AspectRatio,
-  IMAGE_PROMPT_PRESETS,
   GenerateImageResult,
 } from '@/services/imageService';
 import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
@@ -64,7 +64,6 @@ interface ToolConfig {
   type: 'generation' | 'editing';
 }
 
-// Web-parity order: matches GeminiImageModal.tsx endpoint order exactly
 const CUSTOM_TOOLS: ToolConfig[] = [
   {
     id: 'photorealistic',
@@ -75,8 +74,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Photorealistic',
     badgeVi: 'Camera 8K',
     badgeEn: '8K Camera',
-    descVi: 'Tạo ảnh chân thực như chụp bằng máy ảnh thật',
-    descEn: 'Create photorealistic images like real photos',
+    descVi: 'Tạo ảnh chân thực với khả năng kiểm soát ánh sáng và góc chụp máy ảnh',
+    descEn: 'Generate realistic images with photographic lighting & camera control',
     type: 'generation',
   },
   {
@@ -88,8 +87,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Stylized Art',
     badgeVi: '3D & Anime',
     badgeEn: '3D & Anime',
-    descVi: 'Tạo ảnh với phong cách nghệ thuật (anime, watercolor...)',
-    descEn: 'Create artistic stylized images (anime, watercolor...)',
+    descVi: 'Tạo ảnh với phong cách nghệ thuật (anime, watercolor, 3d render, sticker...)',
+    descEn: 'Create images with artistic styles (anime, watercolor, 3d render, sticker...)',
     type: 'generation',
   },
   {
@@ -101,8 +100,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Logo Design',
     badgeVi: 'Vector & Typo',
     badgeEn: 'Vector & Typo',
-    descVi: 'Thiết kế logo thương hiệu với typography',
-    descEn: 'Design brand logos with typography',
+    descVi: 'Thiết kế logo thương hiệu với phong cách và typography ấn tượng',
+    descEn: 'Create logos with various styles and typography',
     type: 'generation',
   },
   {
@@ -114,8 +113,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Background',
     badgeVi: 'Wallpaper',
     badgeEn: 'Wallpaper',
-    descVi: 'Tạo hình nền, texture, backdrop quảng cáo',
-    descEn: 'Generate wallpapers, textures, ad backdrops',
+    descVi: 'Tạo hình nền, texture, wallpaper có không gian trống để đặt chữ',
+    descEn: 'Generate backgrounds and wallpapers with negative space',
     type: 'generation',
   },
   {
@@ -127,8 +126,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Product Mockup',
     badgeVi: 'E-commerce',
     badgeEn: 'E-commerce',
-    descVi: 'Đặt sản phẩm vào bối cảnh studio chuyên nghiệp',
-    descEn: 'Place products in professional studio settings',
+    descVi: 'Đặt sản phẩm vào bối cảnh thực tế và studio chuyên nghiệp',
+    descEn: 'Place products in realistic scenes and contexts',
     type: 'generation',
   },
   {
@@ -140,8 +139,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Sequential Art',
     badgeVi: 'Comic / Manga',
     badgeEn: 'Comic / Manga',
-    descVi: 'Tạo storyboard, truyện tranh từ kịch bản',
-    descEn: 'Create storyboards and comics from scripts',
+    descVi: 'Tạo chuỗi tranh phân cảnh, truyện tranh comic theo kịch bản',
+    descEn: 'Create multi-panel stories and comic strips',
     type: 'generation',
   },
   {
@@ -153,8 +152,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Style Transfer',
     badgeVi: 'AI Filter',
     badgeEn: 'AI Filter',
-    descVi: 'Chuyển ảnh sang phong cách nghệ thuật khác',
-    descEn: 'Transform images into different art styles',
+    descVi: 'Biến đổi ảnh sang phong cách của các danh họa hoặc phong cách hiện đại',
+    descEn: 'Transform images into different artistic styles',
     type: 'editing',
   },
   {
@@ -166,8 +165,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Object Edit',
     badgeVi: 'Smart Edit',
     badgeEn: 'Smart Edit',
-    descVi: 'Thêm, xóa, thay đổi đối tượng trong ảnh',
-    descEn: 'Add, remove, or modify objects in images',
+    descVi: 'Thêm, bớt hoặc thay đổi chi tiết vật thể trong ảnh gốc',
+    descEn: 'Add, remove, or modify objects in existing images',
     type: 'editing',
   },
   {
@@ -179,8 +178,8 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Inpainting',
     badgeVi: 'Magic Fill',
     badgeEn: 'Magic Fill',
-    descVi: 'Vẽ lại hoặc thay thế vùng chọn trên ảnh',
-    descEn: 'Redraw or replace selected areas in images',
+    descVi: 'Tô vẽ lại hoặc thay thế vùng chọn trên ảnh với AI',
+    descEn: 'Redraw or replace specific regions in images',
     type: 'editing',
   },
   {
@@ -192,10 +191,22 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     nameEn: 'Composition',
     badgeVi: 'AI Blend',
     badgeEn: 'AI Blend',
-    descVi: 'Ghép nhiều ảnh thành một bố cục hoàn chỉnh',
-    descEn: 'Combine multiple images into one composition',
+    descVi: 'Hòa trộn nhiều ảnh lớp phủ vào ảnh nền với ánh sáng đồng nhất',
+    descEn: 'Combine multiple images into a cohesive composition',
     type: 'editing',
   },
+];
+
+const STYLE_TRANSFER_PRESETS = [
+  { name: 'Van Gogh', desc: 'Starry Night swirling brushstrokes & vivid colors' },
+  { name: 'Picasso', desc: 'Cubist fragmented forms & abstract perspectives' },
+  { name: 'Monet', desc: 'Impressionist soft brushstrokes & natural light' },
+  { name: 'Pop Art', desc: 'Bold printed outlines & vibrant pop culture colors' },
+  { name: 'Watercolor', desc: 'Transparent watercolor blooms & soft bleeding edges' },
+  { name: 'Oil Painting', desc: 'Thick classical oil paint strokes & deep texture' },
+  { name: 'Anime Studio Ghibli', desc: 'Whimsical lush hand-drawn anime backgrounds' },
+  { name: 'Cyberpunk Neon', desc: 'Glowing neon lights, futuristic reflections & dark tones' },
+  { name: '3D Pixar Style', desc: 'Cute clay-like 3D characters with soft rim lighting' },
 ];
 
 export const AiImagesTab: React.FC = () => {
@@ -219,19 +230,91 @@ export const AiImagesTab: React.FC = () => {
   const extraImagesRef = useRef<HTMLInputElement>(null);
   const sessionFileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Tools State ──
-  const [prompt, setPrompt] = useState('');
-  const [negativePrompt, setNegativePrompt] = useState('');
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
-  const [lighting, setLighting] = useState<'Natural' | 'Studio' | 'Cinematic' | 'Golden Hour'>('Cinematic');
-  const [cameraAngle, setCameraAngle] = useState<'Wide Angle' | 'Macro' | 'Drone View' | 'Eye Level'>('Eye Level');
-  const [stylePreset, setStylePreset] = useState<'Anime' | 'Watercolor' | 'Oil Painting' | 'Flat Design' | '3D Render' | 'Sticker Art'>('3D Render');
+  // ── Tool 1: Photorealistic Form State ──
+  const [photoPrompt, setPhotoPrompt] = useState('');
+  const [photoLighting, setPhotoLighting] = useState<string>('Cinematic');
+  const [photoCameraAngle, setPhotoCameraAngle] = useState<string>('Eye Level');
+  const [photoAspectRatio, setPhotoAspectRatio] = useState<AspectRatio>('16:9');
+  const [photoNegativePrompt, setPhotoNegativePrompt] = useState('');
+
+  // ── Tool 2: Stylized Form State ──
+  const [stylizedPrompt, setStylizedPrompt] = useState('');
+  const [stylizedStyle, setStylizedStyle] = useState<'Anime' | '3D Render' | 'Watercolor' | 'Oil Painting' | 'Flat Design' | 'Sticker Art'>('Anime');
+  const [stylizedStickerMode, setStylizedStickerMode] = useState(false);
+  const [stylizedAspectRatio, setStylizedAspectRatio] = useState<AspectRatio>('1:1');
+
+  // ── Tool 3: Logo Form State ──
+  const [logoBrandName, setLogoBrandName] = useState('');
+  const [logoTagline, setLogoTagline] = useState('');
+  const [logoIndustry, setLogoIndustry] = useState('');
   const [logoStyle, setLogoStyle] = useState<'Modern' | 'Minimalist' | 'Vintage' | 'Luxury'>('Modern');
-  const [colorMood, setColorMood] = useState<'Dark' | 'Light' | 'Pastel' | 'Vibrant'>('Vibrant');
-  const [mockupPlacement, setMockupPlacement] = useState<'Tabletop' | 'Model Wearing' | 'Outdoor' | 'Studio Backdrop'>('Studio Backdrop');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoColorPalette, setLogoColorPalette] = useState('');
+  const [logoVisualElements, setLogoVisualElements] = useState('');
+  const [logoAspectRatio, setLogoAspectRatio] = useState<AspectRatio>('1:1');
+
+  // ── Tool 4: Background Form State ──
+  const [bgTheme, setBgTheme] = useState('');
+  const [bgMinimalistMode, setBgMinimalistMode] = useState(false);
+  const [bgNegativeSpace, setBgNegativeSpace] = useState<'Center' | 'Left' | 'Right' | 'Top'>('Center');
+  const [bgColorMood, setBgColorMood] = useState<'Dark' | 'Light' | 'Pastel' | 'Vibrant'>('Dark');
+  const [bgAspectRatio, setBgAspectRatio] = useState<AspectRatio>('16:9');
+
+  // ── Tool 5: Mockup Form State ──
+  const [mockupScene, setMockupScene] = useState('');
+  const [mockupPlacement, setMockupPlacement] = useState<'Tabletop' | 'Model Wearing' | 'Outdoor' | 'Studio Backdrop'>('Tabletop');
+  const [mockupAspectRatio, setMockupAspectRatio] = useState<AspectRatio>('4:3');
+
+  // ── Tool 6: Sequential Form State ──
+  const [seqScript, setSeqScript] = useState('');
+  const [seqPanelCount, setSeqPanelCount] = useState(2);
+  const [seqStyle, setSeqStyle] = useState<'Comic Book' | 'Manga' | 'Storyboard Sketch'>('Comic Book');
+  const [seqAspectRatio, setSeqAspectRatio] = useState<AspectRatio>('16:9');
+
+  // ── Tool 7: Style Transfer Form State ──
+  const [stImageFile, setStImageFile] = useState<File | null>(null);
+  const [stImagePreview, setStImagePreview] = useState<string | null>(null);
+  const [stTargetStyle, setStTargetStyle] = useState('Van Gogh');
+  const [stStrength, setStStrength] = useState(80);
+  const [stPreserveStructure, setStPreserveStructure] = useState(true);
+  const [stAspectRatio, setStAspectRatio] = useState<AspectRatio>('1:1');
+  const [stNegativePrompt, setStNegativePrompt] = useState('');
+  const stFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Tool 8: Object Edit Form State ──
+  const [oeImageFile, setOeImageFile] = useState<File | null>(null);
+  const [oeImagePreview, setOeImagePreview] = useState<string | null>(null);
+  const [oeTargetObject, setOeTargetObject] = useState('');
+  const [oeModification, setOeModification] = useState('');
+  const [oePreserveBg, setOePreserveBg] = useState(true);
+  const [oeAspectRatio, setOeAspectRatio] = useState<AspectRatio>('1:1');
+  const [oeNegativePrompt, setOeNegativePrompt] = useState('');
+  const oeFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Tool 9: Inpainting Form State ──
+  const [inImageFile, setInImageFile] = useState<File | null>(null);
+  const [inImagePreview, setInImagePreview] = useState<string | null>(null);
+  const [inMaskFile, setInMaskFile] = useState<File | null>(null);
+  const [inMaskPreview, setInMaskPreview] = useState<string | null>(null);
+  const [inPrompt, setInPrompt] = useState('');
+  const [inAction, setInAction] = useState<'add' | 'remove' | 'replace'>('add');
+  const [inBlendMode, setInBlendMode] = useState<'natural' | 'seamless' | 'artistic'>('natural');
+  const [inAspectRatio, setInAspectRatio] = useState<AspectRatio>('1:1');
+  const [inNegativePrompt, setInNegativePrompt] = useState('');
+  const inFileInputRef = useRef<HTMLInputElement>(null);
+  const inMaskInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Tool 10: Composition Form State ──
+  const [compBaseFile, setCompBaseFile] = useState<File | null>(null);
+  const [compBasePreview, setCompBasePreview] = useState<string | null>(null);
+  const [compOverlayFiles, setCompOverlayFiles] = useState<File[]>([]);
+  const [compOverlayPreviews, setCompOverlayPreviews] = useState<string[]>([]);
+  const [compPrompt, setCompPrompt] = useState('');
+  const [compStyle, setCompStyle] = useState<'realistic' | 'artistic' | 'professional' | 'collage'>('realistic');
+  const [compLightingAdj, setCompLightingAdj] = useState(true);
+  const [compAspectRatio, setCompAspectRatio] = useState<AspectRatio>('1:1');
+  const [compNegativePrompt, setCompNegativePrompt] = useState('');
+  const compBaseInputRef = useRef<HTMLInputElement>(null);
+  const compOverlayInputRef = useRef<HTMLInputElement>(null);
 
   // ── RemoveBG State ──
   const [removeBgFile, setRemoveBgFile] = useState<File | null>(null);
@@ -240,7 +323,7 @@ export const AiImagesTab: React.FC = () => {
   const [removeBgAspectRatio, setRemoveBgAspectRatio] = useState('original');
   const removeBgInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Generation & Output State ──
+  // ── Output & Lightbox State ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -415,12 +498,10 @@ export const AiImagesTab: React.FC = () => {
         aspect_ratio: studioAspectRatio as AspectRatio,
       });
 
-      // Clear extra images
       extraImageUrls.forEach((u) => URL.revokeObjectURL(u));
       setExtraImages([]);
       setExtraImageUrls([]);
 
-      // Refresh current session
       const updatedSession = await imageService.getSession(sessionId);
       setCurrentSession(updatedSession);
       refreshSubscription();
@@ -432,124 +513,177 @@ export const AiImagesTab: React.FC = () => {
     }
   };
 
-  // ── Tools Selection & File Handlers ──
-  const handleSelectTool = (toolId: ImageEndpoint) => {
-    setSelectedTool(toolId);
-    const preset = IMAGE_PROMPT_PRESETS.find((p) => p.category === toolId);
-    if (preset) setPrompt(preset.prompt);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      const url = URL.createObjectURL(file);
-      setUploadedPreview(url);
-    }
-  };
-
-  const handleRemoveBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setRemoveBgFile(file);
-      const url = URL.createObjectURL(file);
-      setRemoveBgPreview(url);
-    }
-  };
-
-  // ── Tools Generation Trigger ──
-  const handleGenerate = async () => {
+  // ── 10 Dedicated Tools Submission ──
+  const handleExecuteTool = async () => {
     if (!selectedTool) return;
-    if (!prompt.trim() && selectedTool !== 'inpainting') {
-      alert(t('Vui lòng nhập mô tả ảnh!', 'Please enter an image prompt!'));
-      return;
-    }
-
     try {
       setIsGenerating(true);
       setResultImage(null);
-
       let res: GenerateImageResult;
 
       switch (selectedTool) {
         case 'photorealistic':
+          if (photoPrompt.trim().length < 10) {
+            alert(t('Mô tả cảnh cần tối thiểu 10 ký tự!', 'Scene description needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
           res = await imageService.generatePhotorealistic({
-            prompt,
-            aspect_ratio: aspectRatio,
-            negative_prompt: negativePrompt || undefined,
-            lighting,
-            camera_angle: cameraAngle,
+            prompt: photoPrompt.trim(),
+            lighting: photoLighting || undefined,
+            camera_angle: photoCameraAngle || undefined,
+            aspect_ratio: photoAspectRatio,
+            negative_prompt: photoNegativePrompt.trim() || undefined,
           });
           break;
 
         case 'stylized':
+          if (stylizedPrompt.trim().length < 10) {
+            alert(t('Mô tả đối tượng cần tối thiểu 10 ký tự!', 'Object description needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
           res = await imageService.generateStylized({
-            prompt,
-            aspect_ratio: aspectRatio,
-            style_preset: stylePreset,
-            negative_prompt: negativePrompt || undefined,
+            prompt: stylizedPrompt.trim(),
+            style_preset: stylizedStyle,
+            sticker_mode: stylizedStickerMode,
+            aspect_ratio: stylizedAspectRatio,
           });
           break;
 
         case 'logo':
+          if (!logoBrandName.trim() || !logoIndustry.trim()) {
+            alert(t('Vui lòng nhập Tên thương hiệu và Ngành nghề!', 'Please enter Brand Name and Industry!'));
+            setIsGenerating(false);
+            return;
+          }
           res = await imageService.generateLogo({
-            brand_name: prompt,
-            industry: 'Technology',
+            brand_name: logoBrandName.trim(),
+            tagline: logoTagline.trim() || undefined,
+            industry: logoIndustry.trim(),
             style: logoStyle,
-            aspect_ratio: aspectRatio,
+            color_palette: logoColorPalette.trim() || undefined,
+            visual_elements: logoVisualElements.trim() || undefined,
+            aspect_ratio: logoAspectRatio,
           });
           break;
 
         case 'background':
+          if (bgTheme.trim().length < 10) {
+            alert(t('Chủ đề background cần tối thiểu 10 ký tự!', 'Theme needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
           res = await imageService.generateBackground({
-            theme: prompt,
-            aspect_ratio: aspectRatio,
-            color_mood: colorMood,
+            theme: bgTheme.trim(),
+            minimalist_mode: bgMinimalistMode,
+            negative_space_position: bgMinimalistMode ? bgNegativeSpace : undefined,
+            color_mood: bgColorMood,
+            aspect_ratio: bgAspectRatio,
           });
           break;
 
         case 'mockup':
+          if (mockupScene.trim().length < 10) {
+            alert(t('Mô tả sản phẩm và bối cảnh cần tối thiểu 10 ký tự!', 'Description needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
           res = await imageService.generateMockup({
-            scene_description: prompt,
-            aspect_ratio: aspectRatio,
+            scene_description: mockupScene.trim(),
             placement_type: mockupPlacement,
+            aspect_ratio: mockupAspectRatio,
+          });
+          break;
+
+        case 'sequential':
+          if (seqScript.trim().length < 10) {
+            alert(t('Kịch bản truyện cần tối thiểu 10 ký tự!', 'Story script needs at least 10 characters!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.generateSequential({
+            story_script: seqScript.trim(),
+            panel_count: seqPanelCount,
+            style: seqStyle,
+            aspect_ratio: seqAspectRatio,
           });
           break;
 
         case 'style-transfer':
-        case 'object-edit':
-        case 'inpainting':
-        case 'composition':
-          {
-            const editRes = await imageService.editImage({
-              image_file: uploadedFile || undefined,
-              prompt: prompt || 'Edit image realistically',
-              edit_mode: selectedTool === 'object-edit' ? 'object-edit' : selectedTool === 'inpainting' ? 'inpainting' : 'style-transfer',
-              aspect_ratio: aspectRatio,
-            });
-            res = {
-              image_url: editRes.image_url,
-              file_id: editRes.file_id,
-              prompt_used: prompt,
-              aspect_ratio: aspectRatio,
-            };
+          if (!stImageFile || !stTargetStyle.trim()) {
+            alert(t('Vui lòng tải ảnh gốc và chọn phong cách đích!', 'Please upload original image & select target style!'));
+            setIsGenerating(false);
+            return;
           }
+          res = await imageService.editStyleTransfer({
+            image_file: stImageFile,
+            target_style: stTargetStyle.trim(),
+            strength: stStrength,
+            preserve_structure: stPreserveStructure,
+            aspect_ratio: stAspectRatio,
+            negative_prompt: stNegativePrompt.trim() || undefined,
+          });
+          break;
+
+        case 'object-edit':
+          if (!oeImageFile || !oeTargetObject.trim() || !oeModification.trim()) {
+            alert(t('Vui lòng tải ảnh gốc, nhập đối tượng và mô tả chỉnh sửa!', 'Please fill in original image, target object and modification!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.editObjectEdit({
+            image_file: oeImageFile,
+            target_object: oeTargetObject.trim(),
+            modification: oeModification.trim(),
+            preserve_background: oePreserveBg,
+            aspect_ratio: oeAspectRatio,
+            negative_prompt: oeNegativePrompt.trim() || undefined,
+          });
+          break;
+
+        case 'inpainting':
+          if (!inImageFile || !inPrompt.trim()) {
+            alert(t('Vui lòng tải ảnh gốc và nhập mô tả vùng vẽ!', 'Please upload image and enter prompt!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.editInpainting({
+            image_file: inImageFile,
+            mask_file: inMaskFile || undefined,
+            prompt: inPrompt.trim(),
+            action: inAction,
+            blend_mode: inBlendMode,
+            aspect_ratio: inAspectRatio,
+            negative_prompt: inNegativePrompt.trim() || undefined,
+          });
+          break;
+
+        case 'composition':
+          if (!compBaseFile || !compPrompt.trim()) {
+            alert(t('Vui lòng tải ảnh nền (Base image) và nhập mô tả bố cục!', 'Please upload base image and enter prompt!'));
+            setIsGenerating(false);
+            return;
+          }
+          res = await imageService.editComposition({
+            base_image: compBaseFile,
+            overlay_images: compOverlayFiles,
+            prompt: compPrompt.trim(),
+            composition_style: compStyle,
+            lighting_adjustment: compLightingAdj,
+            aspect_ratio: compAspectRatio,
+            negative_prompt: compNegativePrompt.trim() || undefined,
+          });
           break;
 
         default:
-          res = await imageService.generateImage({
-            prompt,
-            category: selectedTool,
-            aspect_ratio: aspectRatio,
-            negative_prompt: negativePrompt || undefined,
-          });
-          break;
+          throw new Error('Unknown tool');
       }
 
       setResultImage(res);
       refreshSubscription();
     } catch (err: any) {
-      console.error('Image generate error:', err);
+      console.error('Tool execution error:', err);
       alert(err.message || t('Tạo ảnh thất bại, vui lòng thử lại', 'Image generation failed'));
     } finally {
       setIsGenerating(false);
@@ -584,7 +718,6 @@ export const AiImagesTab: React.FC = () => {
   };
 
   const activeToolConfig = CUSTOM_TOOLS.find((t) => t.id === selectedTool);
-
   const characterRefs = currentSession?.images?.filter((img: any) => img.role === 'character') || [];
   const objectRefs = currentSession?.images?.filter((img: any) => img.role === 'object') || [];
   const generatedHistory = currentSession?.images?.filter((img: any) => img.role === 'generated') || [];
@@ -968,7 +1101,7 @@ export const AiImagesTab: React.FC = () => {
               type="button"
               onClick={handleStudioSubmit}
               disabled={isGenerating || !studioPrompt.trim()}
-              className={`w-full py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg ${
+              className={`w-full py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg ${
                 isDark
                   ? 'bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-500 text-white shadow-fuchsia-500/25'
                   : 'bg-gradient-to-r from-fuchsia-600 via-violet-600 to-cyan-600 text-white shadow-violet-500/25'
@@ -991,12 +1124,12 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. VIEW MODE 2: 10 CUSTOM TOOLS (2-Row Square Cards Grid or Form)
+          3. VIEW MODE 2: 10 CUSTOM TOOLS (Grid & Dedicated Forms)
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'tools' && (
         <div className="space-y-4">
           {!selectedTool ? (
-            // ── Grid View: 10 Tool Cards — Web parity (GeminiImageModal style) ──
+            // ── Grid View: 10 Tool Cards — Web Parity ──
             <div className="space-y-4 animate-in fade-in duration-200">
               <div
                 className={`rounded-[30px] border p-4 sm:p-5 backdrop-blur-2xl ${
@@ -1005,18 +1138,17 @@ export const AiImagesTab: React.FC = () => {
                     : 'border-white/80 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.60)]'
                 }`}
               >
-                {/* Header: Sparkles gradient icon + CUSTOM TOOLS label + title */}
                 <div className="flex items-center gap-3 mb-5">
                   <div className="h-11 w-11 rounded-[18px] bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 flex items-center justify-center shadow-lg shrink-0">
                     <Sparkles className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className={`text-xs uppercase tracking-[0.24em] ${
+                    <p className={`text-xs uppercase tracking-[0.24em] font-black ${
                       isDark ? 'text-fuchsia-200/70' : 'text-fuchsia-700/70'
                     }`}>
                       Custom Tools
                     </p>
-                    <h3 className={`text-lg sm:text-xl font-semibold ${
+                    <h3 className={`text-lg sm:text-xl font-bold ${
                       isDark ? 'text-white' : 'text-slate-900'
                     }`}>
                       {t('10 AI tools studio', '10 AI tools studio')}
@@ -1024,7 +1156,6 @@ export const AiImagesTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Tool Cards Grid: 2 cols mobile / 5 cols sm+ */}
                 <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">
                   {CUSTOM_TOOLS.map((tool) => {
                     const Icon = tool.icon;
@@ -1032,7 +1163,7 @@ export const AiImagesTab: React.FC = () => {
                       <button
                         key={tool.id}
                         type="button"
-                        onClick={() => handleSelectTool(tool.id)}
+                        onClick={() => setSelectedTool(tool.id)}
                         className={`group relative rounded-2xl border p-3 text-left transition-all duration-300 flex flex-col justify-between aspect-square active:scale-95 ${
                           isDark
                             ? 'border-white/10 bg-white/[0.04] hover:border-white/25 hover:bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
@@ -1067,221 +1198,1268 @@ export const AiImagesTab: React.FC = () => {
               </div>
             </div>
           ) : (
-            // ── Form View: Selected Tool Screen ──
+            // ── Dedicated Tool Screen (Matching Web Exactly with Header, Description & Specific Form) ──
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
-              <div className="flex items-center justify-between">
+              {/* Back Button */}
+              <div>
                 <button
                   type="button"
                   onClick={() => setSelectedTool(null)}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-all flex items-center gap-1.5 active:scale-95 ${
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 ${
                     isDark ? 'bg-[#121522] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
                   }`}
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>{t('Quay Lại Danh Sách', 'Back to Tools')}</span>
                 </button>
-
-                <div className="flex items-center gap-2">
-                  {activeToolConfig && (
-                    <span className="text-xs font-black text-white flex items-center gap-1.5">
-                      <activeToolConfig.icon className="w-4 h-4 text-fuchsia-400" />
-                      {isVietnamese ? activeToolConfig.nameVi : activeToolConfig.nameEn}
-                    </span>
-                  )}
-                </div>
               </div>
 
-              {/* Upload Input for Editing Tools */}
-              {activeToolConfig?.type === 'editing' && (
-                <div
-                  className={`p-4 rounded-2xl border space-y-3 ${
-                    isDark ? 'bg-[#121522] border-slate-800' : 'bg-white border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-white flex items-center gap-1.5">
-                      <Upload className="w-3.5 h-3.5 text-fuchsia-400" />
-                      {t('Tải Ảnh Gốc Lên Để Chỉnh Sửa', 'Upload Source Image to Edit')}
-                    </span>
-                    {uploadedFile && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUploadedFile(null);
-                          setUploadedPreview(null);
-                        }}
-                        className="text-[10px] text-rose-400 font-bold"
-                      >
-                        {t('Xóa ảnh', 'Clear')}
-                      </button>
-                    )}
-                  </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-
-                  {uploadedPreview ? (
-                    <div className="relative rounded-xl overflow-hidden border border-slate-700 max-h-48 flex items-center justify-center bg-black/40">
-                      <img src={uploadedPreview} alt="Source" className="max-h-48 object-contain" />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`w-full py-6 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                        isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
-                      }`}
-                    >
-                      <Upload className="w-6 h-6 text-slate-500" />
-                      <span className="text-xs font-bold text-slate-400">
-                        {t('Chạm để chọn ảnh từ thư viện', 'Tap to select image from library')}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Tool Specific Form Options */}
+              {/* Glowing Tool Header with Tag, Title & Full Description */}
               <div
-                className={`p-4 rounded-2xl border space-y-4 ${
-                  isDark ? 'bg-[#121522] border-slate-800' : 'bg-white border-slate-200'
+                className={`rounded-[30px] border p-4 sm:p-6 backdrop-blur-2xl ${
+                  isDark
+                    ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                    : 'border-white/80 bg-white/75 shadow-lg'
                 }`}
               >
-                {/* Prompt input */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-white flex items-center justify-between">
-                    <span>{t('Mô tả hình ảnh (Prompt)', 'Image Prompt')}</span>
-                    <span className="text-[10px] text-slate-500 font-normal">Tiếng Anh & Việt</span>
-                  </label>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={3}
-                    placeholder={t('Mô tả chi tiết bức ảnh bạn muốn AI tạo...', 'Describe the image you want AI to generate...')}
-                    className={`w-full p-3 rounded-xl text-xs font-medium border outline-none resize-none transition-all ${
-                      isDark
-                        ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-[#FF2D55]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-black'
-                    }`}
-                  />
-                </div>
-
-                {/* Aspect ratio */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-white">{t('Tỉ Lệ Khung Hình', 'Aspect Ratio')}</label>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
-                      <button
-                        key={ratio}
-                        type="button"
-                        onClick={() => setAspectRatio(ratio)}
-                        className={`py-2 rounded-xl text-xs font-black transition-all border ${
-                          aspectRatio === ratio
-                            ? isDark
-                              ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
-                              : 'bg-black text-white border-black'
-                            : isDark
-                            ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                            : 'bg-slate-100 border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        {ratio}
-                      </button>
-                    ))}
+                <div className="flex flex-col sm:flex-row items-start gap-4 mb-5">
+                  <div className="relative shrink-0">
+                    <div className="absolute inset-0 rounded-[20px] bg-gradient-to-br from-cyan-400 to-violet-500 blur-md opacity-70" />
+                    <div className="relative h-14 w-14 rounded-[20px] border border-white/20 bg-black/30 backdrop-blur-xl flex items-center justify-center shadow-lg">
+                      {activeToolConfig && <activeToolConfig.icon className="w-7 h-7 text-white" />}
+                    </div>
+                  </div>
+                  <div>
+                    <p className={`text-xs uppercase tracking-[0.24em] font-black ${
+                      isDark ? 'text-cyan-300' : 'text-cyan-700'
+                    }`}>
+                      {activeToolConfig?.type === 'editing' ? t('EDITING TOOL', 'EDITING TOOL') : t('GENERATION TOOL', 'GENERATION TOOL')}
+                    </p>
+                    <h3 className={`text-xl sm:text-2xl font-bold mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      {isVietnamese ? activeToolConfig?.nameVi : activeToolConfig?.nameEn}
+                    </h3>
+                    <p className={`mt-1.5 text-xs sm:text-sm max-w-2xl leading-relaxed ${isDark ? 'text-white/70' : 'text-slate-600'}`}>
+                      {isVietnamese ? activeToolConfig?.descVi : activeToolConfig?.descEn}
+                    </p>
                   </div>
                 </div>
 
-                {/* Specific controls */}
-                {selectedTool === 'photorealistic' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-400">{t('Ánh Sáng', 'Lighting')}</label>
-                      <select
-                        value={lighting}
-                        onChange={(e) => setLighting(e.target.value as any)}
-                        className={`w-full p-2 rounded-xl text-xs font-bold border outline-none ${
-                          isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                      >
-                        <option value="Cinematic">Cinematic</option>
-                        <option value="Natural">Natural</option>
-                        <option value="Studio">Studio</option>
-                        <option value="Golden Hour">Golden Hour</option>
-                      </select>
-                    </div>
+                {/* Form Container */}
+                <div
+                  className={`rounded-[24px] border p-4 sm:p-5 space-y-4 ${
+                    isDark ? 'border-white/10 bg-black/30' : 'border-slate-200 bg-white/90'
+                  }`}
+                >
+                  {/* ────────────────── TOOL 1: PHOTOREALISTIC ────────────────── */}
+                  {selectedTool === 'photorealistic' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Mô tả chi tiết cảnh', 'Detailed Scene Description')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{photoPrompt.length}/500</span>
+                        </label>
+                        <textarea
+                          value={photoPrompt}
+                          onChange={(e) => setPhotoPrompt(e.target.value)}
+                          rows={4}
+                          maxLength={500}
+                          placeholder={t(
+                            'Ví dụ: Một chiếc xe hơi mui trần màu đỏ vintage thập niên 1960 đỗ trên đường ven biển lúc hoàng hôn...',
+                            'Example: A vintage 1960s red convertible car parked on a coastal highway during sunset...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-400">{t('Góc Chụp', 'Camera Angle')}</label>
-                      <select
-                        value={cameraAngle}
-                        onChange={(e) => setCameraAngle(e.target.value as any)}
-                        className={`w-full p-2 rounded-xl text-xs font-bold border outline-none ${
-                          isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                      >
-                        <option value="Eye Level">Eye Level</option>
-                        <option value="Wide Angle">Wide Angle</option>
-                        <option value="Macro">Macro 8K</option>
-                        <option value="Drone View">Drone View</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Kiểu ánh sáng (Tùy chọn)', 'Lighting (Optional)')}
+                          </label>
+                          <select
+                            value={photoLighting}
+                            onChange={(e) => setPhotoLighting(e.target.value)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="">{t('-- Chọn ánh sáng --', '-- Select lighting --')}</option>
+                            <option value="Natural">{t('Ánh sáng tự nhiên', 'Natural')}</option>
+                            <option value="Studio">{t('Ánh sáng studio', 'Studio')}</option>
+                            <option value="Cinematic">{t('Ánh sáng điện ảnh', 'Cinematic')}</option>
+                            <option value="Golden Hour">{t('Giờ vàng', 'Golden Hour')}</option>
+                          </select>
+                        </div>
 
-                {selectedTool === 'stylized' && (
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-400">{t('Phong Cách', 'Style Preset')}</label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {(['Anime', '3D Render', 'Watercolor', 'Oil Painting', 'Flat Design', 'Sticker Art'] as const).map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setStylePreset(preset)}
-                          className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all truncate ${
-                            stylePreset === preset
-                              ? isDark
-                                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55]'
-                                : 'bg-black text-white border-black'
-                              : isDark
-                              ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                              : 'bg-slate-100 border-slate-200 text-slate-600'
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Góc máy (Tùy chọn)', 'Camera Angle (Optional)')}
+                          </label>
+                          <select
+                            value={photoCameraAngle}
+                            onChange={(e) => setPhotoCameraAngle(e.target.value)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="">{t('-- Chọn góc máy --', '-- Select camera angle --')}</option>
+                            <option value="Wide Angle">{t('Góc rộng', 'Wide Angle')}</option>
+                            <option value="Macro">{t('Góc cận cảnh (Macro)', 'Macro')}</option>
+                            <option value="Drone View">{t('Góc flycam', 'Drone View')}</option>
+                            <option value="Eye Level">{t('Góc ngang tầm mắt', 'Eye Level')}</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setPhotoAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                photoAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Negative Prompt (Những gì cần tránh - Tùy chọn)', 'Negative Prompt (Optional)')}
+                        </label>
+                        <input
+                          type="text"
+                          value={photoNegativePrompt}
+                          onChange={(e) => setPhotoNegativePrompt(e.target.value)}
+                          placeholder="Ví dụ: blur, distortion, low quality, watermark"
+                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 2: STYLIZED ART ────────────────── */}
+                  {selectedTool === 'stylized' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Mô tả đối tượng cần vẽ', 'Object Description')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{stylizedPrompt.length}/500</span>
+                        </label>
+                        <textarea
+                          value={stylizedPrompt}
+                          onChange={(e) => setStylizedPrompt(e.target.value)}
+                          rows={4}
+                          maxLength={500}
+                          placeholder={t(
+                            'Ví dụ: Một con gấu trúc đỏ đáng yêu đang ăn tre trong rừng trúc mùa thu...',
+                            'Example: A cute red panda eating bamboo in a forest during autumn...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Phong cách nghệ thuật', 'Art Style')} <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={stylizedStyle}
+                          onChange={(e) => setStylizedStyle(e.target.value as any)}
+                          className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                           }`}
                         >
-                          {preset}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                          <option value="Anime">Anime</option>
+                          <option value="3D Render">Render 3D</option>
+                          <option value="Watercolor">{t('Màu nước', 'Watercolor')}</option>
+                          <option value="Oil Painting">{t('Tranh sơn dầu', 'Oil Painting')}</option>
+                          <option value="Flat Design">{t('Thiết kế phẳng', 'Flat Design')}</option>
+                          <option value="Sticker Art">{t('Nghệ thuật sticker', 'Sticker Art')}</option>
+                        </select>
+                      </div>
 
-                {/* Generate Button */}
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className={`w-full py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg ${
-                    isDark
-                      ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-rose-500/25'
-                      : 'bg-black text-white shadow-slate-500/25'
-                  } disabled:opacity-50`}
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{t('Đang vẽ AI...', 'Generating...')} ({elapsedTime}s)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>{t('Tạo Ảnh Nghệ Thuật Ngay', 'Generate Image Now')}</span>
-                    </>
+                      <div className="flex items-center gap-2.5 py-1">
+                        <input
+                          type="checkbox"
+                          id="stk-mode"
+                          checked={stylizedStickerMode}
+                          onChange={(e) => setStylizedStickerMode(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="stk-mode" className="text-xs font-bold text-slate-300 cursor-pointer">
+                          {t('Chế độ sticker (nền trắng, đường viền rõ nét)', 'Sticker mode (white background, clean outlines)')}
+                        </label>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setStylizedAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                stylizedAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </button>
+
+                  {/* ────────────────── TOOL 3: LOGO DESIGN ────────────────── */}
+                  {selectedTool === 'logo' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Tên thương hiệu', 'Brand Name')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{logoBrandName.length}/50</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={logoBrandName}
+                          onChange={(e) => setLogoBrandName(e.target.value)}
+                          maxLength={50}
+                          placeholder={t('Ví dụ: TechFlow, WynMotion', 'Example: TechFlow, WynMotion')}
+                          className={`w-full p-2.5 rounded-xl text-xs outline-none border ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Khẩu hiệu (Tùy chọn)', 'Tagline (Optional)')}
+                          </label>
+                          <input
+                            type="text"
+                            value={logoTagline}
+                            onChange={(e) => setLogoTagline(e.target.value)}
+                            placeholder="Ví dụ: Innovation in Motion"
+                            className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Ngành nghề', 'Industry')} <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={logoIndustry}
+                            onChange={(e) => setLogoIndustry(e.target.value)}
+                            placeholder="Ví dụ: Tech Startup, Coffee Shop"
+                            className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Phong cách logo', 'Logo Style')} <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={logoStyle}
+                            onChange={(e) => setLogoStyle(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="Modern">{t('Hiện đại (Modern)', 'Modern')}</option>
+                            <option value="Minimalist">{t('Tối giản (Minimalist)', 'Minimalist')}</option>
+                            <option value="Vintage">{t('Cổ điển (Vintage)', 'Vintage')}</option>
+                            <option value="Luxury">{t('Sang trọng (Luxury)', 'Luxury')}</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Bảng màu (Tùy chọn)', 'Color Palette (Optional)')}
+                          </label>
+                          <input
+                            type="text"
+                            value={logoColorPalette}
+                            onChange={(e) => setLogoColorPalette(e.target.value)}
+                            placeholder="Ví dụ: Cyan & Violet Gradient"
+                            className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Chi tiết hình ảnh mong muốn (Tùy chọn)', 'Visual Elements (Optional)')}
+                        </label>
+                        <input
+                          type="text"
+                          value={logoVisualElements}
+                          onChange={(e) => setLogoVisualElements(e.target.value)}
+                          placeholder="Ví dụ: Geometric waves, AI node connections"
+                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setLogoAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                logoAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 4: BACKGROUND ────────────────── */}
+                  {selectedTool === 'background' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Chủ đề background', 'Background Theme')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{bgTheme.length}/200</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={bgTheme}
+                          onChange={(e) => setBgTheme(e.target.value)}
+                          maxLength={200}
+                          placeholder={t('Ví dụ: Thành phố cyberpunk về đêm, Thiên nhiên rừng thông sương mù...', 'Example: Cyberpunk city at night, Foggy pine forest...')}
+                          className={`w-full p-2.5 rounded-xl text-xs outline-none border ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2.5 py-1">
+                        <input
+                          type="checkbox"
+                          id="bg-min"
+                          checked={bgMinimalistMode}
+                          onChange={(e) => setBgMinimalistMode(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="bg-min" className="text-xs font-bold text-slate-300 cursor-pointer">
+                          {t('Chế độ tối giản (có không gian trống để đặt chữ)', 'Minimalist mode (with negative space for text)')}
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {bgMinimalistMode && (
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                              {t('Vị trí không gian trống', 'Negative Space Position')}
+                            </label>
+                            <select
+                              value={bgNegativeSpace}
+                              onChange={(e) => setBgNegativeSpace(e.target.value as any)}
+                              className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                                isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            >
+                              <option value="Center">{t('Giữa', 'Center')}</option>
+                              <option value="Left">{t('Bên trái', 'Left')}</option>
+                              <option value="Right">{t('Bên phải', 'Right')}</option>
+                              <option value="Top">{t('Phía trên', 'Top')}</option>
+                            </select>
+                          </div>
+                        )}
+
+                        <div className={bgMinimalistMode ? '' : 'col-span-2'}>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Tông màu chủ đạo', 'Color Mood')}
+                          </label>
+                          <select
+                            value={bgColorMood}
+                            onChange={(e) => setBgColorMood(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="Dark">{t('Tối & Bí ẩn (Dark)', 'Dark')}</option>
+                            <option value="Light">{t('Sáng & Tinh tế (Light)', 'Light')}</option>
+                            <option value="Pastel">{t('Pastel dịu nhẹ (Pastel)', 'Pastel')}</option>
+                            <option value="Vibrant">{t('Rực rỡ nổi bật (Vibrant)', 'Vibrant')}</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setBgAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                bgAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 5: MOCKUP ────────────────── */}
+                  {selectedTool === 'mockup' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Mô tả sản phẩm và bối cảnh', 'Product & Scene Description')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{mockupScene.length}/300</span>
+                        </label>
+                        <textarea
+                          value={mockupScene}
+                          onChange={(e) => setMockupScene(e.target.value)}
+                          rows={4}
+                          maxLength={300}
+                          placeholder={t(
+                            'Ví dụ: Một chiếc smartphone màn hình cong cao cấp đặt trên bàn làm việc gỗ hiện đại cùng cốc cà phê và cây xanh...',
+                            'Example: A sleek modern smartphone placed on a wooden desk with a coffee mug and indoor plant...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Kiểu đặt sản phẩm', 'Placement Type')} <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={mockupPlacement}
+                          onChange={(e) => setMockupPlacement(e.target.value as any)}
+                          className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="Tabletop">{t('Trên bàn (Tabletop)', 'Tabletop')}</option>
+                          <option value="Model Wearing">{t('Người mẫu mang / mặc (Model Wearing)', 'Model Wearing')}</option>
+                          <option value="Outdoor">{t('Ngoài trời (Outdoor)', 'Outdoor')}</option>
+                          <option value="Studio Backdrop">{t('Phông studio chuyên nghiệp (Studio Backdrop)', 'Studio Backdrop')}</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setMockupAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                mockupAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 6: SEQUENTIAL ART ────────────────── */}
+                  {selectedTool === 'sequential' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Mô tả câu chuyện / kịch bản chuỗi', 'Story Script')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{seqScript.length}/500</span>
+                        </label>
+                        <textarea
+                          value={seqScript}
+                          onChange={(e) => setSeqScript(e.target.value)}
+                          rows={4}
+                          maxLength={500}
+                          placeholder={t(
+                            'Ví dụ: Một điệp viên đứng dưới mưa trong con hẻm tối. Anh phát hiện dấu vết bí ẩn trên tường và rút thiết bị quét laser ra...',
+                            'Example: A detective in the rain in a dark alley. He spots a mysterious symbol on the wall and pulls out his scanner...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 items-center">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Số lượng panels', 'Panel Count')} ({seqPanelCount})
+                          </label>
+                          <input
+                            type="range"
+                            min={1}
+                            max={4}
+                            value={seqPanelCount}
+                            onChange={(e) => setSeqPanelCount(parseInt(e.target.value))}
+                            className="w-full accent-[#FF2D55] cursor-pointer"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Phong cách nghệ thuật', 'Art Style')} <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={seqStyle}
+                            onChange={(e) => setSeqStyle(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="Comic Book">Comic Book</option>
+                            <option value="Manga">Manga</option>
+                            <option value="Storyboard Sketch">Storyboard Sketch</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setSeqAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                seqAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 7: STYLE TRANSFER ────────────────── */}
+                  {selectedTool === 'style-transfer' && (
+                    <div className="space-y-4">
+                      <input
+                        ref={stFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setStImageFile(f);
+                            setStImagePreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Ảnh gốc cần chuyển phong cách', 'Original Image')} <span className="text-rose-500">*</span>
+                        </label>
+                        {stImagePreview ? (
+                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-48 flex items-center justify-center bg-black/40">
+                            <img src={stImagePreview} alt="Original" className="max-h-48 object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStImageFile(null);
+                                setStImagePreview(null);
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => stFileInputRef.current?.click()}
+                            className={`w-full py-7 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
+                            }`}
+                          >
+                            <Upload className="w-6 h-6 text-indigo-400" />
+                            <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Chọn phong cách đích', 'Target Style Preset')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {STYLE_TRANSFER_PRESETS.map((pst) => (
+                            <button
+                              key={pst.name}
+                              type="button"
+                              onClick={() => setStTargetStyle(pst.name)}
+                              className={`py-2 px-2 rounded-xl text-[11px] font-bold border transition-all truncate text-left ${
+                                stTargetStyle === pst.name
+                                  ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-indigo-500 shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-300'
+                                  : 'bg-slate-100 border-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {pst.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Hoặc nhập mô tả phong cách tùy chỉnh', 'Or custom style description')}
+                        </label>
+                        <input
+                          type="text"
+                          value={stTargetStyle}
+                          onChange={(e) => setStTargetStyle(e.target.value)}
+                          placeholder="Ví dụ: Van Gogh Starry Night with thick oil strokes"
+                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Độ mạnh áp dụng phong cách', 'Strength')} ({stStrength}%)
+                        </label>
+                        <input
+                          type="range"
+                          min={10}
+                          max={100}
+                          value={stStrength}
+                          onChange={(e) => setStStrength(parseInt(e.target.value))}
+                          className="w-full accent-[#FF2D55] cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2.5 py-1">
+                        <input
+                          type="checkbox"
+                          id="st-pres"
+                          checked={stPreserveStructure}
+                          onChange={(e) => setStPreserveStructure(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="st-pres" className="text-xs font-bold text-slate-300 cursor-pointer">
+                          {t('Giữ nguyên bố cục và cấu trúc ảnh gốc', 'Preserve structure of original image')}
+                        </label>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setStAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                stAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 8: OBJECT EDIT ────────────────── */}
+                  {selectedTool === 'object-edit' && (
+                    <div className="space-y-4">
+                      <input
+                        ref={oeFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setOeImageFile(f);
+                            setOeImagePreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Ảnh gốc cần chỉnh sửa', 'Original Image')} <span className="text-rose-500">*</span>
+                        </label>
+                        {oeImagePreview ? (
+                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-48 flex items-center justify-center bg-black/40">
+                            <img src={oeImagePreview} alt="Original" className="max-h-48 object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOeImageFile(null);
+                                setOeImagePreview(null);
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => oeFileInputRef.current?.click()}
+                            className={`w-full py-7 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
+                            }`}
+                          >
+                            <Upload className="w-6 h-6 text-cyan-400" />
+                            <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Đối tượng cần sửa trong ảnh', 'Target Object')} <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={oeTargetObject}
+                          onChange={(e) => setOeTargetObject(e.target.value)}
+                          maxLength={100}
+                          placeholder={t('Ví dụ: Chiếc áo thun, Kính râm, Chiếc xe màu trắng...', 'Example: The t-shirt, The sunglasses, The white car...')}
+                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Mô tả hành động / thay đổi chi tiết', 'Modification Description')} <span className="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                          value={oeModification}
+                          onChange={(e) => setOeModification(e.target.value)}
+                          rows={3}
+                          maxLength={200}
+                          placeholder={t(
+                            'Ví dụ: Đổi thành áo khoác da màu đen có khóa kéo kim loại sáng bóng...',
+                            'Example: Change into a black leather jacket with shiny metallic zipper...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2.5 py-1">
+                        <input
+                          type="checkbox"
+                          id="oe-bg"
+                          checked={oePreserveBg}
+                          onChange={(e) => setOePreserveBg(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="oe-bg" className="text-xs font-bold text-slate-300 cursor-pointer">
+                          {t('Giữ nguyên tuyệt đối phần nền còn lại', 'Preserve background unchanged')}
+                        </label>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setOeAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                oeAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 9: INPAINTING ────────────────── */}
+                  {selectedTool === 'inpainting' && (
+                    <div className="space-y-4">
+                      <input
+                        ref={inFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setInImageFile(f);
+                            setInImagePreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <input
+                        ref={inMaskInputRef}
+                        type="file"
+                        accept="image/png"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setInMaskFile(f);
+                            setInMaskPreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-bold text-white mb-1.5 block">
+                            {t('Ảnh gốc', 'Original Image')} <span className="text-rose-500">*</span>
+                          </label>
+                          {inImagePreview ? (
+                            <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-36 flex items-center justify-center bg-black/40">
+                              <img src={inImagePreview} alt="Original" className="max-h-36 object-contain" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInImageFile(null);
+                                  setInImagePreview(null);
+                                }}
+                                className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => inFileInputRef.current?.click()}
+                              className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
+                                isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                              }`}
+                            >
+                              <Upload className="w-5 h-5 text-teal-400" />
+                              <span className="text-[11px] font-bold text-white">{t('Tải ảnh gốc', 'Upload Image')}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-white mb-1.5 block">
+                            {t('Ảnh Mask (Tùy chọn)', 'Mask PNG (Optional)')}
+                          </label>
+                          {inMaskPreview ? (
+                            <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-36 flex items-center justify-center bg-black/40">
+                              <img src={inMaskPreview} alt="Mask" className="max-h-36 object-contain" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInMaskFile(null);
+                                  setInMaskPreview(null);
+                                }}
+                                className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => inMaskInputRef.current?.click()}
+                              className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
+                                isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                              }`}
+                            >
+                              <Upload className="w-5 h-5 text-slate-500" />
+                              <span className="text-[11px] font-bold text-slate-400">{t('Tải Mask PNG', 'Upload Mask')}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Mô tả những gì cần vẽ vào vùng chọn', 'Prompt')} <span className="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                          value={inPrompt}
+                          onChange={(e) => setInPrompt(e.target.value)}
+                          rows={3}
+                          placeholder={t(
+                            'Ví dụ: Thêm một chiếc đồng hồ đeo tay thông minh hiện đại vào cổ tay người mẫu...',
+                            'Example: Add a modern smartwatch onto the model wrist...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Hành động', 'Action')} <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={inAction}
+                            onChange={(e) => setInAction(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="add">{t('Thêm đối tượng (Add)', 'Add')}</option>
+                            <option value="remove">{t('Xóa đối tượng (Remove)', 'Remove')}</option>
+                            <option value="replace">{t('Thay thế đối tượng (Replace)', 'Replace')}</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Kiểu hòa trộn', 'Blend Mode')}
+                          </label>
+                          <select
+                            value={inBlendMode}
+                            onChange={(e) => setInBlendMode(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="natural">{t('Tự nhiên (Natural)', 'Natural')}</option>
+                            <option value="seamless">{t('Mịn màng liền mạch (Seamless)', 'Seamless')}</option>
+                            <option value="artistic">{t('Nghệ thuật (Artistic)', 'Artistic')}</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setInAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                inAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 10: COMPOSITION ────────────────── */}
+                  {selectedTool === 'composition' && (
+                    <div className="space-y-4">
+                      <input
+                        ref={compBaseInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setCompBaseFile(f);
+                            setCompBasePreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <input
+                        ref={compOverlayInputRef}
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            const newPreviews = files.map((f) => URL.createObjectURL(f));
+                            setCompOverlayFiles((prev) => [...prev, ...files].slice(0, 5));
+                            setCompOverlayPreviews((prev) => [...prev, ...newPreviews].slice(0, 5));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Ảnh nền cơ sở (Base Image)', 'Base Background Image')} <span className="text-rose-500">*</span>
+                        </label>
+                        {compBasePreview ? (
+                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-40 flex items-center justify-center bg-black/40">
+                            <img src={compBasePreview} alt="Base" className="max-h-40 object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCompBaseFile(null);
+                                setCompBasePreview(null);
+                              }}
+                              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => compBaseInputRef.current?.click()}
+                            className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
+                              isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                            }`}
+                          >
+                            <Upload className="w-5 h-5 text-purple-400" />
+                            <span className="text-[11px] font-bold text-white">{t('Tải ảnh nền cơ sở (Base Image)', 'Upload Base Image')}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-bold text-white">
+                            {t('Ảnh lớp phủ ghép vào (Tối đa 5 ảnh)', 'Overlay Images (Max 5)')}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => compOverlayInputRef.current?.click()}
+                            className="text-[10px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-0.5"
+                          >
+                            <Plus className="w-3 h-3" /> {t('Thêm ảnh', 'Add Image')}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none min-h-[50px]">
+                          {compOverlayPreviews.length === 0 ? (
+                            <span className="text-[11px] text-slate-500 italic py-2">{t('Chưa có ảnh lớp phủ nào', 'No overlay images yet')}</span>
+                          ) : (
+                            compOverlayPreviews.map((url, idx) => (
+                              <div key={idx} className="relative h-12 w-12 shrink-0 rounded-xl overflow-hidden border border-purple-500/30">
+                                <img src={url} alt="Overlay" className="h-full w-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    URL.revokeObjectURL(url);
+                                    setCompOverlayFiles((prev) => prev.filter((_, i) => i !== idx));
+                                    setCompOverlayPreviews((prev) => prev.filter((_, i) => i !== idx));
+                                  }}
+                                  className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-rose-400"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Mô tả bố cục ghép ảnh', 'Composition Description')} <span className="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                          value={compPrompt}
+                          onChange={(e) => setCompPrompt(e.target.value)}
+                          rows={3}
+                          placeholder={t(
+                            'Ví dụ: Đặt vật thể vào góc phải của bức ảnh nền, hòa trộn ánh sáng hoàng hôn và đổ bóng tự nhiên...',
+                            'Example: Place overlay subject onto right side of base background with sunset lighting match...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Phong cách bố cục', 'Composition Style')}
+                          </label>
+                          <select
+                            value={compStyle}
+                            onChange={(e) => setCompStyle(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="realistic">{t('Chân thực (Realistic)', 'Realistic')}</option>
+                            <option value="artistic">{t('Nghệ thuật (Artistic)', 'Artistic')}</option>
+                            <option value="professional">{t('Chuyên nghiệp (Professional)', 'Professional')}</option>
+                            <option value="collage">{t('Collage sáng tạo', 'Collage')}</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-6">
+                          <input
+                            type="checkbox"
+                            id="comp-light"
+                            checked={compLightingAdj}
+                            onChange={(e) => setCompLightingAdj(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                          />
+                          <label htmlFor="comp-light" className="text-xs font-bold text-slate-300 cursor-pointer">
+                            {t('Tự động khớp ánh sáng', 'Match lighting')}
+                          </label>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setCompAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                compAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submit Button for Active Tool */}
+                  <button
+                    type="button"
+                    onClick={handleExecuteTool}
+                    disabled={isGenerating}
+                    className={`w-full py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg ${
+                      isDark
+                        ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-rose-500/25'
+                        : 'bg-black text-white shadow-slate-500/25'
+                    } disabled:opacity-50`}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{t('Đang tạo ảnh AI...', 'Generating AI...')} ({elapsedTime}s)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>{t('Tạo Ảnh Nghệ Thuật Ngay', 'Generate Image Now')}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1314,7 +2492,14 @@ export const AiImagesTab: React.FC = () => {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={handleRemoveBgUpload}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setRemoveBgFile(file);
+                setRemoveBgPreview(URL.createObjectURL(file));
+              }
+              e.target.value = '';
+            }}
           />
 
           {removeBgPreview ? (

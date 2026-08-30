@@ -1,6 +1,6 @@
 /**
  * WynMotion AI Image Service — iOS Client
- * Connects to AI Image Generation & Editing (Photorealistic, Stylized, Logo, Background, Mockup, Sequential, Edit)
+ * Connects to AI Image Generation & Editing (10 Tools + Studio + RemoveBG)
  * Mirrors https://www.wynai.pro/app/wynmotion-ai?tab=images & GeminiImageModal.tsx
  */
 
@@ -47,69 +47,6 @@ export type ImageEndpoint =
 
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
 
-export interface ImagePromptPreset {
-  id: string;
-  labelVi: string;
-  labelEn: string;
-  prompt: string;
-  category: ImageEndpoint;
-}
-
-export const IMAGE_PROMPT_PRESETS: ImagePromptPreset[] = [
-  {
-    id: '1',
-    labelVi: '🦊 Mascot Cáo 3D Pixar',
-    labelEn: '🦊 3D Pixar Fox Mascot',
-    prompt: 'Cute fluffy white fox mascot wearing cyan hoodie with letter M, 3D Pixar character style, soft studio rim lighting, vibrant 8k render',
-    category: 'stylized',
-  },
-  {
-    id: '2',
-    labelVi: '📸 Chân Dung Nhiếp Ảnh 8K',
-    labelEn: '📸 8K Portrait Photo',
-    prompt: 'Hyperrealistic cinematic portrait of a young Vietnamese woman, natural golden hour sunlight, 85mm lens, f/1.4 soft bokeh, ultra-detailed skin texture',
-    category: 'photorealistic',
-  },
-  {
-    id: '3',
-    labelVi: '✨ Logo Vector Gradient',
-    labelEn: '✨ Gradient Vector Logo',
-    prompt: 'Minimalist modern vector logo of motion waves forming an AI brain, bold geometric shapes, smooth cyan and violet gradient, clean isolated white background',
-    category: 'logo',
-  },
-  {
-    id: '4',
-    labelVi: '🌌 Wallpaper Vũ Trụ 4K',
-    labelEn: '🌌 Deep Space Wallpaper',
-    prompt: 'Breathtaking deep space nebula wallpaper, luminous cosmic dust clouds in magenta and deep navy, floating starlight, ultra-wide 4k OLED wallpaper',
-    category: 'background',
-  },
-  {
-    id: '5',
-    labelVi: '📱 Mockup iPhone 16 Pro',
-    labelEn: '📱 iPhone 16 Pro Mockup',
-    prompt: 'Sleek premium iPhone 16 Pro mockup floating at an angle with glowing glass display, aesthetic minimalist pastel gradient studio backdrop, 3D render',
-    category: 'mockup',
-  },
-  {
-    id: '6',
-    labelVi: '🎨 Tranh Màu Nước Anime',
-    labelEn: '🎨 Watercolor Anime',
-    prompt: 'Serene Japanese street in spring with blooming cherry blossoms, soft watercolor painting style, delicate ink outlines, Studio Ghibli aesthetic',
-    category: 'stylized',
-  },
-];
-
-export const INSPIRATION_CATEGORIES = [
-  { id: 'ai-art', labelVi: '✨ AI Art', labelEn: '✨ AI Art', query: 'AI art digital illustration vibrant' },
-  { id: 'portrait', labelVi: '👤 Chân Dung', labelEn: '👤 Portrait', query: 'cinematic portrait photography 8k' },
-  { id: 'anime', labelVi: '🎨 Anime / 3D', labelEn: '🎨 Anime / 3D', query: 'anime 3D pixar render character' },
-  { id: 'nature', labelVi: '🌿 Thiên Nhiên', labelEn: '🌿 Nature', query: 'breathtaking nature landscape sunrise' },
-  { id: 'city', labelVi: '🌆 Thành Phố', labelEn: '🌆 Cityscape', query: 'futuristic cyberpunk city neon night' },
-  { id: 'fantasy', labelVi: '🐉 Fantasy', labelEn: '🐉 Fantasy', query: 'magical fantasy epic castle dragon' },
-  { id: 'background', labelVi: '🌌 Wallpaper', labelEn: '🌌 Wallpaper', query: 'minimalist modern abstract wallpaper 4k' },
-];
-
 export interface GenerateImageResult {
   image_url: string;
   file_id?: string;
@@ -136,20 +73,30 @@ export const imageService = {
     if (params.camera_angle) formData.append('camera_angle', params.camera_angle);
     if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/photorealistic`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo ảnh Photorealistic');
-    return {
-      image_url: data.file_url || data.image_url || data.url,
-      file_id: data.file_id || data.id,
-      prompt_used: data.prompt_used || params.prompt,
-      aspect_ratio: data.aspect_ratio || params.aspect_ratio,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/photorealistic`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo ảnh Photorealistic');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.prompt,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
   },
 
   /**
@@ -170,20 +117,30 @@ export const imageService = {
     if (params.sticker_mode !== undefined) formData.append('sticker_mode', params.sticker_mode.toString());
     if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/stylized`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo ảnh Stylized');
-    return {
-      image_url: data.file_url || data.image_url || data.url,
-      file_id: data.file_id || data.id,
-      prompt_used: data.prompt_used || params.prompt,
-      aspect_ratio: data.aspect_ratio || params.aspect_ratio,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/stylized`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo ảnh Stylized');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.prompt,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
   },
 
   /**
@@ -194,6 +151,8 @@ export const imageService = {
     tagline?: string;
     industry: string;
     style: 'Modern' | 'Minimalist' | 'Vintage' | 'Luxury';
+    color_palette?: string;
+    visual_elements?: string;
     aspect_ratio: AspectRatio;
   }): Promise<GenerateImageResult> {
     const token = await getAuthToken();
@@ -202,22 +161,34 @@ export const imageService = {
     if (params.tagline) formData.append('tagline', params.tagline);
     formData.append('industry', params.industry || 'Technology');
     formData.append('style', params.style);
+    if (params.color_palette) formData.append('color_palette', params.color_palette);
+    if (params.visual_elements) formData.append('visual_elements', params.visual_elements);
     formData.append('aspect_ratio', params.aspect_ratio);
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/logo`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Logo');
-    return {
-      image_url: data.file_url || data.image_url || data.url,
-      file_id: data.file_id || data.id,
-      prompt_used: data.prompt_used || params.brand_name,
-      aspect_ratio: data.aspect_ratio || params.aspect_ratio,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/logo`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Logo');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.brand_name,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
   },
 
   /**
@@ -227,6 +198,7 @@ export const imageService = {
     theme: string;
     color_mood?: 'Vibrant' | 'Pastel' | 'Dark' | 'Light';
     minimalist_mode?: boolean;
+    negative_space_position?: 'Center' | 'Left' | 'Right' | 'Top';
     aspect_ratio: AspectRatio;
   }): Promise<GenerateImageResult> {
     const token = await getAuthToken();
@@ -234,22 +206,33 @@ export const imageService = {
     formData.append('theme', params.theme);
     if (params.color_mood) formData.append('color_mood', params.color_mood);
     if (params.minimalist_mode !== undefined) formData.append('minimalist_mode', params.minimalist_mode.toString());
+    if (params.negative_space_position) formData.append('negative_space_position', params.negative_space_position);
     formData.append('aspect_ratio', params.aspect_ratio);
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/background`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Background');
-    return {
-      image_url: data.file_url || data.image_url || data.url,
-      file_id: data.file_id || data.id,
-      prompt_used: data.prompt_used || params.theme,
-      aspect_ratio: data.aspect_ratio || params.aspect_ratio,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/background`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Background');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.theme,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
   },
 
   /**
@@ -266,109 +249,260 @@ export const imageService = {
     formData.append('placement_type', params.placement_type);
     formData.append('aspect_ratio', params.aspect_ratio);
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/mockup`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Mockup');
-    return {
-      image_url: data.file_url || data.image_url || data.url,
-      file_id: data.file_id || data.id,
-      prompt_used: data.prompt_used || params.scene_description,
-      aspect_ratio: data.aspect_ratio || params.aspect_ratio,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/mockup`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Mockup');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.scene_description,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
   },
 
   /**
-   * Generic Universal Generation (Fallback)
+   * 6. Sequential Art Generation
    */
-  async generateImage(params: {
-    prompt: string;
-    category: ImageEndpoint;
+  async generateSequential(params: {
+    story_script: string;
+    panel_count: number;
+    style: 'Comic Book' | 'Manga' | 'Storyboard Sketch';
     aspect_ratio: AspectRatio;
-    negative_prompt?: string;
   }): Promise<GenerateImageResult> {
-    if (params.category === 'photorealistic') {
-      return this.generatePhotorealistic({
-        prompt: params.prompt,
-        aspect_ratio: params.aspect_ratio,
-        negative_prompt: params.negative_prompt,
-      });
-    }
-    if (params.category === 'stylized') {
-      return this.generateStylized({
-        prompt: params.prompt,
-        style_preset: '3D Render',
-        aspect_ratio: params.aspect_ratio,
-        negative_prompt: params.negative_prompt,
-      });
-    }
-    if (params.category === 'logo') {
-      return this.generateLogo({
-        brand_name: params.prompt,
-        industry: 'Technology',
-        style: 'Modern',
-        aspect_ratio: params.aspect_ratio,
-      });
-    }
-    if (params.category === 'background') {
-      return this.generateBackground({
-        theme: params.prompt,
-        aspect_ratio: params.aspect_ratio,
-      });
-    }
-    if (params.category === 'mockup') {
-      return this.generateMockup({
-        scene_description: params.prompt,
-        placement_type: 'Studio Backdrop',
-        aspect_ratio: params.aspect_ratio,
-      });
-    }
-
-    // Default fallback
-    return this.generateStylized({
-      prompt: params.prompt,
-      style_preset: '3D Render',
-      aspect_ratio: params.aspect_ratio,
-      negative_prompt: params.negative_prompt,
-    });
-  },
-
-  /**
-   * AI Image Editing (Style Transfer, Object Edit, Inpainting)
-   */
-  async editImage(params: {
-    image_url?: string;
-    image_file?: File;
-    prompt: string;
-    edit_mode: 'style-transfer' | 'object-edit' | 'inpainting';
-    aspect_ratio?: AspectRatio;
-  }): Promise<{ image_url: string; file_id?: string }> {
     const token = await getAuthToken();
     const formData = new FormData();
-    if (params.image_file) {
-      formData.append('image', params.image_file);
-    } else if (params.image_url) {
-      formData.append('image_url', params.image_url);
+    formData.append('story_script', params.story_script);
+    formData.append('panel_count', params.panel_count.toString());
+    formData.append('style', params.style);
+    formData.append('aspect_ratio', params.aspect_ratio);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/generate/sequential`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo Sequential Art');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.story_script,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
     }
-    formData.append('prompt', params.prompt);
+  },
+
+  /**
+   * 7. Style Transfer Editing
+   */
+  async editStyleTransfer(params: {
+    image_file: File;
+    target_style: string;
+    strength?: number;
+    preserve_structure?: boolean;
+    aspect_ratio?: AspectRatio;
+    negative_prompt?: string;
+  }): Promise<GenerateImageResult> {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('image', params.image_file);
+    formData.append('target_style', params.target_style);
+    if (params.strength !== undefined) formData.append('strength', params.strength.toString());
+    if (params.preserve_structure !== undefined) formData.append('preserve_structure', params.preserve_structure.toString());
     if (params.aspect_ratio) formData.append('aspect_ratio', params.aspect_ratio);
+    if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/images/edit/${params.edit_mode}`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi chỉnh sửa ảnh');
-    return {
-      image_url: data.file_url || data.image_url || data.url,
-      file_id: data.file_id || data.id,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/edit/style-transfer`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi chuyển phong cách ảnh');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.target_style,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio || '1:1',
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
+  },
+
+  /**
+   * 8. Object Edit
+   */
+  async editObjectEdit(params: {
+    image_file: File;
+    target_object: string;
+    modification: string;
+    preserve_background?: boolean;
+    aspect_ratio?: AspectRatio;
+    negative_prompt?: string;
+  }): Promise<GenerateImageResult> {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('image', params.image_file);
+    formData.append('target_object', params.target_object);
+    formData.append('modification', params.modification);
+    if (params.preserve_background !== undefined) formData.append('preserve_background', params.preserve_background.toString());
+    if (params.aspect_ratio) formData.append('aspect_ratio', params.aspect_ratio);
+    if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/edit/object-edit`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi chỉnh sửa đối tượng ảnh');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || `${params.target_object} -> ${params.modification}`,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio || '1:1',
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
+  },
+
+  /**
+   * 9. Inpainting
+   */
+  async editInpainting(params: {
+    image_file: File;
+    mask_file?: File;
+    prompt: string;
+    action?: 'add' | 'remove' | 'replace';
+    blend_mode?: 'natural' | 'seamless' | 'artistic';
+    aspect_ratio?: AspectRatio;
+    negative_prompt?: string;
+  }): Promise<GenerateImageResult> {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('image', params.image_file);
+    if (params.mask_file) formData.append('mask', params.mask_file);
+    formData.append('prompt', params.prompt);
+    if (params.action) formData.append('action', params.action);
+    if (params.blend_mode) formData.append('blend_mode', params.blend_mode);
+    if (params.aspect_ratio) formData.append('aspect_ratio', params.aspect_ratio);
+    if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/edit/inpainting`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi inpainting ảnh');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.prompt,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio || '1:1',
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
+  },
+
+  /**
+   * 10. Composition
+   */
+  async editComposition(params: {
+    base_image: File;
+    overlay_images: File[];
+    prompt: string;
+    composition_style?: 'realistic' | 'artistic' | 'professional' | 'collage';
+    lighting_adjustment?: boolean;
+    aspect_ratio?: AspectRatio;
+    negative_prompt?: string;
+  }): Promise<GenerateImageResult> {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('base_image', params.base_image);
+    params.overlay_images.forEach((img) => formData.append('overlay_images', img));
+    formData.append('prompt', params.prompt);
+    if (params.composition_style) formData.append('composition_style', params.composition_style);
+    if (params.lighting_adjustment !== undefined) formData.append('lighting_adjustment', params.lighting_adjustment.toString());
+    if (params.aspect_ratio) formData.append('aspect_ratio', params.aspect_ratio);
+    if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/edit/composition`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi ghép ảnh composition');
+      return {
+        image_url: data.file_url || data.image_url || data.url,
+        file_id: data.file_id || data.id,
+        prompt_used: data.prompt_used || params.prompt,
+        aspect_ratio: data.aspect_ratio || params.aspect_ratio || '1:1',
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
   },
 
   /**
@@ -514,4 +648,3 @@ export const imageService = {
     return data;
   },
 };
-
