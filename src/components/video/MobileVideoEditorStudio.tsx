@@ -868,7 +868,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         )}
 
         {/* Dynamic Remotion Stage */}
-        <div className="shrink-0 flex items-center justify-center p-2 relative overflow-hidden bg-[#07080E] min-h-[280px]">
+        <div className="shrink-0 flex items-center justify-center p-2.5 relative overflow-hidden bg-[#07080E]">
           {/* Floating Compact Aspect Ratio Dropdown */}
           <div className="absolute top-3 right-3 z-30">
             <button
@@ -914,11 +914,11 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             className="relative shadow-2xl rounded-3xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all touch-none select-none"
             style={{
               backgroundColor: bgColor,
-              width: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? 'auto' : 'auto',
-              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '280px' : '360px',
+              width: aspectRatio === '16:9' ? '100%' : 'auto',
+              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '360px' : '380px',
               height: aspectRatio === '16:9' ? 'auto' : '100%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
-              maxHeight: aspectRatio === '16:9' ? '46vh' : '44vh',
+              maxHeight: aspectRatio === '16:9' ? '46vh' : aspectRatio === '9:16' ? '58vh' : '52vh',
             }}
           >
             <DynamicAnimationComposition
@@ -1082,39 +1082,41 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         </div>
 
         {/* ── Multi-Track Timeline Slider (CapCut Look & Feel with 100+ GLSL Shaders & Trimming) ── */}
-        <MultiTrackTimelineSlider
-          currentTime={currentTimeSec}
-          totalDuration={totalDurationSec}
-          isPlaying={isPlaying}
-          onPlayPause={togglePlay}
-          onSeek={(t) => seekTo(Math.round(t * 30))}
-          tracks={timelineTracks}
-          isMobile={true}
-          selectedItemId={activeScene ? `media_${activeScene.scene_id}` : null}
-          onSelectItem={(itemId) => {
-            if (itemId?.startsWith('media_')) {
-              const sId = parseInt(itemId.replace('media_', ''), 10);
-              if (!isNaN(sId)) {
-                const s = scenes.find((sc) => sc.scene_id === sId);
-                if (s && s.start_frame !== undefined) seekTo(s.start_frame);
+        <div className="pb-28">
+          <MultiTrackTimelineSlider
+            currentTime={currentTimeSec}
+            totalDuration={totalDurationSec}
+            isPlaying={isPlaying}
+            onPlayPause={togglePlay}
+            onSeek={(t) => seekTo(Math.round(t * 30))}
+            tracks={timelineTracks}
+            isMobile={true}
+            selectedItemId={activeScene ? `media_${activeScene.scene_id}` : null}
+            onSelectItem={(itemId) => {
+              if (itemId?.startsWith('media_')) {
+                const sId = parseInt(itemId.replace('media_', ''), 10);
+                if (!isNaN(sId)) {
+                  const s = scenes.find((sc) => sc.scene_id === sId);
+                  if (s && s.start_frame !== undefined) seekTo(s.start_frame);
+                }
               }
-            }
-          }}
-          onOpenFXTab={() => setActiveBottomSheet('effects')}
-          onUpdateItemDuration={(itemId, newStart, newDur) => {
-            if (itemId.startsWith('fx_')) {
-              const sId = parseInt(itemId.replace('fx_', ''), 10);
-              updateScene(sId, {
-                transition_out: {
-                  shader_name: (scenes.find((s) => s.scene_id === sId) as any)?.shader_name || 'GlitchMemories',
-                  duration: Math.max(0.2, newDur),
-                },
-              } as any);
-              setSyncStatusMsg(`Đã cập nhật thời lượng chuyển cảnh: ${newDur.toFixed(2)}s!`);
-              setTimeout(() => setSyncStatusMsg(null), 2500);
-            }
-          }}
-        />
+            }}
+            onOpenFXTab={() => setActiveBottomSheet('effects')}
+            onUpdateItemDuration={(itemId, newStart, newDur) => {
+              if (itemId.startsWith('fx_')) {
+                const sId = parseInt(itemId.replace('fx_', ''), 10);
+                updateScene(sId, {
+                  transition_out: {
+                    shader_name: (scenes.find((s) => s.scene_id === sId) as any)?.shader_name || 'GlitchMemories',
+                    duration: Math.max(0.2, newDur),
+                  },
+                } as any);
+                setSyncStatusMsg(`Đã cập nhật thời lượng chuyển cảnh: ${newDur.toFixed(2)}s!`);
+                setTimeout(() => setSyncStatusMsg(null), 2500);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {/* ── Bottom Action Toolbar (5 Tabs Fixed at Bottom) ── */}
