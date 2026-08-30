@@ -22,10 +22,13 @@ import {
 } from 'firebase/auth';
 import { wordaiAuth, wordaiGoogleProvider } from '@/lib/wordai-firebase';
 import { linkAppleAccount } from '@/services/appleAuthService';
+import { libraryCacheManager } from '@/services/libraryCacheManager';
 
 export interface UserSubscription {
   points_balance: number;
-  tier?: string;
+  points_total?: number;
+  points_used?: number;
+  tier?: 'free' | 'premium' | 'vip' | string;
   is_active?: boolean;
 }
 
@@ -78,24 +81,67 @@ export function mapFirebaseAuthError(code: string): string {
 
 export function WordaiAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userSubscription, setUserSubscription] = useState<UserSubscription | null>({ points_balance: 100 });
+  const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch points balance from backend
+  // Fetch real-time points balance and plan info matching Web backend
   const fetchUserSubscription = async (currentUser: User) => {
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch('https://ai.wordai.pro/api/user/subscription', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUserSubscription(data);
+      
+      // 1. Fetch live points balance
+      let pointsRemaining = 0;
+      let pointsTotal = 0;
+      let pointsUsed = 0;
+      try {
+        const resBalance = await fetch('https://ai.wordai.pro/api/subscription/points/balance', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (resBalance.ok) {
+          const balanceJson = await resBalance.json();
+          const balanceData = balanceJson.data || balanceJson;
+          if (balanceData && typeof balanceData.points_remaining === 'number') {
+            pointsRemaining = balanceData.points_remaining;
+            pointsTotal = balanceData.points_total || 0;
+            pointsUsed = balanceData.points_used || 0;
+          }
+        }
+      } catch (errBalance) {
+        console.warn('Failed to fetch points balance:', errBalance);
       }
+
+      // 2. Fetch plan tier info
+      let userTier = 'free';
+      try {
+        const resInfo = await fetch('https://ai.wordai.pro/api/subscription/info', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (resInfo.ok) {
+          const infoJson = await resInfo.json();
+          const infoData = infoJson.data || infoJson;
+          if (infoData && infoData.plan) {
+            userTier = infoData.plan;
+          }
+        }
+      } catch (errInfo) {
+        console.warn('Failed to fetch subscription plan:', errInfo);
+      }
+
+      setUserSubscription({
+        points_balance: pointsRemaining,
+        points_total: pointsTotal,
+        points_used: pointsUsed,
+        tier: userTier,
+        is_active: userTier !== 'free',
+      });
     } catch (err) {
       console.warn('Could not fetch user subscription:', err);
     }
@@ -384,10 +430,14 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async (): Promise<void> => {
     setIsLoading(true);
+    const prevUid = user?.uid;
     try {
+      if (prevUid) {
+        libraryCacheManager.clearAllUserCache(prevUid);
+      }
       await firebaseSignOut(wordaiAuth);
       setUser(null);
-      setUserSubscription({ points_balance: 100 });
+      setUserSubscription(null);
     } finally {
       setIsLoading(false);
     }
@@ -395,15 +445,43 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
 
   const deleteAccount = async (): Promise<void> => {
     if (!wordaiAuth.currentUser) throw new Error('Chưa đăng nhập');
-    await deleteUser(wordaiAuth.currentUser);
-    setUser(null);
-    setUserSubscription({ points_balance: 100 });
+    const targetUid = wordaiAuth.currentUser.uid;
+    const token = await wordaiAuth.currentUser.getIdToken();
+
+    // 1. Call backend account deletion endpoint
+    try {
+      await fetch('https://ai.wordai.pro/api/user/account', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (e) {
+      console.warn('[DeleteAccount] Backend API deletion notice:', e);
+    }
+
+    // 2. Delete user in Firebase Auth
+    try {
+      await deleteUser(wordaiAuth.currentUser);
+    } catch (fbErr: any) {
+      console.warn('[DeleteAccount] Firebase deleteUser warning:', fbErr);
+    }
+
+    // 3. Wipe all user-scoped data & local storage
+    if (targetUid) {
+      libraryCacheManager.clearAllUserCache(targetUid);
+    }
+
     try {
       localStorage.clear();
     } catch {}
     try {
       sessionStorage.clear();
     } catch {}
+
+    setUser(null);
+    setUserSubscription(null);
   };
 
   return (

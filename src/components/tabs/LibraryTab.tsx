@@ -178,9 +178,15 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     [user, projects.length]
   );
 
+  // ── Reset state & reload when user switches ──
   useEffect(() => {
-    loadCategoryData(activeCategory);
-  }, [user, activeCategory]);
+    setProjects([]);
+    setRecentProjects([]);
+    setFiles([]);
+    if (user?.uid) {
+      loadCategoryData(activeCategory);
+    }
+  }, [user?.uid, activeCategory]);
 
   // ── Listen for Cross-Tab Update Broadcasts (e.g. from Studio) ──
   useEffect(() => {

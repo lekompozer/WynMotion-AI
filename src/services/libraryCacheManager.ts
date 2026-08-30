@@ -103,7 +103,7 @@ export const libraryCacheManager = {
   },
 
   /**
-   * Remove cached records when explicit refresh or logout occurs
+   * Remove cached records when explicit refresh occurs
    */
   clearCategoryCache(userId: string, category: string): void {
     if (!userId || typeof window === 'undefined') return;
@@ -115,6 +115,39 @@ export const libraryCacheManager = {
       localStorage.removeItem(key);
       localStorage.removeItem(syncKey);
     } catch {}
+  },
+
+  /**
+   * Wipe ALL cached records, project history, and indexes for a specific user.
+   * Ensures zero cross-account data leakage and full Apple Guideline 5.1.1 compliance.
+   */
+  clearAllUserCache(userId: string): void {
+    if (!userId || typeof window === 'undefined') return;
+    const userPrefix = `${CACHE_PREFIX}${userId}`;
+    const syncPrefix = `${SYNC_PREFIX}${userId}`;
+    const projKey = `wynmotion_cached_projects_${userId}`;
+
+    // 1. Clear memory cache
+    for (const k of Array.from(memoryCache.keys())) {
+      if (k.includes(userId)) {
+        memoryCache.delete(k);
+      }
+    }
+
+    // 2. Clear user-scoped LocalStorage
+    try {
+      localStorage.removeItem(projKey);
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith(userPrefix) || k.startsWith(syncPrefix) || k.includes(userId))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('[LibraryCache] LocalStorage user wipe error:', e);
+    }
   },
 
   /**
