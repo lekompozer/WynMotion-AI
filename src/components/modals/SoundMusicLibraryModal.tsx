@@ -363,30 +363,27 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
             )}
           </div>
 
-          {/* 3 Main Category Tabs */}
-          <div className="grid grid-cols-4 gap-1.5">
+          {/* 3 Main Category Tabs (Scroll ngang mượt mà, không bị co rút chữ, bỏ toàn bộ số đếm) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
             {[
-              { id: 'all', nameVi: 'Tất Cả', nameEn: 'All', icon: Sparkles, count: allTracks.length },
+              { id: 'all', nameVi: 'Tất Cả Thể Loại', nameEn: 'All Tracks', icon: Sparkles },
               {
                 id: 'future-bass',
-                nameVi: 'Future Bass',
-                nameEn: 'Future Bass',
+                nameVi: 'Future Bass & Sôi Động',
+                nameEn: 'Future Bass & EDM',
                 icon: Zap,
-                count: allTracks.filter((t) => t.category === 'future-bass').length,
               },
               {
                 id: 'relax',
-                nameVi: 'Nhạc Chill',
+                nameVi: 'Nhạc Chill & Thư Giãn',
                 nameEn: 'Relax / Chill',
                 icon: Coffee,
-                count: allTracks.filter((t) => t.category === 'relax').length,
               },
               {
                 id: 'songs',
-                nameVi: 'Rap & EDM',
-                nameEn: 'Vocal Songs',
+                nameVi: 'Rap & EDM Có Lời',
+                nameEn: 'Vocal Songs & Rap',
                 icon: Mic,
-                count: allTracks.filter((t) => t.category === 'songs').length,
               },
             ].map((cat) => {
               const Icon = cat.icon;
@@ -396,7 +393,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                   key={cat.id}
                   type="button"
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border active:scale-95 ${
+                  className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border active:scale-95 shrink-0 whitespace-nowrap ${
                     isActive
                       ? isDark
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-400 shadow-md shadow-purple-500/25'
@@ -407,15 +404,14 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{isVietnamese ? cat.nameVi : cat.nameEn}</span>
-                  <span className="text-[10px] opacity-75 font-normal">({cat.count})</span>
+                  <span>{isVietnamese ? cat.nameVi : cat.nameEn}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Duration Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+          {/* Duration Filter Chips (Scroll ngang độc lập) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
             <span
               className={`text-[10px] font-bold uppercase tracking-wider shrink-0 mr-1 ${
                 isDark ? 'text-slate-400' : 'text-slate-500'
@@ -429,7 +425,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                 key={chip.id}
                 type="button"
                 onClick={() => setSelectedDurationFilter(chip.id)}
-                className={`h-7 px-3 rounded-full text-[11px] font-bold shrink-0 transition-all border ${
+                className={`h-7 px-3 rounded-full text-[11px] font-bold shrink-0 whitespace-nowrap transition-all border ${
                   selectedDurationFilter === chip.id
                     ? isDark
                       ? 'bg-purple-500/20 border-purple-400 text-purple-300'
@@ -445,8 +441,8 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
           </div>
         </div>
 
-        {/* Track List Section */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2.5 pb-60">
+        {/* Track List Section (Chỉ cuộn dọc, cố định 100% không xô lệch 2 bên) */}
+        <div className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden p-3 sm:p-5 space-y-2.5 pb-60">
           {filteredTracks.length === 0 ? (
             <div className="py-16 text-center">
               <Music className="w-12 h-12 mx-auto mb-3 text-slate-500 opacity-50" />
@@ -467,7 +463,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
               return (
                 <div
                   key={track.id}
-                  className={`group rounded-2xl border p-3 sm:p-3.5 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                  className={`group w-full max-w-full box-border overflow-hidden rounded-2xl border p-3 sm:p-3.5 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                     currentPlayingTrackId === track.id
                       ? isDark
                         ? 'border-purple-500/50 bg-purple-500/10 shadow-lg shadow-purple-500/10'
@@ -478,7 +474,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                   }`}
                 >
                   {/* Left info & play button */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-3 min-w-0 flex-1 w-full sm:w-auto">
                     {/* Play/Pause Circle Button */}
                     <button
                       type="button"
@@ -505,7 +501,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                           {track.title}
                         </h4>
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${
                             track.category === 'future-bass'
                               ? 'bg-cyan-500/15 text-cyan-500'
                               : track.category === 'relax'
@@ -522,10 +518,10 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Right Actions: Duration Chips & Buttons */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-0 border-white/5">
+                  {/* Right Actions: Duration Chips & Buttons (Cố định width không tràn lề) */}
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-white/5 overflow-hidden">
                     {/* Duration Variations Selector */}
-                    <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-0.5 bg-black/20 p-1 rounded-xl border border-white/10 shrink min-w-0 overflow-x-auto scrollbar-none">
                       {(['15s', '30s', '45s', '60s', '90s', 'full'] as const).map((durKey) => {
                         const isSelected = activeDurKey === durKey;
                         const isCurrentlyRunning =
@@ -535,7 +531,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                             key={durKey}
                             type="button"
                             onClick={(e) => handleSelectTrackDuration(track.id, durKey, e)}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${
+                            className={`px-1.5 sm:px-2 py-1 rounded-lg text-[10px] font-black transition-all shrink-0 ${
                               isCurrentlyRunning
                                 ? 'bg-pink-500 text-white shadow-xs'
                                 : isSelected
@@ -567,7 +563,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                             onClose();
                           }
                         }}
-                        className="h-8 px-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
+                        className="h-8 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>{t('Dùng', 'Use')}</span>
