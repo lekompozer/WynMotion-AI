@@ -399,5 +399,119 @@ export const imageService = {
       points_deducted: data.points_deducted || 3,
     };
   },
+
+  /**
+   * Session Management & Generation (Studio Parity)
+   */
+  async createSession(title: string = 'New Session') {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('title', title);
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo session');
+    return data;
+  },
+
+  async listSessions() {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions`, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi lấy danh sách session');
+    return data;
+  },
+
+  async getSession(sessionId: string) {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions/${sessionId}`, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi lấy session');
+    return data;
+  },
+
+  async uploadSessionReferences(sessionId: string, files: File[], role: 'character' | 'object') {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    formData.append('role', role);
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions/${sessionId}/references`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi upload ảnh tham chiếu');
+    return data;
+  },
+
+  async generateInSession(sessionId: string, params: {
+    prompt: string;
+    aspect_ratio?: string;
+    negative_prompt?: string;
+    extra_images?: File[];
+    extra_role?: 'object' | 'character';
+    plan_id?: string;
+  }) {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('prompt', params.prompt);
+    if (params.aspect_ratio) formData.append('aspect_ratio', params.aspect_ratio);
+    if (params.negative_prompt) formData.append('negative_prompt', params.negative_prompt);
+    params.extra_images?.forEach((file) => formData.append('extra_images', file));
+    if (params.extra_role) formData.append('extra_role', params.extra_role);
+    if (params.plan_id) formData.append('plan_id', params.plan_id);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions/${sessionId}/generate`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi tạo ảnh trong session');
+      return data;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Quá thời gian tạo ảnh (240s)');
+      throw err;
+    }
+  },
+
+  async deleteSessionImage(sessionId: string, imageIndex: number) {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions/${sessionId}/images/${imageIndex}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi xóa ảnh');
+    return data;
+  },
+
+  async deleteSession(sessionId: string) {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/api/v1/images/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi xóa session');
+    return data;
+  },
 };
 

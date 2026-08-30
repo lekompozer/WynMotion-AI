@@ -360,7 +360,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             )}
 
             {/* Top Bar Floating on Video */}
-            <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-12 sm:pt-4 pb-3 bg-gradient-to-b from-black/85 via-black/40 to-transparent">
+            <div
+              className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pb-3 bg-gradient-to-b from-black/85 via-black/40 to-transparent"
+              style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+            >
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 shadow-lg">
                   {badge}

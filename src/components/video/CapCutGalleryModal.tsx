@@ -161,8 +161,11 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#090A10] text-white animate-in fade-in duration-200">
-      {/* ── TOP SEARCH & BACK BAR ── */}
-      <div className="pt-4 px-4 pb-2 border-b border-slate-800/80 bg-[#090A10]/95 backdrop-blur-md flex items-center gap-3">
+      {/* ── TOP SEARCH & BACK BAR (Shifted down for iOS Notch / Dynamic Island) ── */}
+      <div
+        className="px-4 pb-2 border-b border-slate-800/80 bg-[#090A10]/95 backdrop-blur-md flex items-center gap-3"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
         <button
           type="button"
           onClick={onClose}
