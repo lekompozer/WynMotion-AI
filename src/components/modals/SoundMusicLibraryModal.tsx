@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   X,
   Search,
@@ -13,12 +13,11 @@ import {
   Clock,
   Download,
   Sparkles,
-  Check,
-  ChevronDown,
+  ChevronRight,
+  SkipBack,
+  SkipForward,
   Volume2,
   VolumeX,
-  Filter,
-  Share2,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import defaultMusicCatalog from '@/data/music_library.json';
@@ -69,6 +68,13 @@ const DURATION_CHIPS: { id: DurationFilter; labelVi: string; labelEn: string }[]
   { id: 'full', labelVi: 'Full Bài', labelEn: 'Full' },
 ];
 
+function formatTime(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
 export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
   isOpen,
   onClose,
@@ -76,7 +82,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
 }) => {
   const { isDark, isVietnamese, t } = useApp();
 
-  // Categories & Data
+  // Filters & State
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [selectedDurationFilter, setSelectedDurationFilter] = useState<DurationFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,10 +93,10 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Selected duration per track for granular testing
+  // Granular duration selection per track
   const [trackSelectedDurations, setTrackSelectedDurations] = useState<Record<string, string>>({});
 
   const catalog = defaultMusicCatalog as any;
@@ -98,7 +104,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
     return (catalog?.tracks || []) as MusicTrack[];
   }, [catalog]);
 
-  // Filtered tracks
+  // Filtered tracks according to current search, category, and screen view
   const filteredTracks = useMemo(() => {
     return allTracks.filter((track) => {
       // Category filter
@@ -110,34 +116,109 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
         const q = searchQuery.toLowerCase();
         const matchTitle = track.title.toLowerCase().includes(q);
         const matchArtist = track.artist.toLowerCase().includes(q);
-        const matchCat = (track.category_name_vi || '').toLowerCase().includes(q) || (track.category_name_en || '').toLowerCase().includes(q);
+        const matchCat =
+          (track.category_name_vi || '').toLowerCase().includes(q) ||
+          (track.category_name_en || '').toLowerCase().includes(q);
         if (!matchTitle && !matchArtist && !matchCat) return false;
       }
       return true;
     });
   }, [allTracks, activeCategory, searchQuery]);
 
-  // Handle Play/Pause
+  // Index of currently playing track within filtered list
+  const currentTrackIndex = useMemo(() => {
+    if (!currentPlayingTrackId) return -1;
+    return filteredTracks.findIndex((t) => t.id === currentPlayingTrackId);
+  }, [filteredTracks, currentPlayingTrackId]);
+
+  const currentPlayingTrack = useMemo(() => {
+    return allTracks.find((t) => t.id === currentPlayingTrackId);
+  }, [allTracks, currentPlayingTrackId]);
+
+  // Play a specific track and duration key
+  const playTrack = useCallback(
+    (track: MusicTrack, durationKey?: string) => {
+      const targetDurKey =
+        durationKey ||
+        trackSelectedDurations[track.id] ||
+        (selectedDurationFilter !== 'all' ? selectedDurationFilter : track.durations['30s'] ? '30s' : 'full');
+
+      const trackDur =
+        track.durations[targetDurKey as keyof typeof track.durations] ||
+        track.durations['30s'] ||
+        track.durations['full'];
+
+      if (!trackDur) return;
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = trackDur.url;
+        audioRef.current.currentTime = 0;
+        audioRef.current
+          .play()
+          .then(() => {
+            setIsPlaying(true);
+            setCurrentPlayingTrackId(track.id);
+            setCurrentPlayingDurationKey(targetDurKey);
+          })
+          .catch(() => {
+            setIsPlaying(false);
+          });
+      }
+    },
+    [trackSelectedDurations, selectedDurationFilter]
+  );
+
+  // Toggle Play / Pause
   const handleTogglePlay = (track: MusicTrack, durationKey?: string) => {
-    const targetDurKey = durationKey || trackSelectedDurations[track.id] || (track.durations['30s'] ? '30s' : 'full');
-    const trackDur = track.durations[targetDurKey as keyof typeof track.durations] || track.durations['full'] || track.durations['30s'];
-    if (!trackDur) return;
+    const targetDurKey =
+      durationKey ||
+      trackSelectedDurations[track.id] ||
+      (selectedDurationFilter !== 'all' ? selectedDurationFilter : track.durations['30s'] ? '30s' : 'full');
 
     if (currentPlayingTrackId === track.id && currentPlayingDurationKey === targetDurKey && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
+    } else if (currentPlayingTrackId === track.id && currentPlayingDurationKey === targetDurKey && !isPlaying) {
+      audioRef.current?.play();
+      setIsPlaying(true);
     } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = trackDur.url;
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-          setCurrentPlayingTrackId(track.id);
-          setCurrentPlayingDurationKey(targetDurKey);
-        }).catch(() => {
-          setIsPlaying(false);
-        });
-      }
+      playTrack(track, targetDurKey);
+    }
+  };
+
+  // Next Track in Current Filter List
+  const handleNextTrack = useCallback(() => {
+    if (filteredTracks.length === 0) return;
+    let nextIdx = currentTrackIndex + 1;
+    if (nextIdx >= filteredTracks.length) {
+      nextIdx = 0; // Loop back to beginning
+    }
+    const nextTrack = filteredTracks[nextIdx];
+    if (nextTrack) {
+      playTrack(nextTrack);
+    }
+  }, [filteredTracks, currentTrackIndex, playTrack]);
+
+  // Previous Track in Current Filter List
+  const handlePrevTrack = useCallback(() => {
+    if (filteredTracks.length === 0) return;
+    let prevIdx = currentTrackIndex - 1;
+    if (prevIdx < 0) {
+      prevIdx = filteredTracks.length - 1; // Loop to end
+    }
+    const prevTrack = filteredTracks[prevIdx];
+    if (prevTrack) {
+      playTrack(prevTrack);
+    }
+  }, [filteredTracks, currentTrackIndex, playTrack]);
+
+  // Scrubber / Seek Handler
+  const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
     }
   };
 
@@ -146,18 +227,25 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
     setTrackSelectedDurations((prev) => ({ ...prev, [trackId]: durationKey }));
     const track = allTracks.find((t) => t.id === trackId);
     if (track && currentPlayingTrackId === trackId) {
-      handleTogglePlay(track, durationKey);
+      playTrack(track, durationKey);
     }
   };
 
-  // Audio events
+  // Audio Event Listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
+    const handleTimeUpdate = () => {
+      if (!isSeeking) {
+        setCurrentTime(audio.currentTime);
+      }
+    };
+    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      handleNextTrack(); // Auto-advance to next track in screen list
+    };
     const handlePause = () => setIsPlaying(false);
     const handlePlay = () => setIsPlaying(true);
 
@@ -174,9 +262,9 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('play', handlePlay);
     };
-  }, []);
+  }, [isSeeking, handleNextTrack]);
 
-  // Stop audio on close
+  // Reset audio on modal close
   useEffect(() => {
     if (!isOpen && audioRef.current) {
       audioRef.current.pause();
@@ -186,8 +274,6 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const currentPlayingTrack = allTracks.find((t) => t.id === currentPlayingTrackId);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
@@ -199,30 +285,33 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
 
       {/* Slide-Up Container */}
       <div
-        className={`relative z-10 w-full max-w-4xl max-h-[90vh] h-[85vh] rounded-t-[36px] flex flex-col overflow-hidden shadow-2xl border-t border-x transition-all animate-in slide-in-from-bottom duration-300 ${
-          isDark
-            ? 'bg-[#0E111A] border-white/10 text-white'
-            : 'bg-white border-slate-200 text-slate-900'
+        className={`relative z-10 w-full max-w-4xl max-h-[92vh] h-[88vh] rounded-t-[36px] flex flex-col overflow-hidden shadow-2xl border-t border-x transition-all animate-in slide-in-from-bottom duration-300 ${
+          isDark ? 'bg-[#0E111A] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
-        <div className={`p-4 sm:p-5 border-b shrink-0 flex items-center justify-between ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+        <div
+          className={`p-4 sm:p-5 border-b shrink-0 flex items-center justify-between ${
+            isDark ? 'border-white/10' : 'border-slate-100'
+          }`}
+        >
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/25">
               <Music className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black tracking-tight">
-                  Sound & Music Library
-                </h2>
+                <h2 className="text-base sm:text-lg font-black tracking-tight">Sound & Music Library</h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xs">
                   {allTracks.length}+ Tracks
                 </span>
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {t('Kho nhạc độc quyền WynMotion đã cắt highlight 15s-90s', 'Curated WynMotion music library with 15s-90s smart highlight cuts')}
+                {t(
+                  'Kho nhạc độc quyền WynMotion đã cắt highlight 15s-90s',
+                  'Curated WynMotion music library with 15s-90s smart highlight cuts'
+                )}
               </p>
             </div>
           </div>
@@ -231,7 +320,9 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
             type="button"
             onClick={onClose}
             className={`p-2 rounded-2xl border transition-all active:scale-95 ${
-              isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white' : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800'
+              isDark
+                ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white'
+                : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800'
             }`}
           >
             <X className="w-5 h-5" />
@@ -239,15 +330,22 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
         </div>
 
         {/* Search & Category Filter Bar */}
-        <div className={`p-3 sm:px-5 space-y-2.5 border-b shrink-0 ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-100 bg-slate-50/50'}`}>
+        <div
+          className={`p-3 sm:px-5 space-y-2.5 border-b shrink-0 ${
+            isDark ? 'border-white/5 bg-black/20' : 'border-slate-100 bg-slate-50/50'
+          }`}
+        >
           {/* Search Input */}
           <div className="relative">
-            <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-400' : 'text-slate-400'}`} />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('Tìm kiếm bài hát, tác giả hoặc phong cách âm nhạc...', 'Search songs, artists, or genres...')}
+              placeholder={t(
+                'Tìm kiếm bài hát, tác giả hoặc phong cách âm nhạc...',
+                'Search songs, artists, or genres...'
+              )}
               className={`w-full h-10 pl-10 pr-4 rounded-2xl border text-xs outline-none transition-all ${
                 isDark
                   ? 'bg-[#121522] border-slate-800 text-white placeholder:text-slate-500 focus:border-purple-400'
@@ -269,9 +367,27 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
           <div className="grid grid-cols-4 gap-1.5">
             {[
               { id: 'all', nameVi: 'Tất Cả', nameEn: 'All', icon: Sparkles, count: allTracks.length },
-              { id: 'future-bass', nameVi: 'Future Bass', nameEn: 'Future Bass', icon: Zap, count: allTracks.filter(t => t.category === 'future-bass').length },
-              { id: 'relax', nameVi: 'Nhạc Chill', nameEn: 'Relax / Chill', icon: Coffee, count: allTracks.filter(t => t.category === 'relax').length },
-              { id: 'songs', nameVi: 'Rap & EDM', nameEn: 'Vocal Songs', icon: Mic, count: allTracks.filter(t => t.category === 'songs').length },
+              {
+                id: 'future-bass',
+                nameVi: 'Future Bass',
+                nameEn: 'Future Bass',
+                icon: Zap,
+                count: allTracks.filter((t) => t.category === 'future-bass').length,
+              },
+              {
+                id: 'relax',
+                nameVi: 'Nhạc Chill',
+                nameEn: 'Relax / Chill',
+                icon: Coffee,
+                count: allTracks.filter((t) => t.category === 'relax').length,
+              },
+              {
+                id: 'songs',
+                nameVi: 'Rap & EDM',
+                nameEn: 'Vocal Songs',
+                icon: Mic,
+                count: allTracks.filter((t) => t.category === 'songs').length,
+              },
             ].map((cat) => {
               const Icon = cat.icon;
               const isActive = activeCategory === cat.id;
@@ -300,7 +416,11 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
 
           {/* Duration Filter Chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-            <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 mr-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider shrink-0 mr-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-500'
+              }`}
+            >
               <Clock className="w-3 h-3 inline mr-1" />
               {t('Thời lượng:', 'Duration:')}
             </span>
@@ -326,7 +446,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
         </div>
 
         {/* Track List Section */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2.5">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2.5 pb-28">
           {filteredTracks.length === 0 ? (
             <div className="py-16 text-center">
               <Music className="w-12 h-12 mx-auto mb-3 text-slate-500 opacity-50" />
@@ -340,7 +460,9 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
           ) : (
             filteredTracks.map((track) => {
               const isCurrentPlaying = currentPlayingTrackId === track.id && isPlaying;
-              const activeDurKey = trackSelectedDurations[track.id] || (selectedDurationFilter !== 'all' ? selectedDurationFilter : '30s');
+              const activeDurKey =
+                trackSelectedDurations[track.id] ||
+                (selectedDurationFilter !== 'all' ? selectedDurationFilter : '30s');
 
               return (
                 <div
@@ -369,7 +491,11 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                           : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                       }`}
                     >
-                      {isCurrentPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                      {isCurrentPlaying ? (
+                        <Pause className="w-5 h-5" />
+                      ) : (
+                        <Play className="w-5 h-5 fill-current ml-0.5" />
+                      )}
                     </button>
 
                     {/* Text meta */}
@@ -378,13 +504,15 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                         <h4 className={`text-xs sm:text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {track.title}
                         </h4>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                          track.category === 'future-bass'
-                            ? 'bg-cyan-500/15 text-cyan-500'
-                            : track.category === 'relax'
-                            ? 'bg-emerald-500/15 text-emerald-500'
-                            : 'bg-pink-500/15 text-pink-500'
-                        }`}>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                            track.category === 'future-bass'
+                              ? 'bg-cyan-500/15 text-cyan-500'
+                              : track.category === 'relax'
+                              ? 'bg-emerald-500/15 text-emerald-500'
+                              : 'bg-pink-500/15 text-pink-500'
+                          }`}
+                        >
                           {track.bpm ? `${track.bpm} BPM` : 'NCS'}
                         </span>
                       </div>
@@ -400,7 +528,8 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                     <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl border border-white/10">
                       {(['15s', '30s', '45s', '60s', '90s', 'full'] as const).map((durKey) => {
                         const isSelected = activeDurKey === durKey;
-                        const isCurrentlyRunning = currentPlayingTrackId === track.id && currentPlayingDurationKey === durKey && isPlaying;
+                        const isCurrentlyRunning =
+                          currentPlayingTrackId === track.id && currentPlayingDurationKey === durKey && isPlaying;
                         return (
                           <button
                             key={durKey}
@@ -410,8 +539,12 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                               isCurrentlyRunning
                                 ? 'bg-pink-500 text-white shadow-xs'
                                 : isSelected
-                                ? isDark ? 'bg-white/20 text-white' : 'bg-white text-slate-900 shadow-xs'
-                                : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                                ? isDark
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-white text-slate-900 shadow-xs'
+                                : isDark
+                                ? 'text-slate-400 hover:text-white'
+                                : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
                             {durKey}
@@ -425,7 +558,10 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          const durObj = track.durations[activeDurKey as keyof typeof track.durations] || track.durations['30s'] || track.durations['full'];
+                          const durObj =
+                            track.durations[activeDurKey as keyof typeof track.durations] ||
+                            track.durations['30s'] ||
+                            track.durations['full'];
                           if (durObj) {
                             onSelectTrackForVideo(durObj.url, `${track.title} (${activeDurKey})`);
                             onClose();
@@ -442,13 +578,18 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                     <button
                       type="button"
                       onClick={async () => {
-                        const durObj = track.durations[activeDurKey as keyof typeof track.durations] || track.durations['30s'] || track.durations['full'];
+                        const durObj =
+                          track.durations[activeDurKey as keyof typeof track.durations] ||
+                          track.durations['30s'] ||
+                          track.durations['full'];
                         if (durObj) {
                           await saveAndShareMedia(durObj.url, `${track.title}_${activeDurKey}.mp3`);
                         }
                       }}
                       className={`h-8 w-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 shrink-0 ${
-                        isDark ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                        isDark
+                          ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                          : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
                       }`}
                       title={t('Tải về máy', 'Download track')}
                     >
@@ -461,51 +602,146 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
           )}
         </div>
 
-        {/* Bottom Sticky Player if Audio is Active */}
+        {/* ─────────────────────────────────────────────────────────────
+            STICKY BOTTOM MEDIA PLAYER (Positioned right above nav bar)
+            With Seek bar, Time counters, Play/Pause, Back & Next buttons
+            ───────────────────────────────────────────────────────────── */}
         {currentPlayingTrack && (
-          <div className={`p-3 px-4 border-t flex items-center justify-between gap-3 shrink-0 shadow-lg ${
-            isDark ? 'bg-[#090B12] border-white/10' : 'bg-slate-900 text-white border-slate-800'
-          }`}>
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <button
-                type="button"
-                onClick={() => {
-                  if (audioRef.current) {
-                    if (isPlaying) audioRef.current.pause();
-                    else audioRef.current.play();
-                  }
-                }}
-                className="w-9 h-9 rounded-full bg-pink-500 text-white flex items-center justify-center shrink-0 shadow active:scale-95"
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold truncate text-white">
-                  {currentPlayingTrack.title} <span className="text-[10px] text-pink-400 font-black">({currentPlayingDurationKey})</span>
-                </p>
-                <p className="text-[10px] text-slate-400 truncate">
-                  {currentPlayingTrack.artist} • {Math.floor(currentTime)}s / {Math.floor(duration)}s
-                </p>
+          <div
+            className={`absolute bottom-0 left-0 right-0 z-30 border-t shadow-2xl backdrop-blur-2xl transition-all animate-in slide-in-from-bottom-2 duration-200 flex flex-col ${
+              isDark
+                ? 'bg-[#090B12]/95 border-purple-500/20 text-white shadow-purple-950/40'
+                : 'bg-slate-900/95 border-slate-800 text-white shadow-black/30'
+            }`}
+          >
+            {/* Top Scrubber Bar & Live Time Counter */}
+            <div className="px-4 pt-2 pb-1 flex items-center gap-2.5">
+              <span className="text-[10px] font-mono text-slate-400 shrink-0 w-8 text-right">
+                {formatTime(currentTime)}
+              </span>
+
+              {/* Range Slider for Seeking */}
+              <div className="relative flex-1 flex items-center">
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 1}
+                  step={0.1}
+                  value={currentTime}
+                  onChange={handleSeekChange}
+                  onMouseDown={() => setIsSeeking(true)}
+                  onMouseUp={() => setIsSeeking(false)}
+                  onTouchStart={() => setIsSeeking(true)}
+                  onTouchEnd={() => setIsSeeking(false)}
+                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                  style={{
+                    background: `linear-gradient(to right, #ec4899 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.15) ${(currentTime / (duration || 1)) * 100}%)`,
+                  }}
+                />
               </div>
+
+              <span className="text-[10px] font-mono text-slate-400 shrink-0 w-8 text-left">
+                {formatTime(duration)}
+              </span>
             </div>
 
-            {/* Quick Action Button in Sticky Player */}
-            {onSelectTrackForVideo && (
-              <button
-                type="button"
-                onClick={() => {
-                  const durObj = currentPlayingTrack.durations[currentPlayingDurationKey as keyof typeof currentPlayingTrack.durations] || currentPlayingTrack.durations['30s'] || currentPlayingTrack.durations['full'];
-                  if (durObj) {
-                    onSelectTrackForVideo(durObj.url, `${currentPlayingTrack.title} (${currentPlayingDurationKey})`);
-                    onClose();
-                  }
-                }}
-                className="h-8 px-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-xs flex items-center gap-1 shadow active:scale-95 shrink-0"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{t('Gắn Vào Video', 'Attach to Video')}</span>
-              </button>
-            )}
+            {/* Bottom Controls Row */}
+            <div className="px-4 pb-3 pt-0.5 flex items-center justify-between gap-3">
+              {/* Left Track Info */}
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                  <Music className={`w-5 h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold truncate text-white">{currentPlayingTrack.title}</p>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-pink-500/20 text-pink-400 shrink-0">
+                      {currentPlayingDurationKey}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 truncate">
+                    👤 {currentPlayingTrack.artist} • {currentPlayingTrack.bpm} BPM
+                  </p>
+                </div>
+              </div>
+
+              {/* Center Controls: Back - Play/Pause - Next (According to active filtered list) */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Previous Button */}
+                <button
+                  type="button"
+                  onClick={handlePrevTrack}
+                  disabled={filteredTracks.length <= 1}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
+                  title={t('Bài trước đó', 'Previous track')}
+                >
+                  <SkipBack className="w-4 h-4 fill-current" />
+                </button>
+
+                {/* Play / Pause Center Glowing Button */}
+                <button
+                  type="button"
+                  onClick={() => handleTogglePlay(currentPlayingTrack, currentPlayingDurationKey)}
+                  className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-pink-500/30 active:scale-95 transition-all"
+                  title={isPlaying ? 'Pause' : 'Play'}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                </button>
+
+                {/* Next Button */}
+                <button
+                  type="button"
+                  onClick={handleNextTrack}
+                  disabled={filteredTracks.length <= 1}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
+                  title={t('Bài kế tiếp', 'Next track')}
+                >
+                  <SkipForward className="w-4 h-4 fill-current" />
+                </button>
+              </div>
+
+              {/* Right Quick Actions */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onSelectTrackForVideo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const durObj =
+                        currentPlayingTrack.durations[
+                          currentPlayingDurationKey as keyof typeof currentPlayingTrack.durations
+                        ] ||
+                        currentPlayingTrack.durations['30s'] ||
+                        currentPlayingTrack.durations['full'];
+                      if (durObj) {
+                        onSelectTrackForVideo(
+                          durObj.url,
+                          `${currentPlayingTrack.title} (${currentPlayingDurationKey})`
+                        );
+                        onClose();
+                      }
+                    }}
+                    className="h-8 px-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-xs flex items-center gap-1 shadow active:scale-95"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>{t('Gắn Vào Video', 'Attach')}</span>
+                  </button>
+                )}
+
+                {/* Close Player */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    audioRef.current?.pause();
+                    setIsPlaying(false);
+                    setCurrentPlayingTrackId(null);
+                  }}
+                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center"
+                  title={t('Đóng player', 'Close player')}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
