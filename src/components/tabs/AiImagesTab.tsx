@@ -4,17 +4,13 @@
  * AiImagesTab.tsx — WynMotion-AI iOS & Mobile Image Studio
  *
  * Full Parity with Web GeminiImageModal (Studio + 10 Tools + Remove BG):
- * - Studio View with Session Management, Character & Object Reference uploads, and History
- * - 1-row Extra & Aspect Ratio dropdown (with ChevronDown) & Plan ID hidden on iOS
- * - 10 Dedicated Tool Forms with:
- *   1. Glowing header card with Tag (GENERATION TOOL / EDITING TOOL), Title, and full Description line
- *   2. Rich field-level controls (Photorealistic, Stylized, Logo, Background, Mockup, Sequential, Style Transfer, Object Edit, Inpainting, Composition)
- *   3. File upload dropzones for editing tools with preview, delete, and validation
- * - Seamless Remove Background tool
- * - Generation Lightbox & Share Sheet
+ * - Studio View with Design Prompt, Consistent History (Session), Extra Images, Preview Canvas & Pixabay Inspiration
+ * - 10 Tools Grid matching Web exactly (No clutter badges, clean w-12 icon boxes, 2-line descriptions, exact tool order)
+ * - Header with https://www.wynai.pro/logo%20AI%20Image%20Studio.png + "AI Images Studio"
+ * - Full parity with Web APIs and parameters
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Camera,
   Palette,
@@ -37,6 +33,10 @@ import {
   Upload,
   Sparkles,
   ChevronDown,
+  FolderOpen,
+  Trash2,
+  Search,
+  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -52,58 +52,151 @@ type MainViewMode = 'studio' | 'tools' | 'removebg';
 
 interface ToolConfig {
   id: ImageEndpoint;
-  icon: typeof Camera;
+  icon: any;
   iconBg: string;
   iconColor: string;
   nameVi: string;
   nameEn: string;
-  badgeVi: string;
-  badgeEn: string;
   descVi: string;
   descEn: string;
   type: 'generation' | 'editing';
 }
 
+const PIXABAY_KEY = process.env.NEXT_PUBLIC_PIXABAY_API_KEY || '55048100-e971c09b92fef96aab418bbc1';
+
+const INSPIRATION_TABS = [
+  { id: 'ai-images', vi: 'AI Images', en: 'AI Images', query: 'AI art digital illustration' },
+  { id: 'ai-women', vi: 'AI Women', en: 'AI Women', query: 'beautiful women portrait AI' },
+  { id: 'ai-man', vi: 'AI Man', en: 'AI Man', query: 'handsome men portrait AI' },
+  { id: 'anime', vi: 'Anime', en: 'Anime', query: 'anime illustration character' },
+  { id: 'nature', vi: 'Thiên nhiên', en: 'Nature', query: 'nature landscape scenery' },
+  { id: 'city', vi: 'Thành phố', en: 'City', query: 'city urban architecture night' },
+  { id: 'fantasy', vi: 'Fantasy', en: 'Fantasy', query: 'fantasy magical art illustration' },
+  { id: 'art', vi: 'Nghệ thuật', en: 'Art', query: 'digital painting concept art' },
+  { id: 'portrait', vi: 'Chân dung', en: 'Portrait', query: 'portrait photography face' },
+  { id: 'background', vi: 'Background', en: 'Background', query: 'abstract background texture wallpaper' },
+  { id: 'fashion', vi: 'Thời trang', en: 'Fashion', query: 'fashion model style outfit' },
+  { id: 'food', vi: 'Ẩm thực', en: 'Food', query: 'food photography delicious' },
+] as const;
+
+interface PixabayImage {
+  id: number;
+  webformatURL: string;
+  previewURL: string;
+  tags: string;
+}
+
+// Exact Web 10 Tools order & definition matching Image 3
 const CUSTOM_TOOLS: ToolConfig[] = [
+  // 1. Photorealistic
   {
     id: 'photorealistic',
     icon: Camera,
     iconBg: 'bg-blue-500/12',
     iconColor: 'text-blue-500',
-    nameVi: 'Chân Thực',
+    nameVi: 'Ảnh Chân Thực',
     nameEn: 'Photorealistic',
-    badgeVi: 'Camera 8K',
-    badgeEn: '8K Camera',
-    descVi: 'Tạo ảnh chân thực với khả năng kiểm soát ánh sáng và góc chụp máy ảnh',
-    descEn: 'Generate realistic images with photographic lighting & camera control',
+    descVi: 'Tạo ảnh chân thực như chụp bằng máy ảnh',
+    descEn: 'Create photorealistic images like real photos',
     type: 'generation',
   },
+  // 2. Stylized Art
   {
     id: 'stylized',
     icon: Palette,
     iconBg: 'bg-fuchsia-500/12',
     iconColor: 'text-fuchsia-500',
-    nameVi: 'Cách Điệu',
+    nameVi: 'Phong Cách Nghệ Thuật',
     nameEn: 'Stylized Art',
-    badgeVi: '3D & Anime',
-    badgeEn: '3D & Anime',
-    descVi: 'Tạo ảnh với phong cách nghệ thuật (anime, watercolor, 3d render, sticker...)',
-    descEn: 'Create images with artistic styles (anime, watercolor, 3d render, sticker...)',
+    descVi: 'Tạo ảnh với phong cách nghệ thuật (anime, watercolor...)',
+    descEn: 'Create images with artistic styles (anime, watercolor...)',
     type: 'generation',
   },
+  // 3. Logo & Typography
   {
     id: 'logo',
     icon: Type,
     iconBg: 'bg-amber-500/12',
     iconColor: 'text-amber-500',
-    nameVi: 'Thiết Kế Logo',
-    nameEn: 'Logo Design',
-    badgeVi: 'Vector & Typo',
-    badgeEn: 'Vector & Typo',
-    descVi: 'Thiết kế logo thương hiệu với phong cách và typography ấn tượng',
-    descEn: 'Create logos with various styles and typography',
+    nameVi: 'Logo & Typography',
+    nameEn: 'Logo & Typography',
+    descVi: 'Tạo logo thương hiệu và biểu tượng',
+    descEn: 'Create brand logos and icons',
     type: 'generation',
   },
+  // 4. Object Edit
+  {
+    id: 'object-edit',
+    icon: Edit3,
+    iconBg: 'bg-violet-500/12',
+    iconColor: 'text-violet-500',
+    nameVi: 'Chỉnh Sửa Đối Tượng',
+    nameEn: 'Object Edit',
+    descVi: 'Chỉnh sửa đối tượng cụ thể trong ảnh',
+    descEn: 'Edit specific objects in image',
+    type: 'editing',
+  },
+  // 5. Advanced Composition
+  {
+    id: 'composition',
+    icon: Layers,
+    iconBg: 'bg-emerald-500/12',
+    iconColor: 'text-emerald-500',
+    nameVi: 'Ghép Ảnh Nâng Cao',
+    nameEn: 'Advanced Composition',
+    descVi: 'Kết hợp nhiều ảnh thành một composition',
+    descEn: 'Combine multiple images into one composition',
+    type: 'editing',
+  },
+  // 6. Sequential Art
+  {
+    id: 'sequential',
+    icon: Film,
+    iconBg: 'bg-rose-500/12',
+    iconColor: 'text-rose-500',
+    nameVi: 'Sequential Art',
+    nameEn: 'Sequential Art',
+    descVi: 'Tạo storyboard và comic panels',
+    descEn: 'Create storyboards and comic panels',
+    type: 'generation',
+  },
+  // 7. Product Mockup
+  {
+    id: 'mockup',
+    icon: Package,
+    iconBg: 'bg-cyan-500/12',
+    iconColor: 'text-cyan-500',
+    nameVi: 'Product Mockup',
+    nameEn: 'Product Mockup',
+    descVi: 'Tạo mockup sản phẩm cho marketing',
+    descEn: 'Create product mockups for marketing',
+    type: 'generation',
+  },
+  // 8. Style Transfer
+  {
+    id: 'style-transfer',
+    icon: Wand2,
+    iconBg: 'bg-purple-500/12',
+    iconColor: 'text-purple-500',
+    nameVi: 'Chuyển Phong Cách',
+    nameEn: 'Style Transfer',
+    descVi: 'Chuyển ảnh thành phong cách nghệ thuật khác',
+    descEn: 'Transform image to different artistic style',
+    type: 'editing',
+  },
+  // 9. Inpainting
+  {
+    id: 'inpainting',
+    icon: Scissors,
+    iconBg: 'bg-teal-500/12',
+    iconColor: 'text-teal-500',
+    nameVi: 'Inpainting',
+    nameEn: 'Inpainting',
+    descVi: 'Thêm, xóa hoặc thay thế phần tử trong ảnh',
+    descEn: 'Add, remove or replace elements in image',
+    type: 'editing',
+  },
+  // 10. Background
   {
     id: 'background',
     icon: ImageIcon,
@@ -111,89 +204,9 @@ const CUSTOM_TOOLS: ToolConfig[] = [
     iconColor: 'text-emerald-500',
     nameVi: 'Background',
     nameEn: 'Background',
-    badgeVi: 'Wallpaper',
-    badgeEn: 'Wallpaper',
-    descVi: 'Tạo hình nền, texture, wallpaper có không gian trống để đặt chữ',
-    descEn: 'Generate backgrounds and wallpapers with negative space',
+    descVi: 'Tạo background cho UI và wallpaper',
+    descEn: 'Create backgrounds for UI and wallpapers',
     type: 'generation',
-  },
-  {
-    id: 'mockup',
-    icon: Package,
-    iconBg: 'bg-violet-500/12',
-    iconColor: 'text-violet-500',
-    nameVi: 'Mockup Sản Phẩm',
-    nameEn: 'Product Mockup',
-    badgeVi: 'E-commerce',
-    badgeEn: 'E-commerce',
-    descVi: 'Đặt sản phẩm vào bối cảnh thực tế và studio chuyên nghiệp',
-    descEn: 'Place products in realistic scenes and contexts',
-    type: 'generation',
-  },
-  {
-    id: 'sequential',
-    icon: Film,
-    iconBg: 'bg-rose-500/12',
-    iconColor: 'text-rose-500',
-    nameVi: 'Truyện Tranh AI',
-    nameEn: 'Sequential Art',
-    badgeVi: 'Comic / Manga',
-    badgeEn: 'Comic / Manga',
-    descVi: 'Tạo chuỗi tranh phân cảnh, truyện tranh comic theo kịch bản',
-    descEn: 'Create multi-panel stories and comic strips',
-    type: 'generation',
-  },
-  {
-    id: 'style-transfer',
-    icon: Wand2,
-    iconBg: 'bg-indigo-500/12',
-    iconColor: 'text-indigo-500',
-    nameVi: 'Chuyển Phong Cách',
-    nameEn: 'Style Transfer',
-    badgeVi: 'AI Filter',
-    badgeEn: 'AI Filter',
-    descVi: 'Biến đổi ảnh sang phong cách của các danh họa hoặc phong cách hiện đại',
-    descEn: 'Transform images into different artistic styles',
-    type: 'editing',
-  },
-  {
-    id: 'object-edit',
-    icon: Edit3,
-    iconBg: 'bg-cyan-500/12',
-    iconColor: 'text-cyan-500',
-    nameVi: 'Sửa Chi Tiết',
-    nameEn: 'Object Edit',
-    badgeVi: 'Smart Edit',
-    badgeEn: 'Smart Edit',
-    descVi: 'Thêm, bớt hoặc thay đổi chi tiết vật thể trong ảnh gốc',
-    descEn: 'Add, remove, or modify objects in existing images',
-    type: 'editing',
-  },
-  {
-    id: 'inpainting',
-    icon: Scissors,
-    iconBg: 'bg-teal-500/12',
-    iconColor: 'text-teal-500',
-    nameVi: 'Vẽ Lại Vùng Chọn',
-    nameEn: 'Inpainting',
-    badgeVi: 'Magic Fill',
-    badgeEn: 'Magic Fill',
-    descVi: 'Tô vẽ lại hoặc thay thế vùng chọn trên ảnh với AI',
-    descEn: 'Redraw or replace specific regions in images',
-    type: 'editing',
-  },
-  {
-    id: 'composition',
-    icon: Layers,
-    iconBg: 'bg-purple-500/12',
-    iconColor: 'text-purple-500',
-    nameVi: 'Ghép Ảnh AI',
-    nameEn: 'Composition',
-    badgeVi: 'AI Blend',
-    badgeEn: 'AI Blend',
-    descVi: 'Hòa trộn nhiều ảnh lớp phủ vào ảnh nền với ánh sáng đồng nhất',
-    descEn: 'Combine multiple images into a cohesive composition',
-    type: 'editing',
   },
 ];
 
@@ -222,6 +235,7 @@ export const AiImagesTab: React.FC = () => {
   const [studioAspectRatio, setStudioAspectRatio] = useState<string>('16:9');
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [allSessions, setAllSessions] = useState<any[]>([]);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
   const [extraImages, setExtraImages] = useState<File[]>([]);
   const [extraImageUrls, setExtraImageUrls] = useState<string[]>([]);
@@ -229,6 +243,17 @@ export const AiImagesTab: React.FC = () => {
   const [uploadRoleForRef, setUploadRoleForRef] = useState<'character' | 'object'>('character');
   const extraImagesRef = useRef<HTMLInputElement>(null);
   const sessionFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Pixabay Inspiration State (Inside Studio) ──
+  const [inspirationTab, setInspirationTab] = useState<string>('ai-images');
+  const [pixabayQuery, setPixabayQuery] = useState('');
+  const [pixabayImages, setPixabayImages] = useState<PixabayImage[]>([]);
+  const [pixabayPage, setPixabayPage] = useState(1);
+  const [pixabayHasMore, setPixabayHasMore] = useState(true);
+  const [isPixabayLoading, setIsPixabayLoading] = useState(false);
+  const [isPixabayLoadingMore, setIsPixabayLoadingMore] = useState(false);
+  const [pixabayPreviewImg, setPixabayPreviewImg] = useState<PixabayImage | null>(null);
+  const [addingPixabayIdx, setAddingPixabayIdx] = useState<number | null>(null);
 
   // ── Tool 1: Photorealistic Form State ──
   const [photoPrompt, setPhotoPrompt] = useState('');
@@ -350,6 +375,59 @@ export const AiImagesTab: React.FC = () => {
     }
   }, [user]);
 
+  // Fetch Pixabay Inspiration
+  const fetchPixabay = useCallback(async (query: string, page = 1, append = false) => {
+    if (!query.trim()) return;
+    if (append) setIsPixabayLoadingMore(true);
+    else setIsPixabayLoading(true);
+
+    try {
+      const lang = isVietnamese ? 'vi' : 'en';
+      const response = await fetch(
+        `https://pixabay.com/api/?key=${PIXABAY_KEY}&q=${encodeURIComponent(query)}&image_type=all&lang=${lang}&safesearch=true&order=popular&per_page=20&page=${page}`
+      );
+      if (!response.ok) throw new Error(`Pixabay status ${response.status}`);
+      const data = await response.json();
+      const hits: PixabayImage[] = data.hits || [];
+
+      if (append) setPixabayImages((prev) => [...prev, ...hits]);
+      else setPixabayImages(hits);
+
+      setPixabayHasMore(hits.length === 20);
+      setPixabayPage(page);
+    } catch (_) {
+    } finally {
+      setIsPixabayLoading(false);
+      setIsPixabayLoadingMore(false);
+    }
+  }, [isVietnamese]);
+
+  useEffect(() => {
+    if (mainView === 'studio') {
+      const tab = INSPIRATION_TABS.find((tb) => tb.id === inspirationTab) || INSPIRATION_TABS[0];
+      setPixabayImages([]);
+      setPixabayPage(1);
+      setPixabayHasMore(true);
+      setPixabayQuery('');
+      fetchPixabay(tab.query, 1, false);
+    }
+  }, [inspirationTab, mainView, fetchPixabay]);
+
+  const addPixabayAsReference = async (img: PixabayImage, idx: number) => {
+    setAddingPixabayIdx(idx);
+    try {
+      const res = await fetch(img.webformatURL);
+      const blob = await res.blob();
+      const file = new File([blob], `pixabay-${img.id}.jpg`, { type: blob.type || 'image/jpeg' });
+      handleAddExtraImages([file]);
+      alert(t('Đã thêm ảnh vào danh sách Extra!', 'Added image to Extra list!'));
+    } catch {
+      alert(t('Không thể tải ảnh này trực tiếp.', 'Cannot fetch this image.'));
+    } finally {
+      setAddingPixabayIdx(null);
+    }
+  };
+
   const loadSessions = async () => {
     try {
       setIsSessionLoading(true);
@@ -364,6 +442,23 @@ export const AiImagesTab: React.FC = () => {
             setActivePreviewUrl(lastImg.file_url);
           }
         }
+      }
+    } catch (_) {
+    } finally {
+      setIsSessionLoading(false);
+    }
+  };
+
+  const loadSessionDetail = async (sessionId: string) => {
+    try {
+      setIsSessionLoading(true);
+      const detail = await imageService.getSession(sessionId);
+      setCurrentSession(detail);
+      setShowSessionPicker(false);
+      if (detail.images?.length > 0) {
+        setActivePreviewUrl(detail.images[detail.images.length - 1].file_url);
+      } else {
+        setActivePreviewUrl(null);
       }
     } catch (_) {
     } finally {
@@ -439,6 +534,19 @@ export const AiImagesTab: React.FC = () => {
       }
     } catch (err: any) {
       alert(err.message || t('Không thể xóa ảnh', 'Failed to delete image'));
+    }
+  };
+
+  const handleDeleteCurrentSession = async () => {
+    if (!user || !currentSession) return;
+    if (!confirm(t('Bạn có chắc chắn muốn xóa session này?', 'Are you sure you want to delete this session?'))) return;
+    try {
+      await imageService.deleteSession(currentSession.session_id);
+      setAllSessions((prev) => prev.filter((s) => s.session_id !== currentSession.session_id));
+      setCurrentSession(null);
+      setActivePreviewUrl(null);
+    } catch (err: any) {
+      alert(err.message || t('Không thể xóa session', 'Failed to delete session'));
     }
   };
 
@@ -718,14 +826,32 @@ export const AiImagesTab: React.FC = () => {
   };
 
   const activeToolConfig = CUSTOM_TOOLS.find((t) => t.id === selectedTool);
-  const characterRefs = currentSession?.images?.filter((img: any) => img.role === 'character') || [];
-  const objectRefs = currentSession?.images?.filter((img: any) => img.role === 'object') || [];
-  const generatedHistory = currentSession?.images?.filter((img: any) => img.role === 'generated') || [];
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 pt-2 pb-24 space-y-4">
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 pt-1 pb-24 space-y-4">
       {/* ─────────────────────────────────────────────────────────────
-          1. TOP NAVIGATION HEADER (Studio | 10 Tools | Remove BG)
+          1. UNIFIED APP HEADER (Logo + AI Images Studio + Subtitle)
+          ───────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 px-1 py-1">
+        <div className="flex items-center gap-3 min-w-0">
+          <img
+            src="https://www.wynai.pro/logo%20AI%20Image%20Studio.png"
+            alt="AI Images Studio"
+            className="w-11 h-11 sm:w-12 sm:h-12 object-contain shrink-0"
+          />
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight truncate">
+              AI Images Studio
+            </h2>
+            <p className="text-[11px] sm:text-xs text-slate-400 leading-tight truncate">
+              {t('Tạo và chỉnh sửa ảnh bằng AI', 'Create and edit images with AI')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          2. TAB NAVIGATION SWITCHER (Studio | Tools | RemoveBG)
           ───────────────────────────────────────────────────────────── */}
       <div
         className={`p-1 rounded-2xl border flex items-center gap-1 backdrop-blur-xl ${
@@ -733,9 +859,9 @@ export const AiImagesTab: React.FC = () => {
         }`}
       >
         {[
-          { id: 'studio' as MainViewMode, icon: Sparkles, labelVi: 'Studio', labelEn: 'Studio' },
-          { id: 'tools' as MainViewMode, icon: Wand2, labelVi: '10 Công Cụ', labelEn: '10 Tools' },
-          { id: 'removebg' as MainViewMode, icon: Scissors, labelVi: 'Xóa Nền', labelEn: 'Remove BG' },
+          { id: 'studio' as MainViewMode, labelVi: 'Studio', labelEn: 'Studio' },
+          { id: 'tools' as MainViewMode, labelVi: '10 Tools', labelEn: '10 Tools' },
+          { id: 'removebg' as MainViewMode, icon: Scissors, labelVi: 'Remove BG', labelEn: 'Remove BG' },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = mainView === tab.id;
@@ -747,7 +873,7 @@ export const AiImagesTab: React.FC = () => {
                 setMainView(tab.id);
                 if (tab.id !== 'tools') setSelectedTool(null);
               }}
-              className={`flex-1 py-2 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+              className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
                 isActive
                   ? isDark
                     ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 scale-[1.02]'
@@ -757,7 +883,7 @@ export const AiImagesTab: React.FC = () => {
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
+              {Icon && <Icon className="w-3.5 h-3.5" />}
               <span className="truncate">{isVietnamese ? tab.labelVi : tab.labelEn}</span>
             </button>
           );
@@ -791,297 +917,68 @@ export const AiImagesTab: React.FC = () => {
       />
 
       {/* ─────────────────────────────────────────────────────────────
-          2. VIEW MODE 1: STUDIO (Web Parity with Session & Clean Controls)
+          3. VIEW MODE 1: STUDIO (Exact Web Parity — Image 1 Layout)
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'studio' && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {/* Main Hero & Preview Canvas Card */}
+          {/* Top Card: DESIGN PROMPT (Matching Image 1 on Web) */}
           <div
-            className={`rounded-[28px] border overflow-hidden backdrop-blur-2xl ${
-              isDark
-                ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                : 'border-white/80 bg-white/75 shadow-lg'
-            }`}
-          >
-            {/* Header: Session Status & Actions */}
-            <div className="p-4 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="text-xs font-bold truncate">
-                  {currentSession?.title || t('Studio Sáng Tạo', 'Creative Studio')}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCreateNewSession}
-                disabled={isSessionLoading}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1.5 active:scale-95 ${
-                  isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-800'
-                }`}
-              >
-                <Plus className="w-3 h-3" />
-                <span>{t('Session Mới', 'New Session')}</span>
-              </button>
-            </div>
-
-            {/* Canvas Display */}
-            <div className="p-3 sm:p-4">
-              <div
-                className={`relative rounded-2xl overflow-hidden min-h-[220px] sm:min-h-[300px] flex items-center justify-center border ${
-                  isDark ? 'bg-black/50 border-white/5' : 'bg-slate-100 border-slate-200'
-                }`}
-              >
-                {activePreviewUrl ? (
-                  <div className="relative group w-full flex items-center justify-center">
-                    <img
-                      src={activePreviewUrl}
-                      alt="Studio Preview"
-                      className="max-h-[360px] w-auto max-w-full object-contain rounded-xl cursor-pointer"
-                      onClick={() => {
-                        setResultImage({
-                          image_url: activePreviewUrl,
-                          prompt_used: studioPrompt || 'Studio Image',
-                          aspect_ratio: studioAspectRatio as AspectRatio,
-                        });
-                        setIsLightboxOpen(true);
-                      }}
-                    />
-                    <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-90">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await saveAndShareMedia(activePreviewUrl, `wynmotion_studio_${Date.now()}.png`);
-                        }}
-                        className="p-2 rounded-xl bg-black/70 backdrop-blur-md text-white border border-white/15 active:scale-95 shadow-md"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setResultImage({
-                            image_url: activePreviewUrl,
-                            prompt_used: studioPrompt || 'Studio Image',
-                            aspect_ratio: studioAspectRatio as AspectRatio,
-                          });
-                          setIsLightboxOpen(true);
-                        }}
-                        className="p-2 rounded-xl bg-black/70 backdrop-blur-md text-white border border-white/15 active:scale-95 shadow-md"
-                      >
-                        <Maximize2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-center">
-                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-fuchsia-500/20 to-cyan-500/20 flex items-center justify-center mb-3">
-                      <Sparkles className="w-6 h-6 text-fuchsia-400" />
-                    </div>
-                    <p className="text-xs font-bold text-white/90">
-                      {t('WynMotion AI Studio Sẵn Sàng', 'WynMotion AI Studio Ready')}
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                      {t('Nhập prompt hoặc tải ảnh nhân vật tham chiếu để bắt đầu tạo ảnh chất lượng cao.', 'Enter a prompt or upload reference characters to generate images.')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Live Generation Overlay */}
-                {isGenerating && (
-                  <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center p-4">
-                    <div className="rounded-2xl border border-white/15 bg-white/10 px-6 py-5 text-center shadow-2xl">
-                      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-cyan-300" />
-                      <p className="text-sm font-bold text-white">{t('Đang tạo ảnh AI...', 'Generating AI image...')}</p>
-                      <p className="text-2xl font-black mt-1 text-white">{elapsedTime}s</p>
-                      <p className="text-[11px] mt-1 text-white/70">{t('Studio đang phân tích & vẽ chi tiết', 'Studio is rendering artwork')}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Reference Images Section (Character + Object) */}
-            <div className="px-4 pb-4 space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                {/* Character Reference Box */}
-                <div className={`p-2.5 rounded-2xl border ${isDark ? 'border-white/5 bg-white/[0.02]' : 'border-slate-200 bg-slate-50'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-fuchsia-400">
-                      👤 {t('Nhân vật', 'Character')} ({characterRefs.length}/4)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUploadRoleForRef('character');
-                        sessionFileInputRef.current?.click();
-                      }}
-                      className="text-[10px] font-bold text-fuchsia-300 hover:text-fuchsia-200 flex items-center gap-0.5"
-                    >
-                      <Plus className="w-3 h-3" /> {t('Thêm', 'Add')}
-                    </button>
-                  </div>
-                  <div className="flex gap-1.5 overflow-x-auto py-1 scrollbar-none min-h-[44px]">
-                    {characterRefs.length === 0 ? (
-                      <span className="text-[10px] text-slate-500 italic py-2">{t('Chưa có ảnh', 'No images')}</span>
-                    ) : (
-                      characterRefs.map((img: any) => (
-                        <div key={img.index} className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-white/10 group">
-                          <img src={img.file_url} alt="Character ref" className="h-full w-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSessionImage(img.index)}
-                            className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-rose-400"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Object Reference Box */}
-                <div className={`p-2.5 rounded-2xl border ${isDark ? 'border-white/5 bg-white/[0.02]' : 'border-slate-200 bg-slate-50'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-cyan-400">
-                      📦 {t('Vật thể', 'Object')} ({objectRefs.length}/10)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUploadRoleForRef('object');
-                        sessionFileInputRef.current?.click();
-                      }}
-                      className="text-[10px] font-bold text-cyan-300 hover:text-cyan-200 flex items-center gap-0.5"
-                    >
-                      <Plus className="w-3 h-3" /> {t('Thêm', 'Add')}
-                    </button>
-                  </div>
-                  <div className="flex gap-1.5 overflow-x-auto py-1 scrollbar-none min-h-[44px]">
-                    {objectRefs.length === 0 ? (
-                      <span className="text-[10px] text-slate-500 italic py-2">{t('Chưa có ảnh', 'No images')}</span>
-                    ) : (
-                      objectRefs.map((img: any) => (
-                        <div key={img.index} className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-white/10 group">
-                          <img src={img.file_url} alt="Object ref" className="h-full w-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSessionImage(img.index)}
-                            className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-rose-400"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Extra Images Chips (One-time) */}
-              {extraImageUrls.length > 0 && (
-                <div className="flex items-center gap-2 overflow-x-auto py-1">
-                  <span className="text-[10px] font-bold text-amber-400 shrink-0">✨ Extra:</span>
-                  {extraImageUrls.map((url, idx) => (
-                    <div key={idx} className="relative h-8 w-8 shrink-0 rounded-lg overflow-hidden border border-amber-400/40">
-                      <img src={url} alt="Extra" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExtraImage(idx)}
-                        className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-amber-400"
-                      >
-                        <X className="w-2 h-2" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Session Generated History Strip */}
-            {generatedHistory.length > 0 && (
-              <div className="px-4 pb-4 border-t border-white/5 pt-3">
-                <p className="text-[11px] font-bold text-slate-400 mb-2">
-                  🎞️ {t('Lịch sử Session', 'Session History')} ({generatedHistory.length})
-                </p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {generatedHistory.map((img: any) => (
-                    <div
-                      key={img.index}
-                      onClick={() => setActivePreviewUrl(img.file_url)}
-                      className={`relative h-14 w-14 shrink-0 rounded-xl overflow-hidden border cursor-pointer transition-all ${
-                        activePreviewUrl === img.file_url ? 'border-fuchsia-400 scale-105 shadow-md shadow-fuchsia-500/20' : 'border-white/10 opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={img.file_url} alt="History" className="h-full w-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Prompts & Controls Card (Plan ID hidden, Extra + 16:9 in 1 row with ChevronDown) */}
-          <div
-            className={`rounded-[28px] border p-4 space-y-3 backdrop-blur-2xl ${
+            className={`rounded-[28px] border p-4 sm:p-5 space-y-3 backdrop-blur-2xl ${
               isDark
                 ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                 : 'border-white/80 bg-white/75 shadow-lg'
             }`}
           >
             <div>
-              <p className={`text-[10px] uppercase tracking-widest font-black mb-1.5 ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
-                {t('CÂU LỆNH TẠO ẢNH / DESIGN PROMPT', 'DESIGN PROMPT')}
+              <p className={`text-[10px] uppercase tracking-[0.24em] font-black mb-1.5 ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
+                DESIGN PROMPT
               </p>
               <textarea
                 value={studioPrompt}
                 onChange={(e) => setStudioPrompt(e.target.value)}
                 rows={3}
-                className={`w-full resize-none rounded-2xl border px-3.5 py-2.5 text-xs outline-none transition-all ${
+                className={`w-full resize-none rounded-2xl border px-3.5 py-3 text-xs sm:text-sm outline-none transition-all ${
                   isDark
                     ? 'border-white/10 bg-white/[0.04] text-white placeholder:text-white/35 focus:border-cyan-400/60'
                     : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-cyan-500'
                 }`}
-                placeholder={t(
-                  'Nhập ý tưởng tạo ảnh hoặc mô tả nhân vật, bối cảnh để bắt đầu...',
-                  'Enter your ideas or describe character and setting to get started...'
-                )}
+                placeholder="Enter your ideas or upload images to get started."
               />
             </div>
 
-            {/* Extra Button and 16:9 Dropdown in 1 Single Horizontal Row */}
-            <div className="flex flex-row items-center gap-2 w-full">
-              {/* 1. Extra Button */}
-              <button
-                type="button"
-                onClick={() => extraImagesRef.current?.click()}
-                className={`h-11 flex-1 px-3 rounded-2xl font-semibold text-xs border transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
-                  isDark
-                    ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white'
-                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-900'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5 shrink-0" />
-                <span>{t('Extra', 'Extra')}</span>
-                {extraImages.length > 0 && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400">
-                    {extraImages.length}
-                  </span>
-                )}
-              </button>
+            {/* Bottom bar inside Design Prompt Card: Extra + 16:9 + Send Button */}
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <div className="flex items-center gap-2">
+                {/* Extra Button */}
+                <button
+                  type="button"
+                  onClick={() => extraImagesRef.current?.click()}
+                  className={`h-10 px-3.5 rounded-2xl font-semibold text-xs border transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                    isDark
+                      ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white'
+                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-900'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 shrink-0" />
+                  <span>Extra</span>
+                  {extraImages.length > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400">
+                      {extraImages.length}
+                    </span>
+                  )}
+                </button>
 
-              {/* 2. Aspect Ratio Dropdown Button with ChevronDown Arrow */}
-              <div
-                className={`h-11 flex-1 rounded-2xl border px-3 flex items-center justify-between relative transition-all ${
-                  isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                {/* 16:9 Dropdown */}
+                <div
+                  className={`h-10 rounded-2xl border px-3 flex items-center gap-1.5 relative transition-all ${
+                    isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'
+                  }`}
+                >
                   <ImageIcon className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-300' : 'text-cyan-600'}`} />
                   <select
                     value={studioAspectRatio}
                     onChange={(e) => setStudioAspectRatio(e.target.value)}
-                    className="w-full bg-transparent outline-none text-xs font-semibold appearance-none cursor-pointer pr-4"
+                    className="bg-transparent outline-none text-xs font-semibold appearance-none cursor-pointer pr-4"
                   >
                     <option value="16:9" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>16:9</option>
                     <option value="1:1" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>1:1</option>
@@ -1091,51 +988,458 @@ export const AiImagesTab: React.FC = () => {
                     <option value="3:2" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>3:2</option>
                     <option value="2:3" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-black'}>2:3</option>
                   </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 pointer-events-none -ml-3" />
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 pointer-events-none -ml-3" />
+              </div>
+
+              {/* Send Button */}
+              <button
+                type="button"
+                onClick={handleStudioSubmit}
+                disabled={isGenerating || !studioPrompt.trim()}
+                className="h-10 px-6 rounded-2xl font-bold text-xs text-white bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-500 shadow-md shadow-violet-500/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>{elapsedTime}s</span>
+                  </>
+                ) : (
+                  <span>Send</span>
+                )}
+              </button>
+            </div>
+
+            {/* Status Footer Line */}
+            <div className={`pt-1 flex items-center gap-3 text-[11px] ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+              <span>Session: {currentSession?.title || 'None'}</span>
+              <span>•</span>
+              <span>History: {currentSession?.images?.length ?? 0} images</span>
+            </div>
+          </div>
+
+          {/* Middle Section: SESSION & EXTRA IMAGES (Image 1 Layout) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 1. SESSION Card (Consistent History) */}
+            <div
+              className={`rounded-[28px] border p-4 space-y-3 backdrop-blur-2xl ${
+                isDark
+                  ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                  : 'border-white/80 bg-white/75 shadow-lg'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
+                    SESSION
+                  </p>
+                  <h3 className="text-sm font-bold text-white mt-0.5">{t('Lịch sử nhất quán', 'Consistent History')}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateNewSession}
+                  disabled={isSessionLoading}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1 active:scale-95 ${
+                    isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-800'
+                  }`}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{t('Mới', 'New')}</span>
+                </button>
+              </div>
+
+              {/* Session Selector Dropdown if Sessions exist */}
+              {allSessions.length > 0 && (
+                <div className={`rounded-xl border overflow-hidden ${isDark ? 'border-white/10 bg-black/30' : 'border-slate-200 bg-slate-50'}`}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSessionPicker(!showSessionPicker)}
+                    className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-white"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FolderOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="truncate">{currentSession?.title || t('Chọn session...', 'Select session...')}</span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSessionPicker ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showSessionPicker && (
+                    <div className={`border-t divide-y max-h-36 overflow-y-auto ${isDark ? 'border-white/10 divide-white/5' : 'border-slate-200 divide-slate-200'}`}>
+                      {allSessions.map((s) => (
+                        <button
+                          key={s.session_id}
+                          type="button"
+                          onClick={() => loadSessionDetail(s.session_id)}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between ${
+                            currentSession?.session_id === s.session_id
+                              ? 'bg-cyan-500/15 text-cyan-300 font-bold'
+                              : 'text-slate-300 hover:bg-white/5'
+                          }`}
+                        >
+                          <span className="truncate">{s.title}</span>
+                          <span className="text-[10px] text-slate-500 shrink-0">{s.images_count} imgs</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* UPLOAD REFERENCES Sub-card */}
+              <div className={`rounded-2xl border p-3 ${isDark ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'}`}>
+                <p className={`text-[10px] uppercase tracking-widest font-black mb-2 ${isDark ? 'text-fuchsia-300' : 'text-fuchsia-700'}`}>
+                  {t('UPLOAD THAM CHIẾU', 'UPLOAD REFERENCES')}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadRoleForRef('character');
+                      sessionFileInputRef.current?.click();
+                    }}
+                    className={`py-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1 active:scale-95 ${
+                      uploadRoleForRef === 'character'
+                        ? 'border-violet-500/50 bg-violet-500/20 text-violet-200'
+                        : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    👤 {t('Nhân vật', 'Character')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadRoleForRef('object');
+                      sessionFileInputRef.current?.click();
+                    }}
+                    className={`py-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1 active:scale-95 ${
+                      uploadRoleForRef === 'object'
+                        ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-200'
+                        : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    📦 {t('Đối tượng', 'Object')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Session Images Display / Empty State */}
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {!currentSession || currentSession.images?.length === 0 ? (
+                  <div className={`rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-50'}`}>
+                    <FolderOpen className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-60" />
+                    <p className="text-xs font-bold text-white/80">{t('Chưa có session', 'No session yet')}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {t('Tạo session mới để bắt đầu chuỗi ảnh nhất quán.', 'Create a new session to start a consistent image series.')}
+                    </p>
+                  </div>
+                ) : (
+                  currentSession.images.map((img: any, idx: number) => (
+                    <div
+                      key={idx}
+                      onClick={() => setActivePreviewUrl(img.file_url)}
+                      className={`group rounded-xl border p-2 flex items-center gap-2.5 cursor-pointer transition-all ${
+                        activePreviewUrl === img.file_url
+                          ? 'border-cyan-400/50 bg-cyan-400/10'
+                          : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <div className="w-11 h-11 rounded-lg overflow-hidden bg-black/40 shrink-0">
+                        <img src={img.file_url} alt="Ref" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          img.role === 'character' ? 'bg-violet-500/20 text-violet-300' : img.role === 'object' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-emerald-500/20 text-emerald-300'
+                        }`}>
+                          {img.role === 'character' ? 'Character' : img.role === 'object' ? 'Object' : 'Generated'}
+                        </span>
+                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {img.prompt || 'Reference image'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSessionImage(idx);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {currentSession && (
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentSession}
+                  className="w-full py-2 rounded-xl text-[11px] font-semibold border border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 flex items-center justify-center gap-1 transition-all"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>{t('Xóa session', 'Delete session')}</span>
+                </button>
+              )}
+            </div>
+
+            {/* 2. EXTRA IMAGES Card (Image 1 Layout) */}
+            <div
+              className={`rounded-[28px] border p-4 space-y-3 backdrop-blur-2xl ${
+                isDark
+                  ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                  : 'border-white/80 bg-white/75 shadow-lg'
+              }`}
+            >
+              <div>
+                <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-fuchsia-300' : 'text-fuchsia-700'}`}>
+                  EXTRA IMAGES
+                </p>
+                <h4 className="text-xs font-semibold text-slate-400 mt-0.5">
+                  {t('Chỉ dùng 1 lần — không lưu vào session', 'One-time only — not saved to session')}
+                </h4>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => extraImagesRef.current?.click()}
+                className={`w-full py-2.5 rounded-2xl text-xs font-bold border transition-all active:scale-[0.98] ${
+                  isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-800'
+                }`}
+              >
+                {t('Thêm ảnh', 'Add images')}
+              </button>
+
+              <div className="flex flex-wrap gap-2 min-h-[90px]">
+                {extraImages.length === 0 ? (
+                  <div className={`w-full rounded-2xl border border-dashed p-4 text-center text-[11px] ${isDark ? 'border-white/10 text-white/40' : 'border-slate-200 text-slate-400'}`}>
+                    {t('Thêm ảnh cho lần generate hiện tại.', 'Add images for this current generation.')}
+                  </div>
+                ) : (
+                  extraImageUrls.map((url, idx) => (
+                    <div key={idx} className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 group">
+                      <img src={url} alt="Extra" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExtraImage(idx)}
+                        className="absolute top-1 right-1 p-0.5 rounded-full bg-black/70 text-white hover:bg-rose-500"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Active Preview / Canvas Display Card */}
+          {activePreviewUrl && (
+            <div
+              className={`rounded-[28px] border p-4 backdrop-blur-2xl ${
+                isDark
+                  ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                  : 'border-white/80 bg-white/75 shadow-lg'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                  {t('Ảnh xem trước', 'Studio Preview')}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await saveAndShareMedia(activePreviewUrl, `wynmotion_studio_${Date.now()}.png`);
+                    }}
+                    className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResultImage({
+                        image_url: activePreviewUrl,
+                        prompt_used: studioPrompt || 'Studio Image',
+                        aspect_ratio: studioAspectRatio as AspectRatio,
+                      });
+                      setIsLightboxOpen(true);
+                    }}
+                    className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 active:scale-95"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="relative rounded-2xl overflow-hidden max-h-[360px] flex items-center justify-center bg-black/60 border border-white/10">
+                <img
+                  src={activePreviewUrl}
+                  alt="Studio Render"
+                  className="max-h-[360px] w-auto max-w-full object-contain cursor-pointer"
+                  onClick={() => {
+                    setResultImage({
+                      image_url: activePreviewUrl,
+                      prompt_used: studioPrompt || 'Studio Image',
+                      aspect_ratio: studioAspectRatio as AspectRatio,
+                    });
+                    setIsLightboxOpen(true);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Card: INSPIRATION (Browse inspiration — Image 1 Layout) */}
+          <div
+            className={`rounded-[30px] border p-4 sm:p-5 backdrop-blur-2xl ${
+              isDark
+                ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                : 'border-white/80 bg-white/72 shadow-lg'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-400 via-pink-500 to-violet-500 flex items-center justify-center shadow-lg shrink-0">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className={`text-[10px] uppercase tracking-[0.24em] font-black ${isDark ? 'text-amber-200/70' : 'text-amber-700/70'}`}>
+                    INSPIRATION
+                  </p>
+                  <h3 className="text-base sm:text-lg font-bold text-white">{t('Tìm ảnh cảm hứng', 'Browse inspiration')}</h3>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-56">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
+                <input
+                  type="text"
+                  value={pixabayQuery}
+                  onChange={(e) => setPixabayQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && pixabayQuery.trim()) {
+                      setPixabayImages([]);
+                      setPixabayPage(1);
+                      setPixabayHasMore(true);
+                      fetchPixabay(pixabayQuery.trim(), 1, false);
+                    }
+                  }}
+                  placeholder={t('Tìm kiếm thêm...', 'Search more...')}
+                  className={`h-9 w-full pl-8 pr-3 rounded-2xl border text-xs outline-none transition-all ${
+                    isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-violet-400/60' : 'border-slate-200 bg-white text-slate-900'
+                  }`}
+                />
               </div>
             </div>
 
-            {/* Send / Generate Button */}
-            <button
-              type="button"
-              onClick={handleStudioSubmit}
-              disabled={isGenerating || !studioPrompt.trim()}
-              className={`w-full py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg ${
-                isDark
-                  ? 'bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-500 text-white shadow-fuchsia-500/25'
-                  : 'bg-gradient-to-r from-fuchsia-600 via-violet-600 to-cyan-600 text-white shadow-violet-500/25'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t('Đang tạo ảnh Studio...', 'Generating Studio...')} ({elapsedTime}s)</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>{t('Tạo Ảnh Studio Ngay', 'Generate in Studio')}</span>
-                </>
-              )}
-            </button>
+            {/* Category Pills */}
+            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-none">
+              {INSPIRATION_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setInspirationTab(tab.id)}
+                  className={`h-8 px-3.5 rounded-2xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all border ${
+                    inspirationTab === tab.id
+                      ? 'border-violet-500/60 bg-violet-500/20 text-violet-200 shadow-sm'
+                      : isDark
+                      ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                      : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  {isVietnamese ? tab.vi : tab.en}
+                </button>
+              ))}
+            </div>
+
+            {/* Pixabay Images Grid */}
+            {isPixabayLoading ? (
+              <div className="flex items-center justify-center h-36">
+                <Loader2 className="w-7 h-7 animate-spin text-violet-400 opacity-60" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                  {pixabayImages.map((img, idx) => (
+                    <div key={img.id} className="group relative rounded-2xl overflow-hidden aspect-square border border-white/10 bg-black/40">
+                      <img
+                        src={img.previewURL}
+                        alt={img.tags}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setPixabayPreviewImg(img)}
+                          className="h-6 px-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold flex items-center gap-1 backdrop-blur-sm"
+                        >
+                          <Search className="w-2.5 h-2.5" />
+                          <span>{t('Xem', 'View')}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addPixabayAsReference(img, idx)}
+                          disabled={addingPixabayIdx === idx}
+                          className="h-6 px-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-bold flex items-center gap-1 shadow"
+                        >
+                          {addingPixabayIdx === idx ? (
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Plus className="w-2.5 h-2.5" />
+                              <span>{t('Dùng', 'Use')}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {pixabayHasMore && pixabayImages.length > 0 && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const activeTab = INSPIRATION_TABS.find((tb) => tb.id === inspirationTab) || INSPIRATION_TABS[0];
+                        fetchPixabay(pixabayQuery.trim() || activeTab.query, pixabayPage + 1, true);
+                      }}
+                      disabled={isPixabayLoadingMore}
+                      className="h-9 px-5 rounded-2xl text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all flex items-center gap-1.5"
+                    >
+                      {isPixabayLoadingMore ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>{t('Đang tải...', 'Loading...')}</span>
+                        </>
+                      ) : (
+                        <span>{t('Tải thêm 20 ảnh', 'Load 20 more')}</span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. VIEW MODE 2: 10 CUSTOM TOOLS (Grid & Dedicated Forms)
+          4. VIEW MODE 2: 10 CUSTOM TOOLS (Exact Web Parity — Image 3)
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'tools' && (
         <div className="space-y-4">
           {!selectedTool ? (
-            // ── Grid View: 10 Tool Cards — Web Parity ──
+            // ── Grid View: 10 Tool Cards — Clean & Exact Web Layout (Image 3) ──
             <div className="space-y-4 animate-in fade-in duration-200">
               <div
                 className={`rounded-[30px] border p-4 sm:p-5 backdrop-blur-2xl ${
                   isDark
                     ? 'border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                    : 'border-white/80 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.60)]'
+                    : 'border-white/80 bg-white/72 shadow-lg'
                 }`}
               >
                 <div className="flex items-center gap-3 mb-5">
@@ -1146,12 +1450,12 @@ export const AiImagesTab: React.FC = () => {
                     <p className={`text-xs uppercase tracking-[0.24em] font-black ${
                       isDark ? 'text-fuchsia-200/70' : 'text-fuchsia-700/70'
                     }`}>
-                      Custom Tools
+                      CUSTOM TOOLS
                     </p>
                     <h3 className={`text-lg sm:text-xl font-bold ${
                       isDark ? 'text-white' : 'text-slate-900'
                     }`}>
-                      {t('10 AI tools studio', '10 AI tools studio')}
+                      10 AI tools studio
                     </h3>
                   </div>
                 </div>
@@ -1164,29 +1468,21 @@ export const AiImagesTab: React.FC = () => {
                         key={tool.id}
                         type="button"
                         onClick={() => setSelectedTool(tool.id)}
-                        className={`group relative rounded-2xl border p-3 text-left transition-all duration-300 flex flex-col justify-between aspect-square active:scale-95 ${
+                        className={`group relative rounded-[26px] border p-4 text-left transition-all duration-200 flex flex-col justify-between aspect-square active:scale-95 ${
                           isDark
-                            ? 'border-white/10 bg-white/[0.04] hover:border-white/25 hover:bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                            ? 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                             : 'border-slate-200/80 bg-white/80 hover:border-slate-300 hover:bg-white shadow-sm'
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 ${tool.iconBg}`}>
-                            <Icon className={`w-4 h-4 ${tool.iconColor}`} />
-                          </div>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                            isDark ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {isVietnamese ? tool.badgeVi : tool.badgeEn}
-                          </span>
-                        </div>
-
                         <div>
-                          <h4 className={`text-xs font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          <div className={`w-12 h-12 rounded-2xl mb-3 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 ${tool.iconBg}`}>
+                            <Icon className={`w-6 h-6 ${tool.iconColor}`} />
+                          </div>
+                          <h4 className={`text-xs sm:text-sm font-bold leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {isVietnamese ? tool.nameVi : tool.nameEn}
                           </h4>
-                          <p className={`text-[10px] leading-tight line-clamp-2 mt-0.5 ${
-                            isDark ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-500'
+                          <p className={`mt-1.5 text-[10px] sm:text-xs leading-relaxed line-clamp-2 ${
+                            isDark ? 'text-white/65 group-hover:text-white/80' : 'text-slate-600'
                           }`}>
                             {isVietnamese ? tool.descVi : tool.descEn}
                           </p>
@@ -1198,7 +1494,7 @@ export const AiImagesTab: React.FC = () => {
               </div>
             </div>
           ) : (
-            // ── Dedicated Tool Screen (Matching Web Exactly with Header, Description & Specific Form) ──
+            // ── Dedicated Tool Screen With Glowing Header & Form ──
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
               {/* Back Button */}
               <div>
@@ -1564,21 +1860,86 @@ export const AiImagesTab: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ────────────────── TOOL 4: BACKGROUND ────────────────── */}
-                  {selectedTool === 'background' && (
+                  {/* ────────────────── TOOL 4: OBJECT EDIT ────────────────── */}
+                  {selectedTool === 'object-edit' && (
                     <div className="space-y-4">
+                      <input
+                        ref={oeFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setOeImageFile(f);
+                            setOeImagePreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
-                          <span>{t('Chủ đề background', 'Background Theme')} <span className="text-rose-500">*</span></span>
-                          <span className="text-[10px] text-slate-400">{bgTheme.length}/200</span>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Ảnh gốc cần chỉnh sửa', 'Original Image')} <span className="text-rose-500">*</span>
+                        </label>
+                        {oeImagePreview ? (
+                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-48 flex items-center justify-center bg-black/40">
+                            <img src={oeImagePreview} alt="Original" className="max-h-48 object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOeImageFile(null);
+                                setOeImagePreview(null);
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => oeFileInputRef.current?.click()}
+                            className={`w-full py-7 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
+                            }`}
+                          >
+                            <Upload className="w-6 h-6 text-violet-400" />
+                            <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Đối tượng cần sửa trong ảnh', 'Target Object')} <span className="text-rose-500">*</span>
                         </label>
                         <input
                           type="text"
-                          value={bgTheme}
-                          onChange={(e) => setBgTheme(e.target.value)}
+                          value={oeTargetObject}
+                          onChange={(e) => setOeTargetObject(e.target.value)}
+                          maxLength={100}
+                          placeholder={t('Ví dụ: Chiếc áo thun, Kính râm, Chiếc xe màu trắng...', 'Example: The t-shirt, The sunglasses, The white car...')}
+                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Mô tả hành động / thay đổi chi tiết', 'Modification Description')} <span className="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                          value={oeModification}
+                          onChange={(e) => setOeModification(e.target.value)}
+                          rows={3}
                           maxLength={200}
-                          placeholder={t('Ví dụ: Thành phố cyberpunk về đêm, Thiên nhiên rừng thông sương mù...', 'Example: Cyberpunk city at night, Foggy pine forest...')}
-                          className={`w-full p-2.5 rounded-xl text-xs outline-none border ${
+                          placeholder={t(
+                            'Ví dụ: Đổi thành áo khoác da màu đen có khóa kéo kim loại sáng bóng...',
+                            'Example: Change into a black leather jacket with shiny metallic zipper...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
                             isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
                           }`}
                         />
@@ -1587,54 +1948,14 @@ export const AiImagesTab: React.FC = () => {
                       <div className="flex items-center gap-2.5 py-1">
                         <input
                           type="checkbox"
-                          id="bg-min"
-                          checked={bgMinimalistMode}
-                          onChange={(e) => setBgMinimalistMode(e.target.checked)}
+                          id="oe-bg"
+                          checked={oePreserveBg}
+                          onChange={(e) => setOePreserveBg(e.target.checked)}
                           className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
                         />
-                        <label htmlFor="bg-min" className="text-xs font-bold text-slate-300 cursor-pointer">
-                          {t('Chế độ tối giản (có không gian trống để đặt chữ)', 'Minimalist mode (with negative space for text)')}
+                        <label htmlFor="oe-bg" className="text-xs font-bold text-slate-300 cursor-pointer">
+                          {t('Giữ nguyên tuyệt đối phần nền còn lại', 'Preserve background unchanged')}
                         </label>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        {bgMinimalistMode && (
-                          <div>
-                            <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                              {t('Vị trí không gian trống', 'Negative Space Position')}
-                            </label>
-                            <select
-                              value={bgNegativeSpace}
-                              onChange={(e) => setBgNegativeSpace(e.target.value as any)}
-                              className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                                isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                              }`}
-                            >
-                              <option value="Center">{t('Giữa', 'Center')}</option>
-                              <option value="Left">{t('Bên trái', 'Left')}</option>
-                              <option value="Right">{t('Bên phải', 'Right')}</option>
-                              <option value="Top">{t('Phía trên', 'Top')}</option>
-                            </select>
-                          </div>
-                        )}
-
-                        <div className={bgMinimalistMode ? '' : 'col-span-2'}>
-                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Tông màu chủ đạo', 'Color Mood')}
-                          </label>
-                          <select
-                            value={bgColorMood}
-                            onChange={(e) => setBgColorMood(e.target.value as any)}
-                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            <option value="Dark">{t('Tối & Bí ẩn (Dark)', 'Dark')}</option>
-                            <option value="Light">{t('Sáng & Tinh tế (Light)', 'Light')}</option>
-                            <option value="Pastel">{t('Pastel dịu nhẹ (Pastel)', 'Pastel')}</option>
-                            <option value="Vibrant">{t('Rực rỡ nổi bật (Vibrant)', 'Vibrant')}</option>
-                          </select>
-                        </div>
                       </div>
 
                       <div>
@@ -1646,9 +1967,9 @@ export const AiImagesTab: React.FC = () => {
                             <button
                               key={ratio}
                               type="button"
-                              onClick={() => setBgAspectRatio(ratio)}
+                              onClick={() => setOeAspectRatio(ratio)}
                               className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                                bgAspectRatio === ratio
+                                oeAspectRatio === ratio
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
@@ -1663,22 +1984,120 @@ export const AiImagesTab: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ────────────────── TOOL 5: MOCKUP ────────────────── */}
-                  {selectedTool === 'mockup' && (
+                  {/* ────────────────── TOOL 5: COMPOSITION ────────────────── */}
+                  {selectedTool === 'composition' && (
                     <div className="space-y-4">
+                      <input
+                        ref={compBaseInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setCompBaseFile(f);
+                            setCompBasePreview(URL.createObjectURL(f));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <input
+                        ref={compOverlayInputRef}
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            const newPreviews = files.map((f) => URL.createObjectURL(f));
+                            setCompOverlayFiles((prev) => [...prev, ...files].slice(0, 5));
+                            setCompOverlayPreviews((prev) => [...prev, ...newPreviews].slice(0, 5));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+
                       <div>
-                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
-                          <span>{t('Mô tả sản phẩm và bối cảnh', 'Product & Scene Description')} <span className="text-rose-500">*</span></span>
-                          <span className="text-[10px] text-slate-400">{mockupScene.length}/300</span>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Ảnh nền cơ sở (Base Image)', 'Base Background Image')} <span className="text-rose-500">*</span>
+                        </label>
+                        {compBasePreview ? (
+                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-40 flex items-center justify-center bg-black/40">
+                            <img src={compBasePreview} alt="Base" className="max-h-40 object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCompBaseFile(null);
+                                setCompBasePreview(null);
+                              }}
+                              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => compBaseInputRef.current?.click()}
+                            className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
+                              isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
+                            }`}
+                          >
+                            <Upload className="w-5 h-5 text-emerald-400" />
+                            <span className="text-[11px] font-bold text-white">{t('Tải ảnh nền cơ sở (Base Image)', 'Upload Base Image')}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-bold text-white">
+                            {t('Ảnh lớp phủ ghép vào (Tối đa 5 ảnh)', 'Overlay Images (Max 5)')}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => compOverlayInputRef.current?.click()}
+                            className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-0.5"
+                          >
+                            <Plus className="w-3 h-3" /> {t('Thêm ảnh', 'Add Image')}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none min-h-[50px]">
+                          {compOverlayPreviews.length === 0 ? (
+                            <span className="text-[11px] text-slate-500 italic py-2">{t('Chưa có ảnh lớp phủ nào', 'No overlay images yet')}</span>
+                          ) : (
+                            compOverlayPreviews.map((url, idx) => (
+                              <div key={idx} className="relative h-12 w-12 shrink-0 rounded-xl overflow-hidden border border-emerald-500/30">
+                                <img src={url} alt="Overlay" className="h-full w-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    URL.revokeObjectURL(url);
+                                    setCompOverlayFiles((prev) => prev.filter((_, i) => i !== idx));
+                                    setCompOverlayPreviews((prev) => prev.filter((_, i) => i !== idx));
+                                  }}
+                                  className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-rose-400"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Mô tả bố cục ghép ảnh', 'Composition Description')} <span className="text-rose-500">*</span>
                         </label>
                         <textarea
-                          value={mockupScene}
-                          onChange={(e) => setMockupScene(e.target.value)}
-                          rows={4}
-                          maxLength={300}
+                          value={compPrompt}
+                          onChange={(e) => setCompPrompt(e.target.value)}
+                          rows={3}
                           placeholder={t(
-                            'Ví dụ: Một chiếc smartphone màn hình cong cao cấp đặt trên bàn làm việc gỗ hiện đại cùng cốc cà phê và cây xanh...',
-                            'Example: A sleek modern smartphone placed on a wooden desk with a coffee mug and indoor plant...'
+                            'Ví dụ: Đặt vật thể vào góc phải của bức ảnh nền, hòa trộn ánh sáng hoàng hôn và đổ bóng tự nhiên...',
+                            'Example: Place overlay subject onto right side of base background with sunset lighting match...'
                           )}
                           className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
                             isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
@@ -1686,22 +2105,37 @@ export const AiImagesTab: React.FC = () => {
                         />
                       </div>
 
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                          {t('Kiểu đặt sản phẩm', 'Placement Type')} <span className="text-rose-500">*</span>
-                        </label>
-                        <select
-                          value={mockupPlacement}
-                          onChange={(e) => setMockupPlacement(e.target.value as any)}
-                          className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        >
-                          <option value="Tabletop">{t('Trên bàn (Tabletop)', 'Tabletop')}</option>
-                          <option value="Model Wearing">{t('Người mẫu mang / mặc (Model Wearing)', 'Model Wearing')}</option>
-                          <option value="Outdoor">{t('Ngoài trời (Outdoor)', 'Outdoor')}</option>
-                          <option value="Studio Backdrop">{t('Phông studio chuyên nghiệp (Studio Backdrop)', 'Studio Backdrop')}</option>
-                        </select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                            {t('Phong cách bố cục', 'Composition Style')}
+                          </label>
+                          <select
+                            value={compStyle}
+                            onChange={(e) => setCompStyle(e.target.value as any)}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                              isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            <option value="realistic">{t('Chân thực (Realistic)', 'Realistic')}</option>
+                            <option value="artistic">{t('Nghệ thuật (Artistic)', 'Artistic')}</option>
+                            <option value="professional">{t('Chuyên nghiệp (Professional)', 'Professional')}</option>
+                            <option value="collage">{t('Collage sáng tạo', 'Collage')}</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-6">
+                          <input
+                            type="checkbox"
+                            id="comp-light"
+                            checked={compLightingAdj}
+                            onChange={(e) => setCompLightingAdj(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                          />
+                          <label htmlFor="comp-light" className="text-xs font-bold text-slate-300 cursor-pointer">
+                            {t('Tự động khớp ánh sáng', 'Match lighting')}
+                          </label>
+                        </div>
                       </div>
 
                       <div>
@@ -1713,9 +2147,9 @@ export const AiImagesTab: React.FC = () => {
                             <button
                               key={ratio}
                               type="button"
-                              onClick={() => setMockupAspectRatio(ratio)}
+                              onClick={() => setCompAspectRatio(ratio)}
                               className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                                mockupAspectRatio === ratio
+                                compAspectRatio === ratio
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
@@ -1812,7 +2246,74 @@ export const AiImagesTab: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ────────────────── TOOL 7: STYLE TRANSFER ────────────────── */}
+                  {/* ────────────────── TOOL 7: MOCKUP ────────────────── */}
+                  {selectedTool === 'mockup' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Mô tả sản phẩm và bối cảnh', 'Product & Scene Description')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{mockupScene.length}/300</span>
+                        </label>
+                        <textarea
+                          value={mockupScene}
+                          onChange={(e) => setMockupScene(e.target.value)}
+                          rows={4}
+                          maxLength={300}
+                          placeholder={t(
+                            'Ví dụ: Một chiếc smartphone màn hình cong cao cấp đặt trên bàn làm việc gỗ hiện đại cùng cốc cà phê và cây xanh...',
+                            'Example: A sleek modern smartphone placed on a wooden desk with a coffee mug and indoor plant...'
+                          )}
+                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                          {t('Kiểu đặt sản phẩm', 'Placement Type')} <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={mockupPlacement}
+                          onChange={(e) => setMockupPlacement(e.target.value as any)}
+                          className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                            isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="Tabletop">{t('Trên bàn (Tabletop)', 'Tabletop')}</option>
+                          <option value="Model Wearing">{t('Người mẫu mang / mặc (Model Wearing)', 'Model Wearing')}</option>
+                          <option value="Outdoor">{t('Ngoài trời (Outdoor)', 'Outdoor')}</option>
+                          <option value="Studio Backdrop">{t('Phông studio chuyên nghiệp (Studio Backdrop)', 'Studio Backdrop')}</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white mb-1.5 block">
+                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setMockupAspectRatio(ratio)}
+                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                                mockupAspectRatio === ratio
+                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
+                                  : isDark
+                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ────────────────── TOOL 8: STYLE TRANSFER ────────────────── */}
                   {selectedTool === 'style-transfer' && (
                     <div className="space-y-4">
                       <input
@@ -1856,7 +2357,7 @@ export const AiImagesTab: React.FC = () => {
                               isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
                             }`}
                           >
-                            <Upload className="w-6 h-6 text-indigo-400" />
+                            <Upload className="w-6 h-6 text-purple-400" />
                             <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
                           </button>
                         )}
@@ -1874,7 +2375,7 @@ export const AiImagesTab: React.FC = () => {
                               onClick={() => setStTargetStyle(pst.name)}
                               className={`py-2 px-2 rounded-xl text-[11px] font-bold border transition-all truncate text-left ${
                                 stTargetStyle === pst.name
-                                  ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-indigo-500 shadow-sm'
+                                  ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-500 shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-300'
                                   : 'bg-slate-100 border-slate-200 text-slate-700'
@@ -1940,130 +2441,6 @@ export const AiImagesTab: React.FC = () => {
                               onClick={() => setStAspectRatio(ratio)}
                               className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                                 stAspectRatio === ratio
-                                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
-                                  : isDark
-                                  ? 'bg-[#090B12] border-slate-800 text-slate-400'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
-                              }`}
-                            >
-                              {ratio}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ────────────────── TOOL 8: OBJECT EDIT ────────────────── */}
-                  {selectedTool === 'object-edit' && (
-                    <div className="space-y-4">
-                      <input
-                        ref={oeFileInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) {
-                            setOeImageFile(f);
-                            setOeImagePreview(URL.createObjectURL(f));
-                          }
-                          e.target.value = '';
-                        }}
-                      />
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
-                          {t('Ảnh gốc cần chỉnh sửa', 'Original Image')} <span className="text-rose-500">*</span>
-                        </label>
-                        {oeImagePreview ? (
-                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-48 flex items-center justify-center bg-black/40">
-                            <img src={oeImagePreview} alt="Original" className="max-h-48 object-contain" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setOeImageFile(null);
-                                setOeImagePreview(null);
-                              }}
-                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => oeFileInputRef.current?.click()}
-                            className={`w-full py-7 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                              isDark ? 'border-slate-800 bg-[#090B12] hover:border-slate-700' : 'border-slate-300 bg-slate-50'
-                            }`}
-                          >
-                            <Upload className="w-6 h-6 text-cyan-400" />
-                            <span className="text-xs font-bold text-white">{t('Chạm để tải ảnh lên (PNG/JPG)', 'Tap to upload original image')}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
-                          {t('Đối tượng cần sửa trong ảnh', 'Target Object')} <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={oeTargetObject}
-                          onChange={(e) => setOeTargetObject(e.target.value)}
-                          maxLength={100}
-                          placeholder={t('Ví dụ: Chiếc áo thun, Kính râm, Chiếc xe màu trắng...', 'Example: The t-shirt, The sunglasses, The white car...')}
-                          className={`w-full p-2.5 rounded-xl text-xs border outline-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
-                          {t('Mô tả hành động / thay đổi chi tiết', 'Modification Description')} <span className="text-rose-500">*</span>
-                        </label>
-                        <textarea
-                          value={oeModification}
-                          onChange={(e) => setOeModification(e.target.value)}
-                          rows={3}
-                          maxLength={200}
-                          placeholder={t(
-                            'Ví dụ: Đổi thành áo khoác da màu đen có khóa kéo kim loại sáng bóng...',
-                            'Example: Change into a black leather jacket with shiny metallic zipper...'
-                          )}
-                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
-                            isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2.5 py-1">
-                        <input
-                          type="checkbox"
-                          id="oe-bg"
-                          checked={oePreserveBg}
-                          onChange={(e) => setOePreserveBg(e.target.checked)}
-                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
-                        />
-                        <label htmlFor="oe-bg" className="text-xs font-bold text-slate-300 cursor-pointer">
-                          {t('Giữ nguyên tuyệt đối phần nền còn lại', 'Preserve background unchanged')}
-                        </label>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
-                          {t('Tỷ lệ khung hình', 'Aspect Ratio')} <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {(['1:1', '16:9', '9:16', '4:3', '3:4'] as AspectRatio[]).map((ratio) => (
-                            <button
-                              key={ratio}
-                              type="button"
-                              onClick={() => setOeAspectRatio(ratio)}
-                              className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                                oeAspectRatio === ratio
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
@@ -2256,157 +2633,76 @@ export const AiImagesTab: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ────────────────── TOOL 10: COMPOSITION ────────────────── */}
-                  {selectedTool === 'composition' && (
+                  {/* ────────────────── TOOL 10: BACKGROUND ────────────────── */}
+                  {selectedTool === 'background' && (
                     <div className="space-y-4">
-                      <input
-                        ref={compBaseInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) {
-                            setCompBaseFile(f);
-                            setCompBasePreview(URL.createObjectURL(f));
-                          }
-                          e.target.value = '';
-                        }}
-                      />
-                      <input
-                        ref={compOverlayInputRef}
-                        type="file"
-                        multiple
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          if (files.length > 0) {
-                            const newPreviews = files.map((f) => URL.createObjectURL(f));
-                            setCompOverlayFiles((prev) => [...prev, ...files].slice(0, 5));
-                            setCompOverlayPreviews((prev) => [...prev, ...newPreviews].slice(0, 5));
-                          }
-                          e.target.value = '';
-                        }}
-                      />
-
                       <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
-                          {t('Ảnh nền cơ sở (Base Image)', 'Base Background Image')} <span className="text-rose-500">*</span>
+                        <label className="text-xs font-bold text-white flex items-center justify-between mb-1.5">
+                          <span>{t('Chủ đề background', 'Background Theme')} <span className="text-rose-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">{bgTheme.length}/200</span>
                         </label>
-                        {compBasePreview ? (
-                          <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-40 flex items-center justify-center bg-black/40">
-                            <img src={compBasePreview} alt="Base" className="max-h-40 object-contain" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCompBaseFile(null);
-                                setCompBasePreview(null);
-                              }}
-                              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => compBaseInputRef.current?.click()}
-                            className={`w-full py-6 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all ${
-                              isDark ? 'border-slate-800 bg-[#090B12]' : 'border-slate-300 bg-slate-50'
-                            }`}
-                          >
-                            <Upload className="w-5 h-5 text-purple-400" />
-                            <span className="text-[11px] font-bold text-white">{t('Tải ảnh nền cơ sở (Base Image)', 'Upload Base Image')}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-bold text-white">
-                            {t('Ảnh lớp phủ ghép vào (Tối đa 5 ảnh)', 'Overlay Images (Max 5)')}
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => compOverlayInputRef.current?.click()}
-                            className="text-[10px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-0.5"
-                          >
-                            <Plus className="w-3 h-3" /> {t('Thêm ảnh', 'Add Image')}
-                          </button>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none min-h-[50px]">
-                          {compOverlayPreviews.length === 0 ? (
-                            <span className="text-[11px] text-slate-500 italic py-2">{t('Chưa có ảnh lớp phủ nào', 'No overlay images yet')}</span>
-                          ) : (
-                            compOverlayPreviews.map((url, idx) => (
-                              <div key={idx} className="relative h-12 w-12 shrink-0 rounded-xl overflow-hidden border border-purple-500/30">
-                                <img src={url} alt="Overlay" className="h-full w-full object-cover" />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    URL.revokeObjectURL(url);
-                                    setCompOverlayFiles((prev) => prev.filter((_, i) => i !== idx));
-                                    setCompOverlayPreviews((prev) => prev.filter((_, i) => i !== idx));
-                                  }}
-                                  className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-rose-400"
-                                >
-                                  <X className="w-2.5 h-2.5" />
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-white mb-1.5 block">
-                          {t('Mô tả bố cục ghép ảnh', 'Composition Description')} <span className="text-rose-500">*</span>
-                        </label>
-                        <textarea
-                          value={compPrompt}
-                          onChange={(e) => setCompPrompt(e.target.value)}
-                          rows={3}
-                          placeholder={t(
-                            'Ví dụ: Đặt vật thể vào góc phải của bức ảnh nền, hòa trộn ánh sáng hoàng hôn và đổ bóng tự nhiên...',
-                            'Example: Place overlay subject onto right side of base background with sunset lighting match...'
-                          )}
-                          className={`w-full p-3 rounded-xl text-xs outline-none border resize-none ${
+                        <input
+                          type="text"
+                          value={bgTheme}
+                          onChange={(e) => setBgTheme(e.target.value)}
+                          maxLength={200}
+                          placeholder={t('Ví dụ: Thành phố cyberpunk về đêm, Thiên nhiên rừng thông sương mù...', 'Example: Cyberpunk city at night, Foggy pine forest...')}
+                          className={`w-full p-2.5 rounded-xl text-xs outline-none border ${
                             isDark ? 'bg-[#090B12] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-400' : 'bg-slate-50 border-slate-200 text-slate-900'
                           }`}
                         />
                       </div>
 
+                      <div className="flex items-center gap-2.5 py-1">
+                        <input
+                          type="checkbox"
+                          id="bg-min"
+                          checked={bgMinimalistMode}
+                          onChange={(e) => setBgMinimalistMode(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="bg-min" className="text-xs font-bold text-slate-300 cursor-pointer">
+                          {t('Chế độ tối giản (có không gian trống để đặt chữ)', 'Minimalist mode (with negative space for text)')}
+                        </label>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        {bgMinimalistMode && (
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                              {t('Vị trí không gian trống', 'Negative Space Position')}
+                            </label>
+                            <select
+                              value={bgNegativeSpace}
+                              onChange={(e) => setBgNegativeSpace(e.target.value as any)}
+                              className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
+                                isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            >
+                              <option value="Center">{t('Giữa', 'Center')}</option>
+                              <option value="Left">{t('Bên trái', 'Left')}</option>
+                              <option value="Right">{t('Bên phải', 'Right')}</option>
+                              <option value="Top">{t('Phía trên', 'Top')}</option>
+                            </select>
+                          </div>
+                        )}
+
+                        <div className={bgMinimalistMode ? '' : 'col-span-2'}>
                           <label className="text-[11px] font-bold text-slate-400 mb-1 block">
-                            {t('Phong cách bố cục', 'Composition Style')}
+                            {t('Tông màu chủ đạo', 'Color Mood')}
                           </label>
                           <select
-                            value={compStyle}
-                            onChange={(e) => setCompStyle(e.target.value as any)}
+                            value={bgColorMood}
+                            onChange={(e) => setBgColorMood(e.target.value as any)}
                             className={`w-full p-2.5 rounded-xl text-xs font-bold border outline-none ${
                               isDark ? 'bg-[#090B12] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                             }`}
                           >
-                            <option value="realistic">{t('Chân thực (Realistic)', 'Realistic')}</option>
-                            <option value="artistic">{t('Nghệ thuật (Artistic)', 'Artistic')}</option>
-                            <option value="professional">{t('Chuyên nghiệp (Professional)', 'Professional')}</option>
-                            <option value="collage">{t('Collage sáng tạo', 'Collage')}</option>
+                            <option value="Dark">{t('Tối & Bí ẩn (Dark)', 'Dark')}</option>
+                            <option value="Light">{t('Sáng & Tinh tế (Light)', 'Light')}</option>
+                            <option value="Pastel">{t('Pastel dịu nhẹ (Pastel)', 'Pastel')}</option>
+                            <option value="Vibrant">{t('Rực rỡ nổi bật (Vibrant)', 'Vibrant')}</option>
                           </select>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-6">
-                          <input
-                            type="checkbox"
-                            id="comp-light"
-                            checked={compLightingAdj}
-                            onChange={(e) => setCompLightingAdj(e.target.checked)}
-                            className="w-4 h-4 rounded border-slate-700 text-[#FF2D55] focus:ring-0 cursor-pointer"
-                          />
-                          <label htmlFor="comp-light" className="text-xs font-bold text-slate-300 cursor-pointer">
-                            {t('Tự động khớp ánh sáng', 'Match lighting')}
-                          </label>
                         </div>
                       </div>
 
@@ -2419,9 +2715,9 @@ export const AiImagesTab: React.FC = () => {
                             <button
                               key={ratio}
                               type="button"
-                              onClick={() => setCompAspectRatio(ratio)}
+                              onClick={() => setBgAspectRatio(ratio)}
                               className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                                compAspectRatio === ratio
+                                bgAspectRatio === ratio
                                   ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
                                   : isDark
                                   ? 'bg-[#090B12] border-slate-800 text-slate-400'
@@ -2467,7 +2763,7 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          4. VIEW MODE 3: REMOVE BACKGROUND TOOL
+          5. VIEW MODE 3: REMOVE BACKGROUND TOOL
           ───────────────────────────────────────────────────────────── */}
       {mainView === 'removebg' && (
         <div
@@ -2556,7 +2852,7 @@ export const AiImagesTab: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. RESULT CARD & LIGHTBOX PREVIEW (When Image is Ready)
+          6. RESULT CARD & LIGHTBOX PREVIEW
           ───────────────────────────────────────────────────────────── */}
       {resultImage?.image_url && (
         <div
@@ -2631,7 +2927,53 @@ export const AiImagesTab: React.FC = () => {
         </div>
       )}
 
-      {/* Fullscreen Lightbox Modal */}
+      {/* Fullscreen Pixabay Image Lightbox */}
+      {pixabayPreviewImg && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setPixabayPreviewImg(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full max-h-[85vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-1 overflow-hidden flex items-center justify-center bg-black/60">
+              <img
+                src={pixabayPreviewImg.webformatURL}
+                alt={pixabayPreviewImg.tags}
+                className="max-h-[60vh] w-auto max-w-full object-contain"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 bg-[#0E111A] px-4 py-3 border-t border-white/10">
+              <p className="text-xs text-white/70 truncate">{pixabayPreviewImg.tags}</p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idx = pixabayImages.findIndex((i) => i.id === pixabayPreviewImg.id);
+                    addPixabayAsReference(pixabayPreviewImg, idx);
+                    setPixabayPreviewImg(null);
+                  }}
+                  disabled={addingPixabayIdx !== null}
+                  className="h-8 px-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{t('Dùng làm ref', 'Use as ref')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPixabayPreviewImg(null)}
+                  className="h-8 w-8 rounded-xl bg-white/10 text-white hover:bg-white/20 flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Result Image Lightbox Modal */}
       {isLightboxOpen && resultImage?.image_url && (
         <div
           className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col p-4 animate-in fade-in duration-200"
