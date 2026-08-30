@@ -2202,6 +2202,8 @@ function StudioInner({
             className="relative shadow-2xl rounded-2xl overflow-hidden border border-[#22273B] bg-white transition-transform duration-150 flex items-center justify-center"
             style={{
               width: aspectRatio === '16:9' ? '880px' : aspectRatio === '9:16' ? '420px' : '580px',
+              maxWidth: '94%',
+              maxHeight: '86%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
               transform: `scale(${zoomLevel})`,
               transformOrigin: 'center center',
@@ -2232,7 +2234,7 @@ function StudioInner({
       {/* ───────────────────────────────────────────────────────────── */}
       <footer
         className={`border-t border-[#1E2330] bg-[#12141F] flex flex-col z-20 transition-all duration-200 ${
-          isTimelineCollapsed ? 'h-12' : 'h-64'
+          isTimelineCollapsed ? 'h-10' : 'h-48 md:h-56'
         }`}
       >
         {/* Top Mini Control Toolbar with CapCut Tools */}

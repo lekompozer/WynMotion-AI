@@ -915,10 +915,10 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             style={{
               backgroundColor: bgColor,
               width: aspectRatio === '16:9' ? '100%' : 'auto',
-              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '360px' : '380px',
+              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '320px' : '360px',
               height: aspectRatio === '16:9' ? 'auto' : '100%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
-              maxHeight: aspectRatio === '16:9' ? '46vh' : aspectRatio === '9:16' ? '58vh' : '52vh',
+              maxHeight: aspectRatio === '16:9' ? '38vh' : aspectRatio === '9:16' ? '45vh' : '40vh',
             }}
           >
             <DynamicAnimationComposition

@@ -246,36 +246,34 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
         ref={scrollContainerRef}
         onClick={handleTimelineClick}
         className="w-full overflow-x-auto relative bg-[#090B12] cursor-crosshair scrollbar-thin scrollbar-thumb-slate-700"
-        style={{
-          minHeight: isMobile ? '230px' : '260px',
-        }}
       >
-        <div className="relative py-2" style={{ width: `${totalWidth}px` }}>
-          <div className="h-5 border-b border-[#1E2232] relative flex items-end">
+        <div className="relative py-1.5" style={{ width: `${totalWidth}px` }}>
+          <div className="h-4 border-b border-[#1E2232] relative flex items-end">
             {rulerMarks.map((s) => (
               <div
                 key={s}
-                className="absolute text-[10px] font-mono text-slate-500 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                className="absolute text-[9px] font-mono text-slate-500 -translate-x-1/2 flex flex-col items-center pointer-events-none"
                 style={{ left: `${timeToPixels(s, zoom)}px` }}
               >
                 <span>{s}s</span>
-                <div className="w-[1px] h-1.5 bg-slate-700 mt-0.5" />
+                <div className="w-[1px] h-1 bg-slate-700 mt-0.5" />
               </div>
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 py-2">
+          <div className="flex flex-col gap-1.5 py-1.5">
             {tracks.map((track) => (
               <div
                 key={track.id}
                 className={`relative rounded-xl bg-[#141724]/70 border border-[#1E2232]/90 flex items-center ${
-                  isMobile ? 'h-14' : 'h-16'
+                  isMobile ? 'h-13' : 'h-14'
                 }`}
+                style={{ height: isMobile ? '50px' : '56px' }}
               >
-                <div className="absolute left-2.5 z-10 text-[10px] font-black uppercase text-slate-400/90 flex items-center gap-1 pointer-events-none bg-[#0D0F18]/80 px-1.5 py-0.5 rounded backdrop-blur-xs border border-white/5">
-                  {track.type === 'video' && '🎬 Media'}
-                  {track.type === 'transitions' && (track.id === 'track_fx_1' ? '⚡ FX 2 (Overlay)' : '⚡ FX Shaders')}
-                  {track.type === 'captions' && '💬 Captions'}
+                <div className="absolute left-2 z-10 text-[9px] font-black uppercase text-slate-300 flex items-center gap-1 pointer-events-none bg-[#0D0F18]/90 px-1.5 py-0.5 rounded backdrop-blur-md border border-white/10 shadow-xs">
+                  {track.type === 'video' && '🎬 Scene'}
+                  {track.type === 'transitions' && (track.id === 'track_fx_1' ? '⚡ FX 2' : '⚡ FX')}
+                  {track.type === 'captions' && '💬 Caption'}
                   {track.type === 'audio' && '🎵 Audio'}
                 </div>
 
