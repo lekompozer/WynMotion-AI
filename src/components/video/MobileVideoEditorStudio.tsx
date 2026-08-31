@@ -868,7 +868,10 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         )}
 
         {/* Dynamic Remotion Stage */}
-        <div className="shrink-0 flex items-center justify-center p-2.5 relative overflow-hidden bg-[#07080E]">
+        <div
+          className="shrink-0 flex items-center justify-center p-3 relative overflow-hidden bg-[#07080E] w-full"
+          style={{ minHeight: '220px' }}
+        >
           {/* Floating Compact Aspect Ratio Dropdown */}
           <div className="absolute top-3 right-3 z-30">
             <button
@@ -911,14 +914,14 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           <div
             ref={videoStageRef}
             id="wynmotion-video-stage"
-            className="relative shadow-2xl rounded-3xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all touch-none select-none"
+            className="relative shadow-2xl rounded-2xl overflow-hidden border border-slate-700/60 flex items-center justify-center transition-all touch-none select-none"
             style={{
               backgroundColor: bgColor,
-              width: aspectRatio === '16:9' ? '100%' : 'auto',
-              maxWidth: aspectRatio === '16:9' ? '100%' : aspectRatio === '9:16' ? '320px' : '360px',
-              height: aspectRatio === '16:9' ? 'auto' : '100%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
-              maxHeight: aspectRatio === '16:9' ? '38vh' : aspectRatio === '9:16' ? '45vh' : '40vh',
+              height: aspectRatio === '9:16' ? '44vh' : aspectRatio === '1:1' ? '38vh' : 'auto',
+              width: aspectRatio === '16:9' ? '100%' : 'auto',
+              maxWidth: aspectRatio === '16:9' ? '100%' : 'min(100%, 300px)',
+              maxHeight: aspectRatio === '16:9' ? '38vh' : '44vh',
             }}
           >
             <DynamicAnimationComposition
