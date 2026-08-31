@@ -18,6 +18,8 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
+  Star,
+  Bookmark,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import defaultMusicCatalog from '@/data/music_library.json';
@@ -86,6 +88,26 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [selectedDurationFilter, setSelectedDurationFilter] = useState<DurationFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [savedTrackIds, setSavedTrackIds] = useState<string[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('wynmotion_saved_music_tracks');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch {}
+    return [];
+  });
+
+  const handleToggleSaveTrack = (trackId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSavedTrackIds((prev) => {
+      const next = prev.includes(trackId) ? prev.filter((id) => id !== trackId) : [...prev, trackId];
+      try {
+        localStorage.setItem('wynmotion_saved_music_tracks', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Audio Playback
   const [currentPlayingTrackId, setCurrentPlayingTrackId] = useState<string | null>(null);
@@ -107,8 +129,10 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
   // Filtered tracks according to current search, category, and screen view
   const filteredTracks = useMemo(() => {
     return allTracks.filter((track) => {
-      // Category filter
-      if (activeCategory !== 'all' && track.category !== activeCategory) {
+      // Saved Category Filter
+      if (activeCategory === 'saved') {
+        if (!savedTrackIds.includes(track.id)) return false;
+      } else if (activeCategory !== 'all' && track.category !== activeCategory) {
         return false;
       }
       // Search query
@@ -123,7 +147,7 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
       }
       return true;
     });
-  }, [allTracks, activeCategory, searchQuery]);
+  }, [allTracks, activeCategory, searchQuery, savedTrackIds]);
 
   // Index of currently playing track within filtered list
   const currentTrackIndex = useMemo(() => {
@@ -363,10 +387,16 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
             )}
           </div>
 
-          {/* 3 Main Category Tabs (Scroll ngang mượt mà, không bị co rút chữ, bỏ toàn bộ số đếm) */}
+          {/* 4 Main Category Tabs (Scroll ngang mượt mà) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
             {[
               { id: 'all', nameVi: 'Tất Cả Thể Loại', nameEn: 'All Tracks', icon: Sparkles },
+              {
+                id: 'saved',
+                nameVi: `⭐ Đã Lưu (${savedTrackIds.length})`,
+                nameEn: `⭐ Saved (${savedTrackIds.length})`,
+                icon: Star,
+              },
               {
                 id: 'future-bass',
                 nameVi: 'Future Bass & Sôi Động',
@@ -549,6 +579,22 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
                       })}
                     </div>
 
+                    {/* Bookmark / Save Star Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleSaveTrack(track.id, e)}
+                      className={`h-8 w-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 shrink-0 ${
+                        savedTrackIds.includes(track.id)
+                          ? 'bg-amber-500/20 border-amber-400 text-amber-400 shadow-xs'
+                          : isDark
+                          ? 'bg-white/5 border-white/10 text-slate-400 hover:text-amber-300 hover:bg-white/10'
+                          : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-slate-200'
+                      }`}
+                      title={savedTrackIds.includes(track.id) ? t('Bỏ lưu', 'Unsave') : t('Lưu bài hát', 'Save track')}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${savedTrackIds.includes(track.id) ? 'fill-amber-400' : ''}`} />
+                    </button>
+
                     {/* Use In Video Button */}
                     {onSelectTrackForVideo && (
                       <button
@@ -636,6 +682,42 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
 
               {/* Right Action Buttons */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* Bookmark in Player */}
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleSaveTrack(currentPlayingTrack.id, e)}
+                  className={`h-9 px-3 rounded-2xl border flex items-center gap-1.5 transition-all active:scale-95 ${
+                    savedTrackIds.includes(currentPlayingTrack.id)
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-400'
+                      : 'bg-white/10 border-white/15 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <Star className={`w-3.5 h-3.5 ${savedTrackIds.includes(currentPlayingTrack.id) ? 'fill-amber-400' : ''}`} />
+                  <span className="text-xs font-bold hidden sm:inline">
+                    {savedTrackIds.includes(currentPlayingTrack.id) ? t('Đã lưu', 'Saved') : t('Lưu', 'Save')}
+                  </span>
+                </button>
+
+                {/* Use in Video from Player */}
+                {onSelectTrackForVideo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const durObj =
+                        currentPlayingTrack.durations[currentPlayingDurationKey as keyof typeof currentPlayingTrack.durations] ||
+                        currentPlayingTrack.durations['30s'] ||
+                        currentPlayingTrack.durations['full'];
+                      if (durObj) {
+                        onSelectTrackForVideo(durObj.url, `${currentPlayingTrack.title} (${currentPlayingDurationKey})`);
+                        onClose();
+                      }
+                    }}
+                    className="h-9 px-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{t('Dùng BGM', 'Use BGM')}</span>
+                  </button>
+                )}
                 {/* Close Player Button */}
                 <button
                   type="button"
