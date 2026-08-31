@@ -132,6 +132,18 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     audioSrc,
     setAudioSrc,
     setDurationInFrames,
+    bgmAudioSrc: remotionBgmAudioSrc,
+    setBgmAudioSrc: setRemotionBgmAudioSrc,
+    bgmVolume: remotionBgmVolume,
+    setBgmVolume: setRemotionBgmVolume,
+    bgmStartSec: remotionBgmStartSec,
+    setBgmStartSec: setRemotionBgmStartSec,
+    bgmDurationSec: remotionBgmDurationSec,
+    setBgmDurationSec: setRemotionBgmDurationSec,
+    voiceStartSec: remotionVoiceStartSec,
+    setVoiceStartSec: setRemotionVoiceStartSec,
+    voiceDurationSec: remotionVoiceDurationSec,
+    setVoiceDurationSec: setRemotionVoiceDurationSec,
   } = useRemotion();
 
   // Local storage draft key for instant offline auto-save
@@ -316,6 +328,11 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     }
   };
   const [bgmVolume, setBgmVolume] = useState(0.3);
+  const [bgmStartSec, setBgmStartSec] = useState<number>(0);
+  const [bgmDurationSec, setBgmDurationSec] = useState<number | undefined>(undefined);
+  const [voiceStartSec, setVoiceStartSec] = useState<number>(0);
+  const [voiceDurationSec, setVoiceDurationSec] = useState<number | undefined>(undefined);
+
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement>(null);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
@@ -349,30 +366,32 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   };
 
   const handleRemoveAudio = () => {
-    if (confirm(t('Bạn có chắc muốn xoá audio đính kèm khỏi video?', 'Are you sure you want to remove attached audio?'))) {
-      setAudioSrc?.('');
-    }
+    setAudioSrc?.('');
+    libraryCacheManager.notifyLibraryUpdated('audio');
   };
 
-  // ── Scrubber Live Dragging Ref & Handlers ──
-  const scrubberTrackRef = useRef<HTMLDivElement>(null);
-  const isDraggingScrubberRef = useRef<boolean>(false);
+  const handleRemoveBgm = () => {
+    setBgmAudioUrl(null);
+    setBgmTrackTitle(null);
+    setRemotionBgmAudioSrc?.(null);
+  };
 
-  const handleScrubberSeek = useCallback(
-    (clientX: number) => {
-      if (!scrubberTrackRef.current || durationInFrames <= 0) return;
-      const rect = scrubberTrackRef.current.getBoundingClientRect();
-      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
-      const pct = clickX / rect.width;
-      const targetFrame = Math.round(pct * durationInFrames);
-      seekTo(targetFrame);
-    },
-    [durationInFrames, seekTo]
-  );
+  // Scrubber scrubbing via pointer events
+  const isDraggingScrubberRef = useRef(false);
+
+  const handleScrubberSeek = (clientX: number) => {
+    const stage = videoStageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    seekTo(Math.round(progress * durationInFrames));
+  };
 
   const handleScrubberPointerDown = (e: React.PointerEvent) => {
     isDraggingScrubberRef.current = true;
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (err) {}
     handleScrubberSeek(e.clientX);
   };
 
@@ -496,25 +515,43 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       };
     });
 
-    const audioItems: TimelineItem[] = [
-      {
-        id: 'bgm_main',
-        trackId: 'track_audio',
-        trackType: 'audio',
-        startTime: 0,
-        endTime: totalDurationSec,
-        duration: totalDurationSec,
-        title: '🎵 BGM & Voiceover Audio',
-      },
-    ];
+    const voiceItem: TimelineItem = {
+      id: 'audio_voice',
+      trackId: 'track_voice',
+      trackType: 'audio',
+      startTime: voiceStartSec,
+      endTime: voiceStartSec + (voiceDurationSec || totalDurationSec),
+      duration: voiceDurationSec || totalDurationSec,
+      title: `🎙️ Voice: ${multilingualAudios[activeAudioLang]?.voice_name || 'AI Voice'} (${activeAudioLang.toUpperCase()})`,
+    };
 
-    return [
+    const tracksList: TimelineTrack[] = [
       { id: 'track_media', type: 'video', name: 'Media Scenes', items: mediaItems },
       { id: 'track_fx', type: 'transitions', name: 'FX & Transitions', items: fxItems },
       { id: 'track_captions', type: 'captions', name: 'Auto Captions', items: captionItems },
-      { id: 'track_audio', type: 'audio', name: 'Audio Track', items: audioItems },
+      { id: 'track_voice', type: 'audio', name: 'Voice Track', items: [voiceItem] },
     ];
-  }, [scenes, totalDurationSec, captionSegments]);
+
+    if (bgmAudioUrl) {
+      const bgmItem: TimelineItem = {
+        id: 'audio_bgm',
+        trackId: 'track_bgm',
+        trackType: 'audio',
+        startTime: bgmStartSec,
+        endTime: bgmStartSec + (bgmDurationSec || totalDurationSec),
+        duration: bgmDurationSec || totalDurationSec,
+        title: `🎵 BGM: ${bgmTrackTitle || 'Background Music'}`,
+      };
+      tracksList.push({
+        id: 'track_bgm',
+        type: 'audio',
+        name: 'BGM Track',
+        items: [bgmItem],
+      });
+    }
+
+    return tracksList;
+  }, [scenes, totalDurationSec, captionSegments, voiceStartSec, voiceDurationSec, bgmAudioUrl, bgmTrackTitle, bgmStartSec, bgmDurationSec, activeAudioLang, multilingualAudios]);
 
   // Active scene tracking based on frame
   useEffect(() => {
@@ -630,6 +667,15 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       const df = idx === scenes.length - 1 ? Math.max(30, totalAudioFrames - curFrame) : scaledF;
       curFrame += df;
 
+      const sceneScale = rawFrames > 0 ? df / rawFrames : scale;
+
+      const scaledActions = (s as any).actions?.map((act: any) => ({
+        ...act,
+        draw_speed_sec: act.draw_speed_sec ? Number((act.draw_speed_sec * sceneScale).toFixed(2)) : act.draw_speed_sec,
+        timestamp_start_sec: act.timestamp_start_sec ? Number((act.timestamp_start_sec * sceneScale).toFixed(2)) : act.timestamp_start_sec,
+        timestamp_end_sec: act.timestamp_end_sec ? Number((act.timestamp_end_sec * sceneScale).toFixed(2)) : act.timestamp_end_sec,
+      }));
+
       return {
         ...s,
         start_frame: sf,
@@ -637,8 +683,24 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         duration_sec: Number((df / fps).toFixed(2)),
         start_sec: Number((sf / fps).toFixed(2)),
         end_sec: Number(((sf + df) / fps).toFixed(2)),
+        ...(scaledActions ? { actions: scaledActions } : {}),
       };
     });
+
+    if (captionSegments.length > 0) {
+      setCaptionSegments((prev) =>
+        prev.map((seg) => ({
+          ...seg,
+          start: Number((seg.start * scale).toFixed(2)),
+          end: Number((seg.end * scale).toFixed(2)),
+          words: seg.words?.map((w) => ({
+            ...w,
+            start: Number((w.start * scale).toFixed(2)),
+            end: Number((w.end * scale).toFixed(2)),
+          })),
+        }))
+      );
+    }
 
     setScenes(scaledScenes);
     setDurationInFrames?.(totalAudioFrames);
@@ -708,8 +770,18 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const handleSelectBgmFromLibrary = (url: string, title: string) => {
     setBgmAudioUrl(url);
     setBgmTrackTitle(title);
+    setBgmStartSec(0);
+    setBgmDurationSec(totalDurationSec);
+    setRemotionBgmAudioSrc?.(url);
+    setRemotionBgmStartSec?.(0);
+    setRemotionBgmDurationSec?.(totalDurationSec);
     setSyncStatusMsg(`🎵 Đã gắn Nhạc Nền: ${title}!`);
     setTimeout(() => setSyncStatusMsg(null), 3000);
+  };
+
+  const handleBgmVolumeChange = (newVal: number) => {
+    setBgmVolume(newVal);
+    setRemotionBgmVolume?.(newVal);
   };
 
   // ── Update scene field with 0ms local auto-save (No backend DB writes while dragging) ──
@@ -720,22 +792,15 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         try {
           if (typeof window !== 'undefined') {
             localStorage.setItem(
-              draftKey,
-              JSON.stringify({
-                scenes: next,
-                swap_speakers: swapSpeakers,
-                aspect_ratio: aspectRatio,
-                updated_at: new Date().toISOString(),
-              })
+              `wynmotion_draft_${project.project_id}`,
+              JSON.stringify({ scenes: next, swap_speakers: swapSpeakers, visual_style: visualStyle })
             );
           }
-        } catch (e) {
-          console.warn('LocalStorage save failed:', e);
-        }
+        } catch (e) {}
         return next;
       });
     },
-    [draftKey, swapSpeakers, aspectRatio]
+    [project.project_id, swapSpeakers, visualStyle]
   );
 
   // ── Native Share / Save to Camera Roll Helper (Local File:// with Save Video option) ──
@@ -766,9 +831,26 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     }, 1000);
 
     try {
+      const currentActiveAudioUrl =
+        multilingualAudios[activeAudioLang]?.audio_url ||
+        (activeAudioLang === 'en' || activeAudioLang === 'en-US' ? (project as any).audio_url_en : project.audio_url) ||
+        audioSrc ||
+        '';
+
       const res = await wynmotionService.exportMP4(project.project_id, scenes as any, {
         swap_speakers: swapSpeakers,
         aspect_ratio: aspectRatio,
+        show_scene_cards: showSceneCards,
+        show_whisper_subs: showWhisperSubs,
+        force_rerender: true,
+        audio_url: currentActiveAudioUrl,
+        voice_volume: volume,
+        bgm_url: bgmAudioUrl || undefined,
+        bgm_volume: bgmVolume,
+        bgm_start_sec: bgmStartSec,
+        bgm_duration_sec: bgmDurationSec,
+        duration_sec: totalDurationSec,
+        language_code: activeAudioLang,
       });
 
       // Instant pre-rendered MP4 hit
@@ -1225,7 +1307,21 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             }}
             onOpenFXTab={() => setActiveBottomSheet('effects')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
-              if (itemId.startsWith('fx_')) {
+              if (itemId === 'audio_bgm') {
+                setBgmStartSec(newStart);
+                setBgmDurationSec(newDur);
+                setRemotionBgmStartSec?.(newStart);
+                setRemotionBgmDurationSec?.(newDur);
+                setSyncStatusMsg(`🎵 BGM: Bắt đầu ${newStart.toFixed(1)}s, dài ${newDur.toFixed(1)}s`);
+                setTimeout(() => setSyncStatusMsg(null), 2500);
+              } else if (itemId === 'audio_voice') {
+                setVoiceStartSec(newStart);
+                setVoiceDurationSec(newDur);
+                setRemotionVoiceStartSec?.(newStart);
+                setRemotionVoiceDurationSec?.(newDur);
+                setSyncStatusMsg(`🎙️ Voice: Bắt đầu ${newStart.toFixed(1)}s, dài ${newDur.toFixed(1)}s`);
+                setTimeout(() => setSyncStatusMsg(null), 2500);
+              } else if (itemId.startsWith('fx_')) {
                 const sId = parseInt(itemId.replace('fx_', ''), 10);
                 updateScene(sId, {
                   transition_out: {
@@ -1583,10 +1679,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                   <button
                     type="button"
                     disabled={!bgmAudioUrl}
-                    onClick={() => {
-                      setBgmAudioUrl(null);
-                      setBgmTrackTitle(null);
-                    }}
+                    onClick={handleRemoveBgm}
                     className={`py-2.5 px-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
                       isDark
                         ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
@@ -1634,7 +1727,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                     max={1}
                     step={0.05}
                     value={bgmVolume}
-                    onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
+                    onChange={(e) => handleBgmVolumeChange(parseFloat(e.target.value))}
                     className="w-full accent-purple-400 h-2 rounded-lg"
                   />
                 </div>
@@ -2536,6 +2629,8 @@ export const MobileVideoEditorStudio: React.FC<MobileVideoEditorStudioProps> = (
       fps={30}
       durationInFrames={initialFrames}
       audioSrc={project.audio_url || ''}
+      bgmAudioSrc={(project as any).bgm_url || null}
+      initialBgmVolume={(project as any).bgm_volume ?? 0.3}
       initialBgColor={project.bg_color || '#FAF7EF'}
       initialAspectRatio={((project.aspect_ratio as any) || '16:9') as any}
     >

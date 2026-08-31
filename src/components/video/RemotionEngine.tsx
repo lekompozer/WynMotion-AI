@@ -5,6 +5,7 @@
  *
  * Exact 1:1 Parity with wordai Web Remotion Runtime:
  * - Frame-accurate requestAnimationFrame playhead synced with Audio element
+ * - Dual Audio Engine: Simultaneous Voiceover + Background Music (BGM) playback with independent volume mixing
  * - Mathematical interpolate() with clamping and easing
  * - Spring physics simulation (spring({ frame, fps, config: { damping, stiffness, mass } }))
  * - Sequence component for multi-scene composition slicing
@@ -27,6 +28,20 @@ export interface RemotionContextType {
   setDurationInFrames?: (frames: number) => void;
   audioSrc?: string;
   setAudioSrc?: (src: string) => void;
+  // BGM Background Music
+  bgmAudioSrc?: string | null;
+  setBgmAudioSrc?: (src: string | null) => void;
+  bgmVolume?: number;
+  setBgmVolume?: (vol: number) => void;
+  bgmStartSec?: number;
+  setBgmStartSec?: (sec: number) => void;
+  bgmDurationSec?: number;
+  setBgmDurationSec?: (sec: number) => void;
+  // Voice Volume & Timing
+  voiceStartSec?: number;
+  setVoiceStartSec?: (sec: number) => void;
+  voiceDurationSec?: number;
+  setVoiceDurationSec?: (sec: number) => void;
   width: number;
   height: number;
   isPlaying: boolean;
@@ -124,23 +139,23 @@ export interface SpringConfig {
 }
 
 export const spring = ({ frame, fps, config }: SpringConfig): number => {
-  if (frame <= 0) return 0;
   const damping = config?.damping ?? 10;
   const stiffness = config?.stiffness ?? 100;
   const mass = config?.mass ?? 1;
 
+  const t = frame / fps;
+  if (t <= 0) return 0;
+
   const omega0 = Math.sqrt(stiffness / mass);
   const zeta = damping / (2 * Math.sqrt(stiffness * mass));
-  const t = frame / fps;
 
   if (zeta < 1) {
-    const omega1 = omega0 * Math.sqrt(1 - zeta * zeta);
-    const envelope = Math.exp(-zeta * omega0 * t);
-    const oscillation = Math.cos(omega1 * t) + ((zeta * omega0) / omega1) * Math.sin(omega1 * t);
-    return Math.max(0, Math.min(1.5, 1 - envelope * oscillation));
+    const omegaD = omega0 * Math.sqrt(1 - zeta * zeta);
+    const val = 1 - Math.exp(-zeta * omega0 * t) * (Math.cos(omegaD * t) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(omegaD * t));
+    return Math.max(0, Math.min(1.5, val));
   } else {
-    const envelope = Math.exp(-omega0 * t);
-    return Math.max(0, Math.min(1.5, 1 - envelope * (1 + omega0 * t)));
+    const val = 1 - (1 + omega0 * t) * Math.exp(-omega0 * t);
+    return Math.max(0, Math.min(1.5, val));
   }
 };
 
@@ -151,19 +166,16 @@ export interface SequenceProps {
 }
 
 export const Sequence: React.FC<SequenceProps> = ({ from, durationInFrames, children }) => {
-  const ctx = useRemotion();
-  const isVisible = ctx.frame >= from && ctx.frame < from + durationInFrames;
+  const currentFrame = useCurrentFrame();
 
-  if (!isVisible) return null;
-
-  const localFrame = Math.max(0, ctx.frame - from);
+  if (currentFrame < from || currentFrame >= from + durationInFrames) {
+    return null;
+  }
 
   return (
-    <RemotionContext.Provider value={{ ...ctx, frame: localFrame }}>
-      <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        {children}
-      </div>
-    </RemotionContext.Provider>
+    <div style={{ position: 'absolute', inset: 0 }}>
+      {children}
+    </div>
   );
 };
 
@@ -173,6 +185,11 @@ export interface RemotionPlayerProviderProps {
   audioSrc?: string;
   initialBgColor?: string;
   initialAspectRatio?: '16:9' | '9:16' | '1:1';
+  // Optional initial BGM properties
+  bgmAudioSrc?: string | null;
+  initialBgmVolume?: number;
+  initialBgmStartSec?: number;
+  initialBgmDurationSec?: number;
   children: React.ReactNode;
 }
 
@@ -182,6 +199,10 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
   audioSrc = '',
   initialBgColor = '#FAF7EF',
   initialAspectRatio = '16:9',
+  bgmAudioSrc = null,
+  initialBgmVolume = 0.3,
+  initialBgmStartSec = 0,
+  initialBgmDurationSec,
   children,
 }) => {
   const [frame, setFrame] = useState(0);
@@ -193,21 +214,36 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
   const [currentAudioSrc, setCurrentAudioSrc] = useState<string>(audioSrc);
   const [currentDurationInFrames, setCurrentDurationInFrames] = useState<number>(durationInFrames);
 
+  // BGM Background Music State
+  const [currentBgmAudioSrc, setCurrentBgmAudioSrc] = useState<string | null>(bgmAudioSrc);
+  const [bgmVolume, setBgmVolume] = useState<number>(initialBgmVolume);
+  const [bgmStartSec, setBgmStartSec] = useState<number>(initialBgmStartSec);
+  const [bgmDurationSec, setBgmDurationSec] = useState<number | undefined>(initialBgmDurationSec);
+
+  // Voice Timing State
+  const [voiceStartSec, setVoiceStartSec] = useState<number>(0);
+  const [voiceDurationSec, setVoiceDurationSec] = useState<number | undefined>(undefined);
+
   useEffect(() => {
     if (audioSrc) setCurrentAudioSrc(audioSrc);
   }, [audioSrc]);
+
+  useEffect(() => {
+    setCurrentBgmAudioSrc(bgmAudioSrc);
+  }, [bgmAudioSrc]);
 
   useEffect(() => {
     if (durationInFrames) setCurrentDurationInFrames(durationInFrames);
   }, [durationInFrames]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
   const animFrameId = useRef<number | null>(null);
 
   const width = aspectRatio === '16:9' ? 1920 : aspectRatio === '9:16' ? 1080 : 1080;
   const height = aspectRatio === '16:9' ? 1080 : aspectRatio === '9:16' ? 1920 : 1080;
 
-  // Initialize audio element
+  // Initialize Voice audio element
   useEffect(() => {
     if (!currentAudioSrc) {
       if (audioRef.current) {
@@ -223,6 +259,7 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
 
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+        setVoiceDurationSec(audio.duration);
         const audioFrames = Math.round(audio.duration * fps);
         if (audioFrames > 30) {
           setCurrentDurationInFrames(audioFrames);
@@ -234,6 +271,10 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
       setIsPlaying(false);
       setFrame(0);
       audio.currentTime = 0;
+      if (bgmAudioRef.current) {
+        bgmAudioRef.current.pause();
+        bgmAudioRef.current.currentTime = 0;
+      }
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -247,12 +288,40 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     };
   }, [currentAudioSrc, fps]);
 
-  // Sync volume and mute state
+  // Initialize BGM audio element
+  useEffect(() => {
+    if (!currentBgmAudioSrc) {
+      if (bgmAudioRef.current) {
+        bgmAudioRef.current.pause();
+        bgmAudioRef.current = null;
+      }
+      return;
+    }
+
+    const bgm = new Audio(currentBgmAudioSrc);
+    bgm.preload = 'auto';
+    bgm.loop = true; // Auto loop if BGM is shorter than video duration
+    bgmAudioRef.current = bgm;
+
+    return () => {
+      bgm.pause();
+      bgmAudioRef.current = null;
+    };
+  }, [currentBgmAudioSrc]);
+
+  // Sync volume and mute state for Voice
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.volume = isMuted ? 0 : Math.max(0, Math.min(1, volume));
     }
   }, [volume, isMuted]);
+
+  // Sync volume and mute state for BGM
+  useEffect(() => {
+    if (bgmAudioRef.current) {
+      bgmAudioRef.current.volume = isMuted ? 0 : Math.max(0, Math.min(1, bgmVolume));
+    }
+  }, [bgmVolume, isMuted]);
 
   // Playhead update loop synced with audio (or rAF fallback)
   useEffect(() => {
@@ -264,31 +333,52 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     let lastTime = performance.now();
 
     const updatePlayhead = (now: number) => {
+      let currentSec = 0;
+
       if (audioRef.current && currentAudioSrc) {
-        const currentSec = audioRef.current.currentTime;
+        currentSec = audioRef.current.currentTime;
         const currentFrame = Math.round(currentSec * fps);
 
         if (currentFrame >= currentDurationInFrames) {
           setIsPlaying(false);
           setFrame(currentDurationInFrames);
           audioRef.current.pause();
+          if (bgmAudioRef.current) bgmAudioRef.current.pause();
           return;
         }
 
         setFrame(currentFrame);
       } else {
-        // Clock-based fallback if no audio is loaded
+        // Clock-based fallback if no voice audio is loaded
         const deltaSec = (now - lastTime) / 1000;
         lastTime = now;
         setFrame((prev) => {
           const next = prev + deltaSec * fps;
           if (next >= currentDurationInFrames) {
             setIsPlaying(false);
+            if (bgmAudioRef.current) bgmAudioRef.current.pause();
             return 0;
           }
           return next;
         });
+        currentSec = frame / fps;
       }
+
+      // Check and sync BGM playback timing
+      if (bgmAudioRef.current && currentBgmAudioSrc) {
+        const bgmEnd = bgmDurationSec ? bgmStartSec + bgmDurationSec : (currentDurationInFrames / fps);
+        if (currentSec >= bgmStartSec && currentSec < bgmEnd) {
+          if (bgmAudioRef.current.paused) {
+            bgmAudioRef.current.currentTime = Math.max(0, currentSec - bgmStartSec);
+            bgmAudioRef.current.play().catch(() => {});
+          }
+        } else {
+          if (!bgmAudioRef.current.paused) {
+            bgmAudioRef.current.pause();
+          }
+        }
+      }
+
       animFrameId.current = requestAnimationFrame(updatePlayhead);
     };
 
@@ -297,27 +387,36 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     return () => {
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
     };
-  }, [isPlaying, fps, currentDurationInFrames, currentAudioSrc]);
+  }, [isPlaying, fps, currentDurationInFrames, currentAudioSrc, currentBgmAudioSrc, bgmStartSec, bgmDurationSec, frame]);
 
   const play = useCallback(() => {
+    const currentSec = frame / fps;
+
     if (audioRef.current) {
       if (frame >= currentDurationInFrames) {
         setFrame(0);
         audioRef.current.currentTime = 0;
       }
       audioRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else {
-      if (frame >= currentDurationInFrames) {
-        setFrame(0);
-      }
-      setIsPlaying(true);
     }
-  }, [frame, currentDurationInFrames]);
+
+    if (bgmAudioRef.current && currentBgmAudioSrc) {
+      const bgmEnd = bgmDurationSec ? bgmStartSec + bgmDurationSec : (currentDurationInFrames / fps);
+      if (currentSec >= bgmStartSec && currentSec < bgmEnd) {
+        bgmAudioRef.current.currentTime = Math.max(0, currentSec - bgmStartSec);
+        bgmAudioRef.current.play().catch(() => {});
+      }
+    }
+
+    setIsPlaying(true);
+  }, [frame, currentDurationInFrames, fps, currentBgmAudioSrc, bgmStartSec, bgmDurationSec]);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
+    }
+    if (bgmAudioRef.current) {
+      bgmAudioRef.current.pause();
     }
     setIsPlaying(false);
   }, []);
@@ -334,11 +433,25 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     (targetFrame: number) => {
       const clamped = Math.max(0, Math.min(currentDurationInFrames, targetFrame));
       setFrame(clamped);
+      const targetSec = clamped / fps;
+
       if (audioRef.current) {
-        audioRef.current.currentTime = clamped / fps;
+        audioRef.current.currentTime = targetSec;
+      }
+
+      if (bgmAudioRef.current && currentBgmAudioSrc) {
+        const bgmEnd = bgmDurationSec ? bgmStartSec + bgmDurationSec : (currentDurationInFrames / fps);
+        if (targetSec >= bgmStartSec && targetSec < bgmEnd) {
+          bgmAudioRef.current.currentTime = Math.max(0, targetSec - bgmStartSec);
+          if (isPlaying) {
+            bgmAudioRef.current.play().catch(() => {});
+          }
+        } else {
+          bgmAudioRef.current.pause();
+        }
       }
     },
-    [currentDurationInFrames, fps]
+    [currentDurationInFrames, fps, currentBgmAudioSrc, bgmStartSec, bgmDurationSec, isPlaying]
   );
 
   const seekToSec = useCallback(
@@ -357,6 +470,18 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
         setDurationInFrames: setCurrentDurationInFrames,
         audioSrc: currentAudioSrc,
         setAudioSrc: setCurrentAudioSrc,
+        bgmAudioSrc: currentBgmAudioSrc,
+        setBgmAudioSrc: setCurrentBgmAudioSrc,
+        bgmVolume,
+        setBgmVolume,
+        bgmStartSec,
+        setBgmStartSec,
+        bgmDurationSec,
+        setBgmDurationSec,
+        voiceStartSec,
+        setVoiceStartSec,
+        voiceDurationSec,
+        setVoiceDurationSec,
         width,
         height,
         isPlaying,

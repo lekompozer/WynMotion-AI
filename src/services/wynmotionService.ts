@@ -341,6 +341,14 @@ export const wynmotionService = {
       show_scene_cards?: boolean;
       show_whisper_subs?: boolean;
       force_rerender?: boolean;
+      audio_url?: string;
+      voice_volume?: number;
+      bgm_url?: string;
+      bgm_volume?: number;
+      bgm_start_sec?: number;
+      bgm_duration_sec?: number;
+      duration_sec?: number;
+      language_code?: string;
     }
   ): Promise<{ success: boolean; job_id: string; message: string; mp4_url?: string; status?: string }> {
     const headers = await getAuthHeaders();
@@ -355,6 +363,14 @@ export const wynmotionService = {
         show_scene_cards: options?.show_scene_cards,
         show_whisper_subs: options?.show_whisper_subs,
         force_rerender: options?.force_rerender,
+        audio_url: options?.audio_url,
+        voice_volume: options?.voice_volume,
+        bgm_url: options?.bgm_url,
+        bgm_volume: options?.bgm_volume,
+        bgm_start_sec: options?.bgm_start_sec,
+        bgm_duration_sec: options?.bgm_duration_sec,
+        duration_sec: options?.duration_sec,
+        language_code: options?.language_code,
       }),
     });
     const data = await res.json();
