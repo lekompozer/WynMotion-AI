@@ -151,7 +151,10 @@ export const NewVoiceLanguageModal: React.FC<NewVoiceLanguageModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md animate-in fade-in duration-200 p-0 sm:p-4">
+    <div
+      className="fixed inset-0 z-[20000] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200 p-0 sm:p-4"
+      style={{ transform: 'translateZ(20000px)', WebkitTransform: 'translateZ(20000px)' }}
+    >
       {/* Hidden Preview Audio */}
       <audio ref={audioPreviewRef} />
 
@@ -160,9 +163,10 @@ export const NewVoiceLanguageModal: React.FC<NewVoiceLanguageModalProps> = ({
 
       {/* Modal Container */}
       <div
-        className={`relative z-10 w-full max-w-xl max-h-[92vh] rounded-t-[32px] sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border transition-all animate-in slide-in-from-bottom duration-300 ${
+        className={`relative z-[20005] w-full max-w-xl max-h-[92vh] rounded-t-[32px] sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border transition-all animate-in slide-in-from-bottom duration-300 ${
           isDark ? 'bg-[#0F131F] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
         }`}
+        style={{ transform: 'translateZ(20005px)', WebkitTransform: 'translateZ(20005px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

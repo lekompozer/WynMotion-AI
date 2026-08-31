@@ -300,7 +300,10 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-[20000] flex items-end justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      style={{ transform: 'translateZ(20000px)', WebkitTransform: 'translateZ(20000px)' }}
+    >
       {/* Hidden Audio Element */}
       <audio ref={audioRef} preload="none" />
 
@@ -309,9 +312,10 @@ export const SoundMusicLibraryModal: React.FC<SoundMusicLibraryModalProps> = ({
 
       {/* Slide-Up Container */}
       <div
-        className={`relative z-10 w-full max-w-4xl max-h-[92vh] h-[88vh] rounded-t-[36px] flex flex-col overflow-hidden shadow-2xl border-t border-x transition-all animate-in slide-in-from-bottom duration-300 ${
+        className={`relative z-[20005] w-full max-w-4xl max-h-[92vh] h-[88vh] rounded-t-[36px] flex flex-col overflow-hidden shadow-2xl border-t border-x transition-all animate-in slide-in-from-bottom duration-300 ${
           isDark ? 'bg-[#0E111A] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
         }`}
+        style={{ transform: 'translateZ(20005px)', WebkitTransform: 'translateZ(20005px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
