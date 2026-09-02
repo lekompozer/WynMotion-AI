@@ -115,7 +115,16 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
           onClose();
         }, 1500);
       } else {
-        // ── Web Checkout Flow (SePay VietQR or Lemon Squeezy) ──
+        // ── Web Checkout Flow (SePay VietQR) ──
+        if (currency === 'USD') {
+          throw new Error(
+            t(
+              'Cổng thanh toán USD quốc tế đang được nâng cấp. Vui lòng chuyển sang VND để quét VietQR qua SePay thuận tiện!',
+              'International USD checkout is being updated. Please switch to VND for instant VietQR payment!'
+            )
+          );
+        }
+
         const token = user ? await user.getIdToken() : undefined;
         const res = await createWebCheckout({
           productId,

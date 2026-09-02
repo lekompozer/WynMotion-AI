@@ -198,7 +198,7 @@ export async function createWebCheckout(params: {
   userEmail?: string;
 }): Promise<{ checkoutUrl?: string; formFields?: Record<string, string>; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/payments/checkout`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/payments/wynmotion/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
