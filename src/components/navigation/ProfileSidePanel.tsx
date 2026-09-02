@@ -21,6 +21,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { DeleteAccountModal } from '@/components/modals/DeleteAccountModal';
+import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 
 interface ProfileSidePanelProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
   const { user, userSubscription, signOut, deleteAccount, refreshSubscription } = useWordaiAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeDefaultTab, setUpgradeDefaultTab] = useState<'subscriptions' | 'points'>('subscriptions');
   const [isRefreshingPoints, setIsRefreshingPoints] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -205,20 +208,34 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                     </div>
                   </div>
 
-                  {/* Tier status indicator */}
-                  <span
-                    className={`text-xs font-black px-2.5 py-1 rounded-full ${
-                      isVip
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : isPremium
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                        : isDark
-                        ? 'bg-slate-800 text-slate-400'
-                        : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    {isVip ? 'VIP' : isPremium ? 'Premium' : 'Free'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUpgradeModal(true);
+                        setUpgradeDefaultTab('points');
+                      }}
+                      className="text-[11px] font-black px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 transition-all flex items-center gap-1 active:scale-95"
+                    >
+                      <span>+</span>
+                      <span>{t('Nạp điểm', 'Top up')}</span>
+                    </button>
+
+                    {/* Tier status indicator */}
+                    <span
+                      className={`text-xs font-black px-2.5 py-1 rounded-full ${
+                        isVip
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          : isPremium
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                          : isDark
+                          ? 'bg-slate-800 text-slate-400'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {isVip ? 'VIP' : isPremium ? 'Premium' : 'Free'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -275,13 +292,10 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                 </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    alert(
-                      isVietnamese
-                        ? 'Gói Premium chỉ từ 129,000 đ/tháng'
-                        : 'Premium plan starting from 129,000 VND/month'
-                    )
-                  }
+                  onClick={() => {
+                    setShowUpgradeModal(true);
+                    setUpgradeDefaultTab('subscriptions');
+                  }}
                   className="mt-3 w-full py-2.5 rounded-xl bg-white text-slate-950 text-sm font-black flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
                 >
                   <Crown className="h-4 w-4 text-amber-500 fill-amber-500" />
@@ -406,6 +420,13 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
 
       {/* Login Modal */}
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+
+      {/* WynMotion Upgrade & Paywall Modal */}
+      <WynMotionUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        defaultTab={upgradeDefaultTab}
+      />
     </>
   );
 

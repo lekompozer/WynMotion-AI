@@ -69,6 +69,7 @@ import { DialogueScriptEditor } from '@/components/video/DialogueScriptEditor';
 import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStudio';
 import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
 import { CapCutGalleryModal } from '@/components/video/CapCutGalleryModal';
+import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 
 // ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
 
@@ -237,6 +238,8 @@ export const AiVideoTab: React.FC = () => {
   const [selectedGalleryStyle, setSelectedGalleryStyle] = useState<string>('all');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeDefaultTab, setUpgradeDefaultTab] = useState<'subscriptions' | 'points'>('subscriptions');
 
   // ── Auth Toast Notification (hiển thị khi chưa đăng nhập) ──
   const [authToast, setAuthToast] = useState<{ visible: boolean; message: string }>({
@@ -1326,7 +1329,10 @@ export const AiVideoTab: React.FC = () => {
 
         <HeroBackground
           onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenUpgrade={() => setIsProfileOpen(true)}
+          onOpenUpgrade={() => {
+            setIsUpgradeModalOpen(true);
+            setUpgradeDefaultTab('subscriptions');
+          }}
         >
           {/* Banner Headline Text (Lowered down to sit exactly 10px above the New Project row) */}
           <div
@@ -3249,6 +3255,13 @@ export const AiVideoTab: React.FC = () => {
         defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
         onClose={() => setCapcutModalTemplate(null)}
         onApply={handleApplyCapCutTemplate}
+      />
+
+      {/* ── WynMotion Upgrade & Paywall Modal (Apple IAP & SePay) ── */}
+      <WynMotionUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        defaultTab={upgradeDefaultTab}
       />
     </div>
   );
