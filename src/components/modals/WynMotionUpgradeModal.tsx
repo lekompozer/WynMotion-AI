@@ -88,6 +88,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedTier, setSelectedTier] = useState<WynMotionTierKey>(initialTier);
   const [selectedDuration, setSelectedDuration] = useState<WynMotionDurationKey>('1m');
+  const [currency, setCurrency] = useState<'VND' | 'USD'>(isVietnamese ? 'VND' : 'USD');
 
   // Selected item type in Step 1: 'tier' or 'point'
   const [activeItemType, setActiveItemType] = useState<'tier' | 'point'>('tier');
@@ -169,23 +170,24 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
       setStep(1);
       setSelectedTier(initialTier);
       setSelectedDuration('1m');
+      setCurrency(isVietnamese ? 'VND' : 'USD');
       setActiveItemType(defaultTab === 'points' ? 'point' : 'tier');
       setErrorMessage(null);
       setSuccessMessage(null);
       checkWynMotionSubscription();
     }
-  }, [isOpen, initialTier, defaultTab, checkWynMotionSubscription]);
+  }, [isOpen, initialTier, defaultTab, isVietnamese, checkWynMotionSubscription]);
 
   if (!isOpen || !mounted) return null;
 
   const isMember = userTier !== 'free';
 
-  // Helper to format price based on App Store or app settings language
+  // Helper to format price: iOS uses App Store StoreKit, Web uses selected currency (VND / USD)
   const getDisplayPrice = (productId: string, priceVndDisplay: string, priceUsdDisplay: string) => {
     if (isIosPlatform && applePrices[productId]?.priceString) {
       return applePrices[productId].priceString;
     }
-    return isVietnamese ? priceVndDisplay : priceUsdDisplay;
+    return currency === 'VND' ? priceVndDisplay : priceUsdDisplay;
   };
 
   // ── Styles (Matching Listen & Learn Modal Sheet) ──
@@ -227,8 +229,8 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
           setErrorMessage(result.error || t('Giao dịch qua Apple không thành công.', 'Apple transaction failed.'));
         }
       } else {
-        // Web SePay Checkout (VietQR) or USD Checkout depending on app language
-        if (!isVietnamese) {
+        // Web Checkout: VND -> SePay VietQR, USD -> Lemon Squeezy Checkout
+        if (currency === 'USD') {
           const checkoutUrl = `https://checkout.wynai.pro/checkout?product=${productId}&user=${encodeURIComponent(
             user.uid
           )}&email=${encodeURIComponent(user.email || '')}`;
@@ -237,6 +239,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
           return;
         }
 
+        // VND via SePay
         const token = await user.getIdToken();
         const res = await createWebCheckout({
           productId,
@@ -347,15 +350,52 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className={`p-2 rounded-xl transition-colors ${
-              isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!isIosPlatform && (
+              <div
+                className={`flex items-center p-0.5 rounded-xl border text-xs font-bold ${
+                  isDarkMode ? 'bg-gray-800/80 border-gray-700' : 'bg-gray-100 border-gray-200'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setCurrency('VND')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    currency === 'VND'
+                      ? 'bg-amber-500 text-gray-950 shadow-sm'
+                      : isDarkMode
+                      ? 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  VND (SePay)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrency('USD')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    currency === 'USD'
+                      ? 'bg-amber-500 text-gray-950 shadow-sm'
+                      : isDarkMode
+                      ? 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  USD
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className={`p-2 rounded-xl transition-colors ${
+                isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* ── Scrollable Body ── */}
@@ -800,7 +840,9 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
               ? t('Vui lòng đăng nhập để tiếp tục thanh toán', 'Please log in to proceed with payment')
               : isIosPlatform
               ? t('Giao dịch xử lý qua Apple App Store', 'Transaction handled by Apple App Store')
-              : t('Thanh toán an toàn qua SePay', 'Secure payment via SePay')}
+              : currency === 'USD'
+              ? t('Thanh toán quốc tế qua Lemon Squeezy (USD)', 'International payment via Lemon Squeezy (USD)')
+              : t('Thanh toán quét mã VietQR tự động qua SePay (VND)', 'Scan VietQR automatic payment via SePay (VND)')}
           </p>
 
           <div className="flex gap-2.5 w-full sm:w-auto items-center justify-end">
@@ -863,7 +905,9 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                     <span>
                       {isIosPlatform
                         ? t('Thanh toán Apple', 'Pay with Apple')
-                        : t('Tiếp tục thanh toán', 'Proceed to payment')}
+                        : currency === 'USD'
+                        ? t('Thanh toán USD (Lemon Squeezy)', 'Pay USD (Lemon Squeezy)')
+                        : t('Thanh toán qua SePay (VietQR)', 'Pay via SePay (VietQR)')}
                     </span>
                     <ChevronRight className="w-4 h-4 flex-shrink-0" />
                   </>
