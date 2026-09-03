@@ -17,7 +17,7 @@ export const CAPCUT_TEMPLATES = [
     tag: 'Đa Ngành Hàng / Billboard',
     duration: '10s – 60s',
     photos: '1-10 Ảnh',
-    desc: 'Đạo diễn AI Gemini 3.7 tự do điều phối 125 Transitions GLSL & 40 Hiệu ứng thị giác theo nhịp beat.',
+    desc: 'Đạo diễn AI Gemini 3.8 tự do điều phối 125 Transitions GLSL & 40 Hiệu ứng thị giác theo nhịp beat.',
     popular: true,
     points: '15 – 40 Điểm',
   },
