@@ -1,7 +1,7 @@
 #!/bin/bash
 # ios/App/ci_scripts/ci_post_clone.sh
 # Automated Xcode Cloud pre-build hook for WynMotion AI
-# Resolves GoogleSignIn dependency for CapacitorFirebaseAuthentication
+# Resolves GoogleSignIn dependency and bypasses CocoaPods CDN timeout via Podfile.lock
 
 set -e
 
@@ -11,8 +11,22 @@ echo "🚀 Starting Xcode Cloud pre-build hook for WynMotion AI..."
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-# Navigate to repo root
-cd ../../..
+# Configure curl retry and timeout to prevent CocoaPods CDN timeout on Xcode Cloud
+echo "⚙️ Configuring curl network timeout for CocoaPods CDN..."
+echo "retry = 5" >> ~/.curlrc
+echo "retry-delay = 2" >> ~/.curlrc
+echo "connect-timeout = 60" >> ~/.curlrc
+echo "max-time = 180" >> ~/.curlrc
+
+# Navigate to repo root regardless of runner invocation directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/../../../package.json" ]; then
+    cd "$SCRIPT_DIR/../../.."
+elif [ -f "$SCRIPT_DIR/../../package.json" ]; then
+    cd "$SCRIPT_DIR/../.."
+elif [ -f "$SCRIPT_DIR/../package.json" ]; then
+    cd "$SCRIPT_DIR/.."
+fi
 echo "📂 Working directory: $(pwd)"
 
 # Install Node.js if missing
@@ -37,8 +51,8 @@ npm install
 echo "⚙️ Building Next.js static export..."
 npm run build
 
-echo "⚙️ Syncing Capacitor iOS platform..."
-npx cap sync ios
+echo "⚙️ Copying web assets to iOS platform (without unpatched pod install)..."
+npx cap copy ios
 
 echo "⚙️ Patching CapacitorFirebaseAuthentication podspec..."
 node scripts/patch-podspec.js
@@ -56,7 +70,7 @@ echo "⚙️ Updating Podfile to use CapacitorFirebaseAuthentication/Google subs
 cd ios/App
 node -e "const fs=require('fs');const p='Podfile';fs.writeFileSync(p,fs.readFileSync(p,'utf8').replace(\"pod 'CapacitorFirebaseAuthentication'\", \"pod 'CapacitorFirebaseAuthentication/Google'\"),'utf8');"
 
-echo "⚙️ Installing Pods in ios/App..."
-pod install --repo-update
+echo "⚙️ Installing Pods in ios/App using locked dependencies..."
+pod install || pod install --repo-update || (sleep 5 && pod install)
 
 echo "✅ Xcode Cloud pre-build hook completed successfully!"
