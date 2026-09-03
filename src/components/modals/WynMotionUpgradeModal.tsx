@@ -140,14 +140,16 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
 
   // Load real App Store prices on iOS via RevenueCat SDK
   useEffect(() => {
-    if (isOpen && isIosPlatform && user) {
+    if (isOpen && isIosPlatform) {
       const loadApplePrices = async () => {
         try {
           const { Purchases } = await import('@revenuecat/purchases-capacitor');
           const { initRevenueCat } = await import('@/services/appleIAPService');
-          await initRevenueCat(user.uid);
+          if (user?.uid) {
+            await initRevenueCat(user.uid);
+          }
           const res = await Purchases.getProducts({ productIdentifiers: ALL_STORE_PRODUCT_IDS });
-          if (res?.products) {
+          if (res?.products && res.products.length > 0) {
             const pricesMap: Record<string, { priceString: string; pricePerMonthString?: string }> = {};
             res.products.forEach((p: any) => {
               pricesMap[p.identifier] = {
@@ -187,7 +189,17 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
     if (isIosPlatform && applePrices[productId]?.priceString) {
       return applePrices[productId].priceString;
     }
-    return currency === 'VND' ? priceVndDisplay : priceUsdDisplay;
+    return isVietnamese || currency === 'VND' ? priceVndDisplay : priceUsdDisplay;
+  };
+
+  // Helper to format per-month price without overriding with full year total
+  const getDisplayPerMonth = (productId: string, perMonthVnd: number, perMonthUsd: number) => {
+    if (isIosPlatform && applePrices[productId]?.pricePerMonthString) {
+      return applePrices[productId].pricePerMonthString;
+    }
+    return isVietnamese || currency === 'VND'
+      ? `${perMonthVnd.toLocaleString('vi-VN')} ₫`
+      : `$${perMonthUsd.toFixed(2)}`;
   };
 
   // ── Styles (Matching Listen & Learn Modal Sheet) ──
@@ -532,10 +544,10 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                           </div>
                           <div className={`text-[10px] mt-0.5 ${textMuted}`}>
                             {t('từ ', 'from ')}
-                            {getDisplayPrice(
+                            {getDisplayPerMonth(
                               firstPlan.key,
-                              firstPlan.perMonthVnd.toLocaleString('vi-VN') + ' ₫',
-                              '$' + firstPlan.perMonthUsd
+                              firstPlan.perMonthVnd,
+                              firstPlan.perMonthUsd
                             )}
                             /{t('tháng', 'mo')}
                           </div>
@@ -734,10 +746,10 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                         </div>
                         <div className={`text-[10px] mt-0.5 ${textMuted}`}>
                           ~
-                          {getDisplayPrice(
+                          {getDisplayPerMonth(
                             d.key,
-                            d.perMonthVnd.toLocaleString('vi-VN') + ' ₫',
-                            '$' + d.perMonthUsd.toFixed(2)
+                            d.perMonthVnd,
+                            d.perMonthUsd
                           )}
                           /{t('tháng', 'mo')}
                         </div>
