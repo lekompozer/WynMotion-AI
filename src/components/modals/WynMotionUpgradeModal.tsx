@@ -328,8 +328,8 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                 <span>{t('Quay lại', 'Back')}</span>
               </button>
             ) : (
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center border border-amber-500/20 flex-shrink-0">
-                <Crown className="w-6 h-6 text-amber-400" />
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#FF2D55]/20 to-[#FF4570]/5 flex items-center justify-center border border-[#FF2D55]/20 flex-shrink-0">
+                <Crown className="w-6 h-6 text-[#FF2D55]" />
               </div>
             )}
 
@@ -344,7 +344,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                   </span>
                 )}
               </div>
-              <h3 className="text-lg sm:text-xl font-black bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 bg-clip-text text-transparent tracking-wide leading-none mt-0.5">
+              <h3 className="text-lg sm:text-xl font-black bg-gradient-to-r from-[#FF2D55] to-[#FF4570] bg-clip-text text-transparent tracking-wide leading-none mt-0.5">
                 {step === 1 ? 'WYNMOTION AI STUDIO' : tierConfig.nameVi.toUpperCase()}
               </h3>
             </div>
@@ -362,7 +362,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                   onClick={() => setCurrency('VND')}
                   className={`px-2.5 py-1 rounded-lg transition-all ${
                     currency === 'VND'
-                      ? 'bg-amber-500 text-gray-950 shadow-sm'
+                      ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-sm'
                       : isDarkMode
                       ? 'text-gray-400 hover:text-white'
                       : 'text-gray-600 hover:text-gray-900'
@@ -375,7 +375,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                   onClick={() => setCurrency('USD')}
                   className={`px-2.5 py-1 rounded-lg transition-all ${
                     currency === 'USD'
-                      ? 'bg-amber-500 text-gray-950 shadow-sm'
+                      ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-sm'
                       : isDarkMode
                       ? 'text-gray-400 hover:text-white'
                       : 'text-gray-600 hover:text-gray-900'
@@ -401,7 +401,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
         {/* ── Scrollable Body ── */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           {/* Banner Cover Image */}
-          <div className="relative w-full h-36 sm:h-44 rounded-2xl overflow-hidden border border-amber-500/30 shadow-lg bg-black">
+          <div className="relative w-full h-36 sm:h-44 rounded-2xl overflow-hidden border border-[#FF2D55]/30 shadow-lg bg-black">
             <img
               src="/images/WynMotion-UpgradeBanner.avif"
               alt="WynMotion Studio Upgrade"
@@ -479,7 +479,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                           isSelected
                             ? isVip
                               ? 'border-purple-500 bg-purple-500/10'
-                              : 'border-amber-500 bg-amber-500/10'
+                              : 'border-[#FF2D55] bg-[#FF2D55]/10'
                             : isDarkMode
                             ? 'border-gray-800 bg-gray-800/40 hover:border-gray-700'
                             : 'border-gray-200 bg-gray-50 hover:border-gray-300'
@@ -492,14 +492,14 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                               isSelected
                                 ? isVip
                                   ? 'border-purple-500'
-                                  : 'border-amber-500'
+                                  : 'border-[#FF2D55]'
                                 : isDarkMode
                                 ? 'border-gray-600'
                                 : 'border-gray-300'
                             }`}
                           >
                             {isSelected && (
-                              <div className={`w-2.5 h-2.5 rounded-full ${isVip ? 'bg-purple-500' : 'bg-amber-500'}`} />
+                              <div className={`w-2.5 h-2.5 rounded-full ${isVip ? 'bg-purple-500' : 'bg-[#FF2D55]'}`} />
                             )}
                           </div>
 
@@ -511,7 +511,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                               {cfg.badgeVi && (
                                 <span
                                   className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white ${
-                                    isVip ? 'bg-purple-600' : isPro ? 'bg-teal-500' : 'bg-amber-500'
+                                    isVip ? 'bg-purple-600' : isPro ? 'bg-teal-500' : 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570]'
                                   }`}
                                 >
                                   {t(cfg.badgeVi, cfg.badgeEn || '')}
@@ -525,7 +525,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                         <div className="text-right flex-shrink-0">
                           <div
                             className={`text-base font-extrabold ${
-                              isSelected ? (isVip ? 'text-purple-400' : 'text-amber-400') : textPrimary
+                              isSelected ? (isVip ? 'text-purple-400' : 'text-[#FF2D55]') : textPrimary
                             }`}
                           >
                             {getDisplayPrice(firstPlan.key, firstPlan.priceVndDisplay, firstPlan.priceUsdDisplay)}
@@ -550,7 +550,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Coins className="w-4 h-4 text-amber-400" />
+                    <Coins className="w-4 h-4 text-[#FF2D55]" />
                     <p className={`text-sm font-semibold tracking-wide ${textPrimary}`}>
                       {t('Gói nạp thêm điểm AI tiêu hao', 'Additional AI Credit Packs')}
                     </p>
@@ -588,7 +588,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                           !isMember
                             ? 'opacity-55 cursor-not-allowed border-gray-800 bg-gray-900/30'
                             : isSelected
-                            ? 'border-amber-500 bg-amber-500/10 cursor-pointer'
+                            ? 'border-[#FF2D55] bg-[#FF2D55]/10 cursor-pointer'
                             : isDarkMode
                             ? 'border-gray-800 bg-gray-800/40 hover:border-gray-700 cursor-pointer'
                             : 'border-gray-200 bg-gray-50 hover:border-gray-300 cursor-pointer'
@@ -598,13 +598,13 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                           <div
                             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                               isSelected
-                                ? 'border-amber-500'
+                                ? 'border-[#FF2D55]'
                                 : isDarkMode
                                 ? 'border-gray-600'
                                 : 'border-gray-300'
                             }`}
                           >
-                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />}
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#FF2D55]" />}
                           </div>
 
                           <div>
@@ -613,7 +613,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                                 {t(pack.nameVi, pack.nameEn)}
                               </span>
                               {pack.badgeVi && (
-                                <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white bg-amber-500">
+                                <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white bg-gradient-to-r from-[#FF2D55] to-[#FF4570]">
                                   {t(pack.badgeVi, pack.badgeEn || '')}
                                 </span>
                               )}
@@ -624,11 +624,11 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
 
                         <div className="text-right flex-shrink-0">
                           <div
-                            className={`text-base font-extrabold ${isSelected ? 'text-amber-400' : textPrimary}`}
+                            className={`text-base font-extrabold ${isSelected ? 'text-[#FF2D55]' : textPrimary}`}
                           >
                             {getDisplayPrice(pack.key, pack.priceVndDisplay, pack.priceUsdDisplay)}
                           </div>
-                          <div className={`text-[10px] mt-0.5 text-amber-400 font-medium`}>
+                          <div className={`text-[10px] mt-0.5 text-[#FF2D55] font-medium`}>
                             +{pack.points} {t('Điểm', 'Points')}
                           </div>
                         </div>
@@ -675,7 +675,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                         isSelected
                           ? isVip
                             ? 'border-purple-500 bg-purple-500/10'
-                            : 'border-amber-500 bg-amber-500/10'
+                            : 'border-[#FF2D55] bg-[#FF2D55]/10'
                           : isDarkMode
                           ? 'border-gray-800 bg-gray-800/40 hover:border-gray-700'
                           : 'border-gray-200 bg-gray-50 hover:border-gray-300'
@@ -687,14 +687,14 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                             isSelected
                               ? isVip
                                 ? 'border-purple-500'
-                                : 'border-amber-500'
+                                : 'border-[#FF2D55]'
                               : isDarkMode
                               ? 'border-gray-600'
                               : 'border-gray-300'
                           }`}
                         >
                           {isSelected && (
-                            <div className={`w-2.5 h-2.5 rounded-full ${isVip ? 'bg-purple-500' : 'bg-amber-500'}`} />
+                            <div className={`w-2.5 h-2.5 rounded-full ${isVip ? 'bg-purple-500' : 'bg-[#FF2D55]'}`} />
                           )}
                         </div>
 
@@ -715,7 +715,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                               </span>
                             )}
                             {d.badgeVi && (
-                              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white bg-amber-500">
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white bg-gradient-to-r from-[#FF2D55] to-[#FF4570]">
                                 {t(d.badgeVi, d.badgeEn || '')}
                               </span>
                             )}
@@ -727,7 +727,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                       <div className="text-right flex-shrink-0">
                         <div
                           className={`text-base font-extrabold ${
-                            isSelected ? (isVip ? 'text-purple-400' : 'text-amber-400') : textPrimary
+                            isSelected ? (isVip ? 'text-purple-400' : 'text-[#FF2D55]') : textPrimary
                           }`}
                         >
                           {getDisplayPrice(d.key, d.priceVndDisplay, d.priceUsdDisplay)}
@@ -761,7 +761,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                         `${tierConfig.nameEn} (${currentDurationOption.duration})`
                       )}
                     </span>
-                    <div className="mt-0.5 text-xs text-amber-400 font-medium">
+                    <div className="mt-0.5 text-xs text-[#FF2D55] font-medium">
                       +{currentDurationOption.points} {t('Điểm AI tặng kèm', 'AI Bonus Points')}
                     </div>
                   </div>
@@ -800,7 +800,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
               }}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-amber-400 cursor-pointer"
+              className="underline hover:text-[#FF2D55] cursor-pointer"
             >
               {t('Điều khoản sử dụng (EULA)', 'Terms of Use (EULA)')}
             </a>
@@ -819,7 +819,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
               }}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-amber-400 cursor-pointer"
+              className="underline hover:text-[#FF2D55] cursor-pointer"
             >
               {t('Chính sách bảo mật', 'Privacy Policy')}
             </a>
@@ -869,7 +869,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 hover:from-amber-400 hover:to-yellow-400 text-gray-950 shadow-lg shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-[#FF2D55] to-[#FF4570] hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-rose-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <span>{t('Chọn chu kỳ thời hạn', 'Select Plan Duration')}</span>
                 <ChevronRight className="w-4 h-4 flex-shrink-0" />
@@ -885,10 +885,10 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                     handleProceedCheckout(selectedPointKey, false);
                   }
                 }}
-                className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-gray-950 shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap cursor-pointer ${
                   selectedTier === 'vip' && step === 2
-                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-purple-500/20'
-                    : 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 hover:from-amber-400 hover:to-yellow-400 shadow-amber-500/20'
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 shadow-purple-500/20'
+                    : 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] hover:from-rose-500 hover:to-pink-600 shadow-rose-500/25'
                 }`}
               >
                 {isLoading ? (
