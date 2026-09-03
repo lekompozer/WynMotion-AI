@@ -401,23 +401,19 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
         {/* ── Scrollable Body ── */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           {/* Banner Cover Image */}
-          <div className="relative w-full rounded-2xl overflow-hidden border border-amber-500/30 shadow-lg bg-gray-900">
+          <div className="relative w-full h-28 sm:h-36 rounded-2xl overflow-hidden border border-amber-500/30 shadow-lg bg-black flex items-center justify-center">
             <img
-              src="/images/Premium Upgrade Cover.png"
+              src="/images/WynMotion-UpgradeBanner.avif"
               alt="WynMotion Studio Upgrade"
-              className="w-full h-28 sm:h-36 object-cover"
+              className="w-full h-full max-h-[85%] sm:max-h-[90%] object-contain object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex flex-col justify-end p-4">
-              <div className="text-white font-extrabold text-base sm:text-lg flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>{t('Mở khóa toàn bộ Templates & Công nghệ làm phim AI', 'Unlock All Templates & Cinematic AI Video Engine')}</span>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-3.5 sm:p-4 pointer-events-none">
+              <div className="text-white font-black text-base sm:text-xl tracking-tight leading-tight drop-shadow-md">
+                Turn ideas into 1-min videos
               </div>
-              <p className="text-gray-200 text-xs mt-0.5 line-clamp-1">
-                {t(
-                  '125+ Shaders GLSL, 40 VFX điện ảnh, giọng đọc VieNeu 48kHz và render mượt mà.',
-                  '125+ GLSL Shaders, 40 Cinematic VFX, 48kHz natural voiceover, and priority render.'
-                )}
-              </p>
+              <div className="text-gray-200 font-normal text-xs sm:text-sm mt-0.5 drop-shadow">
+                from just $1
+              </div>
             </div>
           </div>
 
