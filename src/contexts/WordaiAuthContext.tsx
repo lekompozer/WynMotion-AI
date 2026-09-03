@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   User,
   OAuthProvider,
@@ -87,7 +87,7 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch real-time points balance and plan info matching Web backend
-  const fetchUserSubscription = async (currentUser: User) => {
+  const fetchUserSubscription = useCallback(async (currentUser: User) => {
     try {
       const token = await currentUser.getIdToken();
       
@@ -145,7 +145,7 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn('Could not fetch user subscription:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Handle redirect result only on web browser flow (not native iOS)
@@ -484,6 +484,10 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
     setUserSubscription(null);
   };
 
+  const refreshSubscription = useCallback(async () => {
+    if (user) await fetchUserSubscription(user);
+  }, [user, fetchUserSubscription]);
+
   return (
     <WordaiAuthContext.Provider
       value={{
@@ -502,9 +506,7 @@ export function WordaiAuthProvider({ children }: { children: ReactNode }) {
         signOut,
         deleteAccount,
         getValidToken,
-        refreshSubscription: async () => {
-          if (user) await fetchUserSubscription(user);
-        },
+        refreshSubscription,
       }}
     >
       {children}

@@ -74,15 +74,23 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
   const isPaidUser = isVip || isPro || isPremium;
   const points = userSubscription?.points_balance ?? 0;
 
-  // Refresh points & WynMotion tier on panel open
+  const hasCheckedOnOpenRef = useRef(false);
+
+  // Refresh points & WynMotion tier ONLY ONCE when panel is opened
   useEffect(() => {
     if (isOpen && user) {
-      refreshSubscription();
-      fetchWynMotionTier();
+      if (!hasCheckedOnOpenRef.current) {
+        hasCheckedOnOpenRef.current = true;
+        refreshSubscription();
+        fetchWynMotionTier();
+      }
+    } else if (!isOpen) {
+      hasCheckedOnOpenRef.current = false;
     }
-  }, [isOpen, user, fetchWynMotionTier, refreshSubscription]);
+  }, [isOpen, user]);
 
   const handleManualRefreshPoints = async () => {
+    if (isRefreshingPoints) return;
     setIsRefreshingPoints(true);
     try {
       await Promise.all([
@@ -137,15 +145,32 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
             isDark ? 'border-slate-800' : 'border-slate-100'
           }`}
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl overflow-hidden border border-cyan-400/30 shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-2xl overflow-hidden border border-cyan-400/30 shadow-sm shrink-0">
               <img src="/assets/mascot-logo.jpg" alt="WynMotion" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <h2 className={`text-base font-black leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                WynMotion AI
-              </h2>
-              <p className="text-[11px] text-slate-400 font-medium">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className={`text-base font-black leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  WynMotion
+                </h2>
+                {/* Badge Upgrade bên phải chữ WynMotion khi là Premium / Pro / VIP */}
+                {isPaidUser && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUpgradeDefaultTab('subscriptions');
+                      setShowUpgradeModal(true);
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white text-[10px] font-black shadow-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    title={t('Nâng cấp gói WynMotion', 'Upgrade WynMotion')}
+                  >
+                    <Crown className="w-2.5 h-2.5 fill-current text-amber-200" />
+                    <span>{t('Upgrade', 'Upgrade')}</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium truncate">
                 {t('Tài khoản & Cài đặt', 'Account & Settings')}
               </p>
             </div>
@@ -153,7 +178,7 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
           <button
             type="button"
             onClick={onClose}
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-2 rounded-full transition-colors shrink-0 ${
               isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'
             }`}
           >
@@ -176,58 +201,46 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                     <img
                       src={user.photoURL}
                       alt={user.displayName || 'Avatar'}
-                      className="w-12 h-12 rounded-full border-2 border-cyan-400 object-cover flex-shrink-0"
+                      className="w-12 h-12 rounded-full border-2 border-cyan-400 object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 font-black text-lg flex items-center justify-center flex-shrink-0 border-2 border-cyan-300">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 font-black text-lg flex items-center justify-center shrink-0 border-2 border-cyan-300">
                       {(user.displayName || user.email || 'U')[0].toUpperCase()}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Hàng 1: Tên người dùng + Badge Free/VIP/Pro/Premium bên cạnh tên */}
+                    <div className="flex items-center gap-2">
                       <p className={`text-base font-black truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {user.displayName || t('Người dùng', 'User')}
                       </p>
-                      {/* WynMotion Dedicated Tier Badge */}
+                      {/* Badge phân loại tài khoản WynMotion */}
                       {isVip ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-xs">
+                        <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-xs">
                           <Crown className="w-3 h-3 fill-current" />
                           VIP
                         </span>
                       ) : isPro ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500 text-white shadow-xs">
+                        <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500 text-white shadow-xs">
                           <Sparkles className="w-3 h-3 fill-current" />
                           Pro
                         </span>
                       ) : isPremium ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xs">
+                        <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xs">
                           <Sparkles className="w-3 h-3 fill-current" />
                           Premium
                         </span>
                       ) : (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-200 text-slate-600'
                         }`}>
                           Free
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                    {/* Hàng 2: Email */}
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
                   </div>
-
-                  {/* Nút Upgrade trên User Card */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUpgradeDefaultTab('subscriptions');
-                      setShowUpgradeModal(true);
-                    }}
-                    className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white text-[11px] font-black shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                    title={t('Nâng cấp gói WynMotion', 'Upgrade WynMotion')}
-                  >
-                    <Crown className="w-3 h-3 fill-current text-amber-200" />
-                    <span>{t('Nâng cấp', 'Upgrade')}</span>
-                  </button>
                 </div>
 
                 {/* Points card with Usage button */}
@@ -252,7 +265,7 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                           title="Refresh points & subscription"
                         >
                           <RotateCw
-                            className={`w-3 h-3 ${isRefreshingPoints || isCheckingSub ? 'animate-spin text-amber-400' : ''}`}
+                            className={`w-3 h-3 ${isRefreshingPoints ? 'animate-spin text-amber-400' : ''}`}
                           />
                         </button>
                       </div>
@@ -446,7 +459,7 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
             isDark ? 'border-slate-800 text-slate-500' : 'border-slate-100 text-slate-400'
           }`}
         >
-          <p className="text-[10px] font-medium">WynMotion AI Studio v1.0.0 (Build 2026)</p>
+          <p className="text-[10px] font-medium">WynMotion Studio v1.0.0 (Build 2026)</p>
         </div>
       </div>
 
