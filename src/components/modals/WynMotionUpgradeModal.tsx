@@ -163,8 +163,9 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
 
     try {
       if (isIosPlatform) {
-        // iOS In-App Purchase via StoreKit
-        const result = await purchaseAppleProduct(productId, user.uid);
+        // iOS In-App Purchase via StoreKit + RevenueCat
+        const token = await user.getIdToken();
+        const result = await purchaseAppleProduct(productId, user.uid, token);
         if (result.success) {
           setSuccessMessage(t('Thanh toán thành công qua Apple App Store!', 'Payment successful via Apple App Store!'));
           await checkWynMotionSubscription();
@@ -207,6 +208,31 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
       }
     } catch (err: any) {
       setErrorMessage(err.message || t('Đã xảy ra lỗi khi tạo thanh toán', 'Payment initiation failed'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    if (!user) {
+      setErrorMessage(t('Vui lòng đăng nhập để khôi phục giao dịch.', 'Please log in to restore purchases.'));
+      return;
+    }
+    setIsLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const token = await user.getIdToken();
+      const result = await restoreApplePurchases(user.uid, token);
+      if (result.success) {
+        setSuccessMessage(t('Khôi phục giao dịch thành công!', 'Purchases restored successfully!'));
+        await checkWynMotionSubscription();
+        if (onSuccess) onSuccess();
+      } else {
+        setErrorMessage(result.error || t('Không tìm thấy giao dịch nào cần khôi phục.', 'No purchases found to restore.'));
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || t('Lỗi khôi phục giao dịch', 'Failed to restore purchases'));
     } finally {
       setIsLoading(false);
     }
@@ -832,6 +858,20 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                 </button>
               </div>
             </>
+          )}
+
+          {/* iOS Restore Purchases Link */}
+          {isIosPlatform && (
+            <div className="w-full flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={handleRestorePurchases}
+                disabled={isLoading}
+                className="text-[11px] text-amber-400/80 hover:text-amber-400 underline cursor-pointer transition-colors"
+              >
+                {t('Khôi phục gói đã mua (Restore Purchases)', 'Restore Purchases')}
+              </button>
+            </div>
           )}
         </div>
       </div>

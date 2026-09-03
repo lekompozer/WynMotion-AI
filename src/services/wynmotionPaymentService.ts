@@ -551,34 +551,20 @@ export async function createWebCheckout(params: {
 }
 
 /**
- * Handle Apple In-App Purchase (iOS Native)
+ * Handle Apple In-App Purchase (iOS Native) via RevenueCat
  */
 export async function purchaseAppleProduct(
   productId: string,
-  userId: string
-): Promise<{ success: boolean; error?: string }> {
+  userId: string,
+  idToken?: string
+): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     if (Capacitor.getPlatform() !== 'ios') {
       return { success: false, error: 'Chỉ khả dụng trên thiết bị iOS' };
     }
 
-    try {
-      // @ts-ignore
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      if (Purchases) {
-        await Purchases.logIn({ appUserID: userId });
-        const res = await Purchases.getProducts({ productIdentifiers: [productId] });
-        if (res?.products && res.products.length > 0) {
-          await Purchases.purchaseStoreProduct({ product: res.products[0] });
-          return { success: true };
-        }
-      }
-    } catch (importErr) {
-      console.warn('RevenueCat plugin not installed or preview mode:', importErr);
-    }
-
-    // Fallback confirmation on preview/dev
-    return { success: true };
+    const { purchaseWynMotionProduct } = await import('./appleIAPService');
+    return await purchaseWynMotionProduct(productId, userId, idToken);
   } catch (err: any) {
     if (err?.userCancelled) {
       return { success: false, error: 'USER_CANCELLED' };
@@ -588,24 +574,19 @@ export async function purchaseAppleProduct(
 }
 
 /**
- * Restore purchases from Apple StoreKit
+ * Restore purchases from Apple StoreKit & Sync with Backend
  */
-export async function restoreApplePurchases(): Promise<{ success: boolean; error?: string }> {
+export async function restoreApplePurchases(
+  userId?: string,
+  idToken?: string
+): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     if (Capacitor.getPlatform() !== 'ios') {
       return { success: false, error: 'Chỉ khả dụng trên iOS' };
     }
-    try {
-      // @ts-ignore
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      if (Purchases) {
-        await Purchases.restorePurchases();
-        return { success: true };
-      }
-    } catch (e) {
-      console.warn('RevenueCat restore fallback:', e);
-    }
-    return { success: true };
+
+    const { restorePurchases } = await import('./appleIAPService');
+    return await restorePurchases(userId, idToken);
   } catch (err: any) {
     return { success: false, error: err?.message || 'Không thể khôi phục giao dịch' };
   }
