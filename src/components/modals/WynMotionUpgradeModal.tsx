@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -45,14 +45,23 @@ const ALL_STORE_PRODUCT_IDS = [
   'wynmotion_premium_3m',
   'wynmotion_premium_6m',
   'wynmotion_premium_12m',
+  'wynmotion_premium_1y',
+  'wynmotion_premium_1year',
+  'wynmotion_premium_12months',
   'wynmotion_pro_1m',
   'wynmotion_pro_3m',
   'wynmotion_pro_6m',
   'wynmotion_pro_12m',
+  'wynmotion_pro_1y',
+  'wynmotion_pro_1year',
+  'wynmotion_pro_12months',
   'wynmotion_vip_1m',
   'wynmotion_vip_3m',
   'wynmotion_vip_6m',
   'wynmotion_vip_12m',
+  'wynmotion_vip_1y',
+  'wynmotion_vip_1year',
+  'wynmotion_vip_12months',
   'wynmotion_credits_99k',
   'wynmotion_credits_199k',
   'wynmotion_credits_499k',
@@ -131,8 +140,8 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
           setUserTier('free');
         }
       }
-    } catch {
-      setUserTier('free');
+    } catch (e) {
+      console.warn('Could not check WynMotion subscription status:', e);
     } finally {
       setIsCheckingSub(false);
     }
@@ -152,10 +161,35 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
           if (res?.products && res.products.length > 0) {
             const pricesMap: Record<string, { priceString: string; pricePerMonthString?: string }> = {};
             res.products.forEach((p: any) => {
-              pricesMap[p.identifier] = {
+              const id = p.identifier;
+              const info = {
                 priceString: p.priceString,
                 pricePerMonthString: p.pricePerMonthString,
               };
+              pricesMap[id] = info;
+
+              // Map aliases to canonical keys if created differently on App Store Connect
+              if (
+                id === 'wynmotion_premium_1y' ||
+                id === 'wynmotion_premium_1year' ||
+                id === 'wynmotion_premium_12months'
+              ) {
+                pricesMap['wynmotion_premium_12m'] = info;
+              }
+              if (
+                id === 'wynmotion_pro_1y' ||
+                id === 'wynmotion_pro_1year' ||
+                id === 'wynmotion_pro_12months'
+              ) {
+                pricesMap['wynmotion_pro_12m'] = info;
+              }
+              if (
+                id === 'wynmotion_vip_1y' ||
+                id === 'wynmotion_vip_1year' ||
+                id === 'wynmotion_vip_12months'
+              ) {
+                pricesMap['wynmotion_vip_12m'] = info;
+              }
             });
             setApplePrices(pricesMap);
           }
@@ -180,6 +214,17 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
     }
   }, [isOpen, initialTier, defaultTab, isVietnamese, checkWynMotionSubscription]);
 
+  // Detect if App Store returned any Vietnamese Dong prices or user is in VN
+  const isVndStorefront = useMemo(() => {
+    const hasVndInApplePrices = Object.values(applePrices).some(
+      (p) =>
+        p.priceString?.includes('đ') ||
+        p.priceString?.includes('₫') ||
+        p.priceString?.includes('VND')
+    );
+    return hasVndInApplePrices || isVietnamese || currency === 'VND';
+  }, [applePrices, isVietnamese, currency]);
+
   if (!isOpen || !mounted) return null;
 
   const isMember = userTier !== 'free';
@@ -189,7 +234,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
     if (isIosPlatform && applePrices[productId]?.priceString) {
       return applePrices[productId].priceString;
     }
-    return isVietnamese || currency === 'VND' ? priceVndDisplay : priceUsdDisplay;
+    return isVndStorefront ? priceVndDisplay : priceUsdDisplay;
   };
 
   // Helper to format per-month price without overriding with full year total
@@ -197,7 +242,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
     if (isIosPlatform && applePrices[productId]?.pricePerMonthString) {
       return applePrices[productId].pricePerMonthString;
     }
-    return isVietnamese || currency === 'VND'
+    return isVndStorefront
       ? `${perMonthVnd.toLocaleString('vi-VN')} ₫`
       : `$${perMonthUsd.toFixed(2)}`;
   };

@@ -106,9 +106,17 @@ export async function purchaseWynMotionProduct(
     // Ensure RevenueCat is configured
     await loginRevenueCat(userId);
 
+    // Build candidates including common 1-year product aliases
+    const idAliases: Record<string, string[]> = {
+      wynmotion_premium_12m: ['wynmotion_premium_12m', 'wynmotion_premium_1y', 'wynmotion_premium_1year', 'wynmotion_premium_12months'],
+      wynmotion_pro_12m: ['wynmotion_pro_12m', 'wynmotion_pro_1y', 'wynmotion_pro_1year', 'wynmotion_pro_12months'],
+      wynmotion_vip_12m: ['wynmotion_vip_12m', 'wynmotion_vip_1y', 'wynmotion_vip_1year', 'wynmotion_vip_12months'],
+    };
+    const candidates = idAliases[productId] || [productId];
+
     // Fetch product details from Apple StoreKit
     const productsResult = await Purchases.getProducts({
-      productIdentifiers: [productId],
+      productIdentifiers: candidates,
     });
 
     if (!productsResult.products || productsResult.products.length === 0) {
