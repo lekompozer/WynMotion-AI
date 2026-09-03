@@ -76,7 +76,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
   onSuccess,
 }) => {
   const { isDark, isVietnamese, t } = useApp();
-  const { user } = useWordaiAuth();
+  const { user, refreshSubscription } = useWordaiAuth();
 
   const initialTier: WynMotionTierKey = defaultPlanKey
     ? defaultPlanKey.includes('vip')
@@ -279,7 +279,10 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
         const result = await purchaseAppleProduct(productId, user.uid, token);
         if (result.success) {
           setSuccessMessage(t('Thanh toán thành công qua Apple App Store!', 'Payment successful via Apple App Store!'));
-          await checkWynMotionSubscription();
+          await Promise.all([
+            checkWynMotionSubscription(),
+            refreshSubscription(),
+          ]);
           if (onSuccess) onSuccess();
           setTimeout(() => onClose(), 1500);
         } else if (result.error !== 'USER_CANCELLED') {
@@ -338,7 +341,10 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
       const result = await restoreApplePurchases(user.uid, token);
       if (result.success) {
         setSuccessMessage(t('Khôi phục giao dịch thành công!', 'Purchases restored successfully!'));
-        await checkWynMotionSubscription();
+        await Promise.all([
+          checkWynMotionSubscription(),
+          refreshSubscription(),
+        ]);
         if (onSuccess) onSuccess();
       } else {
         setErrorMessage(result.error || t('Không tìm thấy giao dịch nào cần khôi phục.', 'No purchases found to restore.'));

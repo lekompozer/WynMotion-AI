@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -36,24 +36,59 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeDefaultTab, setUpgradeDefaultTab] = useState<'subscriptions' | 'points'>('subscriptions');
   const [isRefreshingPoints, setIsRefreshingPoints] = useState(false);
+  const [wynmotionTier, setWynmotionTier] = useState<'free' | 'premium' | 'pro' | 'vip'>('free');
+  const [isCheckingSub, setIsCheckingSub] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const rawTier = (userSubscription?.tier || 'free').toLowerCase();
-  const isVip = rawTier === 'vip';
-  const isPremium = rawTier === 'premium' || rawTier === 'pro';
+  // Fetch dedicated WynMotion subscription tier
+  const fetchWynMotionTier = useCallback(async () => {
+    if (!user) {
+      setWynmotionTier('free');
+      return;
+    }
+    setIsCheckingSub(true);
+    try {
+      const token = await user.getIdToken();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai.wordai.pro';
+      const res = await fetch(`${apiUrl}/api/ai/motion/subscription/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.is_active && data?.tier) {
+          setWynmotionTier(data.tier.toLowerCase() as 'free' | 'premium' | 'pro' | 'vip');
+        } else {
+          setWynmotionTier('free');
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch WynMotion tier in ProfileSidePanel:', err);
+    } finally {
+      setIsCheckingSub(false);
+    }
+  }, [user]);
+
+  const isVip = wynmotionTier === 'vip';
+  const isPro = wynmotionTier === 'pro';
+  const isPremium = wynmotionTier === 'premium';
+  const isPaidUser = isVip || isPro || isPremium;
   const points = userSubscription?.points_balance ?? 0;
 
-  // Refresh points on panel open
+  // Refresh points & WynMotion tier on panel open
   useEffect(() => {
     if (isOpen && user) {
       refreshSubscription();
+      fetchWynMotionTier();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, fetchWynMotionTier, refreshSubscription]);
 
   const handleManualRefreshPoints = async () => {
     setIsRefreshingPoints(true);
     try {
-      await refreshSubscription();
+      await Promise.all([
+        refreshSubscription(),
+        fetchWynMotionTier(),
+      ]);
     } finally {
       setTimeout(() => setIsRefreshingPoints(false), 500);
     }
@@ -153,14 +188,19 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                       <p className={`text-base font-black truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {user.displayName || t('Người dùng', 'User')}
                       </p>
-                      {/* Tier Badge: VIP / Premium / Free */}
+                      {/* WynMotion Dedicated Tier Badge */}
                       {isVip ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-xs">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-xs">
                           <Crown className="w-3 h-3 fill-current" />
                           VIP
                         </span>
+                      ) : isPro ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500 text-white shadow-xs">
+                          <Sparkles className="w-3 h-3 fill-current" />
+                          Pro
+                        </span>
                       ) : isPremium ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xs">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xs">
                           <Sparkles className="w-3 h-3 fill-current" />
                           Premium
                         </span>
@@ -174,9 +214,23 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                     </div>
                     <p className="text-xs text-slate-400 truncate">{user.email}</p>
                   </div>
+
+                  {/* Nút Upgrade trên User Card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUpgradeDefaultTab('subscriptions');
+                      setShowUpgradeModal(true);
+                    }}
+                    className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white text-[11px] font-black shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    title={t('Nâng cấp gói WynMotion', 'Upgrade WynMotion')}
+                  >
+                    <Crown className="w-3 h-3 fill-current text-amber-200" />
+                    <span>{t('Nâng cấp', 'Upgrade')}</span>
+                  </button>
                 </div>
 
-                {/* Points badge matching Web header */}
+                {/* Points card with Usage button */}
                 <div
                   className={`flex items-center justify-between p-3 rounded-xl border ${
                     isDark ? 'bg-slate-950/80 border-amber-500/30' : 'bg-white border-amber-200/80'
@@ -195,10 +249,10 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                           type="button"
                           onClick={handleManualRefreshPoints}
                           className="text-slate-400 hover:text-white transition-colors"
-                          title="Refresh points"
+                          title="Refresh points & subscription"
                         >
                           <RotateCw
-                            className={`w-3 h-3 ${isRefreshingPoints ? 'animate-spin text-amber-400' : ''}`}
+                            className={`w-3 h-3 ${isRefreshingPoints || isCheckingSub ? 'animate-spin text-amber-400' : ''}`}
                           />
                         </button>
                       </div>
@@ -208,34 +262,18 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowUpgradeModal(true);
-                        setUpgradeDefaultTab('points');
-                      }}
-                      className="text-[11px] font-black px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 transition-all flex items-center gap-1 active:scale-95"
-                    >
-                      <span>+</span>
-                      <span>{t('Nạp điểm', 'Top up')}</span>
-                    </button>
-
-                    {/* Tier status indicator */}
-                    <span
-                      className={`text-xs font-black px-2.5 py-1 rounded-full ${
-                        isVip
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                          : isPremium
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                          : isDark
-                          ? 'bg-slate-800 text-slate-400'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {isVip ? 'VIP' : isPremium ? 'Premium' : 'Free'}
-                    </span>
-                  </div>
+                  {/* Nút Usage mở Upgrade Modal thay cho nút Top up và tier badge */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUpgradeDefaultTab('subscriptions');
+                      setShowUpgradeModal(true);
+                    }}
+                    className="text-xs font-black px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/40 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
+                  >
+                    <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
+                    <span>{t('Gói sử dụng', 'Usage')}</span>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -269,7 +307,7 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
             )}
 
             {/* ── Upgrade Banner ── */}
-            {(!isVip && !isPremium) && (
+            {!isVip && (
               <div className="relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 shadow-lg shadow-indigo-500/20">
                 <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/10 rounded-full" />
                 <div className="absolute -bottom-2 -left-2 w-14 h-14 bg-white/10 rounded-full" />
@@ -278,11 +316,13 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                     <div className="flex items-center gap-1.5 mb-1">
                       <Crown className="h-4 w-4 text-yellow-300 fill-yellow-300" />
                       <span className="text-xs font-black text-yellow-300 uppercase tracking-wide">
-                        WynMotion VIP / Premium
+                        {isPaidUser ? 'WynMotion VIP Studio' : 'WynMotion VIP / Pro / Premium'}
                       </span>
                     </div>
                     <p className="text-white font-black text-sm leading-snug">
-                      {t('Mở khóa toàn bộ AI & tính năng nâng cao', 'Unlock full AI & premium features')}
+                      {isPaidUser
+                        ? t('Nâng cấp VIP Studio sở hữu Ads Image VEO 3.1 & 4K', 'Upgrade to VIP Studio for VEO 3.1 & 4K')
+                        : t('Mở khóa toàn bộ AI & tính năng nâng cao', 'Unlock full AI & premium features')}
                     </p>
                     <p className="text-white/80 text-xs mt-1">
                       {t('Video 4K · Giọng 48kHz · Không giới hạn', '4K Video · 48kHz Voice · Unlimited')}
@@ -296,10 +336,10 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                     setShowUpgradeModal(true);
                     setUpgradeDefaultTab('subscriptions');
                   }}
-                  className="mt-3 w-full py-2.5 rounded-xl bg-white text-slate-950 text-sm font-black flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                  className="mt-3 w-full py-2.5 rounded-xl bg-white text-slate-950 text-sm font-black flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   <Crown className="h-4 w-4 text-amber-500 fill-amber-500" />
-                  {t('Nâng Cấp VIP / Premium', 'Upgrade VIP / Premium')}
+                  {isPaidUser ? t('Nâng Cấp VIP Studio', 'Upgrade VIP Studio') : t('Nâng Cấp Gói VIP / Pro', 'Upgrade VIP / Pro')}
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
@@ -424,8 +464,20 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
       {/* WynMotion Upgrade & Paywall Modal */}
       <WynMotionUpgradeModal
         isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          if (user) {
+            refreshSubscription();
+            fetchWynMotionTier();
+          }
+        }}
         defaultTab={upgradeDefaultTab}
+        onSuccess={() => {
+          if (user) {
+            refreshSubscription();
+            fetchWynMotionTier();
+          }
+        }}
       />
     </>
   );
