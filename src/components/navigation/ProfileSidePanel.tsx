@@ -16,6 +16,8 @@ import {
   Sparkles,
   LogIn,
   RotateCw,
+  FileText,
+  Flag,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -403,6 +405,89 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                 </div>
                 <span className="text-xs text-slate-400 font-bold">{isVietnamese ? 'Tiếng Việt' : 'English'}</span>
               </button>
+            </div>
+
+            {/* ── Legal & Policy (Apple Guideline 1.2 & 5.1.1) ── */}
+            <div
+              className={`rounded-2xl border overflow-hidden ${
+                isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              <p className="px-4 pt-3 pb-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {t('Pháp lý & Hỗ trợ', 'Legal & Support')}
+              </p>
+
+              {/* Privacy Policy */}
+              <a
+                href="https://www.wynai.pro/privacy/wynmotion"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const cap = (window as any).Capacitor;
+                  if (cap?.isNativePlatform?.()) {
+                    window.open('https://www.wynai.pro/privacy/wynmotion', '_system');
+                  } else {
+                    window.open('https://www.wynai.pro/privacy/wynmotion', '_blank');
+                  }
+                }}
+                className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                  isDark ? 'hover:bg-slate-800/60 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="h-4.5 w-4.5 text-emerald-400" />
+                  <span>{t('Chính sách bảo mật', 'Privacy Policy')}</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-500" />
+              </a>
+
+              {/* Terms of Use (EULA) */}
+              <a
+                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const cap = (window as any).Capacitor;
+                  if (cap?.isNativePlatform?.()) {
+                    window.open('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/', '_system');
+                  } else {
+                    window.open('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/', '_blank');
+                  }
+                }}
+                className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium border-t transition-colors cursor-pointer ${
+                  isDark
+                    ? 'border-slate-800 hover:bg-slate-800/60 text-slate-300'
+                    : 'border-slate-100 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="h-4.5 w-4.5 text-blue-400" />
+                  <span>{t('Điều khoản sử dụng (EULA)', 'Terms of Use (EULA)')}</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-500" />
+              </a>
+
+              {/* Report AI Content */}
+              <a
+                href="mailto:support@wynai.pro?subject=Report%20AI%20Content%20-%20WynMotion"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = 'mailto:support@wynai.pro?subject=Report%20AI%20Content%20-%20WynMotion';
+                }}
+                className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium border-t transition-colors cursor-pointer ${
+                  isDark
+                    ? 'border-slate-800 hover:bg-slate-800/60 text-slate-300'
+                    : 'border-slate-100 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Flag className="h-4.5 w-4.5 text-amber-400" />
+                  <span>{t('Báo cáo nội dung AI vi phạm', 'Report AI Content')}</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-500" />
+              </a>
             </div>
 
             {/* ── Account Actions ── */}

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>WynMotion AI</string>
+	<string>WynMotion</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -54,13 +54,13 @@
 		<true/>
 	</dict>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>WynMotion cần quyền lưu video hoạt họa vào Thư viện Ảnh.</string>
+	<string>WynMotion requires permission to save generated animated videos, artwork, and exported media to your Photo Library. / WynMotion cần quyền lưu video hoạt họa và hình ảnh đã xuất vào Thư viện Ảnh của bạn.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>WynMotion cần quyền truy cập ảnh để chọn tài nguyên minh họa.</string>
+	<string>WynMotion requires access to your photo library to select photos, product images, and illustration assets for animated video creation. / WynMotion cần quyền truy cập thư viện ảnh để bạn tải lên hình ảnh sản phẩm và tài nguyên làm video.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>WynMotion cần quyền sử dụng microphone để thu âm giọng đọc cho video.</string>
+	<string>WynMotion requires microphone access to record voiceovers and narrations for your animated video projects. / WynMotion cần quyền sử dụng microphone để thu âm giọng đọc cho video.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>WynMotion cần quyền camera để quay video và chụp ảnh minh họa.</string>
+	<string>WynMotion requires camera access to take photos of products or assets for your animated video projects. / WynMotion cần quyền camera để chụp ảnh sản phẩm hoặc tài nguyên đưa vào video.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
