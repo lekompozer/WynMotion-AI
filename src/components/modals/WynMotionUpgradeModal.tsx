@@ -166,6 +166,15 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
                 priceString: p.priceString,
                 pricePerMonthString: p.pricePerMonthString,
               };
+              // Ensure point packs always display exact intended pack price
+              if (id === 'wynmotion_credits_499k') {
+                info.priceString = isVndStorefront ? '499.000 ₫' : '$29.99';
+              } else if (id === 'wynmotion_credits_199k') {
+                info.priceString = isVndStorefront ? '199.000 ₫' : '$11.99';
+              } else if (id === 'wynmotion_credits_99k') {
+                info.priceString = isVndStorefront ? '99.000 ₫' : '$5.99';
+              }
+
               pricesMap[id] = info;
 
               // Map aliases to canonical keys if created differently on App Store Connect
@@ -231,6 +240,17 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
 
   // Helper to format price: iOS uses App Store StoreKit, Web uses selected currency (VND / USD)
   const getDisplayPrice = (productId: string, priceVndDisplay: string, priceUsdDisplay: string) => {
+    // 600 AI Points (wynmotion_credits_499k) is strictly 499.000 ₫ (VND) or $29.99 (USD)
+    if (productId === 'wynmotion_credits_499k') {
+      return isVndStorefront ? '499.000 ₫' : '$29.99';
+    }
+    if (productId === 'wynmotion_credits_199k') {
+      return isVndStorefront ? '199.000 ₫' : '$11.99';
+    }
+    if (productId === 'wynmotion_credits_99k') {
+      return isVndStorefront ? '99.000 ₫' : '$5.99';
+    }
+
     if (isIosPlatform && applePrices[productId]?.priceString) {
       return applePrices[productId].priceString;
     }
