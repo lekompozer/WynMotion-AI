@@ -240,6 +240,35 @@ export const AiVideoTab: React.FC = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeDefaultTab, setUpgradeDefaultTab] = useState<'subscriptions' | 'points'>('subscriptions');
+  const [upgradeDefaultTier, setUpgradeDefaultTier] = useState<'premium' | 'pro' | 'vip'>('pro');
+  const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro' | 'vip'>('free');
+
+  useEffect(() => {
+    const fetchUserTier = async () => {
+      if (!user) {
+        setUserTier('free');
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ai.wordai.pro';
+        const res = await fetch(`${apiUrl}/api/ai/motion/subscription/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.is_active && data?.tier) {
+            setUserTier(data.tier.toLowerCase());
+          } else {
+            setUserTier('free');
+          }
+        }
+      } catch {
+        setUserTier('free');
+      }
+    };
+    fetchUserTier();
+  }, [user, isUpgradeModalOpen]);
 
   // ── Auth Toast Notification (hiển thị khi chưa đăng nhập) ──
   const [authToast, setAuthToast] = useState<{ visible: boolean; message: string }>({
@@ -1026,6 +1055,35 @@ export const AiVideoTab: React.FC = () => {
 
     const tpl = params.template || {};
     const tplStyle = tpl.visual_style || 'product_ads_motion';
+
+    // ── Template Tier Authorization Check ──
+    const isAnimationAdsImageVip =
+      tpl.id?.startsWith('animation_ads_image') ||
+      tpl.badge?.includes('VIP') ||
+      tpl.title_en?.includes('VEO') ||
+      tpl.title_vi?.includes('VEO');
+
+    if (isAnimationAdsImageVip && userTier !== 'vip') {
+      showAuthToast(
+        isVietnamese
+          ? '👑 Template Animation Ads Image (VEO 3.1) độc quyền cho gói VIP Studio. Vui lòng nâng cấp!'
+          : '👑 Animation Ads Image (VEO 3.1) template is exclusive to VIP Studio plan. Please upgrade!'
+      );
+      setUpgradeDefaultTier('vip');
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
+    if (!['premium', 'pro', 'vip'].includes(userTier)) {
+      showAuthToast(
+        isVietnamese
+          ? '⭐ Tất cả Templates yêu cầu gói Premium trở lên. Vui lòng nâng cấp!'
+          : '⭐ All Templates require Premium plan or above. Please upgrade!'
+      );
+      setUpgradeDefaultTier('premium');
+      setIsUpgradeModalOpen(true);
+      return;
+    }
 
     // For interactive narrative styles, prefill settings and launch Studio directly at Step 2
     if (
@@ -3261,6 +3319,7 @@ export const AiVideoTab: React.FC = () => {
       <WynMotionUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
+        defaultTier={upgradeDefaultTier}
         defaultTab={upgradeDefaultTab}
       />
     </div>
