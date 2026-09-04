@@ -70,6 +70,7 @@ import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/typ
 import { CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
 import { SoundMusicLibraryModal } from '@/components/modals/SoundMusicLibraryModal';
 import { NewVoiceLanguageModal, GeneratedVoiceResult } from './modals/NewVoiceLanguageModal';
+import { AUDIO_STUDIO_LANGUAGES } from '@/components/tabs/AiVideoTab';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -247,14 +248,22 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   >(() => {
     const map: any = {};
     const defaultLang = project.language_code || 'vi';
+    const langMeta = AUDIO_STUDIO_LANGUAGES.find(
+      (l) => l.code === defaultLang || l.code.toLowerCase() === defaultLang.toLowerCase() || (defaultLang === 'en' && l.code === 'en-US')
+    );
+    const defaultVoiceName =
+      (project as any).voice_name ||
+      (project as any).voice ||
+      (defaultLang === 'vi' ? 'Phạm Tuyên' : defaultLang.startsWith('en') ? 'Bella' : defaultLang === 'ja' ? 'Alpha' : defaultLang === 'zh' ? 'Xiaobei' : defaultLang === 'kr' || defaultLang === 'ko' ? 'Sarah' : 'AI Voice');
+
     if (project.audio_url) {
       map[defaultLang] = {
         audio_url: project.audio_url,
         duration_sec: project.duration_sec || 30,
         language_code: defaultLang,
-        voice_name: 'Phạm Tuyên',
-        language_name: defaultLang === 'vi' ? 'Tiếng Việt' : 'English (US)',
-        flag: defaultLang === 'vi' ? '🇻🇳' : '🇺🇸',
+        voice_name: defaultVoiceName,
+        language_name: langMeta?.name || (defaultLang === 'vi' ? 'Tiếng Việt' : defaultLang.toUpperCase()),
+        flag: langMeta?.flag || (defaultLang === 'vi' ? '🇻🇳' : '🌐'),
       };
     }
     if ((project as any).audio_url_en && defaultLang !== 'en-US' && defaultLang !== 'en') {
@@ -262,7 +271,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         audio_url: (project as any).audio_url_en,
         duration_sec: (project as any).duration_sec_en || project.duration_sec || 30,
         language_code: 'en-US',
-        voice_name: 'Bella',
+        voice_name: (project as any).voice_name_en || 'Bella',
         language_name: 'English (US)',
         flag: '🇺🇸',
       };
@@ -1549,31 +1558,46 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                     : 'bg-gradient-to-br from-cyan-50/70 to-blue-50/70 border-cyan-300 shadow-md'
                 }`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
-                      <Languages className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-black truncate text-cyan-400">
-                        {t('Giọng Đọc AI Đa Ngôn Ngữ', 'AI Narration Voiceover')}
-                      </div>
-                      <div className={`text-[11px] truncate flex items-center gap-1 mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                        <span>{multilingualAudios[activeAudioLang]?.flag || '🌐'}</span>
-                        <span className="font-bold">{multilingualAudios[activeAudioLang]?.language_name || activeAudioLang.toUpperCase()}</span>
-                        {multilingualAudios[activeAudioLang]?.voice_name && (
-                          <span className="text-[10px] text-slate-400 font-normal">({multilingualAudios[activeAudioLang].voice_name})</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                {(() => {
+                  const activeTrack = multilingualAudios[activeAudioLang];
+                  const langMeta = AUDIO_STUDIO_LANGUAGES.find(
+                    (l) => l.code === activeAudioLang || l.code.toLowerCase() === activeAudioLang.toLowerCase() || (activeAudioLang === 'en' && l.code === 'en-US')
+                  );
+                  const trackFlag = activeTrack?.flag || langMeta?.flag || (activeAudioLang === 'vi' ? '🇻🇳' : '🌐');
+                  const trackLangName = activeTrack?.language_name || langMeta?.name || (activeAudioLang === 'vi' ? 'Tiếng Việt' : activeAudioLang.toUpperCase());
+                  const rawVoice = activeTrack?.voice_name || (project.language_code === activeAudioLang ? (project as any).voice_name : undefined);
+                  const trackVoiceName = rawVoice
+                    ? (rawVoice.includes('(') ? rawVoice.split('(')[0].trim() : rawVoice)
+                    : (activeAudioLang === 'vi' ? 'Phạm Tuyên' : activeAudioLang.startsWith('en') ? 'Bella' : activeAudioLang === 'ja' ? 'Alpha' : activeAudioLang === 'zh' ? 'Xiaobei' : activeAudioLang === 'kr' || activeAudioLang === 'ko' ? 'Sarah' : 'AI Voice');
 
-                  {audioSrc && (
-                    <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
-                      {Math.round(totalDurationSec)}s
-                    </span>
-                  )}
-                </div>
+                  return (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
+                          <Languages className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-black truncate text-cyan-400">
+                            {t('Giọng Đọc AI Đa Ngôn Ngữ', 'AI Narration Voiceover')}
+                          </div>
+                          <div className={`text-[11px] truncate flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                            <span>{trackFlag}</span>
+                            <span className="font-bold">{trackLangName}</span>
+                            {trackVoiceName && (
+                              <span className="text-[10px] text-slate-400 font-normal">({trackVoiceName})</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {audioSrc && (
+                        <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
+                          {Math.round(totalDurationSec)}s
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Multilingual Selector Dropdown Bar */}
                 <div className="p-2 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-2">
@@ -1604,7 +1628,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                   className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                  <span>{t('🎙️ Tạo / Đổi Giọng Đọc Ngôn Ngữ Khác', '🎙️ Create Voice in Other Language')}</span>
+                  <span>{t('Tạo / Đổi Giọng Đọc Ngôn Ngữ Khác', 'Create Voice in Other Language')}</span>
                 </button>
 
                 {/* Touch Actions: Upload Custom or Delete Audio */}
@@ -1670,24 +1694,24 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                   <button
                     type="button"
                     onClick={() => setIsMusicLibraryOpen(true)}
-                    className="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+                    className="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all whitespace-nowrap min-w-0"
                   >
-                    <Music className="w-3.5 h-3.5" />
-                    <span>{bgmAudioUrl ? t('Đổi Nhạc Nền', 'Change BGM') : t('🎵 Chọn Từ Library', '🎵 Pick from Library')}</span>
+                    <Music className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{bgmAudioUrl ? t('Đổi Nhạc Nền', 'Change BGM') : t('Chọn từ Library', 'Pick from Library')}</span>
                   </button>
 
                   <button
                     type="button"
                     disabled={!bgmAudioUrl}
                     onClick={handleRemoveBgm}
-                    className={`py-2.5 px-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
+                    className={`py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 whitespace-nowrap min-w-0 ${
                       isDark
                         ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
                         : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                     }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-purple-400" />
-                    <span>{t('Xoá BGM', 'Remove BGM')}</span>
+                    <Trash2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span className="truncate">{t('Xoá BGM', 'Remove BGM')}</span>
                   </button>
                 </div>
               </div>
@@ -1741,7 +1765,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
               >
                 {isSyncingTimeline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-slate-950" />}
-                <span>{t('⚡ Đồng Bộ Toàn Bộ Phân Cảnh Theo Audio (Sync)', '⚡ Sync All Scenes to Audio')}</span>
+                <span>{t('Đồng Bộ Toàn Bộ Phân Cảnh Theo Audio (Sync)', 'Sync All Scenes to Audio')}</span>
               </button>
             </div>
           )}

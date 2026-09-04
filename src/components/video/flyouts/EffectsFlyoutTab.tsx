@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { X, Sparkles, Search, Zap, RefreshCw } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
 import MANIFEST from '../../../../packages/core-effects/manifest.json';
 import { FULL_CORE_FILTERS, EFFECT_CATEGORIES } from '../../../../packages/core-effects/effectShaders';
 import { EffectCardThumbnail } from './EffectCardThumbnail';
@@ -15,13 +16,13 @@ export interface EffectsFlyoutTabProps {
 }
 
 export const CATEGORIES = [
-  { id: 'all', name: 'Tất cả' },
-  { id: 'glitch', name: 'Glitch & Cyber' },
-  { id: 'motion_blur', name: 'Zoom & Motion Blur' },
-  { id: 'light_cinematic', name: 'Light & Cinematic' },
-  { id: 'wipe_slice', name: 'Wipe & Slices' },
-  { id: '3d_morph', name: '3D & Morphing' },
-  { id: 'creative', name: 'Sáng tạo' },
+  { id: 'all', nameVi: 'Tất cả', nameEn: 'All' },
+  { id: 'glitch', nameVi: 'Glitch & Cyber', nameEn: 'Glitch & Cyber' },
+  { id: 'motion_blur', nameVi: 'Zoom & Chuyển động', nameEn: 'Zoom & Motion Blur' },
+  { id: 'light_cinematic', nameVi: 'Ánh sáng & Điện ảnh', nameEn: 'Light & Cinematic' },
+  { id: 'wipe_slice', nameVi: 'Cắt quét & Slices', nameEn: 'Wipe & Slices' },
+  { id: '3d_morph', nameVi: '3D & Biến hình', nameEn: '3D & Morphing' },
+  { id: 'creative', nameVi: 'Sáng tạo', nameEn: 'Creative' },
 ];
 
 export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
@@ -31,6 +32,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
   selectedSceneIndex = 0,
   currentShaderName,
 }) => {
+  const { t, isVietnamese } = useApp();
   const [activeSubTab, setActiveSubTab] = useState<'transitions' | 'effects'>('transitions');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -72,7 +74,9 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-black text-white">FX & Transitions (125 GLSL + 40 Filters)</h3>
-            <p className="text-[11px] text-slate-400">Kho hiệu ứng chuyển cảnh và bộ lọc video</p>
+            <p className="text-[11px] text-slate-400">
+              {t('Kho hiệu ứng chuyển cảnh và bộ lọc video', 'Transition effects & video filters library')}
+            </p>
           </div>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#1E2333]">
@@ -108,7 +112,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           }`}
         >
           <Zap className="w-3.5 h-3.5" />
-          Effects ({FULL_CORE_FILTERS.length || 40})
+          {t('Hiệu ứng', 'Effects')} ({FULL_CORE_FILTERS.length || 40})
         </button>
       </div>
 
@@ -122,7 +126,10 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
-              placeholder="Tìm kiếm 125 shader (Glitch, Zoom, Burn, Wipe, Swirl...)"
+              placeholder={t(
+                'Tìm kiếm 125 shader (Glitch, Zoom, Burn, Wipe, Swirl...)',
+                'Search 125 shaders (Glitch, Zoom, Burn, Wipe, Swirl...)'
+              )}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#141724] border border-[#252B3E] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
@@ -141,7 +148,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                     : 'bg-[#181B28] text-slate-400 hover:text-white border border-[#252B3E]'
                 }`}
               >
-                {cat.name}
+                {isVietnamese ? cat.nameVi : cat.nameEn}
               </button>
             ))}
           </div>
@@ -183,7 +190,10 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
-              placeholder="Tìm kiếm 40+ hiệu ứng (Glitch, CRT, Godrays, Shockwave, Bloom...)"
+              placeholder={t(
+                'Tìm kiếm 40+ hiệu ứng (Glitch, CRT, Godrays, Shockwave, Bloom...)',
+                'Search 40+ effects (Glitch, CRT, Godrays, Shockwave, Bloom...)'
+              )}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#141724] border border-[#252B3E] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-pink-500"
@@ -192,7 +202,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
 
           {/* Effect Category Filter Pills */}
           <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-700">
-            {EFFECT_CATEGORIES.map((cat) => (
+            {EFFECT_CATEGORIES.map((cat: any) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedEffectCategory(cat.id)}
@@ -202,7 +212,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
                     : 'bg-[#181B28] text-slate-400 hover:text-white border border-[#252B3E]'
                 }`}
               >
-                {cat.name}
+                {(isVietnamese ? cat.nameVi : cat.nameEn) || cat.name}
               </button>
             ))}
           </div>

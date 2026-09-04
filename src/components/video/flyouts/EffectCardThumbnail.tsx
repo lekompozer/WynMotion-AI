@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Plus, Check } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
 
 interface EffectCardThumbnailProps {
   id: string;
@@ -28,11 +29,15 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
   onPreview,
   onApply,
 }) => {
+  const { t } = useApp();
   const [isHovered, setIsHovered] = useState(false);
   const [progress, setProgress] = useState(0);
   const [appliedAnim, setAppliedAnim] = useState(false);
   const animRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(Date.now());
+
+  // Clean category (strip PIXIJS / Pixi)
+  const displayCategory = category ? category.replace(/PixiJS\s*/gi, '').replace(/Pixi\s*/gi, '').trim() : '';
 
   // Loop animation progress bar indicator (1.2s cycle)
   useEffect(() => {
@@ -96,12 +101,12 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
 
         {/* Top Badges */}
         <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between pointer-events-none">
-          <span className="text-[9px] uppercase font-black tracking-wider text-purple-300 bg-black/75 backdrop-blur-xs px-1.5 py-0.5 rounded border border-purple-800/50 truncate max-w-[90px]">
-            {category}
+          <span className="text-[9px] uppercase font-black tracking-wider text-purple-300 bg-black/75 backdrop-blur-xs px-1.5 py-0.5 rounded border border-purple-800/50 truncate max-w-[110px]">
+            {displayCategory || category}
           </span>
           {isSelected && (
             <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9px] font-black flex items-center gap-0.5 shadow-sm">
-              🦊 Đang xem
+              🦊 {t('Đang xem', 'Active')}
             </span>
           )}
         </div>
@@ -118,7 +123,7 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
             title="Xem chi tiết trên khung con cáo lớn"
           >
             <Eye className="w-3 h-3" />
-            <span>Xem thử</span>
+            <span>{t('Xem thử', 'Preview')}</span>
           </button>
 
           <button
@@ -133,12 +138,12 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
             {appliedAnim ? (
               <>
                 <Check className="w-3 h-3" />
-                <span>Đã áp dụng!</span>
+                <span>{t('Đã áp dụng!', 'Applied!')}</span>
               </>
             ) : (
               <>
                 <Plus className="w-3 h-3" />
-                <span>Áp dụng</span>
+                <span>{t('Áp dụng', 'Apply')}</span>
               </>
             )}
           </button>
@@ -160,7 +165,6 @@ export const EffectCardThumbnail: React.FC<EffectCardThumbnailProps> = ({
         </div>
         <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
           <span>{duration}s</span>
-          <span className="text-purple-400 font-mono font-bold text-[9px]">CapCut Pro</span>
         </div>
       </div>
     </div>
