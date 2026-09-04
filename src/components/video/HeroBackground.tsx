@@ -29,48 +29,48 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
     <div className={`relative w-full overflow-hidden min-h-[410px] flex flex-col justify-between ${className}`}>
       {/* Dynamic CSS for Orbiting Warm & Cool Liquid Glowing Orbs */}
       <style jsx>{`
-        /* Warm Glowing Orb (Coral Pink -> Sunset Orange -> Amber -> Magenta) Orbiting Motion */
-        @keyframes warmOrbFloat {
+        /* Warm Glowing Orb (Coral Pink -> Sunset Orange -> Amber -> Magenta) Orbiting Motion on RIGHT */
+        @keyframes warmOrbFloatRight {
           0% {
             transform: translate(0px, 0px) scale(1) rotate(0deg);
           }
           25% {
-            transform: translate(50px, -20px) scale(1.15) rotate(90deg);
+            transform: translate(-50px, -20px) scale(1.15) rotate(-90deg);
           }
           50% {
-            transform: translate(90px, 35px) scale(1.22) rotate(180deg);
+            transform: translate(-90px, 35px) scale(1.22) rotate(-180deg);
           }
           75% {
-            transform: translate(25px, 50px) scale(0.95) rotate(270deg);
+            transform: translate(-25px, 50px) scale(0.95) rotate(-270deg);
           }
           100% {
-            transform: translate(0px, 0px) scale(1) rotate(360deg);
+            transform: translate(0px, 0px) scale(1) rotate(-360deg);
           }
         }
 
-        /* Cool Liquid Blob (Sky Blue -> Cyan -> Royal Indigo -> Deep Violet) at Bottom-Right */
-        @keyframes coolLiquidDrift {
+        /* Cool Liquid Blob (Sky Blue -> Cyan -> Royal Indigo -> Deep Violet) at Bottom-LEFT */
+        @keyframes coolLiquidDriftLeft {
           0% {
             transform: translate(0px, 0px) scale(1);
           }
           33% {
-            transform: translate(-45px, -30px) scale(1.18);
+            transform: translate(45px, -30px) scale(1.18);
           }
           66% {
-            transform: translate(20px, -45px) scale(0.92);
+            transform: translate(-20px, -45px) scale(0.92);
           }
           100% {
             transform: translate(0px, 0px) scale(1);
           }
         }
 
-        /* Aqua Cyan Ambient Flow */
-        @keyframes cyanFlow {
+        /* Aqua Cyan Ambient Flow on LEFT */
+        @keyframes cyanFlowLeft {
           0% {
             transform: translate(0px, 0px) scale(1);
           }
           50% {
-            transform: translate(-35px, 30px) scale(1.12);
+            transform: translate(35px, 30px) scale(1.12);
           }
           100% {
             transform: translate(0px, 0px) scale(1);
@@ -113,45 +113,45 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           }
         }
 
-        .warm-orb {
-          animation: warmOrbFloat 11s ease-in-out infinite, morphWarmColors 12s ease-in-out infinite;
+        .warm-orb-right {
+          animation: warmOrbFloatRight 11s ease-in-out infinite, morphWarmColors 12s ease-in-out infinite;
         }
 
-        .cool-liquid-bottom-right {
-          animation: coolLiquidDrift 10s ease-in-out infinite, morphCoolColors 13s ease-in-out infinite;
+        .cool-liquid-bottom-left {
+          animation: coolLiquidDriftLeft 10s ease-in-out infinite, morphCoolColors 13s ease-in-out infinite;
         }
 
-        .cyan-orb {
-          animation: cyanFlow 9s ease-in-out infinite;
+        .cyan-orb-left {
+          animation: cyanFlowLeft 9s ease-in-out infinite;
         }
       `}</style>
 
-      {/* 1. Deep Midnight Base with Vivid Warm Orbiting Orb + Cool Bottom-Right Liquid */}
+      {/* 1. Deep Midnight Base with Vivid Warm Orbiting Orb on RIGHT + Cool Bottom-LEFT Liquid */}
       <div className="absolute inset-0 z-0 bg-[#07132B] overflow-hidden pointer-events-none">
         {/* Ambient base gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A2552] via-[#091D42] to-[#061226]" />
 
-        {/* VIVID WARM ORB (Center/Top area - coral pink to orange/amber orbiting fluidly) */}
+        {/* VIVID WARM ORB (Right area - coral pink to orange/amber orbiting fluidly) */}
         <div
-          className="warm-orb absolute top-8 left-10 w-80 h-80 rounded-full blur-[65px] opacity-95"
+          className="warm-orb-right absolute top-8 right-10 w-80 h-80 rounded-full blur-[65px] opacity-95"
           style={{ willChange: 'transform, background-color' }}
         />
 
-        {/* COOL LIQUID BLOB (Bottom-Right quadrant - Sky Blue to Indigo to Violet) */}
+        {/* COOL LIQUID BLOB (Bottom-Left quadrant - Sky Blue to Indigo to Violet) */}
         <div
-          className="cool-liquid-bottom-right absolute bottom-12 right-0 w-88 h-88 rounded-full blur-[70px] opacity-95"
+          className="cool-liquid-bottom-left absolute bottom-12 left-0 w-88 h-88 rounded-full blur-[70px] opacity-95"
           style={{ willChange: 'transform, background-color' }}
         />
 
-        {/* AMBIENT ELECTRIC CYAN (Top-Right / Center Accent) */}
+        {/* AMBIENT ELECTRIC CYAN (Top-Left Accent) */}
         <div
-          className="cyan-orb absolute top-4 right-12 w-72 h-72 rounded-full bg-cyan-400 blur-[75px] opacity-80"
+          className="cyan-orb-left absolute top-4 left-12 w-72 h-72 rounded-full bg-cyan-400 blur-[75px] opacity-80"
           style={{ willChange: 'transform' }}
         />
 
-        {/* DEEP SAPPHIRE BASE (Top-Left corner) */}
+        {/* DEEP SAPPHIRE BASE (Top-Right corner) */}
         <div
-          className="absolute -top-12 -left-12 w-80 h-80 rounded-full bg-blue-600/70 blur-[85px] opacity-75"
+          className="absolute -top-12 -right-12 w-80 h-80 rounded-full bg-blue-600/70 blur-[85px] opacity-75"
         />
       </div>
 
