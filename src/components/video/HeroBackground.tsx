@@ -23,7 +23,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   userAvatarUrl,
   userDisplayName,
 }) => {
-  const { isDark } = useApp();
+  const { isDark, isVietnamese } = useApp();
 
   return (
     <div className={`relative w-full overflow-hidden min-h-[410px] flex flex-col justify-between ${className}`}>
@@ -172,11 +172,11 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           {/* Left: Upgrade Pill with Bright Crisp White Background */}
           <button
             onClick={onOpenUpgrade}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-slate-950 font-bold text-xs shadow-lg shadow-black/20 active:scale-95 transition-all border border-white/90"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-slate-950 font-bold text-xs shadow-lg shadow-black/20 active:scale-95 hover:bg-slate-50 transition-all border border-white/90 cursor-pointer"
           >
             <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
             <span className="truncate">
-              Start Premium for only 129,000 đ
+              {isVietnamese ? 'Nâng cấp Premium chỉ 129.000 đ' : 'Start Premium for only $7.99'}
             </span>
           </button>
 
