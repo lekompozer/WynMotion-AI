@@ -32,7 +32,7 @@ export interface CapCutCategoryConfig {
 
 export const CAPCUT_CATEGORIES: CapCutCategoryConfig[] = [
   { id: 'all', nameVi: 'Tất cả mẫu', nameEn: 'All', styles: [], icon: '🔥' },
-  { id: 'business_short_video', nameVi: 'Quảng Cáo Doanh Nghiệp', nameEn: 'Business Short Video', styles: ['animation_ads_image_veo', 'ads_strobe_teaser', 'ads_cinematic_showcase'], icon: '🛍️' },
+  { id: 'business_short_video', nameVi: 'Quảng Cáo Doanh Nghiệp', nameEn: 'Business Short Video', styles: ['business_short_video', 'business_ads', 'animation_ads_image_veo', 'ads_strobe_teaser', 'ads_cinematic_showcase'], icon: '🛍️' },
   { id: 'video_news_60s', nameVi: 'Bản Tin Nóng 60s', nameEn: '60s Video News', styles: ['video_news_60s'], icon: '📰' },
   { id: 'illustrative', nameVi: 'Minh Họa & Vẽ Tay', nameEn: 'Illustrative', styles: ['whiteboard_stream_hand', 'handdrawn_fast_doodle', 'character_animation'], icon: '🎨' },
   { id: 'motion_explainer', nameVi: 'Chuyển Động & Diễn Giải', nameEn: 'Motion Explainer', styles: ['dialogue_scene', 'science_explainer', 'apple_modern_motion'], icon: '💬' },
@@ -106,7 +106,44 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
     let isMounted = true;
     wynmotionService.getTemplates().then((res) => {
       if (isMounted && res && res.success && res.templates && res.templates.length > 0) {
-        const mapped: CapCutGalleryItem[] = res.templates.map((t) => ({
+        // Exclude Universal Images Product Video as requested
+        const validTemplates = res.templates.filter(
+          (t) => t.template_id !== 'product_ads_motion' && t.visual_style !== 'product_ads_motion'
+        );
+
+        // Ensure Apple Modern Motion has its designated template
+        const hasAppleModern = validTemplates.some(
+          (t) => t.visual_style === 'apple_modern_motion' || t.template_id?.includes('apple_modern')
+        );
+        if (!hasAppleModern) {
+          validTemplates.push({
+            template_id: 'apple_modern_motion_saas',
+            visual_style: 'apple_modern_motion',
+            category: 'Giao diện Apple',
+            title_vi: 'Apple UI Glassmorphism & SaaS Metrics',
+            title_en: 'Apple UI Glassmorphism & SaaS Metrics',
+            desc_vi: 'Giao diện thẻ kính mờ bán trong suốt, hiệu ứng Dynamic Typewriter, biểu đồ tương tác và huy hiệu glowing chuẩn Apple.',
+            desc_en: 'Glassmorphic frosted cards, dynamic typewriter simulation, interactive charts, and glowing particle badges in Apple design aesthetics.',
+            cover_url: '/assets/motion-styles/apple_motion.jpg',
+            cover_ios_url: '/assets/motion-styles/apple_motion.jpg',
+            video_demo_url: 'https://static.wordai.pro/ai-generated-images/wynmotion/templates/WynMotion_dialogue_EN_demo.mp4',
+            local_video_path: '/templates/animation_ads_image_demo.mp4',
+            duration_sec: 15.0,
+            max_images: 1,
+            points_cost: 20,
+            is_vip: false,
+            badge: '✨ Apple UI',
+            usage_count: '48.9K',
+            aspect_class: 'aspect-[9/16]',
+            order: 14,
+            default_params: {
+              theme: 'dark',
+              card_style: 'glass',
+            },
+          });
+        }
+
+        const mapped: CapCutGalleryItem[] = validTemplates.map((t) => ({
           id: t.template_id,
           title: t.title_vi || t.title_en || t.template_id,
           titleVi: t.title_vi || t.title_en || t.template_id,
@@ -122,7 +159,7 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
           rawTemplate: t,
         }));
         setTemplatesList(mapped);
-        preloadAllTemplateVideos(res.templates);
+        preloadAllTemplateVideos(validTemplates);
       }
     }).catch(() => {});
     return () => {

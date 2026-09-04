@@ -1589,7 +1589,7 @@ export const AiVideoTab: React.FC = () => {
               <div className="grid grid-cols-1 gap-2.5">
                 <button
                   onClick={() => {
-                    setSelectedGalleryStyle('business_ads');
+                    setSelectedGalleryStyle('business_short_video');
                     setIsCapCutGalleryOpen(true);
                   }}
                   className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${

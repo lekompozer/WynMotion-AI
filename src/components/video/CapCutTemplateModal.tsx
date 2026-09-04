@@ -174,7 +174,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   // 3-step intuitive flow: preview -> fill_assets (Step 1) -> fill_texts (Step 2)
   const [step, setStep] = useState<'preview' | 'fill_assets' | 'fill_texts'>('preview');
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true); // Default to muted so iOS WebKit never blocks autoplay!
+  const [isMuted, setIsMuted] = useState(false); // Unmuted by default as user clicked to preview!
   const [isVideoReady, setIsVideoReady] = useState(false);
 
   // Form Fields
@@ -194,11 +194,42 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  const handleStartPlay = (unmute = true) => {
+    if (!videoRef.current) return;
+    if (unmute) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+    }
+    const p = videoRef.current.play();
+    if (p !== undefined) {
+      p.then(() => {
+        setIsPlaying(true);
+        setIsVideoReady(true);
+      }).catch((err) => {
+        console.warn('Unmuted autoplay blocked by policy, falling back to muted play:', err);
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          setIsMuted(true);
+          videoRef.current
+            .play()
+            .then(() => {
+              setIsPlaying(true);
+              setIsVideoReady(true);
+            })
+            .catch(() => {
+              setIsPlaying(false);
+            });
+        }
+      });
+    }
+  };
+
   useEffect(() => {
     if (template) {
       setStep('preview');
       setIsPlaying(true);
       setIsVideoReady(false);
+      setIsMuted(false);
       setAspectRatio(defaultAspectRatio);
       setPrompt(title);
       setHookText(defaultHook);
@@ -344,10 +375,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     preload="auto"
                     muted={isMuted}
                     onLoadedData={() => {
-                      setIsVideoReady(true);
-                      videoRef.current?.play().catch(() => {
-                        setIsPlaying(false);
-                      });
+                      handleStartPlay(!isMuted);
                     }}
                     onPlaying={() => {
                       setIsPlaying(true);
