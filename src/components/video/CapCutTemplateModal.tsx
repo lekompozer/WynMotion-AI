@@ -140,6 +140,8 @@ export interface CapCutTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultAspectRatio?: '9:16' | '16:9';
+  userTier?: 'free' | 'premium' | 'pro' | 'vip';
+  onRequireUpgrade?: (tier?: 'premium' | 'vip') => void;
   onApply: (params: {
     template: any;
     prompt: string;
@@ -160,6 +162,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   isOpen,
   onClose,
   defaultAspectRatio = '9:16',
+  userTier = 'free',
+  onRequireUpgrade,
   onApply,
 }) => {
   const { isVietnamese } = useApp();
@@ -285,6 +289,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   };
 
   const handleLaunchCreation = () => {
+    if (!['premium', 'pro', 'vip'].includes(userTier)) {
+      onRequireUpgrade?.('premium');
+      return;
+    }
     const finalPrompt = prompt.trim() || title;
     onApply({
       template,
@@ -429,6 +437,23 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
               {/* Big Use Template Button (App Signature Cyan-Blue Gradient) */}
               <button
                 onClick={() => {
+                  // ── Template Tier Authorization Check: Require Paid Tier for ALL templates ──
+                  const isAnimationAdsImageVip =
+                    template?.id?.startsWith('animation_ads_image') ||
+                    template?.badge?.includes('VIP') ||
+                    template?.title_en?.includes('VEO') ||
+                    template?.title_vi?.includes('VEO');
+
+                  if (isAnimationAdsImageVip && userTier !== 'vip') {
+                    onRequireUpgrade?.('vip');
+                    return;
+                  }
+
+                  if (!['premium', 'pro', 'vip'].includes(userTier)) {
+                    onRequireUpgrade?.('premium');
+                    return;
+                  }
+
                   const isNarrativeStyle =
                     template?.visual_style === 'science_explainer' ||
                     template?.visual_style === 'video_news_60s' ||

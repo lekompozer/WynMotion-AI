@@ -31,12 +31,15 @@ export interface CapCutCategoryConfig {
 
 export const CAPCUT_CATEGORIES: CapCutCategoryConfig[] = [
   { id: 'all', nameVi: 'Tất cả mẫu', nameEn: 'All', styles: [], icon: '🔥' },
+  { id: 'business_short_video', nameVi: 'Quảng Cáo Doanh Nghiệp', nameEn: 'Business Short Video', styles: ['animation_ads_image_veo', 'ads_strobe_teaser', 'ads_cinematic_showcase', 'product_ads_motion'], icon: '🛍️' },
+  { id: 'video_news_60s', nameVi: 'Bản Tin Nóng 60s', nameEn: '60s Video News', styles: ['video_news_60s'], icon: '📰' },
+  { id: 'illustrative', nameVi: 'Minh Họa & Vẽ Tay', nameEn: 'Illustrative', styles: ['whiteboard_stream_hand', 'handdrawn_fast_doodle', 'character_animation'], icon: '🎨' },
+  { id: 'motion_explainer', nameVi: 'Chuyển Động & Diễn Giải', nameEn: 'Motion Explainer', styles: ['dialogue_scene', 'science_explainer', 'apple_modern_motion'], icon: '💬' },
   { id: 'animation_ads_image_veo', nameVi: 'Animation Ads (VEO 3.1)', nameEn: 'Animation Ads (VEO 3.1)', styles: ['animation_ads_image_veo'], icon: '👑' },
   { id: 'ads_strobe_teaser', nameVi: 'Strobe Teaser', nameEn: 'Strobe Teaser', styles: ['ads_strobe_teaser'], icon: '⚡' },
   { id: 'ads_cinematic_showcase', nameVi: 'Menu Thực Đơn (F&B)', nameEn: 'Cinematic Menu (F&B)', styles: ['ads_cinematic_showcase'], icon: '🍔' },
   { id: 'product_ads_motion', nameVi: 'AI Motion Director', nameEn: 'AI Motion Director', styles: ['product_ads_motion'], icon: '🛍️' },
   { id: 'science_explainer', nameVi: 'Khoa Học STEM', nameEn: 'Science STEM', styles: ['science_explainer'], icon: '🔬' },
-  { id: 'video_news_60s', nameVi: 'Bản Tin 60s', nameEn: '60s Video News', styles: ['video_news_60s'], icon: '📰' },
   { id: 'whiteboard_stream_hand', nameVi: 'Vẽ Bảng Trắng', nameEn: 'Whiteboard', styles: ['whiteboard_stream_hand'], icon: '✏️' },
   { id: 'handdrawn_fast_doodle', nameVi: 'Phác Chì & Màu Nước', nameEn: 'Doodle Quick', styles: ['handdrawn_fast_doodle'], icon: '🎨' },
   { id: 'dialogue_scene', nameVi: 'Hội Thoại 2 Người', nameEn: 'Dialogue Scene', styles: ['dialogue_scene'], icon: '💬' },
