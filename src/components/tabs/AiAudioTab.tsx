@@ -257,13 +257,29 @@ export const AiAudioTab: React.FC = () => {
   const selectedLangObj = AUDIO_STUDIO_LANGUAGES.find((l) => l.code === selectedLang);
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 pt-2 pb-24 space-y-4">
+    <div
+      className={`relative w-full max-w-4xl mx-auto px-2 sm:px-4 pt-2 pb-24 space-y-4 rounded-3xl overflow-hidden transition-colors ${
+        isDark ? 'text-white' : 'text-slate-900'
+      }`}
+    >
+      {/* ─────────────────────────────────────────────────────────────
+          ATMOSPHERIC AMBIENT GLOW (Matching Web AIAudioStudioModal)
+          ───────────────────────────────────────────────────────────── */}
+      {isDark && (
+        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden rounded-3xl">
+          <div className="absolute inset-0 bg-[#09111f]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(88,28,135,0.24),transparent_35%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.20),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
+        </div>
+      )}
+
       {/* ─────────────────────────────────────────────────────────────
           1. TOP STUDIO MODE TOGGLE (Voiceover vs Music Generator)
           ───────────────────────────────────────────────────────────── */}
       <div
-        className={`p-1 rounded-2xl border flex items-center gap-1 backdrop-blur-xl ${
-          isDark ? 'bg-[#0E111A]/90 border-slate-800/80 shadow-md' : 'bg-white/90 border-slate-200 shadow-sm'
+        className={`p-1.5 rounded-2xl border flex items-center gap-1.5 backdrop-blur-xl ${
+          isDark
+            ? 'border-white/10 bg-white/5 shadow-md shadow-black/40'
+            : 'bg-slate-100/90 border-slate-200 shadow-sm'
         }`}
       >
         <button
@@ -272,17 +288,17 @@ export const AiAudioTab: React.FC = () => {
             setStudioTab('voice');
             setCurrentStep(1);
           }}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-95 ${
             studioTab === 'voice'
               ? isDark
-                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 scale-[1.02]'
-                : 'bg-black text-white shadow-sm scale-[1.02]'
+                ? 'bg-white/15 text-white shadow-sm border border-white/15'
+                : 'bg-white text-slate-900 shadow-sm border border-slate-200'
               : isDark
-              ? 'text-slate-400 hover:text-white'
+              ? 'text-white/60 hover:text-white'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Mic className="w-3.5 h-3.5" />
+          <Mic className={`w-3.5 h-3.5 ${studioTab === 'voice' ? 'text-fuchsia-400' : ''}`} />
           <span>{t('Lồng Tiếng AI (Voiceover)', 'AI Voiceover')}</span>
         </button>
 
@@ -292,17 +308,17 @@ export const AiAudioTab: React.FC = () => {
             setStudioTab('music');
             setCurrentStep(1);
           }}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-95 ${
             studioTab === 'music'
               ? isDark
-                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25 scale-[1.02]'
-                : 'bg-black text-white shadow-sm scale-[1.02]'
+                ? 'bg-white/15 text-white shadow-sm border border-white/15'
+                : 'bg-white text-slate-900 shadow-sm border border-slate-200'
               : isDark
-              ? 'text-slate-400 hover:text-white'
+              ? 'text-white/60 hover:text-white'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Music2 className="w-3.5 h-3.5" />
+          <Music2 className={`w-3.5 h-3.5 ${studioTab === 'music' ? 'text-fuchsia-400' : ''}`} />
           <span>{t('Tạo Nhạc Nền (BGM Generator)', 'BGM Music')}</span>
         </button>
       </div>
@@ -314,30 +330,36 @@ export const AiAudioTab: React.FC = () => {
         <button
           type="button"
           onClick={() => setCurrentStep(1)}
-          className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all ${
+          className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all backdrop-blur-xl ${
             currentStep === 1
               ? isDark
-                ? 'bg-[#151928] border-rose-500/80 shadow-md shadow-rose-500/10'
-                : 'bg-white border-black shadow-sm'
+                ? 'border-fuchsia-500/50 bg-fuchsia-500/10 shadow-[0_0_20px_rgba(217,70,239,0.15)] ring-1 ring-fuchsia-500/30'
+                : 'bg-white border-fuchsia-500 shadow-sm'
               : isDark
-              ? 'bg-[#0E111A] border-slate-800 opacity-60 hover:opacity-100'
+              ? 'border-white/10 bg-white/[0.03] opacity-60 hover:opacity-100'
               : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100'
           }`}
         >
           <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
               currentStep === 1
-                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-sm'
-                : 'bg-slate-800 text-slate-400'
+                ? 'bg-gradient-to-tr from-fuchsia-600 to-purple-600 text-white shadow-sm shadow-fuchsia-500/30'
+                : isDark
+                ? 'bg-white/10 text-white/50'
+                : 'bg-slate-200 text-slate-600'
             }`}
           >
             1
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">
+            <span
+              className={`text-[9px] font-black uppercase block tracking-wider ${
+                currentStep === 1 && isDark ? 'text-fuchsia-300' : 'text-slate-400'
+              }`}
+            >
               {t('Bước 1', 'Step 1')}
             </span>
-            <span className={`text-xs font-black truncate block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <span className={`text-xs font-bold truncate block ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {studioTab === 'voice' ? t('Nội Dung & Ngôn Ngữ', 'Content & Language') : t('Ý Tưởng & Thể Loại', 'Style & Prompt')}
             </span>
           </div>
@@ -352,30 +374,36 @@ export const AiAudioTab: React.FC = () => {
             }
             setCurrentStep(2);
           }}
-          className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all ${
+          className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all backdrop-blur-xl ${
             currentStep === 2
               ? isDark
-                ? 'bg-[#151928] border-rose-500/80 shadow-md shadow-rose-500/10'
-                : 'bg-white border-black shadow-sm'
+                ? 'border-fuchsia-500/50 bg-fuchsia-500/10 shadow-[0_0_20px_rgba(217,70,239,0.15)] ring-1 ring-fuchsia-500/30'
+                : 'bg-white border-fuchsia-500 shadow-sm'
               : isDark
-              ? 'bg-[#0E111A] border-slate-800 opacity-60 hover:opacity-100'
+              ? 'border-white/10 bg-white/[0.03] opacity-60 hover:opacity-100'
               : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100'
           }`}
         >
           <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
               currentStep === 2
-                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-sm'
-                : 'bg-slate-800 text-slate-400'
+                ? 'bg-gradient-to-tr from-fuchsia-600 to-purple-600 text-white shadow-sm shadow-fuchsia-500/30'
+                : isDark
+                ? 'bg-white/10 text-white/50'
+                : 'bg-slate-200 text-slate-600'
             }`}
           >
             2
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">
+            <span
+              className={`text-[9px] font-black uppercase block tracking-wider ${
+                currentStep === 2 && isDark ? 'text-fuchsia-300' : 'text-slate-400'
+              }`}
+            >
               {t('Bước 2', 'Step 2')}
             </span>
-            <span className={`text-xs font-black truncate block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <span className={`text-xs font-bold truncate block ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {studioTab === 'voice' ? t('Giọng Đọc & Tạo Audio', 'Voice & Generate') : t('Tùy Chỉnh & Sinh Nhạc', 'Config & Render')}
             </span>
           </div>
@@ -391,8 +419,8 @@ export const AiAudioTab: React.FC = () => {
             <>
               {/* Language Selector Dropdown / Pills */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Globe className="w-3 h-3 text-cyan-400" />
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
                   <span>{t('Ngôn ngữ đọc (Language)', 'Language')}</span>
                 </label>
                 <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -401,13 +429,13 @@ export const AiAudioTab: React.FC = () => {
                       key={lang.code}
                       type="button"
                       onClick={() => setSelectedLang(lang.code)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 active:scale-95 ${
                         selectedLang === lang.code
                           ? isDark
-                            ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-sm'
-                            : 'bg-black text-white border-black'
+                            ? 'border-fuchsia-400 bg-fuchsia-500/20 text-fuchsia-300 shadow-sm ring-1 ring-fuchsia-400/40'
+                            : 'bg-fuchsia-600 text-white border-fuchsia-600 shadow-sm'
                           : isDark
-                          ? 'bg-[#121522] border-slate-800 text-slate-400 hover:text-white'
+                          ? 'border-white/10 bg-black/20 text-white/70 hover:border-white/20 hover:text-white'
                           : 'bg-slate-100 border-slate-200 text-slate-600'
                       }`}
                     >
@@ -427,9 +455,9 @@ export const AiAudioTab: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowScriptAssistant((p) => !p)}
-                    className="text-[10px] font-black text-cyan-400 hover:underline flex items-center gap-1"
+                    className="text-[11px] font-bold text-fuchsia-400 hover:text-fuchsia-300 transition-colors flex items-center gap-1"
                   >
-                    <Wand2 className="w-3 h-3" />
+                    <Wand2 className="w-3.5 h-3.5" />
                     <span>{t('Trợ lý AI viết kịch bản', 'AI Script Assistant')}</span>
                   </button>
                 </div>
@@ -437,11 +465,11 @@ export const AiAudioTab: React.FC = () => {
                 {/* AI Script Assistant Pop-down */}
                 {showScriptAssistant && (
                   <div
-                    className={`p-3 rounded-2xl border space-y-2 animate-in fade-in duration-150 ${
-                      isDark ? 'bg-[#141828] border-slate-700' : 'bg-slate-50 border-slate-300'
+                    className={`p-3.5 rounded-2xl border space-y-2.5 animate-in fade-in duration-150 backdrop-blur-xl ${
+                      isDark ? 'border-fuchsia-400/25 bg-fuchsia-500/10' : 'bg-fuchsia-50 border-fuchsia-200'
                     }`}
                   >
-                    <div className="text-[11px] font-bold text-slate-300">
+                    <div className={`text-[11px] font-bold ${isDark ? 'text-fuchsia-200' : 'text-fuchsia-800'}`}>
                       💡 {t('Nhập chủ đề để AI tự động viết kịch bản:', 'Enter topic for AI to write script:')}
                     </div>
                     <div className="flex gap-2">
@@ -450,19 +478,24 @@ export const AiAudioTab: React.FC = () => {
                         value={scriptPromptIdea}
                         onChange={(e) => setScriptPromptIdea(e.target.value)}
                         placeholder="Quảng cáo son môi cao cấp, tin tức công nghệ AI..."
-                        className={`flex-1 p-2 rounded-xl text-xs border focus:outline-none ${
-                          isDark ? 'bg-[#0E111A] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        className={`flex-1 p-2.5 rounded-xl text-xs border focus:outline-none transition-all ${
+                          isDark
+                            ? 'bg-black/40 border-white/15 text-white focus:border-fuchsia-400 placeholder:text-white/35'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-fuchsia-500'
                         }`}
                       />
                       <button
                         type="button"
                         onClick={handleGenerateScriptWithAI}
                         disabled={isWritingScript}
-                        className={`px-3 py-2 rounded-xl text-xs font-black transition-all ${
-                          isDark ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white' : 'bg-black text-white'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 ${
+                          isDark
+                            ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-md shadow-fuchsia-500/25'
+                            : 'bg-fuchsia-600 text-white shadow-sm'
                         }`}
                       >
-                        {isWritingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('Viết AI', 'Write')}
+                        {isWritingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                        <span>{t('Viết AI', 'Write')}</span>
                       </button>
                     </div>
                   </div>
@@ -476,16 +509,20 @@ export const AiAudioTab: React.FC = () => {
                     'Nhập đoạn văn bản cần chuyển thành giọng nói tại đây...',
                     'Enter script text to convert to voice...'
                   )}
-                  className={`w-full p-3.5 rounded-2xl text-xs leading-relaxed border transition-all resize-none focus:outline-none ${
+                  className={`w-full p-4 rounded-2xl text-xs leading-relaxed border transition-all resize-none focus:outline-none backdrop-blur-xl ${
                     isDark
-                      ? 'bg-[#121522] border-slate-800 text-white placeholder-slate-500 focus:border-rose-500'
-                      : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-black'
+                      ? 'bg-black/20 border-white/10 text-white placeholder:text-white/35 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20'
                   }`}
                 />
 
                 <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                  <span>{scriptText.length} {t('ký tự', 'chars')} (~{Math.max(1, Math.round(scriptText.length / 15))}s)</span>
-                  <span>{selectedLangObj?.flag} {selectedLangObj?.name}</span>
+                  <span>
+                    {scriptText.length} {t('ký tự', 'chars')} (~{Math.max(1, Math.round(scriptText.length / 15))}s)
+                  </span>
+                  <span>
+                    {selectedLangObj?.flag} {selectedLangObj?.name}
+                  </span>
                 </div>
               </div>
             </>
@@ -507,14 +544,14 @@ export const AiAudioTab: React.FC = () => {
                       className={`p-3 rounded-2xl border cursor-pointer transition-all active:scale-98 ${
                         selectedMusicStyle.id === style.id
                           ? isDark
-                            ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-md shadow-rose-500/25'
-                            : 'bg-black text-white border-black'
+                            ? 'bg-fuchsia-500/20 border-fuchsia-400 text-white shadow-md shadow-fuchsia-500/25 ring-1 ring-fuchsia-400/40'
+                            : 'bg-fuchsia-600 text-white border-fuchsia-600'
                           : isDark
-                          ? 'bg-[#121522] border-slate-800 hover:border-slate-700 text-slate-300'
+                          ? 'bg-black/20 border-white/10 hover:border-white/20 text-slate-300'
                           : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800'
                       }`}
                     >
-                      <div className="text-xs font-black">{isVietnamese ? style.labelVi : style.labelEn}</div>
+                      <div className="text-xs font-bold">{isVietnamese ? style.labelVi : style.labelEn}</div>
                       <div className="text-[10px] opacity-80 line-clamp-1 mt-0.5">{style.prompt}</div>
                     </div>
                   ))}
@@ -530,10 +567,10 @@ export const AiAudioTab: React.FC = () => {
                   value={customMusicPrompt}
                   onChange={(e) => setCustomMusicPrompt(e.target.value)}
                   placeholder="Lo-fi hiphop beat, chill piano melody, relaxing atmosphere..."
-                  className={`w-full p-3.5 rounded-2xl text-xs leading-relaxed border transition-all resize-none focus:outline-none ${
+                  className={`w-full p-4 rounded-2xl text-xs leading-relaxed border transition-all resize-none focus:outline-none backdrop-blur-xl ${
                     isDark
-                      ? 'bg-[#121522] border-slate-800 text-white placeholder-slate-500 focus:border-rose-500'
-                      : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-black'
+                      ? 'bg-black/20 border-white/10 text-white placeholder:text-white/35 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20'
                   }`}
                 />
               </div>
@@ -550,13 +587,17 @@ export const AiAudioTab: React.FC = () => {
               }
               setCurrentStep(2);
             }}
-            className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all shadow-xl active:scale-98 flex items-center justify-center gap-2 ${
+            className={`w-full py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all shadow-xl active:scale-98 flex items-center justify-center gap-2 ${
               isDark
-                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-rose-500/25'
-                : 'bg-black text-white'
+                ? 'bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 text-white shadow-[0_8px_25px_rgba(192,38,205,0.35)] hover:shadow-[0_12px_32px_rgba(192,38,205,0.45)]'
+                : 'bg-fuchsia-600 text-white shadow-md'
             }`}
           >
-            <span>{studioTab === 'voice' ? t('Tiếp Tục Chọn Giọng Đọc (Bước 2)', 'Next: Configure Voice (Step 2)') : t('Tiếp Tục Sinh Nhạc (Bước 2)', 'Next: Configure & Render (Step 2)')}</span>
+            <span>
+              {studioTab === 'voice'
+                ? t('Tiếp Tục Chọn Giọng Đọc (Bước 2)', 'Next: Configure Voice (Step 2)')
+                : t('Tiếp Tục Sinh Nhạc (Bước 2)', 'Next: Configure & Render (Step 2)')}
+            </span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -572,9 +613,9 @@ export const AiAudioTab: React.FC = () => {
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black transition-all active:scale-95 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
                 isDark
-                  ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:text-white'
+                  ? 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white'
                   : 'bg-slate-100 border-slate-200 text-slate-700'
               }`}
             >
@@ -589,11 +630,11 @@ export const AiAudioTab: React.FC = () => {
 
           {/* Script Summary Card */}
           <div
-            className={`p-3 rounded-2xl border flex items-start gap-2.5 ${
-              isDark ? 'bg-[#121522] border-slate-800' : 'bg-slate-50 border-slate-200'
+            className={`p-3.5 rounded-2xl border flex items-start gap-2.5 backdrop-blur-xl ${
+              isDark ? 'border-white/10 bg-white/[0.04]' : 'bg-slate-50 border-slate-200'
             }`}
           >
-            <Mic className="w-4 h-4 text-[#FF2D55] shrink-0 mt-0.5" />
+            <Mic className="w-4 h-4 text-fuchsia-400 shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
               <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">
                 {t('Văn bản đã chọn', 'Script Preview')}
@@ -612,28 +653,49 @@ export const AiAudioTab: React.FC = () => {
                   ⚡ {t('Công nghệ AI TTS', 'AI Voice Engine')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'wynai' as const, name: 'WynAI Neural 48kHz', desc: 'VieNeu & Kokoro Studio' },
-                    { id: 'gemini' as const, name: 'Gemini Audio Flash', desc: 'Google Gemini Expressive' },
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setModelType(m.id)}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
-                        modelType === m.id
-                          ? isDark
-                            ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-md shadow-rose-500/25'
-                            : 'bg-black text-white border-black'
-                          : isDark
-                          ? 'bg-[#121522] border-slate-800 text-slate-300'
-                          : 'bg-white border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <div className="text-xs font-black">{m.name}</div>
-                      <div className="text-[10px] opacity-80 mt-0.5">{m.desc}</div>
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setModelType('wynai')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      modelType === 'wynai'
+                        ? isDark
+                          ? 'bg-fuchsia-500/20 border-fuchsia-400 text-fuchsia-300 shadow-md ring-1 ring-fuchsia-400/50'
+                          : 'bg-fuchsia-50 border-fuchsia-500 text-fuchsia-800 shadow-sm'
+                        : isDark
+                        ? 'bg-black/20 border-white/10 text-slate-300 hover:border-white/20'
+                        : 'bg-white border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-fuchsia-400" />
+                      <span className="text-xs font-bold">WynAI Neural 48kHz</span>
+                    </div>
+                    <div className={`text-[10px] mt-1 ${isDark ? 'text-fuchsia-200/80' : 'text-fuchsia-700'}`}>
+                      VieNeu & Kokoro Studio
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setModelType('gemini')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      modelType === 'gemini'
+                        ? isDark
+                          ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-md ring-1 ring-purple-400/50'
+                          : 'bg-purple-50 border-purple-500 text-purple-800 shadow-sm'
+                        : isDark
+                        ? 'bg-black/20 border-white/10 text-slate-300 hover:border-white/20'
+                        : 'bg-white border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Mic className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="text-xs font-bold">Gemini Audio Flash</span>
+                    </div>
+                    <div className={`text-[10px] mt-1 ${isDark ? 'text-purple-200/80' : 'text-purple-700'}`}>
+                      Google Gemini Expressive
+                    </div>
+                  </button>
                 </div>
               </div>
 
@@ -656,9 +718,11 @@ export const AiAudioTab: React.FC = () => {
                         onClick={() => setRegionFilter(r.id)}
                         className={`py-1.5 rounded-xl text-xs font-bold border transition-all ${
                           regionFilter === r.id
-                            ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                            ? isDark
+                              ? 'bg-fuchsia-500/25 text-fuchsia-300 border-fuchsia-400 shadow-sm ring-1 ring-fuchsia-400/40'
+                              : 'bg-fuchsia-600 text-white border-fuchsia-600 shadow-sm'
                             : isDark
-                            ? 'bg-[#121522] border-slate-800 text-slate-400'
+                            ? 'bg-black/20 border-white/10 text-slate-400 hover:text-white'
                             : 'bg-slate-100 border-slate-200 text-slate-700'
                         }`}
                       >
@@ -684,22 +748,34 @@ export const AiAudioTab: React.FC = () => {
                         className={`p-3 rounded-2xl border cursor-pointer transition-all active:scale-98 flex flex-col justify-between ${
                           isSelected
                             ? isDark
-                              ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white border-[#FF2D55] shadow-md shadow-rose-500/25'
-                              : 'bg-black text-white border-black'
+                              ? 'bg-fuchsia-500/20 border-fuchsia-400 text-white shadow-md shadow-fuchsia-500/20 ring-1 ring-fuchsia-400/40'
+                              : 'bg-fuchsia-600 text-white border-fuchsia-600'
                             : isDark
-                            ? 'bg-[#121522] border-slate-800 text-slate-300 hover:border-slate-700'
+                            ? 'bg-white/[0.04] border-white/10 text-slate-300 hover:border-white/20 hover:bg-white/[0.06]'
                             : 'bg-white border-slate-200 text-slate-700'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black">{voice.name}</span>
+                          <span className="text-xs font-bold">{voice.name}</span>
                           {voice.gender && (
-                            <span className="text-[9px] opacity-75 uppercase">
+                            <span
+                              className={`text-[9px] uppercase px-1.5 py-0.5 rounded border ${
+                                isSelected
+                                  ? 'bg-white/20 border-white/30 text-white'
+                                  : isDark
+                                  ? 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}
+                            >
                               {voice.gender === 'female' ? '♀ Nữ' : '♂ Nam'}
                             </span>
                           )}
                         </div>
-                        {voice.region && <span className="text-[10px] opacity-80 mt-1">{voice.region}</span>}
+                        {voice.region && (
+                          <span className={`text-[10px] mt-1.5 opacity-80 ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                            {voice.region}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
@@ -708,25 +784,29 @@ export const AiAudioTab: React.FC = () => {
 
               {/* Speed & Reading Style Sliders */}
               <div
-                className={`p-3.5 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-[#121522] border-slate-800' : 'bg-slate-50 border-slate-200'
+                className={`p-3.5 rounded-2xl border space-y-3 backdrop-blur-xl ${
+                  isDark ? 'border-white/10 bg-white/[0.04]' : 'bg-slate-50 border-slate-200'
                 }`}
               >
                 {/* Reading Style */}
                 {selectedLang === 'vi' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400">🎭 {t('Phong cách đọc', 'Reading Style')}</label>
+                    <label className="text-[10px] font-bold text-slate-400">
+                      🎭 {t('Phong cách đọc (VieNeu)', 'Reading Style')}
+                    </label>
                     <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                       {READING_STYLES.map((st) => (
                         <button
                           key={st.code}
                           type="button"
                           onClick={() => setReadingStyle(st.code)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap border ${
+                          className={`px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap border transition-all ${
                             readingStyle === st.code
-                              ? 'bg-rose-500 text-white border-rose-500'
+                              ? isDark
+                                ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-sm ring-1 ring-amber-400/30'
+                                : 'bg-amber-500 text-white border-amber-500'
                               : isDark
-                              ? 'bg-slate-800 border-slate-700 text-slate-300'
+                              ? 'bg-black/20 border-white/10 text-slate-300 hover:text-white'
                               : 'bg-white border-slate-200 text-slate-700'
                           }`}
                         >
@@ -741,7 +821,7 @@ export const AiAudioTab: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-bold">
                     <span className="text-slate-400">⚡ {t('Tốc độ đọc', 'Speaking Rate')}</span>
-                    <span className="text-rose-400 font-mono">{speakingRate}x</span>
+                    <span className="text-fuchsia-400 font-mono">{speakingRate}x</span>
                   </div>
                   <input
                     type="range"
@@ -750,7 +830,7 @@ export const AiAudioTab: React.FC = () => {
                     step={0.1}
                     value={speakingRate}
                     onChange={(e) => setSpeakingRate(parseFloat(e.target.value))}
-                    className="w-full accent-[#FF2D55] h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+                    className="w-full accent-fuchsia-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
                   />
                 </div>
               </div>
@@ -759,14 +839,18 @@ export const AiAudioTab: React.FC = () => {
             // Music Step 2 Config
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400">🚫 {t('Loại trừ (Negative Prompt)', 'Negative Prompt')}</label>
+                <label className="text-[10px] font-bold text-slate-400">
+                  🚫 {t('Loại trừ (Negative Prompt)', 'Negative Prompt')}
+                </label>
                 <input
                   type="text"
                   value={negativeMusicPrompt}
                   onChange={(e) => setNegativeMusicPrompt(e.target.value)}
                   placeholder="vocals, distortion, noise, harsh beats..."
-                  className={`w-full p-2.5 rounded-xl text-xs border focus:outline-none ${
-                    isDark ? 'bg-[#121522] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  className={`w-full p-3 rounded-xl text-xs border focus:outline-none transition-all ${
+                    isDark
+                      ? 'bg-black/20 border-white/10 text-white placeholder:text-white/35 focus:border-fuchsia-500'
+                      : 'bg-white border-slate-200 text-slate-900'
                   }`}
                 />
               </div>
@@ -778,21 +862,27 @@ export const AiAudioTab: React.FC = () => {
             type="button"
             onClick={handleGenerateAudio}
             disabled={isGenerating}
-            className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all shadow-xl active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 ${
+            className={`w-full py-4 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all shadow-xl active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 ${
               isDark
-                ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-rose-500/30'
-                : 'bg-black text-white shadow-slate-900/20'
+                ? 'bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 text-white shadow-[0_8px_25px_rgba(192,38,205,0.35)] hover:shadow-[0_12px_32px_rgba(192,38,205,0.45)]'
+                : 'bg-fuchsia-600 text-white shadow-fuchsia-600/30'
             }`}
           >
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{t('Đang tạo âm thanh AI...', 'Generating audio...')} ({elapsedTime}s)</span>
+                <span>
+                  {t('Đang tạo âm thanh AI...', 'Generating audio...')} ({elapsedTime}s)
+                </span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>{studioTab === 'voice' ? t('✨ Tạo Giọng Đọc AI Ngay', '✨ Generate AI Voice') : t('✨ Tạo Bản Nhạc Ngay', '✨ Generate Music Now')}</span>
+                <span>
+                  {studioTab === 'voice'
+                    ? t('✨ Tạo Giọng Đọc AI Ngay', '✨ Generate AI Voice')
+                    : t('✨ Tạo Bản Nhạc Ngay', '✨ Generate Music Now')}
+                </span>
               </>
             )}
           </button>
@@ -804,14 +894,16 @@ export const AiAudioTab: React.FC = () => {
           ───────────────────────────────────────────────────────────── */}
       {generatedAudio?.audio_url && (
         <div
-          className={`p-4 rounded-3xl border space-y-3 animate-in zoom-in-95 duration-200 ${
-            isDark ? 'bg-[#121522] border-slate-800 shadow-2xl' : 'bg-white border-slate-200 shadow-lg'
+          className={`p-4 sm:p-5 rounded-[28px] border space-y-4 animate-in zoom-in-95 duration-200 backdrop-blur-2xl ${
+            isDark
+              ? 'bg-[#09111f]/95 border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)]'
+              : 'bg-white border-slate-200 shadow-xl'
           }`}
         >
           <audio ref={audioRef} src={generatedAudio.audio_url} preload="metadata" />
 
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
               {t('Âm thanh đã sẵn sàng!', 'Audio ready!')}
             </span>
@@ -821,16 +913,20 @@ export const AiAudioTab: React.FC = () => {
           </div>
 
           {/* Player Controls Bar */}
-          <div className="flex items-center gap-3 bg-[#090B12] p-3 rounded-2xl border border-white/5">
+          <div
+            className={`flex items-center gap-3 p-3.5 rounded-2xl border ${
+              isDark ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+            }`}
+          >
             <button
               type="button"
               onClick={handleTogglePlay}
-              className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+              className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-fuchsia-500/35 hover:scale-105 active:scale-95 transition-transform shrink-0"
             >
-              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </button>
 
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 space-y-1.5">
               <input
                 type="range"
                 min={0}
@@ -843,7 +939,7 @@ export const AiAudioTab: React.FC = () => {
                     setCurrentTime(parseFloat(e.target.value));
                   }
                 }}
-                className="w-full accent-[#FF2D55] h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                className="w-full accent-fuchsia-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
               />
               <div className="flex justify-between text-[10px] font-mono text-slate-400">
                 <span>{currentTime.toFixed(1)}s</span>
@@ -864,13 +960,13 @@ export const AiAudioTab: React.FC = () => {
                   );
                 }
               }}
-              className={`flex-1 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 ${
+              className={`flex-1 py-3.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 active:scale-95 ${
                 isDark
-                  ? 'bg-gradient-to-r from-[#FF2D55] to-[#FF4570] text-white shadow-md shadow-rose-500/25'
-                  : 'bg-black text-white'
+                  ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-md shadow-fuchsia-500/25 hover:scale-[1.01]'
+                  : 'bg-fuchsia-600 text-white shadow-md'
               }`}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>{t('Tải Về File MP3', 'Download MP3')}</span>
             </button>
 
@@ -884,11 +980,13 @@ export const AiAudioTab: React.FC = () => {
                   );
                 }
               }}
-              className={`px-4 py-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
-                isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+              className={`px-5 py-3.5 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                isDark
+                  ? 'border-white/15 bg-white/5 text-white hover:bg-white/10'
+                  : 'bg-slate-100 border-slate-200 text-slate-700'
               }`}
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Share2 className="w-4 h-4" />
               <span>{t('Chia Sẻ', 'Share')}</span>
             </button>
           </div>
