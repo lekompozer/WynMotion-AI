@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService } from '@/services/wynmotionService';
-import { getFastVideoUrl } from '@/utils/templateVideoCache';
+import { getFastVideoUrl, BUNDLED_LOCAL_FILES } from '@/utils/templateVideoCache';
 import { Loader2 } from 'lucide-react';
 
 export interface CapCutTemplateData {
@@ -155,9 +155,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const durationSec = template ? (template.duration_sec || template.durationSec || 12) : 12;
   const localVideoPath = template?.local_video_path || template?.localVideoPath;
   const remoteVideoUrl = template?.video_demo_url || template?.videoUrl;
-  const initialVideoUrl = (localVideoPath && localVideoPath.startsWith('/templates/'))
+  const isLocalBundled = Boolean(localVideoPath && BUNDLED_LOCAL_FILES.has(localVideoPath));
+  const initialVideoUrl = isLocalBundled
     ? localVideoPath
-    : (remoteVideoUrl || localVideoPath || '');
+    : (remoteVideoUrl || (localVideoPath && !localVideoPath.startsWith('/templates/') ? localVideoPath : ''));
   const [fastVideoUrl, setFastVideoUrl] = useState<string>(initialVideoUrl);
   const coverUrl = template ? (template.cover_ios_url || template.cover_url || template.coverUrl || template.cover || '') : '';
   const videoUrl = fastVideoUrl || initialVideoUrl;
@@ -173,7 +174,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   // 3-step intuitive flow: preview -> fill_assets (Step 1) -> fill_texts (Step 2)
   const [step, setStep] = useState<'preview' | 'fill_assets' | 'fill_texts'>('preview');
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default to muted so iOS WebKit never blocks autoplay!
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   // Form Fields
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>(defaultAspectRatio);
@@ -196,6 +198,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
     if (template) {
       setStep('preview');
       setIsPlaying(true);
+      setIsVideoReady(false);
       setAspectRatio(defaultAspectRatio);
       setPrompt(title);
       setHookText(defaultHook);
@@ -316,12 +319,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
           <div className="relative w-full h-full flex flex-col overflow-hidden bg-black">
             {videoUrl ? (
               <>
-                {/* Ambient Blurred Poster Background for Seamless Letterbox Filling (0 decoding overhead) */}
+                {/* Ambient Blurred Poster Background for Seamless Letterbox Filling */}
                 {coverUrl ? (
                   <img
                     src={coverUrl}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-cover filter blur-2xl opacity-35 scale-110 pointer-events-none select-none"
+                    className={`absolute inset-0 w-full h-full object-cover filter blur-2xl scale-110 pointer-events-none select-none transition-opacity duration-500 ${
+                      isVideoReady ? 'opacity-25' : 'opacity-60'
+                    }`}
                   />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black" />
@@ -331,16 +336,37 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 <div className="absolute inset-0 z-10 flex items-center justify-center">
                   <video
                     ref={videoRef}
+                    key={videoUrl}
                     src={videoUrl}
                     autoPlay
                     loop
                     playsInline
                     preload="auto"
                     muted={isMuted}
+                    onLoadedData={() => {
+                      setIsVideoReady(true);
+                      videoRef.current?.play().catch(() => {
+                        setIsPlaying(false);
+                      });
+                    }}
+                    onPlaying={() => {
+                      setIsPlaying(true);
+                      setIsVideoReady(true);
+                    }}
                     onClick={handleTogglePlay}
-                    className="w-full h-full object-contain cursor-pointer"
+                    className="w-full h-full object-contain cursor-pointer relative z-10"
                   />
                 </div>
+
+                {/* Loading indicator while video buffers */}
+                {!isVideoReady && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none bg-black/40">
+                    <Loader2 className="w-9 h-9 text-cyan-400 animate-spin" />
+                    <span className="text-xs text-white/90 mt-2.5 font-bold tracking-wide">
+                      {t('Đang mở video mẫu...', 'Loading video preview...')}
+                    </span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black p-6 text-center space-y-4">
@@ -386,7 +412,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
             </div>
 
             {/* Center Play/Pause indicator */}
-            {!isPlaying && (
+            {!isPlaying && isVideoReady && (
               <div
                 onClick={handleTogglePlay}
                 className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 cursor-pointer"
@@ -420,13 +446,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (videoRef.current) {
-                      videoRef.current.muted = !isMuted;
+                      const nextMuted = !isMuted;
+                      videoRef.current.muted = nextMuted;
+                      setIsMuted(nextMuted);
                     }
-                    setIsMuted(!isMuted);
                   }}
-                  className="text-cyan-300 hover:text-cyan-200 font-bold cursor-pointer ml-2 whitespace-nowrap"
+                  className="text-cyan-300 hover:text-cyan-200 font-bold cursor-pointer ml-2 whitespace-nowrap text-[11px] px-2.5 py-1 rounded-lg bg-white/15 border border-white/20 active:scale-95 transition-transform"
                 >
-                  {isMuted ? '🔇 Bật tiếng' : '🔊 Tắt tiếng'}
+                  {isMuted ? '🔇 Bật tiếng (Unmute)' : '🔊 Tắt tiếng (Mute)'}
                 </button>
               </div>
 
@@ -436,9 +463,11 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   // ── Template Tier Authorization Check: Require Paid Tier for ALL templates ──
                   const isAnimationAdsImageVip =
                     template?.id?.startsWith('animation_ads_image') ||
+                    template?.template_id?.startsWith('animation_ads_image') ||
                     template?.badge?.includes('VIP') ||
                     template?.title_en?.includes('VEO') ||
-                    template?.title_vi?.includes('VEO');
+                    template?.title_vi?.includes('VEO') ||
+                    Boolean(template?.is_vip);
 
                   if (isAnimationAdsImageVip && userTier !== 'vip') {
                     onRequireUpgrade?.('vip');

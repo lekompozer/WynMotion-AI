@@ -1784,6 +1784,7 @@ export const AiVideoTab: React.FC = () => {
                 : '⭐ Please upgrade to use this template!'
             );
             setUpgradeDefaultTier(tier || 'premium');
+            setUpgradeDefaultTab('subscriptions');
             setIsUpgradeModalOpen(true);
           }}
           onClose={() => setCapcutModalTemplate(null)}
@@ -1806,6 +1807,14 @@ export const AiVideoTab: React.FC = () => {
             setIsCreationModalOpen(false);
             setIsCreatingProject(false);
           }}
+        />
+
+        {/* ── WynMotion Upgrade & Paywall Modal (Apple IAP & SePay) in Home Mode ── */}
+        <WynMotionUpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          defaultTier={upgradeDefaultTier}
+          defaultTab={upgradeDefaultTab}
         />
       </div>
     );
@@ -3338,6 +3347,7 @@ export const AiVideoTab: React.FC = () => {
               : '⭐ Please upgrade to use this template!'
           );
           setUpgradeDefaultTier(tier || 'premium');
+          setUpgradeDefaultTab('subscriptions');
           setIsUpgradeModalOpen(true);
         }}
         onClose={() => setCapcutModalTemplate(null)}
