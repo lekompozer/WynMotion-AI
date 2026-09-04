@@ -70,6 +70,7 @@ import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStu
 import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
 import { CapCutGalleryModal } from '@/components/video/CapCutGalleryModal';
 import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
+import { preloadAllTemplateVideos } from '@/utils/templateVideoCache';
 
 // ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
 
@@ -504,6 +505,11 @@ export const AiVideoTab: React.FC = () => {
       }
     };
     window.addEventListener('wynmotion:use-audio', handleUseAudioEvent);
+
+    // Preload template videos in background into offline CacheStorage
+    wynmotionService.getTemplates().then((res) => {
+      if (res?.templates) preloadAllTemplateVideos(res.templates);
+    }).catch(() => {});
 
     return () => {
       window.removeEventListener('wynmotion:open-project', handleOpenProjectEvent);
@@ -1771,14 +1777,11 @@ export const AiVideoTab: React.FC = () => {
           defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
           userTier={userTier}
           onRequireUpgrade={(tier) => {
+            setCapcutModalTemplate(null);
             showAuthToast(
-              tier === 'vip'
-                ? (isVietnamese
-                    ? '👑 Template Animation Ads Image (VEO 3.1) độc quyền cho gói VIP Studio. Vui lòng nâng cấp!'
-                    : '👑 Animation Ads Image (VEO 3.1) template is exclusive to VIP Studio plan. Please upgrade!')
-                : (isVietnamese
-                    ? '⭐ Tất cả Templates yêu cầu gói Premium trở lên. Vui lòng nạp tiền nâng cấp!'
-                    : '⭐ All Templates require Premium plan or above. Please upgrade!')
+              isVietnamese
+                ? '⭐ Vui lòng nâng cấp để sử dụng template này!'
+                : '⭐ Please upgrade to use this template!'
             );
             setUpgradeDefaultTier(tier || 'premium');
             setIsUpgradeModalOpen(true);
@@ -1887,14 +1890,14 @@ export const AiVideoTab: React.FC = () => {
 
       <div className="max-w-xl mx-auto mt-6 space-y-7">
         {/* ========================================================================= */}
-        {/* STEP 1: 4 MASTER CATEGORIES LEADING TO TEMPLATES */}
+        {/* STEP 1: CATEGORIES WITH ICONS LEADING TO TEMPLATES */}
         {/* ========================================================================= */}
         {wizardStep === '1' && (
           <div className="space-y-6 animate-in fade-in duration-150">
             {/* Header / Intro */}
             <div className="text-center space-y-1">
               <h3 className={`text-base font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {t('Chọn 1 trong 4 loại video để bắt đầu', 'Select a video category to get started')}
+                {t('Chọn 1 trong các loại video để bắt đầu', 'Select a video category to get started')}
               </h3>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {t(
@@ -1904,275 +1907,173 @@ export const AiVideoTab: React.FC = () => {
               </p>
             </div>
 
-            {/* 4 MASTER CATEGORIES GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* 1. Business Short Video */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedGalleryStyle('business_short_video');
-                  setIsCapCutGalleryOpen(true);
-                }}
-                className={`p-4 rounded-3xl border-2 text-left transition-all active:scale-[0.98] flex flex-col justify-between h-44 group relative overflow-hidden ${
-                  isDark
-                    ? 'bg-gradient-to-br from-rose-950/40 via-slate-900/90 to-slate-950 border-rose-500/40 hover:border-rose-400 shadow-lg shadow-rose-950/20'
-                    : 'bg-gradient-to-br from-rose-50 to-white border-rose-200 hover:border-rose-400 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
-                    <ProductAdsIcon size={32} />
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                    🔥 {t('Quảng Cáo', 'Commercial')}
-                  </span>
-                </div>
-                <div>
-                  <h3 className={`text-sm font-black group-hover:text-rose-400 transition-colors ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {t('Business Short Video', 'Business Short Video')}
-                  </h3>
-                  <p className={`text-xs mt-0.5 line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {t('Strobe Teaser, Menu F&B, AI Motion Director & Google VEO 3.1', 'Strobe Teaser, F&B Menu, AI Motion Director & Google VEO 3.1')}
-                  </p>
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-rose-400">
-                    <span>{t('Xem kho mẫu', 'Browse templates')}</span>
-                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </button>
-
-              {/* 2. Video News 60s */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedGalleryStyle('video_news_60s');
-                  setIsCapCutGalleryOpen(true);
-                }}
-                className={`p-4 rounded-3xl border-2 text-left transition-all active:scale-[0.98] flex flex-col justify-between h-44 group relative overflow-hidden ${
-                  isDark
-                    ? 'bg-gradient-to-br from-amber-950/40 via-slate-900/90 to-slate-950 border-amber-500/40 hover:border-amber-400 shadow-lg shadow-amber-950/20'
-                    : 'bg-gradient-to-br from-amber-50 to-white border-amber-200 hover:border-amber-400 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                    <VideoNewsIcon size={32} />
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    📰 {t('Bản Tin', 'News Digest')}
-                  </span>
-                </div>
-                <div>
-                  <h3 className={`text-sm font-black group-hover:text-amber-400 transition-colors ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {t('60s Video News', '60s Video News')}
-                  </h3>
-                  <p className={`text-xs mt-0.5 line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {t('Đọc báo từ Link bài viết hoặc dán tin tức 60s, hiệu ứng Ken Burns & ticker', 'Auto-crawl article links, Ken Burns slideshow & live news ticker')}
-                  </p>
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-amber-400">
-                    <span>{t('Xem kho mẫu', 'Browse templates')}</span>
-                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </button>
-
-              {/* 3. Illustrative */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedGalleryStyle('illustrative');
-                  setIsCapCutGalleryOpen(true);
-                }}
-                className={`p-4 rounded-3xl border-2 text-left transition-all active:scale-[0.98] flex flex-col justify-between h-44 group relative overflow-hidden ${
-                  isDark
-                    ? 'bg-gradient-to-br from-cyan-950/40 via-slate-900/90 to-slate-950 border-cyan-500/40 hover:border-cyan-400 shadow-lg shadow-cyan-950/20'
-                    : 'bg-gradient-to-br from-cyan-50 to-white border-cyan-200 hover:border-cyan-400 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
-                    <WhiteboardStreamIcon size={32} />
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                    🎨 {t('Minh Họa', 'Illustrative')}
-                  </span>
-                </div>
-                <div>
-                  <h3 className={`text-sm font-black group-hover:text-cyan-400 transition-colors ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {t('Illustrative & Vẽ Tay', 'Illustrative & Hand Drawn')}
-                  </h3>
-                  <p className={`text-xs mt-0.5 line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {t('Vẽ bảng trắng Whiteboard, phác chì màu nước tốc họa, người que & mascot', 'Whiteboard animation, quick doodle pencil sketch, stickman & mascot')}
-                  </p>
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-cyan-400">
-                    <span>{t('Xem kho mẫu', 'Browse templates')}</span>
-                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </button>
-
-              {/* 4. Motion Explainer */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedGalleryStyle('motion_explainer');
-                  setIsCapCutGalleryOpen(true);
-                }}
-                className={`p-4 rounded-3xl border-2 text-left transition-all active:scale-[0.98] flex flex-col justify-between h-44 group relative overflow-hidden ${
-                  isDark
-                    ? 'bg-gradient-to-br from-purple-950/40 via-slate-900/90 to-slate-950 border-purple-500/40 hover:border-purple-400 shadow-lg shadow-purple-950/20'
-                    : 'bg-gradient-to-br from-purple-50 to-white border-purple-200 hover:border-purple-400 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
-                    <DialogueSceneIcon size={32} />
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                    💬 {t('Diễn Giải', 'Explainer')}
-                  </span>
-                </div>
-                <div>
-                  <h3 className={`text-sm font-black group-hover:text-purple-400 transition-colors ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {t('Motion Explainer & Hội Thoại', 'Motion Explainer & Dialogue')}
-                  </h3>
-                  <p className={`text-xs mt-0.5 line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {t('Hội thoại 2 nhân vật (Pixar 3D/Anime), Khoa học STEM & Apple UI Glassmorphism', 'Two-character dialogue scenes, STEM science explainers & Apple UI Glass')}
-                  </p>
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-purple-400">
-                    <span>{t('Xem kho mẫu', 'Browse templates')}</span>
-                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Nhóm 1: Illustrative */}
-            <div className="space-y-2.5">
-              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {isVietnamese ? 'Nhóm 1: Minh Họa & Bút Vẽ Tay' : 'Category 1: Illustrative & Hand Drawn'}
+            {/* Nhóm 1: Video Ngắn Doanh Nghiệp (Business Short Videos) */}
+            <div className="space-y-3">
+              <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                {isVietnamese ? 'Video Ngắn Doanh Nghiệp' : 'Business Short Videos'}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {ILLUSTRATIVE_STYLES.map((st) => {
-                  const Icon = st.icon;
-                  const isSelected = visualStyle === st.id;
-                  return (
-                    <div
-                      key={st.id}
-                      onClick={() => setVisualStyle(st.id)}
-                      className={`group relative rounded-2xl overflow-hidden border-2 cursor-pointer transition-all flex flex-col ${
-                        isSelected
-                          ? 'border-[#FF2D55] bg-gradient-to-b from-[#FF2D55]/15 to-transparent ring-2 ring-[#FF2D55]/40 shadow-xl scale-[1.01]'
-                          : isDark
-                          ? 'border-white/10 bg-black/40 hover:border-white/25 hover:bg-black/60'
-                          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-black/50">
-                        {st.cover ? (
-                          <img
-                            src={st.cover}
-                            alt={st.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">
-                            <Icon size={44} />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1424] via-transparent to-black/30" />
-                        {st.tag && (
-                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-amber-500/90 text-slate-950 font-black text-[9px] uppercase">
-                            {st.tag}
-                          </span>
-                        )}
-                        {st.isHot && !isSelected && (
-                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[9px] uppercase tracking-wider shadow-md flex items-center gap-0.5 animate-pulse">
-                            <span>🔥</span>
-                            <span>HOT</span>
-                          </span>
-                        )}
-                        {isSelected && (
-                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#FF2D55] text-white font-black text-[9px]">
-                            <Check className="h-2.5 w-2.5" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3 space-y-1 flex-1 flex flex-col justify-between">
-                        <h4 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{st.title}</h4>
-                        <p className={`text-[10px] line-clamp-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{st.desc}</p>
+              <div className="grid grid-cols-1 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedGalleryStyle('business_short_video');
+                    setIsCapCutGalleryOpen(true);
+                  }}
+                  className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
+                    isDark
+                      ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700 shadow-md'
+                      : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <ProductAdsIcon size={36} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {isVietnamese ? 'Kho Mẫu Video Ngắn Doanh Nghiệp' : 'Business Short Video Templates'}
                       </div>
                     </div>
+                    <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      {isVietnamese
+                        ? 'Strobe Teaser, Cinematic Showcase 22s & Motion Video 60fps đỉnh cao'
+                        : 'Strobe Teaser, Cinematic Showcase 22s & 60fps Business Motion'}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Nhóm 2: Video News 60s (Tin Tức & Điểm Tin) */}
+            <div className="space-y-3">
+              <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                {isVietnamese ? 'Tin Tức & Điểm Tin 60s (Video News)' : '60s Video News & Daily Digest'}
+              </h3>
+              <div className="grid grid-cols-1 gap-2.5">
+                {NEWS_VIDEO_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGalleryStyle(style.id);
+                        setIsCapCutGalleryOpen(true);
+                      }}
+                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3.5 active:scale-98 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700 shadow-md'
+                          : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        <Icon size={36} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {style.title.replace('\n', ' ')}
+                          </div>
+                        </div>
+                        <div className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {style.desc}
+                        </div>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Nhóm 2: Motion & Explainer */}
-            <div className="space-y-2.5">
-              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {isVietnamese ? 'Nhóm 2: Chuyển Động & Diễn Giải' : 'Category 2: Motion & Explainer'}
+            {/* Nhóm 3: Illustrative */}
+            <div className="space-y-3">
+              <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                {isVietnamese ? 'Minh Họa & Vẽ Tay' : 'Illustrative'}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {MOTION_EXPLAINER_STYLES.map((st) => {
-                  const Icon = st.icon;
-                  const isSelected = visualStyle === st.id;
+              <div className="grid grid-cols-3 gap-2.5">
+                {ILLUSTRATIVE_STYLES.map((style) => {
+                  const Icon = style.icon;
                   return (
-                    <div
-                      key={st.id}
+                    <button
+                      key={style.id}
+                      type="button"
                       onClick={() => {
-                        setVisualStyle(st.id);
-                        if (st.id === 'dialogue_scene') setCharacterSubtype('pixar_3d');
+                        setSelectedGalleryStyle(style.id);
+                        setIsCapCutGalleryOpen(true);
                       }}
-                      className={`group relative rounded-2xl overflow-hidden border-2 cursor-pointer transition-all flex flex-col ${
-                        isSelected
-                          ? 'border-[#FF2D55] bg-gradient-to-b from-[#FF2D55]/15 to-transparent ring-2 ring-[#FF2D55]/40 shadow-xl scale-[1.01]'
-                          : isDark
-                          ? 'border-white/10 bg-black/40 hover:border-white/25 hover:bg-black/60'
-                          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
+                      className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700'
+                          : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
                       }`}
                     >
-                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-black/50">
-                        {st.cover ? (
-                          <img
-                            src={st.cover}
-                            alt={st.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">
-                            <Icon size={44} />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1424] via-transparent to-black/30" />
-                        {st.tag && (
-                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-pink-500/90 text-white font-black text-[9px] uppercase">
-                            {st.tag}
-                          </span>
-                        )}
-                        {st.isHot && !isSelected && (
-                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[9px] uppercase tracking-wider shadow-md flex items-center gap-0.5 animate-pulse">
-                            <span>🔥</span>
-                            <span>HOT</span>
-                          </span>
-                        )}
-                        {isSelected && (
-                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#FF2D55] text-white font-black text-[9px]">
-                            <Check className="h-2.5 w-2.5" />
-                          </span>
-                        )}
+                      {style.isHot && (
+                        <span className="absolute top-2 right-2 px-1 py-0.2 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[8px] uppercase tracking-wider shadow-sm animate-pulse">
+                          HOT
+                        </span>
+                      )}
+                      <div className={`flex-1 flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        <Icon size={42} />
                       </div>
-                      <div className="p-3 space-y-1 flex-1 flex flex-col justify-between">
-                        <h4 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{st.title}</h4>
-                        <p className={`text-[10px] line-clamp-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{st.desc}</p>
+                      <div className="w-full">
+                        <div className={`text-[11px] font-normal leading-tight text-center whitespace-pre-line ${
+                          isDark ? 'text-slate-200' : 'text-slate-800'
+                        }`}>
+                          {style.title}
+                        </div>
                       </div>
-                    </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Nhóm 4: Motion & Explainer */}
+            <div className="space-y-3">
+              <h3 className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                {isVietnamese ? 'Chuyển Động & Diễn Giải' : 'Motion & Explainer'}
+              </h3>
+              <div className="grid grid-cols-3 gap-2.5">
+                {MOTION_EXPLAINER_STYLES.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGalleryStyle(style.id);
+                        setIsCapCutGalleryOpen(true);
+                      }}
+                      className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between h-30 active:scale-95 group ${
+                        isDark
+                          ? 'bg-slate-900/90 border-slate-800 text-white hover:border-slate-700'
+                          : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-slate-300'
+                      }`}
+                    >
+                      {style.isHot && (
+                        <span className="absolute top-2 right-2 px-1 py-0.2 rounded-md bg-gradient-to-r from-red-600 to-amber-500 text-white font-black text-[8px] uppercase tracking-wider shadow-sm animate-pulse">
+                          HOT
+                        </span>
+                      )}
+                      <div className={`flex-1 flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        <Icon size={42} />
+                      </div>
+                      <div className="w-full">
+                        <div className={`text-[11px] font-normal leading-tight text-center whitespace-pre-line ${
+                          isDark ? 'text-slate-200' : 'text-slate-800'
+                        }`}>
+                          {style.title}
+                        </div>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -3430,14 +3331,11 @@ export const AiVideoTab: React.FC = () => {
         defaultAspectRatio={aspectRatio === '16:9' ? '16:9' : '9:16'}
         userTier={userTier}
         onRequireUpgrade={(tier) => {
+          setCapcutModalTemplate(null);
           showAuthToast(
-            tier === 'vip'
-              ? (isVietnamese
-                  ? '👑 Template Animation Ads Image (VEO 3.1) độc quyền cho gói VIP Studio. Vui lòng nâng cấp!'
-                  : '👑 Animation Ads Image (VEO 3.1) template is exclusive to VIP Studio plan. Please upgrade!')
-              : (isVietnamese
-                  ? '⭐ Tất cả Templates yêu cầu gói Premium trở lên. Vui lòng nạp tiền nâng cấp!'
-                  : '⭐ All Templates require Premium plan or above. Please upgrade!')
+            isVietnamese
+              ? '⭐ Vui lòng nâng cấp để sử dụng template này!'
+              : '⭐ Please upgrade to use this template!'
           );
           setUpgradeDefaultTier(tier || 'premium');
           setIsUpgradeModalOpen(true);

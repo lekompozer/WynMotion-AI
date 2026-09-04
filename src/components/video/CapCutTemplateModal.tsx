@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService } from '@/services/wynmotionService';
+import { getFastVideoUrl } from '@/utils/templateVideoCache';
 import { Loader2 } from 'lucide-react';
 
 export interface CapCutTemplateData {
-  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'product_ads_motion' | 'animation_ads_image_veo' | 'animation_ads_image_veo_2';
+  id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'animation_ads_image_veo' | 'animation_ads_image_veo_2';
   titleVi: string;
   titleEn: string;
   descVi: string;
@@ -69,27 +70,6 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     defaultOutlineEn: 'NOW',
     defaultSloganVi: '⚡ TRẢI NGHIỆM ĐẲNG CẤP - ĐẶT HÀNG NGAY',
     defaultSloganEn: '⚡ EXPERIENCE LUXURY - ORDER NOW',
-  },
-  product_ads_motion: {
-    id: 'product_ads_motion',
-    titleVi: 'Universal Images Product Video',
-    titleEn: 'Universal Images Product Video',
-    descVi: 'Đạo diễn AI Gemini 3.8 tự do điều phối 125 Transitions GLSL & 40 Hiệu ứng thị giác theo nhịp beat (1-10 ảnh).',
-    descEn: 'Universal AI Motion Director with 125+ GLSL Shaders, 40 visual effects & dynamic 1-10 photos layout.',
-    durationSec: 15.0,
-    videoUrl: '/templates/animation_ads_image_demo.mp4',
-    bgmUrl: '',
-    badge: '💎 AI MOTION 10-60s',
-    usageCount: '88.5K',
-    maxImages: 10,
-    defaultHookVi: 'SIÊU PHẨM MỚI',
-    defaultHookEn: 'NEW ARRIVAL',
-    defaultSolidVi: 'ORDER',
-    defaultSolidEn: 'ORDER',
-    defaultOutlineVi: 'NOW',
-    defaultOutlineEn: 'NOW',
-    defaultSloganVi: '⚡ ĐẶT HÀNG NGAY - SỐ LƯỢNG CÓ HẠN',
-    defaultSloganEn: '⚡ LIMITED TIME OFFER - ORDER NOW',
   },
   ads_strobe_teaser: {
     id: 'ads_strobe_teaser',
@@ -173,7 +153,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const title = template ? (isVietnamese ? (template.title_vi || template.titleVi || template.title) : (template.title_en || template.titleEn || template.title)) : '';
   const desc = template ? (isVietnamese ? (template.desc_vi || template.descVi) : (template.desc_en || template.descEn)) : '';
   const durationSec = template ? (template.duration_sec || template.durationSec || 12) : 12;
-  const videoUrl = template ? (template.video_demo_url || template.videoUrl || template.local_video_path || '') : '';
+  const localVideoPath = template?.local_video_path || template?.localVideoPath;
+  const remoteVideoUrl = template?.video_demo_url || template?.videoUrl;
+  const initialVideoUrl = (localVideoPath && localVideoPath.startsWith('/templates/'))
+    ? localVideoPath
+    : (remoteVideoUrl || localVideoPath || '');
+  const [fastVideoUrl, setFastVideoUrl] = useState<string>(initialVideoUrl);
+  const coverUrl = template ? (template.cover_ios_url || template.cover_url || template.coverUrl || template.cover || '') : '';
+  const videoUrl = fastVideoUrl || initialVideoUrl;
   const bgmUrl = template ? (template.bgm_url || template.bgmUrl || template.local_bgm_path || '') : '';
   const badge = template ? (template.badge || (template.is_vip ? '👑 VIP' : '💎 AI VIDEO')) : '💎 AI VIDEO';
   const usageCount = template ? (template.usage_count || template.usageCount || '50K') : '50K';
@@ -220,6 +207,13 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       setSelectedDuration(durationSec);
       setCustomAudioUrl(bgmUrl);
       setCustomAudioName('');
+
+      // Fast Local/Cache Video Resolution
+      const lPath = template.local_video_path || template.localVideoPath;
+      const rUrl = template.video_demo_url || template.videoUrl;
+      getFastVideoUrl(lPath, rUrl).then((fast) => {
+        if (fast) setFastVideoUrl(fast);
+      });
     }
   }, [isOpen, template, isVietnamese, defaultAspectRatio]);
 
@@ -322,17 +316,18 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
           <div className="relative w-full h-full flex flex-col overflow-hidden bg-black">
             {videoUrl ? (
               <>
-                {/* Ambient Blurred Video Background for Seamless Letterbox Filling */}
-                <video
-                  src={videoUrl}
-                  autoPlay
-                  loop
-                  playsInline
-                  muted
-                  className="absolute inset-0 w-full h-full object-cover filter blur-2xl opacity-40 scale-110 pointer-events-none"
-                />
+                {/* Ambient Blurred Poster Background for Seamless Letterbox Filling (0 decoding overhead) */}
+                {coverUrl ? (
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover filter blur-2xl opacity-35 scale-110 pointer-events-none select-none"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black" />
+                )}
 
-                {/* Crisp Main Video Player */}
+                {/* Crisp Main Video Player with Hardware-Accelerated Single Stream */}
                 <div className="absolute inset-0 z-10 flex items-center justify-center">
                   <video
                     ref={videoRef}
@@ -340,6 +335,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     autoPlay
                     loop
                     playsInline
+                    preload="auto"
                     muted={isMuted}
                     onClick={handleTogglePlay}
                     className="w-full h-full object-contain cursor-pointer"
@@ -618,27 +614,10 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   <label className="text-xs font-bold text-white/90">
                     {template.id === 'ads_cinematic_showcase'
                       ? t('📸 8 Ảnh Món Ăn / Menu (Tải 1-8 ảnh)', '📸 8 Food / Menu Images (Upload 1-8)')
-                      : template.id === 'product_ads_motion'
-                      ? t('📸 Tải 1 - 10 Ảnh Sản Phẩm (Tự động tách nền & phân cảnh AI)', '📸 1-10 Product Images (Auto Cutout & AI Directing)')
                       : t('Ảnh Sản Phẩm / Clip Cuối', 'Hero Media')}
                   </label>
                   <span className="text-[10px] text-cyan-300 font-semibold">{productImages.length}/{template.maxImages}</span>
                 </div>
-
-                {template.id === 'product_ads_motion' && (
-                  <div className="p-3 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-transparent border border-purple-500/30 rounded-xl space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-purple-300 font-bold text-xs">
-                      <span>✨</span>
-                      <span>{t('Universal AI Motion Director (1 - 10 ảnh):', 'Universal AI Motion Director (1 - 10 photos):')}</span>
-                    </div>
-                    <p className="text-[11px] text-white/80 leading-relaxed">
-                      {t(
-                        'Tải từ 1 đến 10 ảnh sản phẩm. AI tự động sáng tạo kịch bản, 125+ Shaders GLSL, hiệu ứng Strobe Beat & Typography chữ trắng đè lên video độc bản.',
-                        'Upload 1 to 10 product photos. AI will auto-orchestrate 125+ GLSL Shaders, Strobe Beats & typography overlay.'
-                      )}
-                    </p>
-                  </div>
-                )}
 
                 {template.id === 'ads_cinematic_showcase' && (
                   <div className="p-3 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 rounded-xl space-y-1.5">
