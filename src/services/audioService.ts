@@ -47,8 +47,6 @@ export const AUDIO_STUDIO_LANGUAGES = [
   { code: 'pt-BR', name: 'Português (Brasil)', flag: '🇧🇷' },
   { code: 'hi', name: 'हिन्दी (Hindi)', flag: '🇮🇳' },
   { code: 'bn', name: 'বাংলা (Bengali)', flag: '🇧🇩' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
 ];
 
 export const VIENEU_NORTHERN_VOICES: VoiceOption[] = [
@@ -81,12 +79,13 @@ export const KOKORO_FEMALE_VOICES: VoiceOption[] = [
   { code: 'af_sky', name: 'Sky (US Female 🇺🇸)', region: 'English (US)', gender: 'female', tag: 'Youth' },
   { code: 'bf_isabella', name: 'Isabella (UK Female 🇬🇧)', region: 'English (UK)', gender: 'female', tag: 'Academic' },
   { code: 'bf_emma', name: 'Emma (UK Female 🇬🇧)', region: 'English (UK)', gender: 'female', tag: 'British' },
-  { code: 'jf_alpha', name: 'Alpha (Japanese Female 🇯🇵)', region: '日本語', gender: 'female', tag: 'Anime' },
   { code: 'zf_xiaobei', name: 'Xiaobei (Chinese Female 🇨🇳)', region: '中文', gender: 'female', tag: 'Mandarin' },
+  { code: 'jf_alpha', name: 'Alpha (Japanese Female 🇯🇵)', region: '日本語', gender: 'female', tag: 'Anime' },
+  { code: 'kf_sarah', name: 'Sarah (Korean Female 🇰🇷)', region: '한국어', gender: 'female', tag: 'Korean' },
   { code: 'ef_dora', name: 'Dora (Spanish Female 🇪🇸)', region: 'Español', gender: 'female', tag: 'Spanish' },
-  { code: 'ff_siwis', name: 'Siwis (French Female 🇫🇷)', region: 'Français', gender: 'female', tag: 'French' },
-  { code: 'hf_alpha', name: 'Alpha (Hindi Female 🇮🇳)', region: 'हिन्दी', gender: 'female', tag: 'Hindi' },
+  { code: 'if_sara', name: 'Sara (Italian Female 🇮🇹)', region: 'Italiano', gender: 'female', tag: 'Italian' },
   { code: 'pf_dora', name: 'Dora (Portuguese Female 🇧🇷)', region: 'Português', gender: 'female', tag: 'Portuguese' },
+  { code: 'hf_alpha', name: 'Alpha (Hindi Female 🇮🇳)', region: 'हिन्दी', gender: 'female', tag: 'Hindi' },
 ];
 
 export const KOKORO_MALE_VOICES: VoiceOption[] = [
@@ -94,6 +93,13 @@ export const KOKORO_MALE_VOICES: VoiceOption[] = [
   { code: 'am_michael', name: 'Michael (US Male 🇺🇸)', region: 'English (US)', gender: 'male', tag: 'Deep' },
   { code: 'bm_george', name: 'George (UK Male 🇬🇧)', region: 'English (UK)', gender: 'male', tag: 'Story' },
   { code: 'bm_lewis', name: 'Lewis (UK Male 🇬🇧)', region: 'English (UK)', gender: 'male', tag: 'British' },
+  { code: 'zm_yunjian', name: 'Yunjian (Chinese Male 🇨🇳)', region: '中文', gender: 'male', tag: 'Mandarin' },
+  { code: 'jm_kumo', name: 'Kumo (Japanese Male 🇯🇵)', region: '日本語', gender: 'male', tag: 'Japanese' },
+  { code: 'km_joon', name: 'Joon (Korean Male 🇰🇷)', region: '한국어', gender: 'male', tag: 'Korean' },
+  { code: 'em_alex', name: 'Alex (Spanish Male 🇪🇸)', region: 'Español', gender: 'male', tag: 'Spanish' },
+  { code: 'im_nicola', name: 'Nicola (Italian Male 🇮🇹)', region: 'Italiano', gender: 'male', tag: 'Italian' },
+  { code: 'pm_alex', name: 'Alex (Portuguese Male 🇧🇷)', region: 'Português', gender: 'male', tag: 'Portuguese' },
+  { code: 'hm_omega', name: 'Omega (Hindi Male 🇮🇳)', region: 'हिन्दी', gender: 'male', tag: 'Hindi' },
 ];
 
 export const GEMINI_MALE_VOICES: VoiceOption[] = [
@@ -121,11 +127,10 @@ export const KOKORO_DEFAULT_VOICE_MAP: Record<string, string> = {
   'zh': 'zf_xiaobei',
   'ja': 'jf_alpha',
   'es': 'ef_dora',
-  'fr': 'ff_siwis',
   'hi': 'hf_alpha',
   'pt-BR': 'pf_dora',
-  'kr': 'af_bella',
-  'ko': 'af_bella',
+  'kr': 'kf_sarah',
+  'ko': 'kf_sarah',
   'vi': 'Phạm Tuyên',
 };
 

@@ -88,8 +88,6 @@ export const AUDIO_STUDIO_LANGUAGES = [
   { code: 'pt-BR', name: 'Português (Brasil)', flag: '🇧🇷' },
   { code: 'hi', name: 'हिन्दी (Hindi)', flag: '🇮🇳' },
   { code: 'bn', name: 'বাংলা (Bengali)', flag: '🇧🇩' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
 ];
 
 export const VIENEU_NORTHERN_VOICES = [
@@ -197,7 +195,6 @@ export const KOKORO_DEFAULT_VOICE_MAP: Record<string, { female: string; male: st
   'kr': { female: 'kf_sarah', male: 'km_joon' },
   'ko': { female: 'kf_sarah', male: 'km_joon' },
   'es': { female: 'ef_dora', male: 'em_alex' },
-  'fr': { female: 'ff_siwis', male: 'ff_siwis' },
   'it': { female: 'if_sara', male: 'im_nicola' },
   'pt-BR': { female: 'pf_dora', male: 'pm_alex' },
   'hi': { female: 'hf_alpha', male: 'hm_omega' },
