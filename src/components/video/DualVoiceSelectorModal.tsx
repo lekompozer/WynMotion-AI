@@ -238,7 +238,7 @@ export const DualVoiceSelectorModal: React.FC<DualVoiceSelectorModalProps> = ({
               }`}
             >
               <div className="font-extrabold text-xs">WynAI Ultra-HD</div>
-              <div className="text-[10px] text-slate-400">VieNeu & Kokoro 48kHz</div>
+              <div className="text-[10px] text-slate-400">WynAI Neural Voice 48kHz</div>
             </button>
             <button
               type="button"

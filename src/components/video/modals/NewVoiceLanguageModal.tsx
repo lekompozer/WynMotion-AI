@@ -410,7 +410,7 @@ export const NewVoiceLanguageModal: React.FC<NewVoiceLanguageModalProps> = ({
                         voiceModel === 'wynai' ? 'bg-cyan-400 text-slate-950 shadow-xs' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      WynAI Kokoro / VieNeu
+                      WynAI Voice Model
                     </button>
                     <button
                       type="button"

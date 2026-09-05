@@ -671,7 +671,7 @@ export const AiAudioTab: React.FC = () => {
                       <span className="text-xs font-bold">WynAI Neural 48kHz</span>
                     </div>
                     <div className={`text-[10px] mt-1 ${isDark ? 'text-fuchsia-200/80' : 'text-fuchsia-700'}`}>
-                      VieNeu & Kokoro Studio
+                      WynAI Voice Studio
                     </div>
                   </button>
 
@@ -792,7 +792,7 @@ export const AiAudioTab: React.FC = () => {
                 {selectedLang === 'vi' && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400">
-                      🎭 {t('Phong cách đọc (VieNeu)', 'Reading Style')}
+                      🎭 {t('Phong cách đọc (WynAI)', 'Reading Style')}
                     </label>
                     <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                       {READING_STYLES.map((st) => (
