@@ -38,6 +38,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
+import { LoginModal } from '@/components/auth/LoginModal';
+import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 import {
   audioService,
   AUDIO_STUDIO_LANGUAGES,
@@ -61,7 +63,11 @@ type AudioStep = 1 | 2;
 
 export const AiAudioTab: React.FC = () => {
   const { isVietnamese, isDark, setActiveTab, t } = useApp();
-  const { refreshSubscription } = useWordaiAuth();
+  const { user, userSubscription, refreshSubscription } = useWordaiAuth();
+
+  // Auth & Upgrade Modals
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Studio Mode: 'voice' (Lồng tiếng) | 'music' (Tạo nhạc nền)
   const [studioTab, setStudioTab] = useState<StudioTab>('voice');
@@ -203,6 +209,25 @@ export const AiAudioTab: React.FC = () => {
 
   // Generate Audio Trigger
   const handleGenerateAudio = async () => {
+    // 🔐 Auth Guard: Bắt buộc đăng nhập
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    // 🪙 Points Guard: Cần tối thiểu 2 điểm (hoặc ước tính theo giây cho Gemini)
+    let estimatedPoints = 2;
+    if (studioTab === 'voice' && modelType === 'gemini') {
+      const words = scriptText.trim().split(/\s+/).filter(Boolean).length;
+      const estimatedSec = Math.max(1, (words / 150) * 60);
+      estimatedPoints = estimatedSec <= 30 ? 2 : 2 + Math.ceil((estimatedSec - 30) / 15);
+    }
+
+    if ((userSubscription?.points_balance ?? 0) < estimatedPoints) {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     try {
       setIsGenerating(true);
       setGeneratedAudio(null);
@@ -248,7 +273,11 @@ export const AiAudioTab: React.FC = () => {
       refreshSubscription();
     } catch (err: any) {
       console.error('Audio generation error:', err);
-      alert(err.message || t('Tạo âm thanh thất bại!', 'Failed to generate audio!'));
+      if (err?.message?.includes('402') || err?.message?.includes('insufficient_points') || err?.message?.includes('Không đủ điểm')) {
+        setIsUpgradeModalOpen(true);
+      } else {
+        alert(err.message || t('Tạo âm thanh thất bại!', 'Failed to generate audio!'));
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -880,8 +909,10 @@ export const AiAudioTab: React.FC = () => {
                 <Sparkles className="w-4 h-4" />
                 <span>
                   {studioTab === 'voice'
-                    ? t('✨ Tạo Giọng Đọc AI Ngay', '✨ Generate AI Voice')
-                    : t('✨ Tạo Bản Nhạc Ngay', '✨ Generate Music Now')}
+                    ? modelType === 'wynai'
+                      ? t('✨ Tạo Giọng Đọc AI (2 điểm)', '✨ Generate AI Voice (2 pts)')
+                      : t('✨ Tạo Giọng Đọc Gemini (Theo giây)', '✨ Generate Gemini Voice (Per second)')
+                    : t('✨ Tạo Bản Nhạc Ngay (2 điểm)', '✨ Generate Music Now (2 pts)')}
                 </span>
               </>
             )}
@@ -992,6 +1023,17 @@ export const AiAudioTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Auth & Upgrade Modals */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
+      <WynMotionUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        defaultTab="points"
+      />
     </div>
   );
 };

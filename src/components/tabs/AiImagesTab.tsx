@@ -40,6 +40,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
+import { LoginModal } from '@/components/auth/LoginModal';
+import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 import {
   imageService,
   ImageEndpoint,
@@ -224,7 +226,11 @@ const CUSTOM_TOOLS: ToolConfig[] = [
 
 export const AiImagesTab: React.FC = () => {
   const { isDark, isVietnamese, t } = useApp();
-  const { user, refreshSubscription } = useWordaiAuth();
+  const { user, userSubscription, refreshSubscription } = useWordaiAuth();
+
+  // Auth & Upgrade Modals
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Navigation mode: Studio (Default) | Tools | RemoveBG
   const [mainView, setMainView] = useState<MainViewMode>('studio');
@@ -479,6 +485,18 @@ export const AiImagesTab: React.FC = () => {
 
   // ── Studio Generation Trigger ──
   const handleStudioSubmit = async () => {
+    // 🔐 Auth Guard: Bắt buộc đăng nhập
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    // 🪙 Points Guard: Cần tối thiểu 2 điểm
+    if ((userSubscription?.points_balance ?? 0) < 2) {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     if (!studioPrompt.trim()) {
       alert(t('Vui lòng nhập mô tả ảnh!', 'Please enter an image prompt!'));
       return;
@@ -530,14 +548,24 @@ export const AiImagesTab: React.FC = () => {
       refreshSubscription();
     } catch (err: any) {
       console.error('Studio generate error:', err);
-      alert(err.message || t('Tạo ảnh thất bại, vui lòng thử lại', 'Image generation failed'));
+      if (err?.message?.includes('402') || err?.message?.includes('insufficient_points') || err?.message?.includes('Không đủ điểm')) {
+        setIsUpgradeModalOpen(true);
+      } else {
+        alert(err.message || t('Tạo ảnh thất bại, vui lòng thử lại', 'Image generation failed'));
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // ── Streamlined RemoveBG (No Aspect Ratio / Prompt needed) ──
+  // ── Streamlined RemoveBG (No Aspect Ratio / Prompt needed - Free for logged-in users) ──
   const handleExecuteRemoveBg = async () => {
+    // 🔐 Auth Guard: Bắt buộc đăng nhập (kể cả tính năng miễn phí)
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
     if (!removeBgFile) {
       alert(t('Vui lòng tải ảnh cần xóa nền!', 'Please upload an image!'));
       return;
@@ -564,6 +592,18 @@ export const AiImagesTab: React.FC = () => {
 
   // ── Generic Wrapper to Handle Tool Results ──
   const handleToolExecution = async (toolPromise: Promise<GenerateImageResult>) => {
+    // 🔐 Auth Guard: Bắt buộc đăng nhập
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    // 🪙 Points Guard: Cần tối thiểu 2 điểm
+    if ((userSubscription?.points_balance ?? 0) < 2) {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     try {
       setIsGenerating(true);
       setResultImage(null);
@@ -572,7 +612,11 @@ export const AiImagesTab: React.FC = () => {
       refreshSubscription();
     } catch (err: any) {
       console.error('Tool execution error:', err);
-      alert(err.message || t('Tạo ảnh thất bại, vui lòng thử lại', 'Image generation failed'));
+      if (err?.message?.includes('402') || err?.message?.includes('insufficient_points') || err?.message?.includes('Không đủ điểm')) {
+        setIsUpgradeModalOpen(true);
+      } else {
+        alert(err.message || t('Tạo ảnh thất bại, vui lòng thử lại', 'Image generation failed'));
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -591,9 +635,9 @@ export const AiImagesTab: React.FC = () => {
         }`}
       >
         {[
-          { id: 'studio' as MainViewMode, labelVi: 'Studio', labelEn: 'Studio' },
-          { id: 'tools' as MainViewMode, labelVi: '10 Tools', labelEn: '10 Tools' },
-          { id: 'removebg' as MainViewMode, icon: Scissors, labelVi: 'Remove BG', labelEn: 'Remove BG' },
+          { id: 'studio' as MainViewMode, labelVi: 'Studio (2 điểm)', labelEn: 'Studio (2 pts)' },
+          { id: 'tools' as MainViewMode, labelVi: '10 Tools (2 điểm)', labelEn: '10 Tools (2 pts)' },
+          { id: 'removebg' as MainViewMode, icon: Scissors, labelVi: 'Remove BG (Miễn phí)', labelEn: 'Remove BG (Free)' },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = mainView === tab.id;
@@ -737,7 +781,7 @@ export const AiImagesTab: React.FC = () => {
                     <span>{elapsedTime}s</span>
                   </>
                 ) : (
-                  <span>Send</span>
+                  <span>{t('Tạo ảnh (2 điểm)', 'Create (2 pts)')}</span>
                 )}
               </button>
             </div>
@@ -1518,7 +1562,7 @@ export const AiImagesTab: React.FC = () => {
             ) : (
               <>
                 <Scissors className="w-4 h-4" />
-                <span>{t('✂️ Tách Nền Trong Suốt Ngay', '✂️ Cutout Subject Now')}</span>
+                <span>{t('✂️ Tách Nền Trong Suốt (Miễn phí)', '✂️ Cutout Subject Now (Free)')}</span>
               </>
             )}
           </button>
@@ -1683,6 +1727,17 @@ export const AiImagesTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Auth & Upgrade Modals */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
+      <WynMotionUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        defaultTab="points"
+      />
     </div>
   );
 };
