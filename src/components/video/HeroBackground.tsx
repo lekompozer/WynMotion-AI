@@ -12,6 +12,7 @@ interface HeroBackgroundProps {
   onOpenProfile?: () => void;
   userAvatarUrl?: string;
   userDisplayName?: string;
+  hasUnreadNotifications?: boolean;
 }
 
 export const HeroBackground: React.FC<HeroBackgroundProps> = ({
@@ -22,6 +23,7 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
   onOpenProfile,
   userAvatarUrl,
   userDisplayName,
+  hasUnreadNotifications = false,
 }) => {
   const { isDark, isVietnamese } = useApp();
 
@@ -183,16 +185,22 @@ export const HeroBackground: React.FC<HeroBackgroundProps> = ({
           {/* Right: Notifications & Profile Avatar with Chevron */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
+              type="button"
               onClick={onOpenNotifications}
-              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all backdrop-blur-md border border-white/25 text-white flex items-center justify-center relative shadow-sm"
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all backdrop-blur-md border border-white/25 text-white flex items-center justify-center relative shadow-sm cursor-pointer"
+              title={isVietnamese ? 'Thông báo WynMotion' : 'WynMotion Notifications'}
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FF2D55] ring-2 ring-slate-900" />
+              {hasUnreadNotifications && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FF2D55] ring-2 ring-slate-900 animate-pulse" />
+              )}
             </button>
 
             <button
+              type="button"
               onClick={onOpenProfile}
-              className="flex items-center gap-1 pl-1 pr-1.5 py-1 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all backdrop-blur-md border border-white/25 text-white shadow-sm"
+              className="flex items-center gap-1 pl-1 pr-1.5 py-1 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all backdrop-blur-md border border-white/25 text-white shadow-sm cursor-pointer"
+              title={isVietnamese ? 'Tài khoản & Cài đặt' : 'Account & Settings'}
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-400 to-[#FF2D55] border border-white/70 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {userAvatarUrl ? (
