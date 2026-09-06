@@ -53,6 +53,8 @@ import {
   Languages,
   Plus,
   Star,
+  Send,
+  History,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -222,6 +224,14 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
   const [showAspectDropdown, setShowAspectDropdown] = useState(false);
+
+  // Science Explainer AI Chat Code Editing State (iOS)
+  const [isScienceChatOpen, setIsScienceChatOpen] = useState(false);
+  const [scienceChatInput, setScienceChatInput] = useState('');
+  const [isEditingScienceCode, setIsEditingScienceCode] = useState(false);
+  const [scienceVersions, setScienceVersions] = useState<any[]>([]);
+  const [scienceExplainingMsg, setScienceExplainingMsg] = useState<string | null>(null);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // 2-Layer Text Controls
   const [showSceneCards, setShowSceneCards] = useState<boolean>(true);
@@ -650,6 +660,107 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   }, [frame, scenes]);
 
   const activeScene: DynamicSceneData = scenes[activeSceneIndex] || scenes[0];
+
+  useEffect(() => {
+    if (visualStyle === 'science_explainer' && activeScene) {
+      wynmotionService.getScienceExplainerVersions(project.project_id, activeScene.scene_id).then((hist) => {
+        if (hist && hist.length > 0) {
+          setScienceVersions(hist);
+        }
+      });
+    }
+  }, [visualStyle, activeScene?.scene_id, project.project_id]);
+
+  const handleSendScienceCodePrompt = async (overridePrompt?: string) => {
+    const promptToSend = (overridePrompt || scienceChatInput).trim();
+    if (!promptToSend || isEditingScienceCode) return;
+
+    setIsEditingScienceCode(true);
+    setScienceExplainingMsg(null);
+
+    try {
+      const fallbackScienceCode = `import React from 'react';
+import { useCurrentFrame, useVideoConfig, spring, interpolate } from '../RemotionEngine';
+
+export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width || height === 1920;
+  const popSpring = spring({ frame, fps, config: { damping: 14, stiffness: 140 } });
+  const rotY = (frame * 1.2) % 360;
+  const laserY = interpolate(frame % (fps * 3), [0, fps * 3], [0, 100], { extrapolateRight: 'clamp' });
+
+  return (
+    <div style={{ width: '100%', height: '100%', backgroundColor: '#060B18', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono', monospace", perspective: 1200 }}>
+      <div style={{ position: 'absolute', width: '200%', height: '200%', top: '-50%', left: '-50%', backgroundImage: 'radial-gradient(rgba(0, 240, 255, 0.12) 1px, transparent 1px)', backgroundSize: '36px 36px', transform: 'rotateX(65deg)', opacity: 0.8 }} />
+      <div style={{ position: 'absolute', top: \`\${laserY}%\`, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #00F0FF, #10B981, transparent)', boxShadow: '0 0 20px #00F0FF', zIndex: 5 }} />
+      <div style={{ transform: \`scale(\${popSpring})\`, zIndex: 10, textAlign: 'center', color: '#00F0FF' }}>
+        <h2 style={{ fontSize: isPortrait ? 28 : 42, fontWeight: 900, textShadow: '0 0 20px rgba(0, 240, 255, 0.8)' }}>STEM EXPLAINER</h2>
+        <p style={{ color: '#E2E8F0', marginTop: 8, fontSize: 14 }}>${activeScene?.voice_transcript || activeScene?.title || 'Scientific Discovery & Quantum Dynamics'}</p>
+      </div>
+    </div>
+  );
+};`;
+
+      const currentCode = (activeScene as any)?.code || fallbackScienceCode;
+      const res = await wynmotionService.editScienceExplainerCode({
+        project_id: project.project_id,
+        scene_id: activeScene ? activeScene.scene_id : 1,
+        current_code: currentCode,
+        prompt: promptToSend,
+        aspect_ratio: aspectRatio,
+        science_domain: (project as any)?.science_domain || 'physics',
+        language_code: isVietnamese ? 'vi' : 'en',
+      });
+
+      if (res.success && res.new_code) {
+        setScenes((prev) =>
+          prev.map((s) =>
+            s.scene_id === (activeScene ? activeScene.scene_id : 1)
+              ? { ...s, code: res.new_code }
+              : s
+          )
+        );
+        if (res.version_history) {
+          setScienceVersions(res.version_history);
+        }
+        setScienceExplainingMsg(res.explanation || (isVietnamese ? 'Đã cập nhật code hoạt họa!' : 'Animation code updated!'));
+        setScienceChatInput('');
+      } else {
+        alert(res.message || (isVietnamese ? 'Không thể chỉnh sửa code.' : 'Failed to edit code.'));
+      }
+    } catch (err: any) {
+      console.error('Error editing science code:', err);
+      alert(err.message || (isVietnamese ? 'Lỗi khi gửi yêu cầu chỉnh sửa AI.' : 'AI edit request error.'));
+    } finally {
+      setIsEditingScienceCode(false);
+    }
+  };
+
+  const handleApplyScienceVersion = async (versionId: string) => {
+    try {
+      const res = await wynmotionService.applyScienceExplainerVersion(
+        project.project_id,
+        activeScene ? activeScene.scene_id : 1,
+        versionId
+      );
+      if (res.code) {
+        setScenes((prev) =>
+          prev.map((s) =>
+            s.scene_id === (activeScene ? activeScene.scene_id : 1)
+              ? { ...s, code: res.code }
+              : s
+          )
+        );
+        if (res.version_history) {
+          setScienceVersions(res.version_history);
+        }
+        setScienceExplainingMsg(res.explanation || (isVietnamese ? `Đã chuyển về phiên bản ${res.version_number}` : `Restored version ${res.version_number}`));
+      }
+    } catch (err: any) {
+      alert(err.message || (isVietnamese ? 'Không thể áp dụng phiên bản này.' : 'Failed to apply version.'));
+    }
+  };
 
   // Active speaker identification at current frame
   const activeSpeaker: 'A' | 'B' = useMemo(() => {
@@ -1160,6 +1271,20 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
           className="shrink-0 flex items-center justify-center p-3 relative overflow-hidden bg-[#07080E] w-full"
           style={{ minHeight: '220px' }}
         >
+          {/* Floating AI Chat Button for Science Explainer (Left Side of Canvas) */}
+          {visualStyle === 'science_explainer' && (
+            <div className="absolute top-3 left-3 z-30">
+              <button
+                type="button"
+                onClick={() => setIsScienceChatOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-cyan-500/20 backdrop-blur-md border border-cyan-400/40 text-cyan-300 text-xs font-black shadow-2xl active:scale-95 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                <span>AI Chat</span>
+              </button>
+            </div>
+          )}
+
           {/* Floating Compact Aspect Ratio Dropdown */}
           <div className="absolute top-3 right-3 z-30">
             <button
@@ -2715,6 +2840,194 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         currentLangCode={activeAudioLang}
         onSuccess={handleAddNewVoiceTrack}
       />
+
+      {/* ── Science Explainer: Slide-In Left Chat Drawer ── */}
+      {isScienceChatOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex pointer-events-auto"
+          style={{ transform: 'translateZ(999px)', WebkitTransform: 'translateZ(999px)' }}
+        >
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setIsScienceChatOpen(false)}
+          />
+          <div
+            className={`relative z-[10000] w-[88vw] max-w-[370px] h-full flex flex-col justify-between p-4 space-y-3 animate-in slide-in-from-left duration-250 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+1rem)] pt-[max(env(safe-area-inset-top,0px),16px)] shadow-2xl ${
+              isDark ? 'bg-[#0E121F] border-r border-slate-700/60' : 'bg-slate-900 border-r border-slate-700'
+            }`}
+            style={{ transform: 'translateZ(1000px)', WebkitTransform: 'translateZ(1000px)' }}
+          >
+            <div className="space-y-3 overflow-y-auto pr-1">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-sm">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Edit by Chat with AI</h3>
+                    <p className="text-[10px] text-slate-400">
+                      {isVietnamese ? 'Chỉnh sửa hoạt họa Science Explainer' : 'Edit Science Explainer animation'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsScienceChatOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 active:scale-95 transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Version History Toggle Pill */}
+              <div className="flex items-center justify-between bg-[#14192A] border border-cyan-500/30 p-2 rounded-2xl">
+                <div className="flex items-center gap-2 text-xs text-white font-bold">
+                  <span className="px-2 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono text-[11px] border border-cyan-500/40">
+                    v{scienceVersions.find((v) => v.is_applied)?.version_number || scienceVersions.length || 1}
+                  </span>
+                  <span className="text-[11px] text-slate-300">
+                    {isVietnamese ? 'Phiên bản hoạt họa' : 'Animation version'}
+                  </span>
+                </div>
+                {scienceVersions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVersionHistory(!showVersionHistory)}
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span>{showVersionHistory ? (isVietnamese ? 'Ẩn' : 'Hide') : (isVietnamese ? 'Lịch sử' : 'History')} ({scienceVersions.length})</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Version History List */}
+              {showVersionHistory && scienceVersions.length > 0 && (
+                <div className="space-y-1.5 p-2 rounded-2xl bg-[#0B0E18] border border-slate-800 max-h-44 overflow-y-auto">
+                  {scienceVersions.map((v: any) => (
+                    <div
+                      key={v.version_id}
+                      className={`p-2 rounded-xl text-xs flex items-center justify-between gap-2 border transition-all ${
+                        v.is_applied
+                          ? 'bg-cyan-950/40 border-cyan-500/50 text-white'
+                          : 'bg-[#121626] border-slate-800/80 text-slate-400'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold flex items-center gap-1.5">
+                          <span className="font-mono text-cyan-400 text-[11px]">v{v.version_number}</span>
+                          <span className="truncate text-[11px]">{v.prompt || (isVietnamese ? 'Bản gốc' : 'Initial')}</span>
+                        </div>
+                        {v.explanation && (
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5">{v.explanation}</p>
+                        )}
+                      </div>
+                      {v.is_applied ? (
+                        <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          {isVietnamese ? 'Đang dùng' : 'Applied'}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleApplyScienceVersion(v.version_id)}
+                          className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg bg-cyan-400 text-slate-950 active:scale-95 transition-all shadow-sm"
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* AI Explanation Banner */}
+              {scienceExplainingMsg && (
+                <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/40 text-xs text-cyan-200 leading-relaxed shadow-sm flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5 animate-pulse" />
+                  <div>
+                    <div className="font-bold text-white text-[11px] mb-0.5">Gemini 3.8 Flash</div>
+                    <div className="text-[11px]">{scienceExplainingMsg}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick suggestions */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-slate-400">
+                  {isVietnamese ? 'Gợi ý chỉnh sửa nhanh:' : 'Quick suggestions:'}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    '🟣 Đổi laser sang tím neon',
+                    '⚛️ Thêm quỹ đạo electron',
+                    '📐 Lưới 3D blueprint',
+                    '⚡ Tăng tốc độ quay hạt',
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      disabled={isEditingScienceCode}
+                      onClick={() => handleSendScienceCodePrompt(chip)}
+                      className="text-[10px] font-medium px-2.5 py-1 rounded-xl bg-[#14192A] text-slate-300 hover:text-cyan-300 border border-slate-700/60 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Scene Transcript Display */}
+              <div className="p-3 rounded-2xl bg-[#090C16] border border-slate-800 text-xs text-slate-300 space-y-1">
+                <div className="text-[10px] font-bold uppercase text-slate-400">
+                  {isVietnamese
+                    ? `Phân cảnh ${(activeScene as any)?.scene_number || activeScene?.scene_id || 1}`
+                    : `Scene ${(activeScene as any)?.scene_number || activeScene?.scene_id || 1}`}
+                </div>
+                <p className="text-[11px] text-slate-200 italic line-clamp-3">
+                  "{activeScene?.voice_transcript || activeScene?.summary_text || activeScene?.title || (isVietnamese ? 'Khoa học STEM' : 'Science STEM')}"
+                </p>
+              </div>
+            </div>
+
+            {/* Input area */}
+            <div className="pt-2 border-t border-slate-800">
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={scienceChatInput}
+                  disabled={isEditingScienceCode}
+                  onChange={(e) => setScienceChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSendScienceCodePrompt();
+                    }
+                  }}
+                  placeholder={
+                    isEditingScienceCode
+                      ? (isVietnamese ? 'Gemini 3.8 Flash đang sửa code...' : 'Gemini 3.8 Flash editing code...')
+                      : (isVietnamese ? 'Yêu cầu sửa hoạt họa (Enter gửi)...' : 'Type animation changes (Enter to send)...')
+                  }
+                  className="w-full pl-3 pr-14 py-2.5 text-xs rounded-2xl bg-[#14192A] border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  disabled={isEditingScienceCode || !scienceChatInput.trim()}
+                  onClick={() => handleSendScienceCodePrompt()}
+                  className="absolute right-1.5 p-2 rounded-xl bg-cyan-500 text-slate-950 font-bold hover:bg-cyan-400 disabled:opacity-40 active:scale-95 transition-all"
+                >
+                  {isEditingScienceCode ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

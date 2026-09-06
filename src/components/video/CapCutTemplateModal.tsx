@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService } from '@/services/wynmotionService';
 import { getFastVideoUrl, BUNDLED_LOCAL_FILES } from '@/utils/templateVideoCache';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft, X } from 'lucide-react';
 
 export interface CapCutTemplateData {
   id: 'ads_strobe_teaser' | 'ads_cinematic_showcase' | 'animation_ads_image_veo' | 'animation_ads_image_veo_2';
@@ -119,6 +119,7 @@ export interface CapCutTemplateModalProps {
   template: any | null;
   isOpen: boolean;
   onClose: () => void;
+  onBack?: () => void;
   defaultAspectRatio?: '9:16' | '16:9';
   userTier?: 'free' | 'premium' | 'pro' | 'vip';
   onRequireUpgrade?: (tier?: 'premium' | 'vip') => void;
@@ -141,6 +142,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   template,
   isOpen,
   onClose,
+  onBack,
   defaultAspectRatio = '9:16',
   userTier = 'free',
   onRequireUpgrade,
@@ -148,6 +150,14 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 }) => {
   const { isVietnamese } = useApp();
   const t = (vi: string, en: string) => (isVietnamese ? vi : en);
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      onClose();
+    }
+  };
 
   // Normalized template attributes supporting both snake_case API and camelCase legacy
   const title = template ? (isVietnamese ? (template.title_vi || template.titleVi || template.title) : (template.title_en || template.titleEn || template.title)) : '';
@@ -422,21 +432,32 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
               className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pb-3 bg-gradient-to-b from-black/85 via-black/40 to-transparent"
               style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
             >
+              {/* Back to Templates List */}
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-bold border border-white/20 transition-all active:scale-95 cursor-pointer shadow-lg backdrop-blur-md"
+                title={t('Quay lại danh sách mẫu', 'Back to templates')}
+              >
+                <ArrowLeft className="w-4 h-4 text-cyan-300" />
+                <span>{t('Danh sách mẫu', 'Templates')}</span>
+              </button>
+
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 shadow-lg">
                   {badge}
                 </span>
-                <span className="text-[11px] font-bold text-white/90 drop-shadow">
+                <span className="text-[11px] font-bold text-white/90 drop-shadow hidden sm:inline">
                   🔥 {usageCount} {t('lượt dùng', 'uses')}
                 </span>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="w-8 h-8 min-w-[32px] min-h-[32px] rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-xs font-bold border border-white/20 transition-all active:scale-95 cursor-pointer shadow-lg backdrop-blur-md"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-
-              <button
-                onClick={onClose}
-                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-sm font-bold border border-white/20 transition-all active:scale-95 cursor-pointer shadow-lg backdrop-blur-md"
-              >
-                ✕
-              </button>
             </div>
 
             {/* Center Play/Pause indicator */}
@@ -556,7 +577,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 {t('Bước 1/2: Tải Ảnh & Tỉ Lệ', 'Step 1/2: Photos & Ratio')}
               </h3>
               <button
-                onClick={onClose}
+                onClick={handleBack}
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
               >
                 ✕
@@ -810,7 +831,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 {t('Bước 2/2: Tên & Nội Dung Chữ', 'Step 2/2: Copywriting')}
               </h3>
               <button
-                onClick={onClose}
+                onClick={handleBack}
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
               >
                 ✕

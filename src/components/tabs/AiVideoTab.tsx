@@ -1800,7 +1800,14 @@ export const AiVideoTab: React.FC = () => {
             setUpgradeDefaultTab('subscriptions');
             setIsUpgradeModalOpen(true);
           }}
-          onClose={() => setCapcutModalTemplate(null)}
+          onBack={() => {
+            setCapcutModalTemplate(null);
+            setIsCapCutGalleryOpen(true);
+          }}
+          onClose={() => {
+            setCapcutModalTemplate(null);
+            setIsCapCutGalleryOpen(true);
+          }}
           onApply={handleApplyCapCutTemplate}
         />
 
@@ -3369,7 +3376,14 @@ export const AiVideoTab: React.FC = () => {
           setUpgradeDefaultTab('subscriptions');
           setIsUpgradeModalOpen(true);
         }}
-        onClose={() => setCapcutModalTemplate(null)}
+        onBack={() => {
+          setCapcutModalTemplate(null);
+          setIsCapCutGalleryOpen(true);
+        }}
+        onClose={() => {
+          setCapcutModalTemplate(null);
+          setIsCapCutGalleryOpen(true);
+        }}
         onApply={handleApplyCapCutTemplate}
       />
 

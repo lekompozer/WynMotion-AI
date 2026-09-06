@@ -166,16 +166,33 @@ export interface SequenceProps {
 }
 
 export const Sequence: React.FC<SequenceProps> = ({ from, durationInFrames, children }) => {
-  const currentFrame = useCurrentFrame();
+  const ctx = useContext(RemotionContext);
+  const currentFrame = ctx ? ctx.frame : 0;
 
   if (currentFrame < from || currentFrame >= from + durationInFrames) {
     return null;
   }
 
+  if (!ctx) {
+    return (
+      <div style={{ position: 'absolute', inset: 0 }}>
+        {children}
+      </div>
+    );
+  }
+
+  const localContext: RemotionContextType = {
+    ...ctx,
+    frame: currentFrame - from,
+    durationInFrames: durationInFrames,
+  };
+
   return (
-    <div style={{ position: 'absolute', inset: 0 }}>
-      {children}
-    </div>
+    <RemotionContext.Provider value={localContext}>
+      <div style={{ position: 'absolute', inset: 0 }}>
+        {children}
+      </div>
+    </RemotionContext.Provider>
   );
 };
 

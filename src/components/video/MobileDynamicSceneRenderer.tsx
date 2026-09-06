@@ -944,13 +944,26 @@ export const MobileDynamicSceneRenderer: React.FC<MobileDynamicSceneRendererProp
               {/* 3. 135° Progressive Watercolor Bloom Mask */}
               <mask id={`doodle_bloom_mask_${scene.scene_id}`}>
                 <linearGradient id={`bloom_grad_${scene.scene_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="white" />
-                  <stop offset={`${Math.min(100, colorSpread)}%`} stopColor="white" />
-                  <stop offset={`${Math.min(100, colorSpread + 18)}%`} stopColor="black" />
-                  <stop offset="100%" stopColor="black" />
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <stop offset={`${Math.max(0, Math.min(100, colorSpread - 4))}%`} stopColor="#FFFFFF" stopOpacity="1" />
+                  <stop offset={`${Math.max(0, Math.min(100, colorSpread + 8))}%`} stopColor="#000000" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#000000" stopOpacity="0" />
                 </linearGradient>
                 <rect width={vbWidth} height={vbHeight} fill={`url(#bloom_grad_${scene.scene_id})`} />
               </mask>
+
+              {/* 4. Diagonal Luminous Light Beam Sheen Filter & Gradient */}
+              <filter id={`doodle_glow_${scene.scene_id}`} x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="16" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              <linearGradient id={`doodle_light_beam_${scene.scene_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 12))}%`} stopColor="#FFFFFF" stopOpacity="0" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 2))}%`} stopColor="#38BDF8" stopOpacity="0.85" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread))}%`} stopColor="#FFFFFF" stopOpacity="0.95" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 4))}%`} stopColor="#F59E0B" stopOpacity="0.75" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 14))}%`} stopColor="#FFFFFF" stopOpacity="0" />
+              </linearGradient>
             </defs>
 
             {/* Layer 1: Ink Line Drawing with Contour Mask */}
@@ -965,7 +978,7 @@ export const MobileDynamicSceneRenderer: React.FC<MobileDynamicSceneRendererProp
               />
             </g>
 
-            {/* Layer 2: 135° Watercolor Color Bloom */}
+            {/* Layer 2: 135° Watercolor Color Bloom (Vivid Color Reveal) */}
             {progress >= fillStart && (
               <g mask={`url(#doodle_bloom_mask_${scene.scene_id})`}>
                 <image
@@ -973,10 +986,20 @@ export const MobileDynamicSceneRenderer: React.FC<MobileDynamicSceneRendererProp
                   width={vbWidth}
                   height={vbHeight}
                   preserveAspectRatio={isPortrait ? 'xMidYMid meet' : 'xMidYMid slice'}
-                  style={{ filter: `saturate(${colorSaturation})` }}
-                  opacity={Math.min(1, (progress - fillStart) / 0.15)}
+                  opacity={1}
                 />
               </g>
+            )}
+
+            {/* Layer 3: 135° Sweeping Luminous Light Beam Overlay */}
+            {progress >= fillStart && progress <= fillEnd + 0.05 && (
+              <rect
+                width={vbWidth}
+                height={vbHeight}
+                fill={`url(#doodle_light_beam_${scene.scene_id})`}
+                filter={`url(#doodle_glow_${scene.scene_id})`}
+                style={{ mixBlendMode: 'screen', pointerEvents: 'none' }}
+              />
             )}
           </svg>
         ) : (

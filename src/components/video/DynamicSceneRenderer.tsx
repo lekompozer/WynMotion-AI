@@ -1267,34 +1267,38 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
             style={{
               position: 'absolute',
               ...getSubsStyle(),
-              width: 'auto',
-              maxWidth: isPortrait ? '90%' : '80%',
+              width: 'max-content',
+              maxWidth: '85%',
               zIndex: 45,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               cursor: 'pointer',
+              padding: '0 4px',
             }}
           >
             <div
               style={{
-                backgroundColor: 'rgba(15, 23, 42, 0.88)',
+                backgroundColor: 'rgba(15, 23, 42, 0.92)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: 999,
-                padding: isPortrait ? '4px 14px' : '6px 18px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                borderRadius: 6,
+                padding: isPortrait ? '5px 12px' : '6px 14px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                 textAlign: 'center',
+                maxWidth: '100%',
+                wordBreak: 'break-word',
               }}
             >
               <span
                 style={{
                   fontFamily: "system-ui, -apple-system, sans-serif",
-                  fontSize: isPortrait ? 12 : 14,
+                  fontSize: isPortrait ? 12 : 13,
                   fontWeight: 700,
                   color: '#F8FAFC',
-                  lineHeight: 1.3,
+                  lineHeight: 1.35,
                   letterSpacing: 0.2,
+                  display: 'block',
                 }}
               >
                 {scene.voice_transcript || displaySummary}
@@ -1497,11 +1501,7 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   const fillStart = Math.floor(duration * 0.28);
   const fillEnd = Math.floor(duration * 0.65);
 
-  const colorSpread = interpolate(frame, [fillStart, fillEnd], [0, 100], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const colorSaturation = interpolate(frame, [fillStart, fillEnd], [0.05, 1], {
+  const colorSpread = interpolate(frame, [fillStart, fillEnd], [-15, 125], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -1583,34 +1583,38 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
           style={{
             position: 'absolute',
             ...getSubsStyle(),
-            width: 'auto',
-            maxWidth: isPortrait ? '90%' : '80%',
+            width: 'max-content',
+            maxWidth: '85%',
             zIndex: 35,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             cursor: 'pointer',
+            padding: '0 4px',
           }}
         >
           <div
             style={{
-              backgroundColor: 'rgba(15, 23, 42, 0.88)',
+              backgroundColor: 'rgba(15, 23, 42, 0.92)',
               backdropFilter: 'blur(12px)',
               border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: 999,
-              padding: isPortrait ? '4px 14px' : '6px 18px',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+              borderRadius: 6,
+              padding: isPortrait ? '5px 12px' : '6px 14px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
               textAlign: 'center',
+              maxWidth: '100%',
+              wordBreak: 'break-word',
             }}
           >
             <span
               style={{
                 fontFamily: "system-ui, -apple-system, sans-serif",
-                fontSize: isPortrait ? 12 : 14,
+                fontSize: isPortrait ? 12 : 13,
                 fontWeight: 700,
                 color: '#F8FAFC',
-                lineHeight: 1.3,
+                lineHeight: 1.35,
                 letterSpacing: 0.2,
+                display: 'block',
               }}
             >
               {scene.voice_transcript || displaySummary}
@@ -1745,13 +1749,27 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
 
               {/* 3. 135-DEG DIAGONAL WATERCOLOR BLOOM MASK (28% -> 65%) */}
               <linearGradient id={`colorSpreadGrad_${scene.scene_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset={`${Math.max(0, colorSpread - 20)}%`} stopColor="#FFFFFF" stopOpacity="1" />
-                <stop offset={`${colorSpread}%`} stopColor="#FFFFFF" stopOpacity="1" />
-                <stop offset={`${Math.min(100, colorSpread + 22)}%`} stopColor="#FFFFFF" stopOpacity="0" />
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 4))}%`} stopColor="#FFFFFF" stopOpacity="1" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 8))}%`} stopColor="#000000" stopOpacity="0" />
+                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
               </linearGradient>
               <mask id={`colorBloomMask_${scene.scene_id}`}>
                 <rect width={vbWidth} height={vbHeight} fill={`url(#colorSpreadGrad_${scene.scene_id})`} />
               </mask>
+
+              {/* 4. DIAGONAL LUMINOUS LIGHT BEAM SHEEN FILTER & GRADIENT */}
+              <filter id={`bloomLightGlow_${scene.scene_id}`} x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation={isPortrait ? '18' : '24'} result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              <linearGradient id={`lightBeamGrad_${scene.scene_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 12))}%`} stopColor="#FFFFFF" stopOpacity="0" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 2))}%`} stopColor="#38BDF8" stopOpacity="0.85" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread))}%`} stopColor="#FFFFFF" stopOpacity="0.95" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 4))}%`} stopColor="#F59E0B" stopOpacity="0.75" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 14))}%`} stopColor="#FFFFFF" stopOpacity="0" />
+              </linearGradient>
             </defs>
 
             {/* Background Canvas */}
@@ -1767,17 +1785,27 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
               mask={`url(#contourTracingMask_${scene.scene_id})`}
             />
 
-            {/* LAYER 2: 135-DEG WATERCOLOR BLOOM */}
+            {/* LAYER 2: 135-DEG WATERCOLOR BLOOM (VIVID COLOR REVEAL) */}
             <g mask={`url(#colorBloomMask_${scene.scene_id})`}>
               <image
                 href={scene.image_url}
                 width={vbWidth}
                 height={vbHeight}
                 preserveAspectRatio={isPortrait ? 'xMidYMid meet' : 'xMidYMid slice'}
-                filter={`saturate(${colorSaturation})`}
-                opacity={interpolate(frame, [fillStart, fillEnd], [0.1, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}
+                opacity={1}
               />
             </g>
+
+            {/* LAYER 3: 135-DEG SWEEPING LUMINOUS LIGHT BEAM OVERLAY */}
+            {frame >= fillStart && frame <= fillEnd + 6 && (
+              <rect
+                width={vbWidth}
+                height={vbHeight}
+                fill={`url(#lightBeamGrad_${scene.scene_id})`}
+                filter={`url(#bloomLightGlow_${scene.scene_id})`}
+                style={{ mixBlendMode: 'screen', pointerEvents: 'none' }}
+              />
+            )}
           </svg>
         ) : (
           <div

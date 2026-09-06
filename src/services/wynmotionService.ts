@@ -554,4 +554,99 @@ export const wynmotionService = {
     }
     return { success: false, templates: [], total: 0 };
   },
+
+  /**
+   * AI Chat Code Editing for Science Explainer Scenes (iOS)
+   */
+  async editScienceExplainerCode(req: {
+    project_id?: string;
+    scene_id: string | number;
+    current_code: string;
+    prompt: string;
+    aspect_ratio?: string;
+    science_domain?: string;
+    language_code?: string;
+  }): Promise<{
+    success: boolean;
+    scene_id: string | number;
+    new_code: string;
+    explanation: string;
+    highlight_changes?: string[];
+    version: number;
+    version_id: string;
+    created_at: string;
+    version_history: Array<{
+      version_id: string;
+      version_number: number;
+      prompt: string;
+      explanation?: string;
+      highlight_changes?: string[];
+      code: string;
+      is_applied?: boolean;
+      created_at?: string;
+    }>;
+    message?: string;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/science-explainer/edit-code`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.detail || 'Không thể chỉnh sửa code bằng AI.');
+    }
+    return await res.json();
+  },
+
+  /**
+   * Apply a specific historical version of Science Explainer code
+   */
+  async applyScienceExplainerVersion(
+    projectId: string | undefined,
+    sceneId: string | number,
+    versionId: string
+  ): Promise<any> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/science-explainer/apply-version`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        project_id: projectId,
+        scene_id: sceneId,
+        version_id: versionId,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.detail || 'Không thể áp dụng phiên bản này.');
+    }
+    return await res.json();
+  },
+
+  /**
+   * Get version history for a Science Explainer scene
+   */
+  async getScienceExplainerVersions(
+    projectId: string | undefined,
+    sceneId: string | number
+  ): Promise<Array<any>> {
+    try {
+      const headers = await getAuthHeaders();
+      const p = new URLSearchParams();
+      if (projectId) p.append('project_id', projectId);
+      p.append('scene_id', String(sceneId));
+      const res = await fetch(`${API_BASE_URL}/api/ai/motion/science-explainer/versions?${p.toString()}`, {
+        headers,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.version_history || [];
+      }
+    } catch (e) {
+      console.warn('Could not fetch versions:', e);
+    }
+    return [];
+  },
 };

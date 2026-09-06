@@ -80,23 +80,29 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
         overflow: 'hidden',
       }}
     >
-      {scenes.map((scene) => (
-        <Sequence
-          key={scene.scene_id}
-          from={scene.start_frame || 0}
-          durationInFrames={scene.duration_frames || 150}
-        >
-          <DynamicSceneRenderer
-            scene={scene}
-            visualStyle={visualStyle}
-            showSceneCards={showSceneCards}
-            showWhisperSubs={captionSegments.length > 0 ? false : showWhisperSubs}
-            cardPosY={cardPosY}
-            subsPosY={subsPosY}
-            onUpdateScene={(updated) => onUpdateScene?.(scene.scene_id, updated)}
-          />
-        </Sequence>
-      ))}
+      {scenes.map((scene, idx) => {
+        let fromFrame = scene.start_frame;
+        if (typeof fromFrame !== 'number') {
+          fromFrame = scenes.slice(0, idx).reduce((acc, s) => acc + (s.duration_frames || 150), 0);
+        }
+        return (
+          <Sequence
+            key={scene.scene_id}
+            from={fromFrame}
+            durationInFrames={scene.duration_frames || 150}
+          >
+            <DynamicSceneRenderer
+              scene={scene}
+              visualStyle={visualStyle}
+              showSceneCards={showSceneCards}
+              showWhisperSubs={captionSegments.length > 0 ? false : showWhisperSubs}
+              cardPosY={cardPosY}
+              subsPosY={subsPosY}
+              onUpdateScene={(updated) => onUpdateScene?.(scene.scene_id, updated)}
+            />
+          </Sequence>
+        );
+      })}
 
       {/* 125 GLSL Active WebGL Transitions Overlay */}
       {activeTransitions.map((fx) => {
