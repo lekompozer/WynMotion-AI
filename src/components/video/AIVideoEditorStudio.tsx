@@ -2384,80 +2384,27 @@ function StudioInner({
                   )}
                 </div>
 
-                {/* LAYER 2: WHISPER VOICE SUBTITLES (DARK PILL) */}
-                <div className="pt-3 border-t border-[#22273B] space-y-2.5 bg-[#141724] p-3 rounded-2xl border border-[#282F45]">
-                  <div className="flex items-center justify-between">
+                {/* WHISPER SUBTITLES NOTICE (MOVED TO TAB 5 CAPTIONS) */}
+                <div className="pt-3 border-t border-[#22273B]">
+                  <div
+                    onClick={() => setActiveFlyoutTab('captions')}
+                    className="p-3 rounded-2xl bg-[#141724] border border-[#252B3E] hover:border-cyan-500/50 cursor-pointer transition-all flex items-center justify-between group"
+                  >
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-white/40" />
+                      <Type className="w-4 h-4 text-cyan-400" />
                       <div>
-                        <span className="text-xs font-black text-white block">Phụ Đề Whisper (Dark Pill)</span>
-                        <span className="text-[10px] text-slate-400">Khung xám đen chạy theo giọng đọc audio</span>
+                        <span className="text-xs font-black text-white block group-hover:text-cyan-300 transition-colors">
+                          Phụ Đề Whisper & Kiểu Chữ
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {showWhisperSubs ? `Đang BẬT (${subsPosY === 'bottom' ? 'Phía dưới' : subsPosY === 'middle' ? 'Ở giữa' : 'Trên cùng'})` : 'Đang TẮT'}
+                        </span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowWhisperSubs((v) => !v)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 ${
-                        showWhisperSubs ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {showWhisperSubs ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                      <span>{showWhisperSubs ? 'BẬT' : 'TẮT'}</span>
-                    </button>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 transition-all">
+                      Tab Phụ Đề →
+                    </span>
                   </div>
-
-                  {showWhisperSubs && (
-                    <>
-                      <div className="space-y-1 pt-1">
-                        <div className="text-[10px] font-bold text-slate-300 flex justify-between">
-                          <span>Vị trí Phụ Đề Whisper:</span>
-                          <span className="text-cyan-400 capitalize">{subsPosY}</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {(['bottom', 'middle', 'top'] as const).map((pos) => (
-                            <button
-                              key={pos}
-                              type="button"
-                              onClick={() => setSubsPosY(pos)}
-                              className={`py-1.5 rounded-lg border text-[10px] font-bold transition-all ${
-                                subsPosY === pos
-                                  ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                                  : 'border-[#22273B] bg-[#161926] text-slate-400'
-                              }`}
-                            >
-                              {pos === 'bottom' ? 'Phía Dưới' : pos === 'middle' ? 'Ở Giữa' : 'Trên Cùng'}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {(() => {
-                        const currentScene = scenes.find((s) => s.scene_id === activeSceneId) || scenes[0];
-                        const currentIdx = scenes.findIndex((s) => s.scene_id === (currentScene?.scene_id || 1));
-                        if (!currentScene) return null;
-                        return (
-                          <div className="space-y-1 pt-1">
-                            <div className="text-[10px] font-bold text-slate-300 flex items-center gap-1">
-                              <Edit3 className="w-3 h-3 text-cyan-400" />
-                              <span>Sửa Lời Thoại Whisper (Scene {currentIdx + 1})</span>
-                            </div>
-                            <textarea
-                              value={currentScene.voice_transcript || currentScene.summary_text || ''}
-                              onChange={(e) => {
-                                const newScenes = scenes.map((s) =>
-                                  s.scene_id === currentScene.scene_id ? { ...s, voice_transcript: e.target.value } : s
-                                );
-                                updateScenesWithHistory(newScenes);
-                              }}
-                              rows={3}
-                              className="w-full px-2.5 py-1.5 rounded-xl text-[11px] bg-[#0E1017] border border-[#22273B] text-white resize-none focus:outline-none focus:border-cyan-400"
-                              placeholder="Nhập lời thoại đọc theo audio..."
-                            />
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
                 </div>
 
                 {/* SUBTITLE VISIBILITY PER SCENE */}
@@ -2648,6 +2595,23 @@ function StudioInner({
                 onTranscribeWhisper={handleTranscribeCaptions}
                 isTranscribing={isTranscribingCaptions}
                 visualStyle={visualStyle}
+                showSubs={showWhisperSubs}
+                onToggleSubs={() => setShowWhisperSubs((v) => !v)}
+                subsPosY={subsPosY}
+                onChangeSubsPosY={setSubsPosY}
+                activeScene={scenes.find((s) => s.scene_id === activeSceneId) || scenes[0]}
+                activeSceneIndex={scenes.findIndex((s) => s.scene_id === (activeSceneId || 1))}
+                onUpdateActiveSceneTranscript={(text) => {
+                  const curr = scenes.find((s) => s.scene_id === activeSceneId) || scenes[0];
+                  if (curr) {
+                    const newScenes = scenes.map((s) =>
+                      s.scene_id === curr.scene_id ? { ...s, voice_transcript: text } : s
+                    );
+                    updateScenesWithHistory(newScenes);
+                  }
+                }}
+                hasVoiceAudio={Boolean(selectedExportAudioUrl || audioUrl || remotionAudioSrc)}
+                isCommercialMusicStyle={visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser'}
                 sourceBadgeText={scenes[typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0]?.source_badge_text || scenes[0]?.source_badge_text || 'TIN MỚI TỪ VNEXPRESS'}
                 onChangeSourceBadgeText={(txt) => {
                   const sIdx = typeof activeSceneId === 'number' ? Math.max(0, activeSceneId - 1) : 0;
