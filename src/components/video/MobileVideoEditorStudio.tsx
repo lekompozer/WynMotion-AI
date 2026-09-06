@@ -156,6 +156,20 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     Boolean((project as any).is_music_template) ||
     Boolean((project as any).bgm_url && !(project as any).voice_name);
 
+  // Helper to determine if template supports dynamic proportional animation scaling
+  const isAnimationSyncableTemplate = (style?: string): boolean => {
+    if (!style) return false;
+    return [
+      'whiteboard_stream_hand',
+      'handdrawn_fast_doodle',
+      'dialogue_scene',
+      'science_explainer',
+      'character_animation',
+      'apple_modern_motion',
+      'video_news_60s',
+    ].includes(style);
+  };
+
   // Local storage draft key for instant offline auto-save
   const draftKey = `wynmotion_draft_${project.project_id}`;
 
@@ -381,7 +395,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         const temp = new Audio(res.url);
         temp.addEventListener('loadedmetadata', () => {
           if (temp.duration && isFinite(temp.duration)) {
-            syncAnimationWithAudio(temp.duration, file.name);
+            if (isAnimationSyncableTemplate(project.visual_style || visualStyle)) {
+              syncAnimationWithAudio(temp.duration, file.name);
+            }
           }
         });
       }
@@ -715,6 +731,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
   // ── Sync Animation Timeline with Audio Length ──
   const syncAnimationWithAudio = (audioDuration: number, langLabel: string = 'Audio Track') => {
+    if (!isAnimationSyncableTemplate(project.visual_style || visualStyle)) {
+      return;
+    }
     if (!audioDuration || isNaN(audioDuration) || !isFinite(audioDuration) || audioDuration <= 1.0) {
       alert(t('⚠️ Độ dài file audio không hợp lệ để đồng bộ.', '⚠️ Invalid audio duration for sync.'));
       return;
@@ -805,7 +824,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         if (temp.duration && isFinite(temp.duration)) {
           const flag = trackData?.flag || (langCode === 'vi' ? '🇻🇳' : '🌐');
           const name = trackData?.language_name || langCode.toUpperCase();
-          syncAnimationWithAudio(temp.duration, `${flag} ${name}`);
+          if (isAnimationSyncableTemplate(project.visual_style || visualStyle)) {
+            syncAnimationWithAudio(temp.duration, `${flag} ${name}`);
+          }
         }
       });
     }
@@ -1362,15 +1383,17 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
               <span>{bgmTrackTitle ? t('Đổi Nhạc Nền', 'Change BGM') : t('+ Nhạc Nền', '+ BGM')}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
-              disabled={isSyncingTimeline}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-400 text-[10px] font-black hover:bg-cyan-500/25 active:scale-95 transition-all shadow-sm"
-            >
-              {isSyncingTimeline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 fill-cyan-400" />}
-              <span>{t('Sync Animation', 'Sync Animation')}</span>
-            </button>
+            {isAnimationSyncableTemplate(project.visual_style || visualStyle) && hasVoiceAudio && (
+              <button
+                type="button"
+                onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
+                disabled={isSyncingTimeline}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-400 text-[10px] font-black hover:bg-cyan-500/25 active:scale-95 transition-all shadow-sm"
+              >
+                {isSyncingTimeline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 fill-cyan-400" />}
+                <span>{t('Sync Animation', 'Sync Animation')}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1921,16 +1944,18 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 </div>
               </div>
 
-              {/* 4. SYNC TIMELINE BUTTON */}
-              <button
-                type="button"
-                onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
-                disabled={isSyncingTimeline}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
-              >
-                {isSyncingTimeline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-slate-950" />}
-                <span>{t('Đồng Bộ Toàn Bộ Phân Cảnh Theo Audio (Sync)', 'Sync All Scenes to Audio')}</span>
-              </button>
+              {/* 4. SYNC TIMELINE BUTTON (CHỈ HIỂN THỊ KHI CÓ VOICE AUDIO VÀ THUỘC TEMPLATE HỖ TRỢ CO DÃN ANIMATION) */}
+              {isAnimationSyncableTemplate(project.visual_style || visualStyle) && hasVoiceAudio && (
+                <button
+                  type="button"
+                  onClick={() => syncAnimationWithAudio(totalDurationSec, 'Timeline hiện tại')}
+                  disabled={isSyncingTimeline}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {isSyncingTimeline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-slate-950" />}
+                  <span>{t('Đồng Bộ Toàn Bộ Phân Cảnh Theo Audio (Sync)', 'Sync All Scenes to Audio')}</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -2336,84 +2361,6 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                       </>
                     )}
                   </div>
-
-                  {/* LAYER 2: WHISPER VOICE SUBTITLES */}
-                  <div className="space-y-3 pt-4 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-3xl border border-slate-700/60">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-slate-900 border border-white/40 shadow-sm" />
-                        <div>
-                          <span className="text-xs font-black text-white block">
-                            {t('Lớp 2: Phụ Đề Whisper Giọng Đọc (Dark Pill)', 'Layer 2: Whisper Voice Subtitles (Dark Pill)')}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {t('Khung oval xám đen chạy theo lời đọc audio', 'Dark speech-aligned subtitle bar matching audio')}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowWhisperSubs((v) => !v)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 ${
-                          showWhisperSubs ? 'bg-cyan-400 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        {showWhisperSubs ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        <span>{showWhisperSubs ? t('BẬT', 'ON') : t('TẮT', 'OFF')}</span>
-                      </button>
-                    </div>
-
-                    {showWhisperSubs && (
-                      <>
-                        <div className="space-y-1.5 pt-2">
-                          <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                            <span>{t('Vị trí hiển thị Phụ Đề Giọng Đọc:', 'Voice Subtitles Position:')}</span>
-                            <span className="text-cyan-400 capitalize">{subsPosY}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            {[
-                              { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
-                              { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
-                              { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
-                            ].map((pos) => {
-                              const PosIcon = pos.icon;
-                              return (
-                                <button
-                                  key={pos.id}
-                                  type="button"
-                                  onClick={() => setSubsPosY(pos.id)}
-                                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
-                                    subsPosY === pos.id
-                                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                                      : 'border-slate-800 bg-slate-900 text-slate-400'
-                                  }`}
-                                >
-                                  <PosIcon className="w-3.5 h-3.5" />
-                                  <span>{pos.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {activeScene && (
-                          <div className="space-y-2 pt-2">
-                            <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
-                              <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>{t(`Sửa Lời Thoại / Phụ Đề Whisper (Scene ${activeSceneIndex + 1})`, `Edit Voice Transcript (Scene ${activeSceneIndex + 1})`)}</span>
-                            </div>
-                            <textarea
-                              value={activeScene.voice_transcript || activeScene.summary_text || ''}
-                              onChange={(e) => updateScene(activeScene.scene_id, { voice_transcript: e.target.value })}
-                              rows={3}
-                              className="w-full px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-mono"
-                              placeholder={t('Nhập lời thoại hoặc phụ đề khớp giọng đọc...', 'Enter voice transcript or subtitle...')}
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
                 </>
               )}
             </div>
@@ -2446,6 +2393,20 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 onChangePresetStyle={setCaptionPresetStyle}
                 onTranscribeWhisper={handleTranscribeCaptions}
                 isTranscribing={isTranscribingCaptions}
+                visualStyle={project.visual_style || visualStyle}
+                showSubs={showWhisperSubs}
+                onToggleSubs={() => setShowWhisperSubs((v) => !v)}
+                subsPosY={subsPosY}
+                onChangeSubsPosY={setSubsPosY}
+                activeScene={activeScene}
+                activeSceneIndex={activeSceneIndex}
+                onUpdateActiveSceneTranscript={(text) => {
+                  if (activeScene) {
+                    updateScene(activeScene.scene_id, { voice_transcript: text });
+                  }
+                }}
+                hasVoiceAudio={hasVoiceAudio}
+                isCommercialMusicStyle={isCommercialMusicStyle}
               />
             </div>
           )}
