@@ -41,6 +41,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [internalZoom, setInternalZoom] = React.useState<number>(1.2);
   const activeZoom = zoomLevel !== undefined ? zoomLevel : internalZoom;
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleZoomUpdate = (newVal: number) => {
     const clamped = Math.max(0.5, Math.min(3.5, newVal));
@@ -270,12 +271,13 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                 }`}
                 style={{ height: isMobile ? '50px' : '56px' }}
               >
-                <div className="absolute left-2 z-10 text-[9px] font-black uppercase text-slate-300 flex items-center gap-1 pointer-events-none bg-[#0D0F18]/90 px-1.5 py-0.5 rounded backdrop-blur-md border border-white/10 shadow-xs">
-                  {track.type === 'video' && '🎬 Scene'}
-                  {track.type === 'transitions' && (track.id === 'track_fx_1' ? '⚡ FX 2' : '⚡ FX')}
-                  {track.type === 'captions' && '💬 Caption'}
-                  {track.type === 'audio' && '🎵 Audio'}
-                </div>
+                {/* Only display subtle track indicator if track is empty and not video/audio */}
+                {track.items.length === 0 && (track.type === 'transitions' || track.type === 'captions') && (
+                  <div className="absolute left-2 z-10 text-[9px] font-black uppercase text-slate-400 flex items-center gap-1 pointer-events-none bg-[#0D0F18]/90 px-1.5 py-0.5 rounded backdrop-blur-md border border-white/10 shadow-xs">
+                    {track.type === 'transitions' && (track.id === 'track_fx_1' ? '⚡ FX 2' : '⚡ FX')}
+                    {track.type === 'captions' && '💬 Caption'}
+                  </div>
+                )}
 
                 {track.items.map((item) => {
                   const itemLeft = timeToPixels(item.startTime, zoom);
@@ -295,7 +297,24 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                     <div
                       key={item.id}
                       onMouseDown={(e) => handleDragMoveStart(e, item)}
-                      onTouchStart={(e) => handleDragMoveStart(e, item)}
+                      onTouchStart={(e) => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = setTimeout(() => {
+                          onSelectItem?.(item.id);
+                          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                            try {
+                              navigator.vibrate(50);
+                            } catch {}
+                          }
+                        }, 400);
+                        handleDragMoveStart(e, item);
+                      }}
+                      onTouchEnd={() => {
+                        if (longPressTimerRef.current) {
+                          clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectItem?.(item.id);
@@ -307,7 +326,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                         left: `${itemLeft}px`,
                         width: `${itemWidth}px`,
                       }}
-                      title="Bấm giữ để kéo di chuyển clip / Kéo mép để chỉnh độ dài"
+                      title="Bấm giữ để xóa / kéo di chuyển clip / Kéo mép để chỉnh độ dài"
                     >
                       <div
                         onMouseDown={(e) => handleResizeStart(e, item, 'left')}
@@ -328,14 +347,18 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 
                       {onDeleteItem && (
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteItem(item.id);
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-500/60 text-white rounded-lg transition-opacity ml-1 z-20"
+                          className={`p-1.5 hover:bg-rose-500/90 bg-black/60 text-white rounded-lg transition-all ml-1 z-20 flex items-center gap-1 active:scale-90 ${
+                            isSelected ? 'opacity-100 ring-1 ring-rose-400 shadow-sm' : 'opacity-0 group-hover:opacity-100'
+                          }`}
                           title="Xóa clip này"
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-200" />
+                          <Trash2 className="w-3.5 h-3.5 text-rose-300" />
+                          {isSelected && <span className="text-[9px] font-bold text-rose-200">Xóa</span>}
                         </button>
                       )}
 

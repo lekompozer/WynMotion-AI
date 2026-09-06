@@ -4,7 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, X, Scissors, ArrowLeft, Globe, ChevronDown, Check } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { wynmotionService } from '@/services/wynmotionService';
-import { preloadAllTemplateVideos } from '@/utils/templateVideoCache';
+import {
+  preloadCoverImages,
+  preloadAllTemplateVideos,
+  cancelPreloadVideos,
+} from '@/utils/templateVideoCache';
 
 export interface CapCutGalleryItem {
   id: string;
@@ -159,11 +163,18 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
           rawTemplate: t,
         }));
         setTemplatesList(mapped);
-        preloadAllTemplateVideos(validTemplates);
+
+        // 1. Prioritize preloading cover images first so all cards show visual posters immediately
+        const coverUrls = mapped.map((m) => m.coverUrl).filter(Boolean);
+        preloadCoverImages(coverUrls);
+
+        // 2. Save ALL template preview videos to local device disk storage in the background
+        preloadAllTemplateVideos(validTemplates, 2500);
       }
     }).catch(() => {});
     return () => {
       isMounted = false;
+      cancelPreloadVideos();
     };
   }, []);
 
@@ -305,7 +316,15 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
 
           {/* COLUMN 1 (Starts at top) */}
           <div className="space-y-3.5">
-            {col1.map((item) => renderTemplateCard(item, onSelectTemplate, isVietnamese))}
+            {col1.map((item, idx) => (
+              <TemplateCardItem
+                key={item.id}
+                item={item}
+                index={idx * 2}
+                onSelect={onSelectTemplate}
+                isVietnamese={isVietnamese}
+              />
+            ))}
           </div>
 
           {/* COLUMN 2 (Starts with Language Selector Card, creating staggered offset) */}
@@ -377,7 +396,15 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
             </div>
 
             {/* Column 2 Template Cards */}
-            {col2.map((item) => renderTemplateCard(item, onSelectTemplate, isVietnamese))}
+            {col2.map((item, idx) => (
+              <TemplateCardItem
+                key={item.id}
+                item={item}
+                index={idx * 2 + 1}
+                onSelect={onSelectTemplate}
+                isVietnamese={isVietnamese}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -385,34 +412,65 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
   );
 };
 
-function renderTemplateCard(
-  item: CapCutGalleryItem,
-  onSelect: (template: any) => void,
-  isVietnamese: boolean
-) {
+interface TemplateCardItemProps {
+  item: CapCutGalleryItem;
+  index: number;
+  onSelect: (template: any) => void;
+  isVietnamese: boolean;
+}
+
+const TemplateCardItem: React.FC<TemplateCardItemProps> = ({
+  item,
+  index,
+  onSelect,
+  isVietnamese,
+}) => {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const displayTitle = isVietnamese ? (item.titleVi || item.title) : (item.titleEn || item.title);
 
   return (
     <div
-      key={item.id}
       onClick={() => onSelect(item.rawTemplate || item)}
       className="group cursor-pointer rounded-2xl overflow-hidden bg-slate-900/70 border border-slate-800/90 hover:border-rose-500/60 transition-all active:scale-[0.98] shadow-lg flex flex-col w-full"
     >
       {/* Fixed uniform aspect-[9/16] container with max width & clean cover crop */}
-      <div className="relative w-full aspect-[9/16] overflow-hidden bg-slate-950">
-        <img
-          src={item.coverUrl}
-          alt={displayTitle}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            (e.target as HTMLElement).style.display = 'none';
-          }}
-        />
+      <div className="relative w-full aspect-[9/16] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900">
+        {/* Shimmer skeleton while cover image is loading */}
+        {!imgLoaded && !imgError && (
+          <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-800/80 to-slate-900 animate-pulse flex flex-col items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-slate-800 border border-slate-700/60 flex items-center justify-center text-slate-400 shadow-inner">
+              <span className="text-base">🎬</span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-medium mt-2">Loading...</span>
+          </div>
+        )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
+        {/* Elegant Fallback if image fails (never empty black card) */}
+        {imgError ? (
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-800 via-slate-900 to-[#0b0f19] flex flex-col items-center justify-center p-4 text-center">
+            <span className="text-3xl mb-2 drop-shadow-md">{item.authorAvatar || '🎬'}</span>
+            <span className="text-xs font-bold text-slate-200 line-clamp-2 leading-snug">{displayTitle}</span>
+            <span className="text-[10px] text-rose-400/80 font-bold mt-2 uppercase tracking-wide">WynMotion</span>
+          </div>
+        ) : (
+          <img
+            src={item.coverUrl}
+            alt={displayTitle}
+            loading={index < 6 ? 'eager' : 'lazy'}
+            decoding="async"
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
+            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${
+              imgLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent pointer-events-none" />
 
         {item.badge && (
-          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[9px] font-extrabold text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[9px] font-extrabold text-cyan-300 border border-cyan-500/30 flex items-center gap-1 shadow-sm">
             <span>💎</span>
             <span>{item.badge}</span>
           </div>
@@ -442,4 +500,4 @@ function renderTemplateCard(
       </div>
     </div>
   );
-}
+};

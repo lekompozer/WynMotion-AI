@@ -245,49 +245,35 @@ export const ProfileSidePanel: React.FC<ProfileSidePanelProps> = ({ isOpen, onCl
                   </div>
                 </div>
 
-                {/* Points card with Usage button */}
+                {/* Points card without cramped usage badge */}
                 <div
-                  className={`flex items-center justify-between p-3 rounded-xl border ${
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border ${
                     isDark ? 'bg-slate-950/80 border-amber-500/30' : 'bg-white border-amber-200/80'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${isDark ? 'bg-amber-950/60' : 'bg-amber-50'}`}>
-                      <Zap className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${isDark ? 'bg-amber-950/60 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
+                      <Zap className="h-5 w-5 fill-amber-400 text-amber-400" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[11px] text-slate-400 font-medium">
-                          {t('Điểm AI còn lại', 'AI Points')}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleManualRefreshPoints}
-                          className="text-slate-400 hover:text-white transition-colors"
-                          title="Refresh points & subscription"
-                        >
-                          <RotateCw
-                            className={`w-3 h-3 ${isRefreshingPoints ? 'animate-spin text-amber-400' : ''}`}
-                          />
-                        </button>
-                      </div>
-                      <p className="text-lg font-black text-amber-400 leading-tight">
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {t('Điểm AI còn lại', 'AI Points')}
+                      </p>
+                      <p className="text-xl font-black text-amber-400 leading-tight">
                         {points.toLocaleString()}
                       </p>
                     </div>
                   </div>
 
-                  {/* Nút Usage mở Upgrade Modal thay cho nút Top up và tier badge */}
                   <button
                     type="button"
-                    onClick={() => {
-                      setUpgradeDefaultTab('subscriptions');
-                      setShowUpgradeModal(true);
-                    }}
-                    className="text-xs font-black px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/40 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
+                    onClick={handleManualRefreshPoints}
+                    className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 active:scale-95 transition-all"
+                    title="Refresh points & subscription"
                   >
-                    <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
-                    <span>{t('Gói sử dụng', 'Usage')}</span>
+                    <RotateCw
+                      className={`w-4 h-4 ${isRefreshingPoints ? 'animate-spin text-amber-400' : ''}`}
+                    />
                   </button>
                 </div>
               </div>

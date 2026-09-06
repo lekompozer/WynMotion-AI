@@ -147,6 +147,15 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     setVoiceDurationSec: setRemotionVoiceDurationSec,
   } = useRemotion();
 
+  // Determine whether this project is commercial showcase / BGM based or voice narrator
+  const isCommercialMusicStyle =
+    ['ads_cinematic_showcase', 'cinematic_showcase', 'ads_strobe_teaser', 'strobe_teaser', 'product_ads_motion', 'animation_ads_image_veo'].includes(
+      (project.visual_style as string) || ''
+    ) ||
+    (project as any).audio_mode === 'bgm' ||
+    Boolean((project as any).is_music_template) ||
+    Boolean((project as any).bgm_url && !(project as any).voice_name);
+
   // Local storage draft key for instant offline auto-save
   const draftKey = `wynmotion_draft_${project.project_id}`;
 
@@ -169,34 +178,30 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     if (rawScenes.length === 0 && ((project as any)?.visual_style === 'product_ads_motion' || visualStyle === 'product_ads_motion')) {
       const pImages = (project as any)?.product_images || [];
       const defaultImg = pImages[0] || 'https://static.wordai.pro/ai-generated-images/wynmotion/11ca09714987_templates/cinematic_showcase_cover.png';
-      return [{
-        scene_id: 1,
-        title: project.title || 'Product Commercial Ad',
-        start_sec: 0.0,
-        end_sec: 15.0,
-        start_frame: 0,
-        duration_frames: 450,
-        duration_sec: 15.0,
-        image_url: defaultImg,
-        visual_style: 'product_ads_motion',
-        shader_name: 'GlitchMemories',
-        headline: (project as any)?.hook_text || 'SIÊU PHẨM MỚI',
-        category: (project as any)?.price_text || 'ƯU ĐÃI',
-        cta_text: (project as any)?.cta_text || 'MUA NGAY',
-      } as any];
+      return [
+        {
+          scene_id: 1,
+          scene_number: 1,
+          image_url: defaultImg,
+          original_image_url: defaultImg,
+          start_frame: 0,
+          duration_frames: 660,
+          duration_sec: 22.0,
+          visual_style: 'product_ads_motion',
+          template_type: 'product_ads_motion',
+        },
+      ];
     }
-    let curFrame = 0;
-    return (rawScenes as any[]).map((s: any, idx) => {
-      const durSec = getSceneDuration(s);
-      const durFrames = s.duration_frames || Math.round(durSec * 30);
-      const sf = s.start_frame !== undefined ? s.start_frame : curFrame;
-      curFrame = sf + durFrames;
+    return rawScenes.map((s: any, idx) => {
+      const start = s.start_frame !== undefined ? s.start_frame : idx * 150;
+      const dur = s.duration_frames !== undefined ? s.duration_frames : 150;
       return {
         ...s,
-        scene_id: s.scene_id || `scene_${idx + 1}`,
-        start_frame: sf,
-        duration_frames: durFrames,
-        duration_sec: durSec,
+        scene_id: s.scene_id !== undefined ? s.scene_id : idx + 1,
+        scene_number: s.scene_number !== undefined ? s.scene_number : idx + 1,
+        start_frame: start,
+        duration_frames: dur,
+        duration_sec: dur / 30,
       };
     });
   });
@@ -225,6 +230,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   });
   const [textLangMode, setTextLangMode] = useState<TextLangMode>('vi');
 
+  // Track the current frame inside Remotion player
+  const [currentFrame, setCurrentFrame] = useState<number>(0);
+
   // Audio track switching & animation sync
   const [activeAudioLang, setActiveAudioLang] = useState<string>(() => project.language_code || 'vi');
   const [showAudioLangDropdown, setShowAudioLangDropdown] = useState(false);
@@ -251,25 +259,29 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     const langMeta = AUDIO_STUDIO_LANGUAGES.find(
       (l) => l.code === defaultLang || l.code.toLowerCase() === defaultLang.toLowerCase() || (defaultLang === 'en' && l.code === 'en-US')
     );
-    const defaultVoiceName =
-      (project as any).voice_name ||
-      (project as any).voice ||
-      (defaultLang === 'vi' ? 'Phạm Tuyên' : defaultLang.startsWith('en') ? 'Bella' : defaultLang === 'ja' ? 'Alpha' : defaultLang === 'zh' ? 'Xiaobei' : defaultLang === 'kr' || defaultLang === 'ko' ? 'Sarah' : 'AI Voice');
+    const hasExplicitVoice = Boolean((project as any).voice_name || (project as any).voice);
+    const defaultVoiceName = hasExplicitVoice
+      ? ((project as any).voice_name || (project as any).voice)
+      : isCommercialMusicStyle
+        ? (project.title ? `Nhạc: ${project.title}` : 'Nhạc đính kèm theo mẫu')
+        : (defaultLang === 'vi' ? 'Giọng Đọc AI' : defaultLang.startsWith('en') ? 'Bella' : defaultLang === 'ja' ? 'Alpha' : defaultLang === 'zh' ? 'Xiaobei' : defaultLang === 'kr' || defaultLang === 'ko' ? 'Sarah' : 'AI Voice');
 
     if (project.audio_url) {
       map[defaultLang] = {
         audio_url: project.audio_url,
-        duration_sec: project.duration_sec || 30,
+        duration_sec: project.duration_sec || 22,
         language_code: defaultLang,
         voice_name: defaultVoiceName,
-        language_name: langMeta?.name || (defaultLang === 'vi' ? 'Tiếng Việt' : defaultLang.toUpperCase()),
-        flag: langMeta?.flag || (defaultLang === 'vi' ? '🇻🇳' : '🌐'),
+        language_name: isCommercialMusicStyle
+          ? 'Nhạc Đính Kèm'
+          : langMeta?.name || (defaultLang === 'vi' ? 'Tiếng Việt' : defaultLang.toUpperCase()),
+        flag: isCommercialMusicStyle ? '🎵' : (langMeta?.flag || (defaultLang === 'vi' ? '🇻🇳' : '🌐')),
       };
     }
     if ((project as any).audio_url_en && defaultLang !== 'en-US' && defaultLang !== 'en') {
       map['en-US'] = {
         audio_url: (project as any).audio_url_en,
-        duration_sec: (project as any).duration_sec_en || project.duration_sec || 30,
+        duration_sec: (project as any).duration_sec_en || project.duration_sec || 22,
         language_code: 'en-US',
         voice_name: (project as any).voice_name_en || 'Bella',
         language_name: 'English (US)',
@@ -287,6 +299,11 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     } catch {}
     return map;
   });
+
+  // Track deletion / presence of audio
+  const [isAudioRemoved, setIsAudioRemoved] = useState<boolean>(false);
+  const [selectedTimelineItemId, setSelectedTimelineItemId] = useState<string | null>(null);
+  const hasVoiceAudio = !isAudioRemoved && Boolean(audioSrc && audioSrc.trim().length > 0);
 
   // BGM Background Music State
   const [bgmAudioUrl, setBgmAudioUrl] = useState<string | null>(() => {
@@ -358,6 +375,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       formData.append('file', file);
       const res = await wynmotionService.uploadMedia(formData);
       if (res && res.url) {
+        setIsAudioRemoved(false);
         setAudioSrc?.(res.url);
         libraryCacheManager.notifyLibraryUpdated('audio');
         const temp = new Audio(res.url);
@@ -375,14 +393,32 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   };
 
   const handleRemoveAudio = () => {
+    setIsAudioRemoved(true);
     setAudioSrc?.('');
+    setMultilingualAudios((prev) => {
+      const updated = { ...prev };
+      if (updated[activeAudioLang]) {
+        updated[activeAudioLang] = { ...updated[activeAudioLang], audio_url: '' };
+      }
+      return updated;
+    });
     libraryCacheManager.notifyLibraryUpdated('audio');
+    if (selectedTimelineItemId === 'audio_voice' || selectedTimelineItemId === 'track_voice') {
+      setSelectedTimelineItemId(null);
+    }
+    setSyncStatusMsg(isVietnamese ? '🗑️ Đã xoá âm thanh khỏi timeline' : '🗑️ Audio removed from timeline');
+    setTimeout(() => setSyncStatusMsg(null), 2500);
   };
 
   const handleRemoveBgm = () => {
     setBgmAudioUrl(null);
     setBgmTrackTitle(null);
     setRemotionBgmAudioSrc?.(null);
+    if (selectedTimelineItemId === 'audio_bgm' || selectedTimelineItemId === 'track_bgm') {
+      setSelectedTimelineItemId(null);
+    }
+    setSyncStatusMsg(isVietnamese ? '🗑️ Đã xoá nhạc nền khỏi timeline' : '🗑️ BGM removed from timeline');
+    setTimeout(() => setSyncStatusMsg(null), 2500);
   };
 
   // Scrubber scrubbing via pointer events
@@ -524,6 +560,13 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       };
     });
 
+    const hasVoiceAudio = !isAudioRemoved && Boolean(audioSrc && audioSrc.trim().length > 0);
+
+    const isMusicTrack = isCommercialMusicStyle || (project as any).audio_mode === 'bgm' || !(project as any).voice_name;
+    const trackVoiceTitle = isMusicTrack
+      ? `🎵 Nhạc đính kèm: ${(project as any).bgm_title || project.title || 'Cinematic Showcase'}`
+      : `🎙️ Voice: ${multilingualAudios[activeAudioLang]?.voice_name || 'AI Voice'} (${activeAudioLang.toUpperCase()})`;
+
     const voiceItem: TimelineItem = {
       id: 'audio_voice',
       trackId: 'track_voice',
@@ -531,14 +574,14 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       startTime: voiceStartSec,
       endTime: voiceStartSec + (voiceDurationSec || totalDurationSec),
       duration: voiceDurationSec || totalDurationSec,
-      title: `🎙️ Voice: ${multilingualAudios[activeAudioLang]?.voice_name || 'AI Voice'} (${activeAudioLang.toUpperCase()})`,
+      title: trackVoiceTitle,
     };
 
     const tracksList: TimelineTrack[] = [
       { id: 'track_media', type: 'video', name: 'Media Scenes', items: mediaItems },
       { id: 'track_fx', type: 'transitions', name: 'FX & Transitions', items: fxItems },
       { id: 'track_captions', type: 'captions', name: 'Auto Captions', items: captionItems },
-      { id: 'track_voice', type: 'audio', name: 'Voice Track', items: [voiceItem] },
+      { id: 'track_voice', type: 'audio', name: isMusicTrack ? 'Music Track' : 'Voice Track', items: hasVoiceAudio ? [voiceItem] : [] },
     ];
 
     if (bgmAudioUrl) {
@@ -560,7 +603,23 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     }
 
     return tracksList;
-  }, [scenes, totalDurationSec, captionSegments, voiceStartSec, voiceDurationSec, bgmAudioUrl, bgmTrackTitle, bgmStartSec, bgmDurationSec, activeAudioLang, multilingualAudios]);
+  }, [
+    scenes,
+    totalDurationSec,
+    captionSegments,
+    voiceStartSec,
+    voiceDurationSec,
+    bgmAudioUrl,
+    bgmTrackTitle,
+    bgmStartSec,
+    bgmDurationSec,
+    activeAudioLang,
+    multilingualAudios,
+    audioSrc,
+    isAudioRemoved,
+    isCommercialMusicStyle,
+    project.title,
+  ]);
 
   // Active scene tracking based on frame
   useEffect(() => {
@@ -739,6 +798,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     const targetUrl = trackData?.audio_url || (langCode === 'en' || langCode === 'en-US' ? (project as any).audio_url_en : project.audio_url) || '';
 
     if (targetUrl) {
+      setIsAudioRemoved(false);
       setAudioSrc?.(targetUrl);
       const temp = new Audio(targetUrl);
       temp.addEventListener('loadedmetadata', () => {
@@ -752,6 +812,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   };
 
   const handleAddNewVoiceTrack = (res: GeneratedVoiceResult) => {
+    setIsAudioRemoved(false);
     const nextMap = {
       ...multilingualAudios,
       [res.language_code]: {
@@ -798,6 +859,25 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     (sceneId: string | number, updates: Partial<DynamicSceneData>) => {
       setScenes((prev) => {
         const next = prev.map((s) => (s.scene_id === sceneId ? { ...s, ...updates } : s));
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(
+              `wynmotion_draft_${project.project_id}`,
+              JSON.stringify({ scenes: next, swap_speakers: swapSpeakers, visual_style: visualStyle })
+            );
+          }
+        } catch (e) {}
+        return next;
+      });
+    },
+    [project.project_id, swapSpeakers, visualStyle]
+  );
+
+  const deleteScene = useCallback(
+    (sceneId: string | number) => {
+      setScenes((prev) => {
+        if (prev.length <= 1) return prev;
+        const next = prev.filter((s) => s.scene_id !== sceneId);
         try {
           if (typeof window !== 'undefined') {
             localStorage.setItem(
@@ -1304,14 +1384,27 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
             onSeek={(t) => seekTo(Math.round(t * 30))}
             tracks={timelineTracks}
             isMobile={true}
-            selectedItemId={activeScene ? `media_${activeScene.scene_id}` : null}
+            selectedItemId={selectedTimelineItemId || (activeScene ? `media_${activeScene.scene_id}` : null)}
             onSelectItem={(itemId) => {
+              setSelectedTimelineItemId(itemId);
               if (itemId?.startsWith('media_')) {
                 const sId = parseInt(itemId.replace('media_', ''), 10);
                 if (!isNaN(sId)) {
                   const s = scenes.find((sc) => sc.scene_id === sId);
                   if (s && s.start_frame !== undefined) seekTo(s.start_frame);
                 }
+              }
+            }}
+            onDeleteItem={(itemId) => {
+              if (itemId === 'audio_voice' || itemId === 'track_voice') {
+                handleRemoveAudio();
+              } else if (itemId === 'audio_bgm' || itemId === 'track_bgm') {
+                handleRemoveBgm();
+              } else if (itemId?.startsWith('media_')) {
+                const rawId = itemId.replace('media_', '');
+                const sId = isNaN(Number(rawId)) ? rawId : Number(rawId);
+                deleteScene(sId);
+                setSelectedTimelineItemId(null);
               }
             }}
             onOpenFXTab={() => setActiveBottomSheet('effects')}
@@ -1550,114 +1643,185 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
                 onChange={handleUploadCustomAudio}
               />
 
-              {/* 1. AI NARRATION VOICEOVER MULTILINGUAL CARD */}
-              <div
-                className={`p-4 rounded-3xl border transition-all space-y-3 ${
-                  isDark
-                    ? 'bg-gradient-to-br from-slate-900 to-[#0F1422] border-cyan-500/40 shadow-lg shadow-cyan-500/5'
-                    : 'bg-gradient-to-br from-cyan-50/70 to-blue-50/70 border-cyan-300 shadow-md'
-                }`}
-              >
-                {(() => {
-                  const activeTrack = multilingualAudios[activeAudioLang];
-                  const langMeta = AUDIO_STUDIO_LANGUAGES.find(
-                    (l) => l.code === activeAudioLang || l.code.toLowerCase() === activeAudioLang.toLowerCase() || (activeAudioLang === 'en' && l.code === 'en-US')
-                  );
-                  const trackFlag = activeTrack?.flag || langMeta?.flag || (activeAudioLang === 'vi' ? '🇻🇳' : '🌐');
-                  const trackLangName = activeTrack?.language_name || langMeta?.name || (activeAudioLang === 'vi' ? 'Tiếng Việt' : activeAudioLang.toUpperCase());
-                  const rawVoice = activeTrack?.voice_name || (project.language_code === activeAudioLang ? (project as any).voice_name : undefined);
-                  const trackVoiceName = rawVoice
-                    ? (rawVoice.includes('(') ? rawVoice.split('(')[0].trim() : rawVoice)
-                    : (activeAudioLang === 'vi' ? 'Phạm Tuyên' : activeAudioLang.startsWith('en') ? 'Bella' : activeAudioLang === 'ja' ? 'Alpha' : activeAudioLang === 'zh' ? 'Xiaobei' : activeAudioLang === 'kr' || activeAudioLang === 'ko' ? 'Sarah' : 'AI Voice');
-
-                  return (
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
-                          <Languages className="w-5 h-5" />
+              {/* 1. DYNAMIC PRIMARY AUDIO CARD (Attached Template Music OR AI Narration Voiceover) */}
+              {isCommercialMusicStyle ? (
+                <div
+                  className={`p-4 rounded-3xl border transition-all space-y-3 ${
+                    isDark
+                      ? 'bg-gradient-to-br from-slate-900 to-[#120F24] border-purple-500/40 shadow-lg shadow-purple-500/5'
+                      : 'bg-gradient-to-br from-purple-50/70 to-pink-50/70 border-purple-300 shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-black shadow-md flex-shrink-0">
+                        <Music className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black truncate text-purple-400">
+                          {t('Nhạc Đính Kèm Theo Mẫu', 'Template Attached Music')}
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-black truncate text-cyan-400">
-                            {t('Giọng Đọc AI Đa Ngôn Ngữ', 'AI Narration Voiceover')}
-                          </div>
-                          <div className={`text-[11px] truncate flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                            <span>{trackFlag}</span>
-                            <span className="font-bold">{trackLangName}</span>
-                            {trackVoiceName && (
-                              <span className="text-[10px] text-slate-400 font-normal">({trackVoiceName})</span>
-                            )}
-                          </div>
+                        <div className={`text-[11px] truncate mt-0.5 font-bold ${hasVoiceAudio ? (isDark ? 'text-white' : 'text-slate-900') : 'text-slate-500'}`}>
+                          {hasVoiceAudio
+                            ? `🎵 ${(project as any).bgm_title || project.title || 'Cinematic Music Reel'}`
+                            : t('Chưa có âm thanh / Đã xoá', 'No audio / Removed')}
                         </div>
                       </div>
-
-                      {audioSrc && (
-                        <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
-                          {Math.round(totalDurationSec)}s
-                        </span>
-                      )}
                     </div>
-                  );
-                })()}
 
-                {/* Multilingual Selector Dropdown Bar */}
-                <div className="p-2 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    <span className="text-[11px] font-bold text-slate-300 truncate">
-                      {t('Ngôn ngữ Clip:', 'Clip Language:')}
-                    </span>
+                    {hasVoiceAudio && (
+                      <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black border border-purple-400/30 flex-shrink-0">
+                        {Math.round(totalDurationSec)}s
+                      </span>
+                    )}
                   </div>
 
-                  <select
-                    value={activeAudioLang}
-                    onChange={(e) => handleSelectAudioLang(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/30 text-cyan-300 text-xs font-black outline-none focus:border-cyan-400"
+                  {/* Pick BGM from Sound & Music Library Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMusicLibraryOpen(true)}
+                    className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
                   >
-                    {Object.entries(multilingualAudios).map(([code, data]) => (
-                      <option key={code} value={code}>
-                        {data.flag || '🌐'} {data.language_name || code.toUpperCase()} ({Math.round(data.duration_sec)}s)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <Music className="w-3.5 h-3.5" />
+                    <span>{hasVoiceAudio ? t('Đổi Nhạc Nền / Âm Thanh Khác', 'Change Audio / Music') : t('Chọn Nhạc từ Library', 'Pick Music from Library')}</span>
+                  </button>
 
-                {/* Main Action: Create New Voice in Other Language */}
-                <button
-                  type="button"
-                  onClick={() => setIsNewVoiceModalOpen(true)}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                  {/* Actions: Upload Custom File or Delete Audio */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-500/20">
+                    <button
+                      type="button"
+                      disabled={isUploadingAudio}
+                      onClick={() => audioUploadInputRef.current?.click()}
+                      className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isUploadingAudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      <span>{t('Tải Tệp Từ Máy', 'Upload File')}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!hasVoiceAudio}
+                      onClick={handleRemoveAudio}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
+                        isDark
+                          ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                          : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                      }`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{t('Xoá Audio', 'Delete Audio')}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`p-4 rounded-3xl border transition-all space-y-3 ${
+                    isDark
+                      ? 'bg-gradient-to-br from-slate-900 to-[#0F1422] border-cyan-500/40 shadow-lg shadow-cyan-500/5'
+                      : 'bg-gradient-to-br from-cyan-50/70 to-blue-50/70 border-cyan-300 shadow-md'
+                  }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                  <span>{t('Tạo / Đổi Giọng Đọc Ngôn Ngữ Khác', 'Create Voice in Other Language')}</span>
-                </button>
+                  {(() => {
+                    const activeTrack = multilingualAudios[activeAudioLang];
+                    const langMeta = AUDIO_STUDIO_LANGUAGES.find(
+                      (l) => l.code === activeAudioLang || l.code.toLowerCase() === activeAudioLang.toLowerCase() || (activeAudioLang === 'en' && l.code === 'en-US')
+                    );
+                    const trackFlag = activeTrack?.flag || langMeta?.flag || (activeAudioLang === 'vi' ? '🇻🇳' : '🌐');
+                    const trackLangName = activeTrack?.language_name || langMeta?.name || (activeAudioLang === 'vi' ? 'Tiếng Việt' : activeAudioLang.toUpperCase());
+                    const rawVoice = activeTrack?.voice_name || (project.language_code === activeAudioLang ? (project as any).voice_name : undefined);
+                    const trackVoiceName = rawVoice
+                      ? (rawVoice.includes('(') ? rawVoice.split('(')[0].trim() : rawVoice)
+                      : (activeAudioLang === 'vi' ? 'Giọng Đọc AI' : activeAudioLang.startsWith('en') ? 'Bella' : activeAudioLang === 'ja' ? 'Alpha' : activeAudioLang === 'zh' ? 'Xiaobei' : activeAudioLang === 'kr' || activeAudioLang === 'ko' ? 'Sarah' : 'AI Voice');
 
-                {/* Touch Actions: Upload Custom or Delete Audio */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-500/20">
+                    return (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-10 h-10 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
+                            <Languages className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-black truncate text-cyan-400">
+                              {t('Giọng Đọc AI Đa Ngôn Ngữ', 'AI Narration Voiceover')}
+                            </div>
+                            <div className={`text-[11px] truncate flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                              <span>{trackFlag}</span>
+                              <span className="font-bold">{trackLangName}</span>
+                              {trackVoiceName && (
+                                <span className="text-[10px] text-slate-400 font-normal">({trackVoiceName})</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {hasVoiceAudio && (
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
+                            {Math.round(totalDurationSec)}s
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Multilingual Selector Dropdown Bar */}
+                  <div className="p-2 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="text-[11px] font-bold text-slate-300 truncate">
+                        {t('Ngôn ngữ Clip:', 'Clip Language:')}
+                      </span>
+                    </div>
+
+                    <select
+                      value={activeAudioLang}
+                      onChange={(e) => handleSelectAudioLang(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/30 text-cyan-300 text-xs font-black outline-none focus:border-cyan-400"
+                    >
+                      {Object.entries(multilingualAudios).map(([code, data]) => (
+                        <option key={code} value={code}>
+                          {data.flag || '🌐'} {data.language_name || code.toUpperCase()} ({Math.round(data.duration_sec)}s)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Main Action: Create New Voice in Other Language */}
                   <button
                     type="button"
-                    disabled={isUploadingAudio}
-                    onClick={() => audioUploadInputRef.current?.click()}
-                    className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 transition-all disabled:opacity-50"
+                    onClick={() => setIsNewVoiceModalOpen(true)}
+                    className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
                   >
-                    {isUploadingAudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                    <span>{t('Tải Tệp Từ Máy', 'Upload File')}</span>
+                    <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+                    <span>{t('Tạo / Đổi Giọng Đọc Ngôn Ngữ Khác', 'Create Voice in Other Language')}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={!audioSrc}
-                    onClick={handleRemoveAudio}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
-                      isDark
-                        ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
-                        : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
-                    }`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                    <span>{t('Xoá Audio', 'Delete')}</span>
-                  </button>
+                  {/* Touch Actions: Upload Custom or Delete Audio */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-500/20">
+                    <button
+                      type="button"
+                      disabled={isUploadingAudio}
+                      onClick={() => audioUploadInputRef.current?.click()}
+                      className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isUploadingAudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      <span>{t('Tải Tệp Từ Máy', 'Upload File')}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!hasVoiceAudio}
+                      onClick={handleRemoveAudio}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
+                        isDark
+                          ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                          : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                      }`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{t('Xoá Audio', 'Delete Audio')}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* 2. BACKGROUND MUSIC (BGM) CARD */}
               <div
