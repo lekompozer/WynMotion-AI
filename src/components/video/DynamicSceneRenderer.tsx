@@ -322,6 +322,67 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   };
 
   // ─────────────────────────────────────────────────────────────
+  // STYLE 0: GEMINI OMNI / VEO ANIMATION ADS VIDEO PLAYER
+  // ─────────────────────────────────────────────────────────────
+  const isVideoOmni =
+    effectiveStyle === 'animation_ads_image_veo' ||
+    effectiveStyle === 'product_ads_omni' ||
+    Boolean(scene.video_url);
+
+  if (isVideoOmni && scene.video_url) {
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#000000',
+        }}
+      >
+        <video
+          src={scene.video_url}
+          playsInline
+          loop
+          autoPlay
+          muted
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+        {showWhisperSubs && (scene.voice_transcript || scene.summary_text) && (
+          <div
+            style={{
+              position: 'absolute',
+              ...getSubsStyle(),
+              zIndex: 30,
+              maxWidth: isPortrait ? '88%' : '75%',
+              textAlign: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(8px)',
+              padding: '10px 20px',
+              borderRadius: 16,
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#FFFFFF',
+              fontSize: isPortrait ? 18 : 22,
+              fontWeight: 800,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            }}
+          >
+            {scene.voice_transcript || scene.summary_text}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // STYLE 1: APPLE-STYLE MODERN UI & TECH INFOGRAPHIC
   // ─────────────────────────────────────────────────────────────
   if (isAppleOrTech) {

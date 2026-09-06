@@ -1223,7 +1223,7 @@ export const AiVideoTab: React.FC = () => {
           image_url: firstImg,
           user_prompt: params.prompt,
           aspect_ratio: chosenAspectRatio,
-          duration_seconds: (params.durationSec || 12) as any,
+          duration_seconds: (params.durationSec ? Math.min(params.durationSec, 10) : 10) as any,
         });
       } else {
         res = await wynmotionService.generateScenes({

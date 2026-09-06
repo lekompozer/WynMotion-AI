@@ -471,20 +471,20 @@ function StudioInner({
   });
 
   // Master Studio Config - Single Source of Truth for all 5 Tabs
-  const masterStudioConfig = useMemo(() => ({
-    visual_style: visualStyle,
-    scenes,
-    audio: {
-      audio_url: selectedExportAudioUrl || audioUrl,
+  const masterStudioConfig = useMemo(() => {
+    const audioPayload = {
+      voice_enabled: !isMuted,
+      voice_url: selectedExportAudioUrl || audioUrl || undefined,
       voice_volume: isMuted ? 0 : volume,
       voice_muted: isMuted,
-      bgm_url: customBgmFile || projectData?.bgm_url || null,
+      bgm_enabled: bgmVolume > 0,
+      bgm_url: customBgmFile || projectData?.bgm_url || undefined,
       bgm_volume: bgmVolume,
       bgm_muted: bgmVolume === 0,
       bgm_start_sec: audioTrim.startTime,
       bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
-    },
-    settings: {
+    };
+    const settingsPayload = {
       aspect_ratio: aspectRatio,
       bg_color: bgColor,
       swap_speakers: swapSpeakers,
@@ -492,16 +492,54 @@ function StudioInner({
       show_whisper_subs: showWhisperSubs,
       card_pos_y: cardPosY,
       subs_pos_y: subsPosY,
-    },
-    fx: {
+      fps: 30,
+    };
+    const assetsPayload = {
+      template_nature: (visualStyle === 'science_explainer' || visualStyle === 'stem_explainer')
+        ? 'code_vector_based'
+        : (visualStyle === 'dialogue_scene' || visualStyle === 'conversation')
+        ? 'dialogue_based'
+        : (visualStyle === 'animation_ads_image_veo' || visualStyle === 'product_ads_omni')
+        ? 'ads_video_omni'
+        : 'image_based',
+      scenes,
+      deleted_scene_ids: [],
+      omni_video_url: projectData?.mp4_url || (scenes[0] as any)?.video_url || undefined,
+    };
+    const fxPayload = {
       timeline_effects: timelineEffects,
       transition_type: 'wipe_diagonal',
-    },
-    captions: {
+      scene_transitions: {},
+      visual_filters: {},
+    };
+    const captionsPayload = {
       preset_style: captionPresetStyle,
       caption_segments: captionSegments,
-    },
-  }), [
+      max_width_pct: 85,
+    };
+
+    return {
+      version: '2.0',
+      project_id: projectId || '',
+      visual_style: visualStyle,
+      resolution: selectedExportResolution,
+      aspect_ratio: aspectRatio,
+      bg_color: bgColor,
+      updated_at: new Date().toISOString(),
+      // Standard 2.0 schema
+      assets_config: assetsPayload,
+      audio_config: audioPayload,
+      settings_config: settingsPayload,
+      fx_config: fxPayload,
+      captions_config: captionsPayload,
+      // Backward-compatible legacy aliases
+      scenes,
+      audio: audioPayload,
+      settings: settingsPayload,
+      fx: fxPayload,
+      captions: captionsPayload,
+    };
+  }, [
     visualStyle,
     scenes,
     selectedExportAudioUrl,
@@ -510,6 +548,7 @@ function StudioInner({
     isMuted,
     customBgmFile,
     projectData?.bgm_url,
+    projectData?.mp4_url,
     bgmVolume,
     audioTrim,
     aspectRatio,
@@ -522,6 +561,8 @@ function StudioInner({
     timelineEffects,
     captionPresetStyle,
     captionSegments,
+    selectedExportResolution,
+    projectId,
   ]);
 
   // Debounced auto-save of studio_config to MongoDB
@@ -1681,12 +1722,14 @@ function StudioInner({
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-black text-white">
-                      {visualStyle === 'science_explainer'
+                      {visualStyle === 'science_explainer' || visualStyle === 'stem_explainer'
                         ? '📐 STEM / Math & Code Segments'
-                        : visualStyle === 'dialogue_scene'
+                        : visualStyle === 'dialogue_scene' || visualStyle === 'conversation'
                         ? '👥 Nhân Vật & Lời Thoại (Cast & Turns)'
-                        : (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase')
-                        ? '🛍️ Product Cutouts & Omni Ads Video'
+                        : (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase' || visualStyle === 'animation_ads_image_veo' || visualStyle === 'product_ads_omni')
+                        ? '🛍️ Product Cutouts & Gemini Omni Ads Video'
+                        : (visualStyle === 'video_news_60s' || visualStyle === 'news_video' || visualStyle === 'apple_modern_motion')
+                        ? '📰 News Ticker & Modern Cards'
                         : '🎨 Assets & Phân Cảnh (Sketch Cards)'}
                     </h3>
                     <p className="text-[11px] text-slate-400">
@@ -1846,7 +1889,7 @@ function StudioInner({
                       </button>
                     </div>
                   </div>
-                ) : (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (
+                ) : (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase' || visualStyle === 'animation_ads_image_veo' || visualStyle === 'product_ads_omni') ? (
                   <div className="space-y-3">
                     <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900 border border-indigo-500/30 space-y-2.5">
                       <div className="flex items-center justify-between">
@@ -1946,6 +1989,65 @@ function StudioInner({
                               <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (visualStyle === 'video_news_60s' || visualStyle === 'news_video' || visualStyle === 'apple_modern_motion') ? (
+                  <div className="space-y-3">
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900 to-[#121626] border border-cyan-500/30 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-white">📰 News Ticker & Brand Badge</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">
+                          Live Lower-Third
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-300">Dòng tin tức chân trang (Ticker Text):</label>
+                        <input
+                          type="text"
+                          value={scenes[0]?.ticker_text || ''}
+                          placeholder="Ví dụ: BẢN TIN ĐẶC BIỆT · THỜI SỰ 24/7..."
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setScenes(prev => prev.map((s, idx) => idx === 0 ? { ...s, ticker_text: val } : s));
+                          }}
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-[#141724] border border-[#252B3E] text-white outline-none focus:border-cyan-400"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-300">Nguồn tin / Brand Badge:</label>
+                        <input
+                          type="text"
+                          value={scenes[0]?.source_domain || ''}
+                          placeholder="Ví dụ: VTV Digital · CNN News"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setScenes(prev => prev.map((s, idx) => idx === 0 ? { ...s, source_domain: val } : s));
+                          }}
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-[#141724] border border-[#252B3E] text-white outline-none focus:border-cyan-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      {scenes.map((s) => (
+                        <div
+                          key={s.scene_id}
+                          onClick={() => handleSceneClick(s)}
+                          className={`rounded-2xl border p-2.5 cursor-pointer flex flex-col justify-between transition-all ${
+                            s.scene_id === activeSceneId
+                              ? 'border-cyan-400 bg-cyan-500/15 ring-2 ring-cyan-400/30'
+                              : 'border-[#22273B] bg-[#161926] hover:border-[#323955]'
+                          }`}
+                        >
+                          <div className="aspect-video w-full rounded-xl bg-white border border-[#2A3147] flex items-center justify-center p-1 relative overflow-hidden mb-2">
+                            <SceneMiniThumbnail scene={s} />
+                          </div>
+                          <h4 className="text-[11px] font-bold text-slate-200 line-clamp-1 mb-1">{s.title}</h4>
+                          <span className="text-[9px] font-black uppercase text-slate-400 bg-[#252B3E] px-1.5 py-0.5 rounded">
+                            SCENE {s.scene_id}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -2623,7 +2725,14 @@ function StudioInner({
             }}
           >
             <DynamicAnimationComposition
-              scenes={scenes}
+              scenes={
+                (visualStyle === 'animation_ads_image_veo' || visualStyle === 'product_ads_omni' || visualStyle === 'product_ads_motion') &&
+                projectData?.mp4_url &&
+                scenes.length > 0 &&
+                !scenes[0].video_url
+                  ? scenes.map((s, idx) => (idx === 0 ? { ...s, video_url: projectData.mp4_url } : s))
+                  : scenes
+              }
               visualStyle={visualStyle}
               showSceneCards={showSceneCards}
               showWhisperSubs={showWhisperSubs}
