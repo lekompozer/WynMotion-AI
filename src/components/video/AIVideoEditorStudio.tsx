@@ -2300,12 +2300,24 @@ function StudioInner({
                       if (!currentScene) return null;
                       const layout = (currentScene as any).bubble_custom_layout || {};
 
-                      const posXA = layout.customPosXA ?? (aspectRatio === '9:16' ? 36 : 28);
-                      const posYA = layout.customPosYA ?? layout.customTopPctA ?? (aspectRatio === '9:16' ? 30 : 34);
-                      const posXB = layout.customPosXB ?? (aspectRatio === '9:16' ? 64 : 72);
-                      const posYB = layout.customPosYB ?? layout.customTopPctB ?? (aspectRatio === '9:16' ? 30 : 34);
-                      const widthPct = layout.customWidthPct ?? (aspectRatio === '9:16' ? 82 : 48);
-                      const fontSize = layout.fontSize ?? (aspectRatio === '9:16' ? 14 : 16);
+                      const isPortrait = aspectRatio === '9:16';
+                      const isSquare = aspectRatio === '1:1';
+                      const baseW = isPortrait ? 1080 : isSquare ? 1080 : 1920;
+                      const defaultFontPct = isPortrait ? 3.3 : isSquare ? 3.3 : 2.0;
+
+                      const currentFontPct = layout.fontSizePct
+                        ? Number(layout.fontSizePct)
+                        : layout.fontSize
+                        ? (layout.fontSize > 26 ? ((layout.fontSize / baseW) * 100) : ((layout.fontSize / (isPortrait ? 420 : isSquare ? 580 : 880)) * 100))
+                        : defaultFontPct;
+
+                      const equiv1080pPx = Math.round(baseW * (currentFontPct / 100));
+
+                      const posXA = layout.customPosXA ?? (isPortrait ? 36 : 28);
+                      const posYA = layout.customPosYA ?? layout.customTopPctA ?? (isPortrait ? 30 : 34);
+                      const posXB = layout.customPosXB ?? (isPortrait ? 64 : 72);
+                      const posYB = layout.customPosYB ?? layout.customTopPctB ?? (isPortrait ? 30 : 34);
+                      const widthPct = layout.customWidthPct ?? (isPortrait ? 82 : isSquare ? 76 : 48);
 
                       const updateBubbleLayout = (patch: Record<string, any>) => {
                         const newScenes = scenes.map((s) =>
@@ -2454,16 +2466,25 @@ function StudioInner({
 
                             <div className="space-y-1 bg-[#141724] p-2.5 rounded-2xl border border-[#282F45]">
                               <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
-                                <span>Cỡ Chữ (Font):</span>
-                                <span className="text-amber-400 font-mono">{fontSize}px</span>
+                                <span>Cỡ Chữ (% Màn Hình):</span>
+                                <span className="text-amber-400 font-mono">
+                                  {currentFontPct.toFixed(1)}% ({equiv1080pPx}px)
+                                </span>
                               </div>
                               <input
                                 type="range"
-                                min={11}
-                                max={26}
-                                step={0.5}
-                                value={fontSize}
-                                onChange={(e) => updateBubbleLayout({ fontSize: parseFloat(e.target.value) })}
+                                min={isPortrait || isSquare ? 2.2 : 1.4}
+                                max={isPortrait || isSquare ? 5.0 : 3.2}
+                                step={0.1}
+                                value={currentFontPct}
+                                onChange={(e) => {
+                                  const pct = parseFloat(e.target.value);
+                                  const px1080 = Math.round(baseW * (pct / 100));
+                                  updateBubbleLayout({
+                                    fontSizePct: pct,
+                                    fontSize: px1080,
+                                  });
+                                }}
                                 className="w-full accent-amber-400 h-1.5 rounded-lg bg-slate-800"
                               />
                             </div>

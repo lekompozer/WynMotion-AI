@@ -205,6 +205,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        containerType: 'inline-size',
       }}
     >
       {/* 1. FULL-BLEED SCENE BACKDROP (100% Edge-to-Edge Illustration) */}
@@ -283,8 +284,24 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
           ? (customLayout.customPosYA ?? customLayout.customTopPctA ?? customLayout.customTopPct ?? defaultPosYA)
           : (customLayout.customPosYB ?? customLayout.customTopPctB ?? customLayout.customTopPct ?? defaultPosYB);
 
-        const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : 48);
-        const dynamicFontSize = customLayout.fontSize || (isPortrait ? 14 : isSquare ? 15 : 16);
+        const widthPct = customLayout.customWidthPct || (isPortrait ? 82 : isSquare ? 76 : 48);
+
+        // Responsive Font Size % relative to container inline-size (1cqi = 1% of canvas width)
+        const defaultFontPct = isPortrait ? 3.33 : isSquare ? 3.33 : 2.0;
+        let effectiveFontPct = defaultFontPct;
+        if (customLayout.fontSizePct) {
+          effectiveFontPct = Number(customLayout.fontSizePct);
+        } else if (customLayout.fontSize) {
+          if (customLayout.fontSize > 26) {
+            // Stored in 1080p canvas pixels (e.g. 36px)
+            const baseW = isPortrait ? 1080 : isSquare ? 1080 : 1920;
+            effectiveFontPct = (customLayout.fontSize / baseW) * 100;
+          } else {
+            // Legacy preview pixels (e.g. 14px on 420p)
+            const previewW = isPortrait ? 420 : isSquare ? 580 : 880;
+            effectiveFontPct = (customLayout.fontSize / previewW) * 100;
+          }
+        }
 
         return (
           <div
@@ -293,16 +310,20 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
               top: `${posY}%`,
               left: `${posX}%`,
               width: `${widthPct}%`,
-              maxWidth: isPortrait ? 440 : 640,
+              maxWidth: isPortrait ? '90%' : isSquare ? '84%' : '58%',
               // Anchor speech bubble at the tail tip (expands upwards so character is never covered)
               transform: `translate(${isLeftTail ? -20 : -80}%, -100%) scale(${Math.max(0, bubbleScale)})`,
               transformOrigin: isLeftTail ? 'bottom left' : 'bottom right',
               backgroundColor: bubbleBg,
-              borderRadius: isPortrait ? 22 : 26,
-              padding: isPortrait ? '13px 20px' : '16px 26px',
+              borderRadius: isPortrait ? 'clamp(18px, 5.2cqi, 56px)' : 'clamp(18px, 2.7cqi, 56px)',
+              padding: isPortrait
+                ? 'clamp(10px, 3.1cqi, 34px) clamp(14px, 4.8cqi, 52px)'
+                : 'clamp(12px, 1.7cqi, 34px) clamp(16px, 2.7cqi, 52px)',
               boxShadow:
                 '0 18px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)',
-              border: '2.5px solid rgba(255, 255, 255, 0.24)',
+              border: isPortrait
+                ? 'clamp(2px, 0.6cqi, 6px) solid rgba(255, 255, 255, 0.24)'
+                : 'clamp(2px, 0.3cqi, 6px) solid rgba(255, 255, 255, 0.24)',
               zIndex: 20,
               pointerEvents: 'none',
               transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -312,13 +333,13 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
             <div
               style={{
                 position: 'absolute',
-                bottom: -13,
-                [isLeftTail ? 'left' : 'right']: isPortrait ? 26 : 38,
+                bottom: 'calc(-1 * clamp(10px, 3.1cqi, 34px))',
+                [isLeftTail ? 'left' : 'right']: isPortrait ? 'clamp(18px, 6.2cqi, 68px)' : 'clamp(22px, 3.5cqi, 68px)',
                 width: 0,
                 height: 0,
-                borderLeft: '11px solid transparent',
-                borderRight: '11px solid transparent',
-                borderTop: `13px solid ${bubbleBg}`,
+                borderLeft: isPortrait ? 'clamp(9px, 2.4cqi, 28px) solid transparent' : 'clamp(9px, 1.4cqi, 28px) solid transparent',
+                borderRight: isPortrait ? 'clamp(9px, 2.4cqi, 28px) solid transparent' : 'clamp(9px, 1.4cqi, 28px) solid transparent',
+                borderTop: `clamp(10px, 3.1cqi, 34px) solid ${bubbleBg}`,
                 filter: 'drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3))',
               }}
             />
@@ -326,7 +347,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
             {/* Single Active Sentence (Full sentence displayed at once, elegant & crisp) */}
             <div
               style={{
-                fontSize: dynamicFontSize,
+                fontSize: `clamp(13px, ${effectiveFontPct.toFixed(2)}cqi, 76px)`,
                 fontWeight: 800,
                 color: textColor,
                 lineHeight: 1.35,

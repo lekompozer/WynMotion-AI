@@ -2299,31 +2299,51 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                         </div>
 
                         {/* Font Size */}
-                        <div className="space-y-1 bg-slate-950/50 p-2.5 rounded-2xl border border-slate-800">
-                          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
-                            <span>{t('Cỡ chữ (Font Size):', 'Font Size:')}</span>
-                            <span className="text-amber-400 font-mono">
-                              {activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 14 : 16)}px
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={11}
-                            max={26}
-                            step={0.5}
-                            value={activeScene?.bubble_custom_layout?.fontSize ?? (aspectRatio === '9:16' ? 14 : 16)}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              updateScene(activeScene.scene_id, {
-                                bubble_custom_layout: {
-                                  ...(activeScene.bubble_custom_layout || {}),
-                                  fontSize: val,
-                                },
-                              });
-                            }}
-                            className="w-full accent-amber-400 h-1.5 rounded-lg bg-slate-800"
-                          />
-                        </div>
+                        {(() => {
+                          const isPortrait = aspectRatio === '9:16';
+                          const isSquare = aspectRatio === '1:1';
+                          const baseW = isPortrait ? 1080 : isSquare ? 1080 : 1920;
+                          const defaultFontPct = isPortrait ? 3.3 : isSquare ? 3.3 : 2.0;
+
+                          const layout = activeScene?.bubble_custom_layout || {};
+                          const currentFontPct = layout.fontSizePct
+                            ? Number(layout.fontSizePct)
+                            : layout.fontSize
+                            ? (layout.fontSize > 26 ? ((layout.fontSize / baseW) * 100) : ((layout.fontSize / (isPortrait ? 420 : isSquare ? 580 : 880)) * 100))
+                            : defaultFontPct;
+
+                          const equiv1080pPx = Math.round(baseW * (currentFontPct / 100));
+
+                          return (
+                            <div className="space-y-1 bg-slate-950/50 p-2.5 rounded-2xl border border-slate-800">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
+                                <span>{t('Cỡ chữ (% Màn hình):', 'Font Size (% Screen):')}</span>
+                                <span className="text-amber-400 font-mono">
+                                  {currentFontPct.toFixed(1)}% ({equiv1080pPx}px)
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={isPortrait || isSquare ? 2.2 : 1.4}
+                                max={isPortrait || isSquare ? 5.0 : 3.2}
+                                step={0.1}
+                                value={currentFontPct}
+                                onChange={(e) => {
+                                  const pct = parseFloat(e.target.value);
+                                  const px1080 = Math.round(baseW * (pct / 100));
+                                  updateScene(activeScene.scene_id, {
+                                    bubble_custom_layout: {
+                                      ...(activeScene.bubble_custom_layout || {}),
+                                      fontSizePct: pct,
+                                      fontSize: px1080,
+                                    },
+                                  });
+                                }}
+                                className="w-full accent-amber-400 h-1.5 rounded-lg bg-slate-800"
+                              />
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 
