@@ -70,6 +70,8 @@ import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStu
 import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
 import { CapCutGalleryModal } from '@/components/video/CapCutGalleryModal';
 import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
+import { WynMotionNotificationsModal } from '@/components/modals/WynMotionNotificationsModal';
+import { wynmotionNotificationManager } from '@/services/wynmotionNotificationManager';
 import { preloadAllTemplateVideos } from '@/utils/templateVideoCache';
 
 // ── EXACT WEB DATA CONSTANTS (100% Parity with https://www.wynai.pro/app/wynmotion-ai) ──
@@ -235,11 +237,21 @@ export const AiVideoTab: React.FC = () => {
   const [viewMode, setViewMode] = useState<'home' | 'studio'>('home');
   const [selectedGalleryStyle, setSelectedGalleryStyle] = useState<string>('all');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeDefaultTab, setUpgradeDefaultTab] = useState<'subscriptions' | 'points'>('subscriptions');
   const [upgradeDefaultTier, setUpgradeDefaultTier] = useState<'premium' | 'pro' | 'vip'>('pro');
   const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro' | 'vip'>('free');
+
+  useEffect(() => {
+    setUnreadNotifCount(wynmotionNotificationManager.getUnreadCount());
+    const unsub = wynmotionNotificationManager.subscribe(() => {
+      setUnreadNotifCount(wynmotionNotificationManager.getUnreadCount());
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const fetchUserTier = async () => {
@@ -1403,6 +1415,10 @@ export const AiVideoTab: React.FC = () => {
             setIsUpgradeModalOpen(true);
             setUpgradeDefaultTab('subscriptions');
           }}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          hasUnreadNotifications={unreadNotifCount > 0}
+          userAvatarUrl={user?.photoURL || undefined}
+          userDisplayName={user?.displayName || undefined}
         >
           {/* Banner Headline Text (Lowered down to sit exactly 10px above the New Project row) */}
           <div
@@ -1812,6 +1828,12 @@ export const AiVideoTab: React.FC = () => {
           onClose={() => setIsUpgradeModalOpen(false)}
           defaultTier={upgradeDefaultTier}
           defaultTab={upgradeDefaultTab}
+        />
+
+        {/* ── WynMotion Notifications Modal in Home Mode ── */}
+        <WynMotionNotificationsModal
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
         />
       </div>
     );
@@ -3357,6 +3379,12 @@ export const AiVideoTab: React.FC = () => {
         onClose={() => setIsUpgradeModalOpen(false)}
         defaultTier={upgradeDefaultTier}
         defaultTab={upgradeDefaultTab}
+      />
+
+      {/* ── WynMotion Notifications Modal ── */}
+      <WynMotionNotificationsModal
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
       />
     </div>
   );
