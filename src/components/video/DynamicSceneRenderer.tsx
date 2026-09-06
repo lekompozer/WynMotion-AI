@@ -1750,26 +1750,13 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
               {/* 3. 135-DEG DIAGONAL WATERCOLOR BLOOM MASK (28% -> 65%) */}
               <linearGradient id={`colorSpreadGrad_${scene.scene_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 4))}%`} stopColor="#FFFFFF" stopOpacity="1" />
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 8))}%`} stopColor="#000000" stopOpacity="0" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 8))}%`} stopColor="#FFFFFF" stopOpacity="1" />
+                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 10))}%`} stopColor="#000000" stopOpacity="0" />
                 <stop offset="100%" stopColor="#000000" stopOpacity="0" />
               </linearGradient>
               <mask id={`colorBloomMask_${scene.scene_id}`}>
                 <rect width={vbWidth} height={vbHeight} fill={`url(#colorSpreadGrad_${scene.scene_id})`} />
               </mask>
-
-              {/* 4. DIAGONAL LUMINOUS LIGHT BEAM SHEEN FILTER & GRADIENT */}
-              <filter id={`bloomLightGlow_${scene.scene_id}`} x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation={isPortrait ? '18' : '24'} result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-              <linearGradient id={`lightBeamGrad_${scene.scene_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 12))}%`} stopColor="#FFFFFF" stopOpacity="0" />
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread - 2))}%`} stopColor="#38BDF8" stopOpacity="0.85" />
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread))}%`} stopColor="#FFFFFF" stopOpacity="0.95" />
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 4))}%`} stopColor="#F59E0B" stopOpacity="0.75" />
-                <stop offset={`${Math.max(0, Math.min(100, colorSpread + 14))}%`} stopColor="#FFFFFF" stopOpacity="0" />
-              </linearGradient>
             </defs>
 
             {/* Background Canvas */}
@@ -1795,17 +1782,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
                 opacity={1}
               />
             </g>
-
-            {/* LAYER 3: 135-DEG SWEEPING LUMINOUS LIGHT BEAM OVERLAY */}
-            {frame >= fillStart && frame <= fillEnd + 6 && (
-              <rect
-                width={vbWidth}
-                height={vbHeight}
-                fill={`url(#lightBeamGrad_${scene.scene_id})`}
-                filter={`url(#bloomLightGlow_${scene.scene_id})`}
-                style={{ mixBlendMode: 'screen', pointerEvents: 'none' }}
-              />
-            )}
           </svg>
         ) : (
           <div

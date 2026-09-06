@@ -35,6 +35,7 @@ import {
   Calculator,
   Compass,
   Zap,
+  RotateCcw,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
@@ -449,6 +450,21 @@ export const AiVideoTab: React.FC = () => {
   const [recentProjects, setRecentProjects] = useState<MotionProject[]>([]);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const generatedForPromptRef = useRef<string>('');
+
+  const handleResetTopic = () => {
+    setPrompt('');
+    setScriptText('');
+    setAudioUrl(null);
+    setAudioDurationSec(30);
+    setDialogueTurns([]);
+    setCustomNarrationText('');
+    setUploadedFileName('');
+    generatedForPromptRef.current = '';
+    try {
+      localStorage.removeItem('wynmotion_wizard_draft');
+    } catch {}
+  };
 
   // ── CapCut State Persistence: Auto-restore Draft ──
   useEffect(() => {
@@ -842,6 +858,7 @@ export const AiVideoTab: React.FC = () => {
     }
     setIsGeneratingAudio(true);
     setIsPlayingAudioPreview(false);
+    generatedForPromptRef.current = prompt.trim();
 
     try {
       if (visualStyle === 'dialogue_scene') {
@@ -959,22 +976,33 @@ export const AiVideoTab: React.FC = () => {
     try {
       setCreationStatusMessage(isVietnamese ? 'Đang phân tích kịch bản & căn chỉnh nhịp độ...' : 'Analyzing script & timing...');
 
+      const trimmedPrompt = prompt.trim();
+      const isAudioFresh = !audioUrl || generatedForPromptRef.current === trimmedPrompt || uploadedFileName !== '';
+      const effectiveAudioUrl = isAudioFresh ? (audioUrl || undefined) : undefined;
+      const effectiveDialogueTurns =
+        visualStyle === 'dialogue_scene' &&
+        (scriptMode === 'custom' || generatedForPromptRef.current === trimmedPrompt) &&
+        dialogueTurns.length > 0
+          ? dialogueTurns
+          : undefined;
+      const effectiveScript = (isAudioFresh && scriptText) ? scriptText : trimmedPrompt;
+
       const res = await wynmotionService.generateScenes({
-        title: prompt.slice(0, 40),
-        prompt,
-        script: scriptText || prompt,
-        audio_url: audioUrl || undefined,
+        title: trimmedPrompt.slice(0, 40),
+        prompt: trimmedPrompt,
+        script: effectiveScript,
+        audio_url: effectiveAudioUrl,
         duration_sec: audioDurationSec,
         aspect_ratio: aspectRatio,
         visual_style: visualStyle,
         character_subtype: characterSubtype,
         science_domain: visualStyle === 'science_explainer' ? scienceDomain : undefined,
         product_images: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') && productImages.length > 0 ? productImages : (visualStyle === 'video_news_60s' && newsImages.length > 0 ? newsImages : undefined),
-        hook_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (hookText || prompt.slice(0, 30)) : (visualStyle === 'video_news_60s' ? newsHeadline : undefined),
+        hook_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (hookText || trimmedPrompt.slice(0, 30)) : (visualStyle === 'video_news_60s' ? newsHeadline : undefined),
         price_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (priceText || 'ƯU ĐÃI') : (visualStyle === 'video_news_60s' ? newsCategory : undefined),
         cta_text: (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? ctaText : (visualStyle === 'video_news_60s' ? newsTickerText : undefined),
         dialogue_speakers: visualStyle === 'dialogue_scene' ? { speaker_a: speakerA, speaker_b: speakerB } : undefined,
-        dialogue_turns: visualStyle === 'dialogue_scene' && dialogueTurns.length > 0 ? dialogueTurns : undefined,
+        dialogue_turns: effectiveDialogueTurns,
         language_code: visualStyle === 'dialogue_scene' ? speakerA.language_code : selectedLang,
       });
 
@@ -2430,15 +2458,28 @@ export const AiVideoTab: React.FC = () => {
 
             {/* Prompt Concept Textarea */}
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
-                {visualStyle === 'product_ads_motion'
-                  ? t('Mô tả sản phẩm & thông điệp quảng cáo (Ad Concept)', 'Product Concept & Advertising Message')
-                  : visualStyle === 'dialogue_scene'
-                  ? t('Chủ đề hội thoại 2 nhân vật', 'Two-Character Conversation Topic')
-                  : visualStyle === 'science_explainer'
-                  ? t('Đề bài toán học / Hiện tượng khoa học', 'STEM Problem / Scientific Concept')
-                  : t('Mô tả ý tưởng video (Prompt)', 'Video Prompt Concept')}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  {visualStyle === 'product_ads_motion'
+                    ? t('Mô tả sản phẩm & thông điệp quảng cáo (Ad Concept)', 'Product Concept & Advertising Message')
+                    : visualStyle === 'dialogue_scene'
+                    ? t('Chủ đề hội thoại 2 nhân vật', 'Two-Character Conversation Topic')
+                    : visualStyle === 'science_explainer'
+                    ? t('Đề bài toán học / Hiện tượng khoa học', 'STEM Problem / Scientific Concept')
+                    : t('Mô tả ý tưởng video (Prompt)', 'Video Prompt Concept')}
+                </label>
+                {prompt.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleResetTopic}
+                    className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-rose-400 transition-colors"
+                    title="Xoá chủ đề và làm mới kịch bản"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>{t('Làm mới / New Topic', 'Reset / New Topic')}</span>
+                  </button>
+                )}
+              </div>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -2448,6 +2489,12 @@ export const AiVideoTab: React.FC = () => {
                   isDark ? 'bg-slate-900 border-slate-800 text-white focus:border-cyan-400' : 'bg-white border-slate-200 text-slate-900 focus:border-cyan-500 shadow-sm'
                 }`}
               />
+              {prompt.trim() && audioUrl && generatedForPromptRef.current && generatedForPromptRef.current !== prompt.trim() && (
+                <div className="flex items-center gap-1.5 text-[11px] text-amber-400 font-medium px-2 py-1 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                  <span>⚠️</span>
+                  <span>{t('Bạn đã sửa chủ đề. Âm thanh cũ sẽ không được dùng cho chủ đề mới.', 'You changed topic. Old audio will not be used for new topic.')}</span>
+                </div>
+              )}
             </div>
 
             {/* Suggestions */}

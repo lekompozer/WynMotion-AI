@@ -349,6 +349,8 @@ export const wynmotionService = {
       bgm_duration_sec?: number;
       duration_sec?: number;
       language_code?: string;
+      resolution?: string;
+      studio_config?: any;
     }
   ): Promise<{ success: boolean; job_id: string; message: string; mp4_url?: string; status?: string }> {
     const headers = await getAuthHeaders();
@@ -371,6 +373,8 @@ export const wynmotionService = {
         bgm_duration_sec: options?.bgm_duration_sec,
         duration_sec: options?.duration_sec,
         language_code: options?.language_code,
+        resolution: options?.resolution || '1080p',
+        studio_config: options?.studio_config,
       }),
     });
     const data = await res.json();
@@ -471,10 +475,11 @@ export const wynmotionService = {
    * VIP Feature: Google VEO 3.1 Animation Ads Image
    */
   async generateVeoAdsAnimation(params: {
-    image_url: string;
+    image_url?: string;
     user_prompt?: string;
     aspect_ratio?: '9:16' | '1:1' | '16:9';
-    duration_seconds?: 6 | 9 | 12;
+    duration_seconds?: number;
+    existing_video_url?: string;
     force_create_poster?: boolean;
   }): Promise<{
     success: boolean;

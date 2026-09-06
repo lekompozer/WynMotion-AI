@@ -46,9 +46,12 @@ import {
   Type,
   Trash2,
   Sparkle,
-  Clock,
   ArrowLeft,
   LayoutTemplate,
+  Crown,
+  Atom,
+  Film,
+  Clock,
 } from 'lucide-react';
 import { RemotionPlayerProvider, useRemotion } from './RemotionEngine';
 import { DynamicAnimationComposition } from './DynamicAnimationComposition';
@@ -368,9 +371,54 @@ function StudioInner({
   };
   const [selectedExportAspectRatio, setSelectedExportAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [selectedExportBgColor, setSelectedExportBgColor] = useState<string>('#FAF7EF');
+  const [selectedExportResolution, setSelectedExportResolution] = useState<'1080p' | '4k'>('1080p');
+  const [omniChatPrompt, setOmniChatPrompt] = useState('');
+  const [isGeneratingOmni, setIsGeneratingOmni] = useState(false);
+  const [swapSpeakers, setSwapSpeakers] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [previewPlayingAudioId, setPreviewPlayingAudioId] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handleDeleteScene = (sceneIdToDelete: number | string) => {
+    if (scenes.length <= 1) {
+      alert('Video cần có tối thiểu 1 phân cảnh!');
+      return;
+    }
+    const updatedScenes = scenes
+      .filter((s) => s.scene_id !== sceneIdToDelete)
+      .map((s, idx) => ({
+        ...s,
+        scene_id: idx + 1,
+      }));
+    setScenes(updatedScenes);
+    if (activeScene?.scene_id === sceneIdToDelete) {
+      setActiveSceneId(updatedScenes[0].scene_id);
+    }
+    if (projectId) {
+      wynmotionService.updateProject(projectId, {
+        scenes: updatedScenes as any,
+      } as any).catch(console.warn);
+    }
+  };
+
+  const handleAddScene = () => {
+    const newSceneId = scenes.length + 1;
+    const newScene: DynamicSceneData = {
+      scene_id: newSceneId,
+      title: `Scene ${newSceneId}`,
+      summary_text: `Phân cảnh mới ${newSceneId}`,
+      voice_transcript: `Phân cảnh mới ${newSceneId}`,
+      duration_frames: 120,
+    };
+    const updatedScenes = [...scenes, newScene];
+    setScenes(updatedScenes);
+    setActiveSceneId(newScene.scene_id);
+    if (projectId) {
+      wynmotionService.updateProject(projectId, {
+        scenes: updatedScenes as any,
+      } as any).catch(console.warn);
+    }
+  };
 
   // Active audio selector & sync timeline state
   const [showAudioDropdown, setShowAudioDropdown] = useState(false);
@@ -421,6 +469,74 @@ function StudioInner({
     startTime: 0,
     duration: 0,
   });
+
+  // Master Studio Config - Single Source of Truth for all 5 Tabs
+  const masterStudioConfig = useMemo(() => ({
+    visual_style: visualStyle,
+    scenes,
+    audio: {
+      audio_url: selectedExportAudioUrl || audioUrl,
+      voice_volume: isMuted ? 0 : volume,
+      voice_muted: isMuted,
+      bgm_url: customBgmFile || projectData?.bgm_url || null,
+      bgm_volume: bgmVolume,
+      bgm_muted: bgmVolume === 0,
+      bgm_start_sec: audioTrim.startTime,
+      bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
+    },
+    settings: {
+      aspect_ratio: aspectRatio,
+      bg_color: bgColor,
+      swap_speakers: swapSpeakers,
+      show_scene_cards: showSceneCards,
+      show_whisper_subs: showWhisperSubs,
+      card_pos_y: cardPosY,
+      subs_pos_y: subsPosY,
+    },
+    fx: {
+      timeline_effects: timelineEffects,
+      transition_type: 'wipe_diagonal',
+    },
+    captions: {
+      preset_style: captionPresetStyle,
+      caption_segments: captionSegments,
+    },
+  }), [
+    visualStyle,
+    scenes,
+    selectedExportAudioUrl,
+    audioUrl,
+    volume,
+    isMuted,
+    customBgmFile,
+    projectData?.bgm_url,
+    bgmVolume,
+    audioTrim,
+    aspectRatio,
+    bgColor,
+    swapSpeakers,
+    showSceneCards,
+    showWhisperSubs,
+    cardPosY,
+    subsPosY,
+    timelineEffects,
+    captionPresetStyle,
+    captionSegments,
+  ]);
+
+  // Debounced auto-save of studio_config to MongoDB
+  useEffect(() => {
+    if (!projectId) return;
+    const t = setTimeout(() => {
+      wynmotionService.updateProject(projectId, {
+        scenes: scenes as any,
+        aspect_ratio: aspectRatio,
+        bg_color: bgColor,
+        studio_config: masterStudioConfig,
+      } as any).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [masterStudioConfig, projectId, scenes, aspectRatio, bgColor]);
 
   // Custom User Uploaded Images
   const [uploadedImages, setUploadedImages] = useState<{ id: string; name: string; url: string }[]>([]);
@@ -1009,6 +1125,8 @@ function StudioInner({
           caption_preset_style: captionPresetStyle,
           bgm_start_sec: audioTrim.startTime,
           bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
+          resolution: selectedExportResolution,
+          studio_config: masterStudioConfig,
         });
         jobId = expRes.job_id;
       } else {
@@ -1562,7 +1680,15 @@ function StudioInner({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-black text-white">Assets</h3>
+                    <h3 className="text-sm font-black text-white">
+                      {visualStyle === 'science_explainer'
+                        ? '📐 STEM / Math & Code Segments'
+                        : visualStyle === 'dialogue_scene'
+                        ? '👥 Nhân Vật & Lời Thoại (Cast & Turns)'
+                        : (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase')
+                        ? '🛍️ Product Cutouts & Omni Ads Video'
+                        : '🎨 Assets & Phân Cảnh (Sketch Cards)'}
+                    </h3>
                     <p className="text-[11px] text-slate-400">
                       {scenes.length} Scenes · Slide {slideIndex + 1}
                     </p>
@@ -1572,92 +1698,328 @@ function StudioInner({
                   </button>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={searchAssetQuery}
-                    onChange={(e) => setSearchAssetQuery(e.target.value)}
-                    placeholder="Search assets"
-                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#181B28] border border-[#252B3E] text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
+                {/* CONTEXT-AWARE CONTENT */}
+                {visualStyle === 'science_explainer' ? (
+                  <div className="space-y-2.5">
+                    <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 text-xs text-cyan-200 flex items-center gap-2">
+                      <Atom className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                      <span>Đồ họa vector toán học / vật lý Manim & MathJax. Không dùng ảnh bitmap để đảm bảo độ nét tuyệt đối.</span>
+                    </div>
 
-                {/* Category Pills & Upload Image */}
-                <div className="flex flex-wrap gap-1 text-[11px] font-bold">
-                  {[
-                    'All',
-                    `Image ${uploadedImages.length + scenes.filter((s) => s.image_url).length}`,
-                    'Audio 1',
-                    `Scene ${scenes.length}`,
-                  ].map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setAssetCategory(cat)}
-                      className={`px-2 py-0.5 rounded-lg transition-all ${
-                        assetCategory === cat
-                          ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black'
-                          : 'bg-[#1E2333] text-slate-300 hover:bg-[#282F45]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Upload Custom Image Button */}
-                <label className="p-2.5 rounded-xl border border-dashed border-[#2F374E] hover:border-cyan-400 bg-[#161926] cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-300 transition-all">
-                  <Upload className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="font-bold">+ Upload Ảnh Tùy Biến</span>
-                  <input type="file" accept="image/*" onChange={handleUploadImageFile} className="hidden" />
-                </label>
-
-                {/* 2-Column Scene Cards Grid with REALISTIC SVG THUMBNAILS */}
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
-                  {scenes.map((s) => {
-                    const isActive = s.scene_id === activeSceneId;
-                    return (
-                      <div
-                        key={s.scene_id}
-                        onClick={() => handleSceneClick(s)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          handleOpenRegenerateModal(s);
-                        }}
-                        className={`rounded-2xl border p-2.5 cursor-pointer flex flex-col justify-between transition-all group ${
-                          isActive
-                            ? 'border-cyan-400 bg-cyan-500/15 ring-2 ring-cyan-400/30 shadow-md shadow-cyan-500/10'
-                            : 'border-[#22273B] bg-[#161926] hover:border-[#323955]'
-                        }`}
-                      >
-                        {/* Realistic Mini SVG Preview of Scene */}
-                        <div className="aspect-video w-full rounded-xl bg-white border border-[#2A3147] flex items-center justify-center p-1 relative overflow-hidden mb-2 shadow-xs">
-                          <SceneMiniThumbnail scene={s} />
-                          <span className="absolute bottom-1 right-1 text-[8px] font-mono px-1 py-0.2 bg-black/80 text-white rounded">
-                            {((s.duration_frames ?? 150) / fps).toFixed(1)}s
-                          </span>
-                        </div>
-                        <h4 className="text-[11px] font-bold text-slate-200 line-clamp-1 mb-1">{s.title}</h4>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[9px] font-black uppercase text-slate-400 bg-[#252B3E] px-1.5 py-0.5 rounded">
-                            SCENE {s.scene_id}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenRegenerateModal(s);
+                    <div className="space-y-2">
+                      {scenes.map((s, idx) => (
+                        <div
+                          key={s.scene_id}
+                          onClick={() => handleSceneClick(s)}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                            s.scene_id === activeSceneId
+                              ? 'bg-cyan-500/15 border-cyan-500/50'
+                              : 'bg-[#161926] border-[#22273B] hover:border-[#323955]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-black uppercase text-cyan-400 bg-[#252B3E] px-2 py-0.5 rounded">
+                              Phân đoạn {idx + 1}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRegenerateModal(s);
+                                }}
+                                className="p-1 text-slate-400 hover:text-cyan-400"
+                                title="Tạo lại công thức bằng AI"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteScene(s.scene_id);
+                                }}
+                                className="p-1 text-slate-400 hover:text-rose-400"
+                                title="Xóa phân đoạn này"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs font-bold text-white mb-1">{s.title}</p>
+                          <textarea
+                            value={s.voice_transcript || s.summary_text || ''}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updated = scenes.map((sc) =>
+                                sc.scene_id === s.scene_id
+                                  ? { ...sc, voice_transcript: val, summary_text: val }
+                                  : sc
+                              );
+                              setScenes(updated);
                             }}
-                            title="Tạo lại Scene này bằng AI"
-                            className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+                            rows={2}
+                            placeholder="Nhập phương trình hoặc giải thích..."
+                            className="w-full bg-[#0E111A] border border-[#22273B] rounded-xl p-2 text-[11px] text-slate-200 outline-none focus:border-cyan-400 resize-none font-mono"
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleAddScene}
+                        className="w-full py-2.5 rounded-2xl border border-dashed border-[#2F374E] hover:border-cyan-400 text-xs font-bold text-slate-300 hover:text-cyan-300 transition-all flex items-center justify-center gap-1.5 bg-[#161926]"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Thêm Phân Đoạn STEM</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : visualStyle === 'dialogue_scene' ? (
+                  <div className="space-y-3">
+                    <div className="p-2.5 rounded-2xl bg-[#161926] border border-[#22273B] flex items-center justify-between text-xs font-bold">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🎭</span>
+                        <span className="text-slate-200">2 Nhân Vật Đang Trò Chuyện</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSwapSpeakers(!swapSpeakers)}
+                        className="px-2.5 py-1 rounded-lg bg-[#252B3E] text-cyan-400 hover:bg-[#303850] text-[10px] font-bold transition-all"
+                      >
+                        ⇄ Đổi vị trí
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Danh sách lời thoại ({scenes.length} lượt)
+                      </span>
+                      {scenes.map((s, idx) => (
+                        <div
+                          key={s.scene_id}
+                          onClick={() => handleSceneClick(s)}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                            s.scene_id === activeSceneId
+                              ? 'bg-cyan-500/15 border-cyan-500/50'
+                              : 'bg-[#161926] border-[#22273B] hover:border-[#323955]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-black uppercase text-cyan-400 bg-[#252B3E] px-2 py-0.5 rounded">
+                              {idx % 2 === 0 ? 'Nhân vật A' : 'Nhân vật B'} · Lượt {idx + 1}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteScene(s.scene_id);
+                              }}
+                              className="p-1 text-slate-400 hover:text-rose-400"
+                              title="Xóa lượt thoại"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <textarea
+                            value={s.voice_transcript || s.summary_text || ''}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updated = scenes.map((sc) =>
+                                sc.scene_id === s.scene_id
+                                  ? { ...sc, voice_transcript: val, summary_text: val }
+                                  : sc
+                              );
+                              setScenes(updated);
+                            }}
+                            rows={2}
+                            placeholder="Nhập lời thoại..."
+                            className="w-full bg-[#0E111A] border border-[#22273B] rounded-xl p-2 text-xs text-slate-200 outline-none focus:border-cyan-400 resize-none"
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleAddScene}
+                        className="w-full py-2.5 rounded-2xl border border-dashed border-[#2F374E] hover:border-cyan-400 text-xs font-bold text-slate-300 hover:text-cyan-300 transition-all flex items-center justify-center gap-1.5 bg-[#161926]"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Thêm Lượt Thoại Mới</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (visualStyle === 'product_ads_motion' || visualStyle === 'ads_strobe_teaser' || visualStyle === 'ads_cinematic_showcase') ? (
+                  <div className="space-y-3">
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900 border border-indigo-500/30 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-indigo-400" />
+                          <span className="text-xs font-black text-white">Gemini Omni 1.1 Flash Ads</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          Max 10s · 4K 24fps
+                        </span>
+                      </div>
+
+                      {projectData?.mp4_url ? (
+                        <div className="aspect-video w-full rounded-xl overflow-hidden bg-black border border-indigo-500/20 relative">
+                          <video src={projectData.mp4_url} controls className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="aspect-video w-full rounded-xl bg-[#121522] border border-dashed border-[#2A3147] flex flex-col items-center justify-center p-3 text-center text-xs text-slate-400">
+                          <Film className="w-6 h-6 text-indigo-400 mb-1" />
+                          <span>Video quảng cáo AI Gemini Omni (Tối đa 10s)</span>
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-300">
+                          💬 Chat tiếp với AI để tinh chỉnh video này:
+                        </label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={omniChatPrompt}
+                            onChange={(e) => setOmniChatPrompt(e.target.value)}
+                            placeholder="Ví dụ: Đổi góc quay cận cảnh, thêm ánh sáng spotlight..."
+                            className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-[#141724] border border-[#252B3E] text-white placeholder-slate-500 outline-none focus:border-indigo-400"
+                          />
+                          <button
+                            type="button"
+                            disabled={isGeneratingOmni || !omniChatPrompt.trim()}
+                            onClick={async () => {
+                              if (!omniChatPrompt.trim()) return;
+                              setIsGeneratingOmni(true);
+                              try {
+                                await wynmotionService.generateVeoAdsAnimation({
+                                  user_prompt: omniChatPrompt,
+                                  duration_seconds: 10,
+                                  existing_video_url: projectData?.mp4_url || undefined,
+                                });
+                                alert('Đã gửi yêu cầu tinh chỉnh video bằng Gemini Omni! Hệ thống đang xử lý trong nền.');
+                                setOmniChatPrompt('');
+                              } catch (err: any) {
+                                alert(err.message || 'Lỗi gửi yêu cầu');
+                              } finally {
+                                setIsGeneratingOmni(false);
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold transition-all flex items-center gap-1"
                           >
-                            <RefreshCw className="w-3 h-3" />
+                            {isGeneratingOmni ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            <span>Sửa</span>
                           </button>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+
+                    <label className="p-2.5 rounded-xl border border-dashed border-[#2F374E] hover:border-cyan-400 bg-[#161926] cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-300 transition-all">
+                      <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="font-bold">+ Upload Ảnh Sản Phẩm (Tự Tách Nền)</span>
+                      <input type="file" accept="image/*" onChange={handleUploadImageFile} className="hidden" />
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {scenes.map((s) => (
+                        <div
+                          key={s.scene_id}
+                          onClick={() => handleSceneClick(s)}
+                          className={`rounded-2xl border p-2.5 cursor-pointer flex flex-col justify-between transition-all ${
+                            s.scene_id === activeSceneId
+                              ? 'border-cyan-400 bg-cyan-500/15 ring-2 ring-cyan-400/30'
+                              : 'border-[#22273B] bg-[#161926] hover:border-[#323955]'
+                          }`}
+                        >
+                          <div className="aspect-video w-full rounded-xl bg-white border border-[#2A3147] flex items-center justify-center p-1 relative overflow-hidden mb-2">
+                            <SceneMiniThumbnail scene={s} />
+                          </div>
+                          <h4 className="text-[11px] font-bold text-slate-200 line-clamp-1 mb-1">{s.title}</h4>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black uppercase text-slate-400 bg-[#252B3E] px-1.5 py-0.5 rounded">
+                              SCENE {s.scene_id}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteScene(s.scene_id);
+                              }}
+                              className="p-1 rounded text-slate-400 hover:text-rose-400"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="p-2.5 rounded-xl border border-dashed border-[#2F374E] hover:border-cyan-400 bg-[#161926] cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-300 transition-all">
+                      <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="font-bold">+ Upload Ảnh Tùy Biến</span>
+                      <input type="file" accept="image/*" onChange={handleUploadImageFile} className="hidden" />
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      {scenes.map((s) => {
+                        const isActive = s.scene_id === activeSceneId;
+                        return (
+                          <div
+                            key={s.scene_id}
+                            onClick={() => handleSceneClick(s)}
+                            className={`rounded-2xl border p-2.5 cursor-pointer flex flex-col justify-between transition-all group ${
+                              isActive
+                                ? 'border-cyan-400 bg-cyan-500/15 ring-2 ring-cyan-400/30 shadow-md shadow-cyan-500/10'
+                                : 'border-[#22273B] bg-[#161926] hover:border-[#323955]'
+                            }`}
+                          >
+                            <div className="aspect-video w-full rounded-xl bg-white border border-[#2A3147] flex items-center justify-center p-1 relative overflow-hidden mb-2 shadow-xs">
+                              <SceneMiniThumbnail scene={s} />
+                              <span className="absolute bottom-1 right-1 text-[8px] font-mono px-1 py-0.2 bg-black/80 text-white rounded">
+                                {((s.duration_frames ?? 150) / fps).toFixed(1)}s
+                              </span>
+                            </div>
+                            <h4 className="text-[11px] font-bold text-slate-200 line-clamp-1 mb-1">{s.title}</h4>
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-[9px] font-black uppercase text-slate-400 bg-[#252B3E] px-1.5 py-0.5 rounded">
+                                SCENE {s.scene_id}
+                              </span>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenRegenerateModal(s);
+                                  }}
+                                  title="Tạo lại Scene này bằng AI"
+                                  className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteScene(s.scene_id);
+                                  }}
+                                  title="Xóa phân cảnh này"
+                                  className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddScene}
+                      className="w-full py-2.5 rounded-2xl border border-dashed border-[#2F374E] hover:border-cyan-400 text-xs font-bold text-slate-300 hover:text-cyan-300 transition-all flex items-center justify-center gap-1.5 bg-[#161926]"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Thêm Phân Cảnh (Add Scene)</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1738,17 +2100,29 @@ function StudioInner({
                   <div className="flex items-center justify-between text-xs font-bold text-slate-300">
                     <span className="flex items-center gap-1.5">
                       <Volume2 className="w-4 h-4 text-teal-400" />
-                      <span>Âm lượng Voiceover</span>
+                      <span>Âm lượng Giọng đọc (Voiceover)</span>
                     </span>
-                    <span className="font-mono text-[11px] text-teal-400">{Math.round(volume * 100)}%</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] text-teal-400">{Math.round(volume * 100)}%</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsMuted(!isMuted)}
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isMuted ? 'bg-rose-500/20 text-rose-300' : 'bg-[#252B3E] text-slate-300'}`}
+                      >
+                        {isMuted ? 'Đã tắt' : 'Tắt'}
+                      </button>
+                    </div>
                   </div>
                   <input
                     type="range"
                     min="0"
-                    max="1"
+                    max="2"
                     step="0.05"
                     value={isMuted ? 0 : volume}
-                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                    onChange={(e) => {
+                      setIsMuted(false);
+                      setVolume(parseFloat(e.target.value));
+                    }}
                     className="w-full accent-teal-400 h-1.5 bg-[#252B3E] rounded-lg"
                   />
                 </div>
@@ -1759,7 +2133,18 @@ function StudioInner({
                       <Music className="w-4 h-4 text-orange-400" />
                       <span>Nhạc nền BGM (Music)</span>
                     </span>
-                    <span className="font-mono text-[11px] text-orange-400">{Math.round(bgmVolume * 100)}%</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] text-orange-400">{Math.round(bgmVolume * 100)}%</span>
+                      {bgmVolume > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setBgmVolume(0)}
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#252B3E] text-rose-300 hover:bg-rose-500/20"
+                        >
+                          Xóa BGM
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <input
                     type="range"
@@ -2661,7 +3046,7 @@ function StudioInner({
 
             {/* SECTION 2: ASPECT RATIO */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-200 block">2. Tỉ Lệ Khung Hình (Resolution)</label>
+              <label className="text-xs font-bold text-slate-200 block">2. Tỉ Lệ Khung Hình</label>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: '16:9', label: '16:9 (Ngang)', icon: '🖥️', desc: 'YouTube, Web, TV' },
@@ -2683,6 +3068,51 @@ function StudioInner({
                     <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{item.desc}</p>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* SECTION 2.5: RESOLUTION (FULL HD vs 4K VIP) */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                <span>3. Chất Lượng Render Video</span>
+                <span className="text-[10px] text-amber-400 font-bold">Native 4K Retina Support</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedExportResolution('1080p')}
+                  className={`p-3 rounded-2xl border text-left transition-all ${
+                    selectedExportResolution === '1080p'
+                      ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-300 font-black'
+                      : 'bg-[#1A1E2D] border-[#252B3E] text-slate-300 hover:bg-[#22273B]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold">Full HD (1080p)</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#252B3E] text-slate-400">Tiêu chuẩn</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Xuất cực nhanh ~20s, tương thích mọi máy</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedExportResolution('4k')}
+                  className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden ${
+                    selectedExportResolution === '4k'
+                      ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-500/50 text-amber-300 font-black ring-1 ring-amber-400/30'
+                      : 'bg-[#1A1E2D] border-[#252B3E] text-slate-300 hover:bg-[#22273B]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      <span>4K Ultra HD</span>
+                      <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      VIP
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Retina 3840x2160 siêu nét từng chi tiết</p>
+                </button>
               </div>
             </div>
 
