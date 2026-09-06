@@ -422,16 +422,6 @@ function StudioInner({
     duration: 0,
   });
 
-  // Sync audio duration with total video duration
-  useEffect(() => {
-    if (totalDurationSec > 0) {
-      setAudioTrim((prev) => ({
-        startTime: prev.startTime,
-        duration: prev.duration > 0 ? Math.min(prev.duration, totalDurationSec - prev.startTime) : totalDurationSec,
-      }));
-    }
-  }, [totalDurationSec]);
-
   // Custom User Uploaded Images
   const [uploadedImages, setUploadedImages] = useState<{ id: string; name: string; url: string }[]>([]);
 
@@ -734,6 +724,16 @@ function StudioInner({
   const totalDurationSec = durationInFrames / fps;
   const currentSec = frame / fps;
   const progressPct = (frame / (durationInFrames || 1)) * 100;
+
+  // Sync audio duration with total video duration
+  useEffect(() => {
+    if (totalDurationSec > 0) {
+      setAudioTrim((prev) => ({
+        startTime: prev.startTime,
+        duration: prev.duration > 0 ? Math.min(prev.duration, totalDurationSec - prev.startTime) : totalDurationSec,
+      }));
+    }
+  }, [totalDurationSec]);
 
   const timelineTracks: TimelineTrack[] = useMemo(() => {
     let accumTime = 0;

@@ -37,6 +37,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   isMobile = false,
   zoomLevel,
   onZoomChange,
+}) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = React.useState<number>(0);
 
