@@ -37,21 +37,57 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   isMobile = false,
   zoomLevel,
   onZoomChange,
-}) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [internalZoom, setInternalZoom] = React.useState<number>(1.2);
+  const [containerWidth, setContainerWidth] = React.useState<number>(0);
+
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const el = scrollContainerRef.current;
+    const updateW = () => {
+      if (el && el.clientWidth > 0) {
+        setContainerWidth(el.clientWidth);
+      }
+    };
+    updateW();
+    const ro = new ResizeObserver(updateW);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const basePixelsPerSec = isMobile ? 45 : 85;
+
+  // Auto-calculated fitZoom: exact zoom factor so totalDuration fills available container width
+  const fitZoom = React.useMemo(() => {
+    if (!containerWidth || containerWidth <= 0 || !totalDuration || totalDuration <= 0) return 0.5;
+    const availableW = Math.max(300, containerWidth - 32);
+    const targetPxPerSec = availableW / totalDuration;
+    const calc = targetPxPerSec / basePixelsPerSec;
+    return parseFloat(Math.max(0.15, Math.min(3.5, calc)).toFixed(2));
+  }, [containerWidth, totalDuration, basePixelsPerSec]);
+
+  const [hasUserCustomizedZoom, setHasUserCustomizedZoom] = React.useState<boolean>(false);
+  const [internalZoom, setInternalZoom] = React.useState<number>(fitZoom);
+
+  // If user hasn't explicitly adjusted zoom and containerWidth is known, snap to fitZoom
+  useEffect(() => {
+    if (!hasUserCustomizedZoom && fitZoom > 0) {
+      setInternalZoom(fitZoom);
+      onZoomChange?.(fitZoom);
+    }
+  }, [fitZoom, hasUserCustomizedZoom]);
+
   const activeZoom = zoomLevel !== undefined ? zoomLevel : internalZoom;
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleZoomUpdate = (newVal: number) => {
-    const clamped = Math.max(0.5, Math.min(3.5, newVal));
+    setHasUserCustomizedZoom(true);
+    const clamped = Math.max(0.15, Math.min(3.5, parseFloat(newVal.toFixed(2))));
     setInternalZoom(clamped);
     onZoomChange?.(clamped);
   };
 
-  const basePixelsPerSec = isMobile ? 45 : 85;
   const zoom = basePixelsPerSec * activeZoom; // Dynamic pixels per second scaling
-  const totalWidth = Math.max(isMobile ? 360 : 900, totalDuration * zoom);
+  const totalWidth = Math.max(containerWidth > 0 ? containerWidth - 2 : (isMobile ? 360 : 900), totalDuration * zoom);
 
   // Keyboard shortcut listener for Delete / Backspace
   useEffect(() => {
@@ -206,7 +242,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
           {/* Zoom Controls */}
           <div className="flex items-center gap-1.5 bg-[#090B12] px-2 py-0.5 rounded-xl border border-[#1E2232]">
             <button
-              onClick={() => handleZoomUpdate(activeZoom - 0.2)}
+              onClick={() => handleZoomUpdate(activeZoom - 0.1)}
               className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
               title="Thu nhỏ timeline (-)"
             >
@@ -214,21 +250,32 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
             </button>
             <input
               type="range"
-              min="0.5"
+              min="0.15"
               max="3.5"
-              step="0.1"
+              step="0.05"
               value={activeZoom}
               onChange={(e) => handleZoomUpdate(parseFloat(e.target.value))}
               className="w-16 sm:w-24 accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer"
             />
             <button
-              onClick={() => handleZoomUpdate(activeZoom + 0.2)}
+              onClick={() => handleZoomUpdate(activeZoom + 0.1)}
               className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
               title="Phóng to timeline (+)"
             >
               <ZoomIn className="w-3 h-3" />
             </button>
-            <span className="text-[10px] font-mono text-cyan-400 font-bold ml-1">{Math.round(activeZoom * 100)}%</span>
+            <span className="text-[10px] font-mono text-cyan-400 font-bold ml-0.5 min-w-[32px]">{Math.round(activeZoom * 100)}%</span>
+            <button
+              type="button"
+              onClick={() => {
+                setHasUserCustomizedZoom(false);
+                handleZoomUpdate(fitZoom);
+              }}
+              className="ml-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-[#192238] hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all"
+              title="Khớp toàn bộ chiều ngang màn hình (Fit to Screen Width)"
+            >
+              Fit
+            </button>
           </div>
 
           {/* Changing Timecode */}

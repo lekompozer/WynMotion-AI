@@ -412,8 +412,25 @@ function StudioInner({
 
   const [showAspectDropdown, setShowAspectDropdown] = useState(false);
 
-  // Zoom control state for main canvas
-  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  // Zoom control states: separate canvas stage zoom from multi-track timeline zoom
+  const [canvasZoom, setCanvasZoom] = useState<number>(1.0);
+  const [timelineZoom, setTimelineZoom] = useState<number | undefined>(undefined);
+
+  // Audio trimming state (startTime, duration in seconds)
+  const [audioTrim, setAudioTrim] = useState<{ startTime: number; duration: number }>({
+    startTime: 0,
+    duration: 0,
+  });
+
+  // Sync audio duration with total video duration
+  useEffect(() => {
+    if (totalDurationSec > 0) {
+      setAudioTrim((prev) => ({
+        startTime: prev.startTime,
+        duration: prev.duration > 0 ? Math.min(prev.duration, totalDurationSec - prev.startTime) : totalDurationSec,
+      }));
+    }
+  }, [totalDurationSec]);
 
   // Custom User Uploaded Images
   const [uploadedImages, setUploadedImages] = useState<{ id: string; name: string; url: string }[]>([]);
@@ -791,14 +808,15 @@ function StudioInner({
       };
     });
 
+    const audioDur = audioTrim.duration > 0 ? audioTrim.duration : totalDurationSec;
     const audioItems: TimelineItem[] = [
       {
         id: 'bgm_main',
         trackId: 'track_audio',
         trackType: 'audio',
-        startTime: 0,
-        endTime: totalDurationSec,
-        duration: totalDurationSec,
+        startTime: audioTrim.startTime,
+        endTime: audioTrim.startTime + audioDur,
+        duration: audioDur,
         title: '🎵 BGM & Voiceover Audio',
       },
     ];
@@ -981,6 +999,16 @@ function StudioInner({
           show_scene_cards: showSceneCards,
           show_whisper_subs: showWhisperSubs,
           force_rerender: true,
+          audio_url: chosenAudio || undefined,
+          bg_color: chosenBg,
+          visual_style: visualStyle,
+          card_pos_y: cardPosY,
+          subs_pos_y: subsPosY,
+          timeline_effects: timelineEffects,
+          caption_segments: captionSegments,
+          caption_preset_style: captionPresetStyle,
+          bgm_start_sec: audioTrim.startTime,
+          bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
         });
         jobId = expRes.job_id;
       } else {
@@ -2205,7 +2233,7 @@ function StudioInner({
               maxWidth: '94%',
               maxHeight: '86%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
-              transform: `scale(${zoomLevel})`,
+              transform: `scale(${canvasZoom})`,
               transformOrigin: 'center center',
             }}
           >
@@ -2319,10 +2347,10 @@ function StudioInner({
             </div>
           </div>
 
-          {/* Right: Interactive Zoom Slider & Controls */}
+          {/* Right: Interactive Canvas Zoom Slider & Controls */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setZoomLevel((z) => Math.max(0.5, parseFloat((z - 0.1).toFixed(1))))}
+              onClick={() => setCanvasZoom((z) => Math.max(0.5, parseFloat((z - 0.1).toFixed(1))))}
               className="p-1 text-slate-400 hover:text-white"
               title="Thu nhỏ Canvas"
             >
@@ -2332,19 +2360,19 @@ function StudioInner({
               type="range"
               min="0.5"
               max="2.0"
-              step="0.1"
-              value={zoomLevel}
-              onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
+              step="0.05"
+              value={canvasZoom}
+              onChange={(e) => setCanvasZoom(parseFloat(e.target.value))}
               className="w-16 accent-cyan-400 h-1 bg-[#252B3E] rounded-lg cursor-pointer"
             />
             <button
-              onClick={() => setZoomLevel((z) => Math.min(2.0, parseFloat((z + 0.1).toFixed(1))))}
+              onClick={() => setCanvasZoom((z) => Math.min(2.0, parseFloat((z + 0.1).toFixed(1))))}
               className="p-1 text-slate-400 hover:text-white"
               title="Phóng to Canvas"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[10px] font-mono text-slate-400 w-8">{Math.round(zoomLevel * 100)}%</span>
+            <span className="text-[10px] font-mono text-slate-400 w-8">{Math.round(canvasZoom * 100)}%</span>
             <button onClick={() => seekTo(0)} className="text-slate-400 hover:text-white ml-1">
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -2368,35 +2396,51 @@ function StudioInner({
                 if (!isNaN(sId)) setActiveSceneId(sId);
               }
             }}
-            zoomLevel={zoomLevel}
-            onZoomChange={setZoomLevel}
+            zoomLevel={timelineZoom}
+            onZoomChange={setTimelineZoom}
             onDeleteItem={handleDeleteItem}
             onOpenFXTab={() => setActiveFlyoutTab('effects')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
-              // 1. Move & Resize Media Scene Clip (Independent Position & Duration with Gap Support)
+              // 1. Move & Resize Media Scene Clip (Magnetic Ripple Trimming like CapCut)
               if (itemId.startsWith('media_')) {
                 const sId = parseInt(itemId.replace('media_', ''), 10);
-                setScenes((prev) =>
-                  prev.map((s, idx) => {
-                    const match = (s.scene_id === sId) || (idx + 1 === sId);
-                    if (match) {
-                      const safeStart = Math.max(0, newStart);
-                      const safeDur = Math.max(0.5, newDur);
-                      const startFrame = Math.round(safeStart * fps);
-                      const durFrames = Math.round(safeDur * fps);
-                      return {
-                        ...s,
-                        start_frame: startFrame,
-                        duration_frames: durFrames,
-                        start_sec: safeStart,
-                        duration_sec: safeDur,
-                        end_sec: safeStart + safeDur,
-                      };
-                    }
-                    return s;
-                  })
-                );
-                setSyncStatusMsg(`Đã cập nhật Scene: ${newStart.toFixed(1)}s (${newDur.toFixed(1)}s)!`);
+                const safeDur = Math.max(0.5, newDur);
+                let curSec = 0;
+                let curFrame = 0;
+                const updatedScenes = scenes.map((s, idx) => {
+                  const match = (s.scene_id === sId) || (idx + 1 === sId);
+                  const durSec = match ? safeDur : (s.duration_sec || (s.duration_frames || 150) / fps);
+                  const durFrames = Math.round(durSec * fps);
+                  const startSec = Number(curSec.toFixed(2));
+                  const startFrame = curFrame;
+                  curSec += durSec;
+                  curFrame += durFrames;
+                  return {
+                    ...s,
+                    start_sec: startSec,
+                    duration_sec: durSec,
+                    end_sec: Number(curSec.toFixed(2)),
+                    start_frame: startFrame,
+                    duration_frames: durFrames,
+                  };
+                });
+                updateScenesWithHistory(updatedScenes);
+                const calculatedFrames = updatedScenes.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+                if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+                setSyncStatusMsg(`Đã chỉnh Scene: ${safeDur.toFixed(1)}s (Tổng video: ${curSec.toFixed(1)}s)!`);
+                setTimeout(() => setSyncStatusMsg(null), 2500);
+                return;
+              }
+
+              // 2. Move & Resize Audio Track (CapCut Audio Trimming)
+              if (itemId === 'bgm_main' || itemId.startsWith('audio_')) {
+                const safeStart = Math.max(0, newStart);
+                const safeDur = Math.max(0.5, newDur);
+                setAudioTrim({
+                  startTime: safeStart,
+                  duration: safeDur,
+                });
+                setSyncStatusMsg(`Đã cắt Audio: ${safeStart.toFixed(1)}s ➔ ${(safeStart + safeDur).toFixed(1)}s (${safeDur.toFixed(1)}s)!`);
                 setTimeout(() => setSyncStatusMsg(null), 2500);
                 return;
               }
