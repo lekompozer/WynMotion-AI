@@ -27,6 +27,8 @@ export interface WynMotionDurationOption {
   discountPct?: number;
   perMonthVnd: number;
   perMonthUsd: number;
+  lemonSqueezyProductId?: number;
+  lemonSqueezyVariantId?: number;
 }
 
 export interface WynMotionTierConfig {
@@ -60,6 +62,8 @@ export interface WynMotionPointPack {
   popular?: boolean;
   descVi: string;
   descEn: string;
+  lemonSqueezyProductId?: number;
+  lemonSqueezyVariantId?: number;
 }
 
 export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
@@ -101,6 +105,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         points: 129,
         perMonthVnd: 129000,
         perMonthUsd: 7.99,
+        lemonSqueezyProductId: 1341762,
+        lemonSqueezyVariantId: 2096066,
       },
       {
         key: 'wynmotion_premium_3m',
@@ -116,6 +122,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 10,
         perMonthVnd: 116333,
         perMonthUsd: 6.66,
+        lemonSqueezyProductId: 1341762,
+        lemonSqueezyVariantId: 2096083,
       },
       {
         key: 'wynmotion_premium_6m',
@@ -133,6 +141,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 16,
         perMonthVnd: 108166,
         perMonthUsd: 5.83,
+        lemonSqueezyProductId: 1341762,
+        lemonSqueezyVariantId: 2096087,
       },
       {
         key: 'wynmotion_premium_12m',
@@ -150,6 +160,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 23,
         perMonthVnd: 99916,
         perMonthUsd: 5.0,
+        lemonSqueezyProductId: 1341762,
+        lemonSqueezyVariantId: 2096092,
       },
     ],
   },
@@ -193,6 +205,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         points: 199,
         perMonthVnd: 199000,
         perMonthUsd: 11.99,
+        lemonSqueezyProductId: 1341784,
+        lemonSqueezyVariantId: 2096105,
       },
       {
         key: 'wynmotion_pro_3m',
@@ -208,6 +222,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 8,
         perMonthVnd: 183000,
         perMonthUsd: 10.0,
+        lemonSqueezyProductId: 1341784,
+        lemonSqueezyVariantId: 2096138,
       },
       {
         key: 'wynmotion_pro_6m',
@@ -225,6 +241,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 16,
         perMonthVnd: 166500,
         perMonthUsd: 9.16,
+        lemonSqueezyProductId: 1341784,
+        lemonSqueezyVariantId: 2096148,
       },
       {
         key: 'wynmotion_pro_12m',
@@ -242,6 +260,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 25,
         perMonthVnd: 149916,
         perMonthUsd: 7.5,
+        lemonSqueezyProductId: 1341784,
+        lemonSqueezyVariantId: 2096155,
       },
     ],
   },
@@ -284,6 +304,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         points: 299,
         perMonthVnd: 299000,
         perMonthUsd: 19.99,
+        lemonSqueezyProductId: 1341849,
+        lemonSqueezyVariantId: 2096189,
       },
       {
         key: 'wynmotion_vip_3m',
@@ -299,6 +321,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 11,
         perMonthVnd: 266333,
         perMonthUsd: 16.66,
+        lemonSqueezyProductId: 1341849,
+        lemonSqueezyVariantId: 2096217,
       },
       {
         key: 'wynmotion_vip_6m',
@@ -316,6 +340,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 16,
         perMonthVnd: 249833,
         perMonthUsd: 14.99,
+        lemonSqueezyProductId: 1341849,
+        lemonSqueezyVariantId: 2096220,
       },
       {
         key: 'wynmotion_vip_12m',
@@ -333,6 +359,8 @@ export const WYNMOTION_TIERS: Record<WynMotionTierKey, WynMotionTierConfig> = {
         discountPct: 30,
         perMonthVnd: 208250,
         perMonthUsd: 12.5,
+        lemonSqueezyProductId: 1341849,
+        lemonSqueezyVariantId: 2096222,
       },
     ],
   },
@@ -352,6 +380,8 @@ export const WYNMOTION_POINT_PACKS: WynMotionPointPack[] = [
     priceUsdDisplay: '$5.99',
     descVi: 'Phù hợp cho nhu cầu làm video ngắn hoặc tạo vài clip hoạt họa.',
     descEn: 'Great for occasional short videos or voiceovers.',
+    lemonSqueezyProductId: 1341659,
+    lemonSqueezyVariantId: 2095924,
   },
   {
     key: 'wynmotion_credits_199k',
@@ -367,6 +397,8 @@ export const WYNMOTION_POINT_PACKS: WynMotionPointPack[] = [
     priceUsdDisplay: '$11.99',
     descVi: 'Tối ưu cho nhà sáng tạo nội dung dựng 10-15 video hoạt họa chất lượng cao.',
     descEn: 'Ideal for creators producing 10-15 high-quality animated videos.',
+    lemonSqueezyProductId: 1341659,
+    lemonSqueezyVariantId: 2095944,
   },
   {
     key: 'wynmotion_credits_499k',
@@ -381,8 +413,207 @@ export const WYNMOTION_POINT_PACKS: WynMotionPointPack[] = [
     priceUsdDisplay: '$29.99',
     descVi: 'Gói studio chuyên nghiệp, không lo gián đoạn khi render phim hoạt hình dài tập.',
     descEn: 'Professional studio pack for uninterrupted animated film creation.',
+    lemonSqueezyProductId: 1341659,
+    lemonSqueezyVariantId: 2095947,
   },
 ];
+
+export const WYNMOTION_LEMON_SQUEEZY_PRODUCT_UUIDS: Record<number, string> = {
+  1341659: 'eaee1995-0b00-453a-bded-aa9576e2ff28', // WynMotion - AI Points
+  1341762: 'e4c2ddf2-fe51-4314-95f4-953df30b669c', // WynMotion Premium
+  1341784: '70154921-a26c-426c-8828-37cac3471b58', // WynMotion Pro
+  1341849: 'f8880ffd-4fbf-4295-bf2e-302d2bd9eb26', // WynMotion VIP Studio
+};
+
+/**
+ * Lemon Squeezy product & variant mapping for WynMotion
+ */
+export const WYNMOTION_LEMON_SQUEEZY_VARIANTS: Record<
+  string,
+  {
+    productId: number;
+    productUuid: string;
+    variantId: number;
+    type: 'points' | 'subscription';
+    tier?: WynMotionTierKey;
+    points?: number;
+    durationMonths?: number;
+  }
+> = {
+  // Point Packs (Product 1341659)
+  wynmotion_credits_99k: {
+    productId: 1341659,
+    productUuid: 'eaee1995-0b00-453a-bded-aa9576e2ff28',
+    variantId: 2095924,
+    type: 'points',
+    points: 100,
+  },
+  wynmotion_credits_199k: {
+    productId: 1341659,
+    productUuid: 'eaee1995-0b00-453a-bded-aa9576e2ff28',
+    variantId: 2095944,
+    type: 'points',
+    points: 200,
+  },
+  wynmotion_credits_499k: {
+    productId: 1341659,
+    productUuid: 'eaee1995-0b00-453a-bded-aa9576e2ff28',
+    variantId: 2095947,
+    type: 'points',
+    points: 600,
+  },
+
+  // WynMotion Premium (Product 1341762)
+  wynmotion_premium_1m: {
+    productId: 1341762,
+    productUuid: 'e4c2ddf2-fe51-4314-95f4-953df30b669c',
+    variantId: 2096066,
+    type: 'subscription',
+    tier: 'premium',
+    durationMonths: 1,
+    points: 129,
+  },
+  wynmotion_premium_3m: {
+    productId: 1341762,
+    productUuid: 'e4c2ddf2-fe51-4314-95f4-953df30b669c',
+    variantId: 2096083,
+    type: 'subscription',
+    tier: 'premium',
+    durationMonths: 3,
+    points: 349,
+  },
+  wynmotion_premium_6m: {
+    productId: 1341762,
+    productUuid: 'e4c2ddf2-fe51-4314-95f4-953df30b669c',
+    variantId: 2096087,
+    type: 'subscription',
+    tier: 'premium',
+    durationMonths: 6,
+    points: 649,
+  },
+  wynmotion_premium_12m: {
+    productId: 1341762,
+    productUuid: 'e4c2ddf2-fe51-4314-95f4-953df30b669c',
+    variantId: 2096092,
+    type: 'subscription',
+    tier: 'premium',
+    durationMonths: 12,
+    points: 1199,
+  },
+
+  // WynMotion Pro (Product 1341784)
+  wynmotion_pro_1m: {
+    productId: 1341784,
+    productUuid: '70154921-a26c-426c-8828-37cac3471b58',
+    variantId: 2096105,
+    type: 'subscription',
+    tier: 'pro',
+    durationMonths: 1,
+    points: 199,
+  },
+  wynmotion_pro_3m: {
+    productId: 1341784,
+    productUuid: '70154921-a26c-426c-8828-37cac3471b58',
+    variantId: 2096138,
+    type: 'subscription',
+    tier: 'pro',
+    durationMonths: 3,
+    points: 549,
+  },
+  wynmotion_pro_6m: {
+    productId: 1341784,
+    productUuid: '70154921-a26c-426c-8828-37cac3471b58',
+    variantId: 2096148,
+    type: 'subscription',
+    tier: 'pro',
+    durationMonths: 6,
+    points: 999,
+  },
+  wynmotion_pro_12m: {
+    productId: 1341784,
+    productUuid: '70154921-a26c-426c-8828-37cac3471b58',
+    variantId: 2096155,
+    type: 'subscription',
+    tier: 'pro',
+    durationMonths: 12,
+    points: 1799,
+  },
+
+  // WynMotion VIP Studio (Product 1341849)
+  wynmotion_vip_1m: {
+    productId: 1341849,
+    productUuid: 'f8880ffd-4fbf-4295-bf2e-302d2bd9eb26',
+    variantId: 2096189,
+    type: 'subscription',
+    tier: 'vip',
+    durationMonths: 1,
+    points: 299,
+  },
+  wynmotion_vip_3m: {
+    productId: 1341849,
+    productUuid: 'f8880ffd-4fbf-4295-bf2e-302d2bd9eb26',
+    variantId: 2096217,
+    type: 'subscription',
+    tier: 'vip',
+    durationMonths: 3,
+    points: 799,
+  },
+  wynmotion_vip_6m: {
+    productId: 1341849,
+    productUuid: 'f8880ffd-4fbf-4295-bf2e-302d2bd9eb26',
+    variantId: 2096220,
+    type: 'subscription',
+    tier: 'vip',
+    durationMonths: 6,
+    points: 1499,
+  },
+  wynmotion_vip_12m: {
+    productId: 1341849,
+    productUuid: 'f8880ffd-4fbf-4295-bf2e-302d2bd9eb26',
+    variantId: 2096222,
+    type: 'subscription',
+    tier: 'vip',
+    durationMonths: 12,
+    points: 2499,
+  },
+};
+
+/**
+ * Build Lemon Squeezy Checkout URL for USD Web purchases
+ * Format: https://checkout.wynai.pro/checkout/buy/<product_uuid>?variant=<variant_id>&checkout[custom][user_id]=...
+ */
+export function buildLemonSqueezyCheckoutUrl(params: {
+  productUuid?: string;
+  productId?: number;
+  variantId: string | number;
+  userId?: string;
+  userEmail?: string;
+  productIdKey?: string;
+  redirectUrl?: string;
+}): string {
+  const productUuid =
+    params.productUuid ||
+    (params.productId ? WYNMOTION_LEMON_SQUEEZY_PRODUCT_UUIDS[params.productId] : null) ||
+    '70154921-a26c-426c-8828-37cac3471b58';
+
+  const url = new URL(`https://checkout.wynai.pro/checkout/buy/${productUuid}`);
+  url.searchParams.set('variant', String(params.variantId));
+
+  if (params.userId) {
+    url.searchParams.set('checkout[custom][user_id]', params.userId);
+  }
+  if (params.userEmail) {
+    url.searchParams.set('checkout[email]', params.userEmail);
+  }
+  url.searchParams.set('checkout[custom][module]', 'wynmotion');
+  if (params.productIdKey) {
+    url.searchParams.set('checkout[custom][product_id]', params.productIdKey);
+  }
+  if (params.redirectUrl) {
+    url.searchParams.set('checkout[redirect_url]', params.redirectUrl);
+  }
+  return url.toString();
+}
 
 export interface WynMotionPlan {
   key: string;

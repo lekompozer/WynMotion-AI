@@ -25,6 +25,8 @@ import {
   WynMotionDurationKey,
   WYNMOTION_TIERS,
   WYNMOTION_POINT_PACKS,
+  WYNMOTION_LEMON_SQUEEZY_VARIANTS,
+  buildLemonSqueezyCheckoutUrl,
   submitFormToSePay,
   createWebCheckout,
   purchaseAppleProduct,
@@ -109,6 +111,8 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
   // User subscription status for WynMotion
   const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro' | 'vip'>('free');
   const [isCheckingSub, setIsCheckingSub] = useState<boolean>(false);
+  const [isWaitingLemonSqueezy, setIsWaitingLemonSqueezy] = useState<boolean>(false);
+  const [lastOpenedCheckoutUrl, setLastOpenedCheckoutUrl] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -123,7 +127,7 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
   const checkWynMotionSubscription = useCallback(async () => {
     if (!user) {
       setUserTier('free');
-      return;
+      return 'free';
     }
     setIsCheckingSub(true);
     try {
@@ -135,17 +139,47 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
       if (res.ok) {
         const data = await res.json();
         if (data?.is_active && data?.tier) {
-          setUserTier(data.tier.toLowerCase());
+          const tier = data.tier.toLowerCase();
+          setUserTier(tier);
+          return tier;
         } else {
           setUserTier('free');
+          return 'free';
         }
       }
     } catch (e) {
       console.warn('Could not check WynMotion subscription status:', e);
+      setUserTier('free');
+      return 'free';
     } finally {
       setIsCheckingSub(false);
     }
   }, [user]);
+
+  // Auto-poll subscription activation when waiting for Lemon Squeezy payment
+  useEffect(() => {
+    if (!isWaitingLemonSqueezy || !user) return;
+    const interval = setInterval(async () => {
+      try {
+        const activeTier = await checkWynMotionSubscription();
+        if (activeTier && activeTier !== 'free') {
+          setIsWaitingLemonSqueezy(false);
+          setSuccessMessage(
+            t(
+              'Thanh toán thành công qua Lemon Squeezy! Gói WynMotion đã được kích hoạt.',
+              'Payment successful via Lemon Squeezy! Your WynMotion plan has been activated.'
+            )
+          );
+          if (onSuccess) onSuccess();
+          setTimeout(() => onClose(), 2000);
+        }
+      } catch {
+        // silent retry
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isWaitingLemonSqueezy, user, checkWynMotionSubscription, onSuccess, onClose, t]);
 
   // Load real App Store prices on iOS via RevenueCat SDK
   useEffect(() => {
@@ -311,10 +345,30 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
       } else {
         // Web Checkout: VND -> SePay VietQR, USD -> Lemon Squeezy Checkout
         if (currency === 'USD') {
-          const checkoutUrl = `https://checkout.wynai.pro/checkout?product=${productId}&user=${encodeURIComponent(
-            user.uid
-          )}&email=${encodeURIComponent(user.email || '')}`;
+          const lsConfig = WYNMOTION_LEMON_SQUEEZY_VARIANTS[productId];
+          if (!lsConfig || !lsConfig.variantId) {
+            throw new Error(t('Không tìm thấy cấu hình Lemon Squeezy cho gói này', 'Lemon Squeezy variant configuration not found'));
+          }
+
+          const checkoutUrl = buildLemonSqueezyCheckoutUrl({
+            productUuid: lsConfig.productUuid,
+            productId: lsConfig.productId,
+            variantId: lsConfig.variantId,
+            userId: user.uid,
+            userEmail: user.email || '',
+            productIdKey: productId,
+            redirectUrl: typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}?payment=success&provider=lemon_squeezy` : undefined,
+          });
+
+          setLastOpenedCheckoutUrl(checkoutUrl);
+          setIsWaitingLemonSqueezy(true);
           window.open(checkoutUrl, '_blank');
+          setSuccessMessage(
+            t(
+              'Đang mở trang thanh toán quốc tế Lemon Squeezy. Sau khi thanh toán hoàn tất, hệ thống sẽ tự động kích hoạt gói của bạn.',
+              'Opening Lemon Squeezy checkout. Once payment is completed, your plan will be activated automatically.'
+            )
+          );
           setIsLoading(false);
           return;
         }
@@ -511,6 +565,60 @@ export const WynMotionUpgradeModal: React.FC<WynMotionUpgradeModalProps> = ({
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
               <Check className="w-4 h-4 flex-shrink-0" />
               <span>{successMessage}</span>
+            </div>
+          )}
+          {isWaitingLemonSqueezy && (
+            <div
+              className={`p-4 rounded-xl border ${
+                isDarkMode ? 'bg-purple-950/30 border-purple-500/40 text-purple-200' : 'bg-purple-50 border-purple-200 text-purple-900'
+              } text-xs space-y-3`}
+            >
+              <div className="flex items-center gap-2 font-medium">
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400 flex-shrink-0" />
+                <span>
+                  {t(
+                    'Đang chờ hoàn tất giao dịch trên Lemon Squeezy... Hệ thống đang tự động kiểm tra kích hoạt.',
+                    'Waiting for Lemon Squeezy payment completion... Checking activation automatically.'
+                  )}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const activeTier = await checkWynMotionSubscription();
+                    if (activeTier && activeTier !== 'free') {
+                      setIsWaitingLemonSqueezy(false);
+                      setSuccessMessage(t('Kích hoạt thành công!', 'Activated successfully!'));
+                      if (onSuccess) onSuccess();
+                      setTimeout(() => onClose(), 1500);
+                    } else {
+                      setErrorMessage(
+                        t(
+                          'Chưa nhận được xác nhận thanh toán. Nếu bạn vừa thanh toán, vui lòng chờ 10-30 giây rồi bấm lại.',
+                          'Payment not yet confirmed. If you just paid, please wait 10-30 seconds and retry.'
+                        )
+                      );
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow transition-all cursor-pointer"
+                >
+                  {t('Kiểm tra kích hoạt ngay', 'Verify Activation Now')}
+                </button>
+                {lastOpenedCheckoutUrl && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(lastOpenedCheckoutUrl, '_blank')}
+                    className={`px-3 py-1.5 rounded-lg border ${
+                      isDarkMode
+                        ? 'border-purple-600 text-purple-300 hover:bg-purple-900/40'
+                        : 'border-purple-300 text-purple-800 hover:bg-purple-100'
+                    } font-medium text-xs transition-all cursor-pointer`}
+                  >
+                    {t('Mở lại trang thanh toán', 'Re-open Checkout Page')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
