@@ -52,7 +52,10 @@ import {
   Atom,
   Film,
   Clock,
+  Info,
 } from 'lucide-react';
+import { usePointsBalance } from '@/hooks/useSubscription';
+import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 import { RemotionPlayerProvider, useRemotion } from './RemotionEngine';
 import { DynamicAnimationComposition } from './DynamicAnimationComposition';
 import { DynamicSceneData } from './DynamicSceneRenderer';
@@ -307,6 +310,45 @@ function StudioInner({
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
   const [availableAudioTracks, setAvailableAudioTracks] = useState<AvailableAudioTrack[]>([]);
   const [selectedExportAudioUrl, setSelectedExportAudioUrl] = useState<string>(audioUrl || '');
+
+  // Determine whether this project is commercial showcase / BGM based or voice narrator
+  const isCommercialMusicStyle = useMemo(() => {
+    return (
+      ['ads_cinematic_showcase', 'cinematic_showcase', 'ads_strobe_teaser', 'strobe_teaser', 'product_ads_motion', 'animation_ads_image_veo'].includes(
+        (visualStyle as string) || ''
+      ) ||
+      (projectData as any)?.audio_mode === 'bgm' ||
+      Boolean((projectData as any)?.is_music_template) ||
+      Boolean((projectData as any)?.bgm_url && !(projectData as any)?.voice_name)
+    );
+  }, [visualStyle, projectData]);
+
+  // Determine if template supports dynamic voice animation synchronization
+  const isAnimationSyncableTemplate = useMemo(() => {
+    return [
+      'whiteboard_stream_hand',
+      'handdrawn_fast_doodle',
+      'dialogue_scene',
+      'science_explainer',
+      'character_animation',
+      'apple_modern_motion',
+      'video_news_60s',
+    ].includes(visualStyle);
+  }, [visualStyle]);
+
+  // Points Balance from real API
+  const { data: pointsData, isLoading: pointsLoading, refetch: refetchPoints } = usePointsBalance({
+    autoRefresh: true,
+    refreshInterval: 20000,
+  });
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [showProjectInfoModal, setShowProjectInfoModal] = useState(false);
+
+  // Science Explainer AI Chat Code Editing & Version History State
+  const [isEditingScienceCode, setIsEditingScienceCode] = useState(false);
+  const [scienceVersions, setScienceVersions] = useState<any[]>([]);
+  const [scienceExplainingMsg, setScienceExplainingMsg] = useState<string | null>(null);
+  const [showVersionHistoryDropdown, setShowVersionHistoryDropdown] = useState(false);
 
   // Auto-Captions Whisper & CapCut Subtitle State
   const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>([]);
@@ -1080,6 +1122,97 @@ function StudioInner({
     updateScenesWithHistory(newScenes);
   };
 
+  const handleSendScienceCodePrompt = async (overridePrompt?: string) => {
+    const promptToSend = (overridePrompt || chatInput).trim();
+    if (!promptToSend || isEditingScienceCode) return;
+
+    setIsEditingScienceCode(true);
+    setScienceExplainingMsg(null);
+
+    try {
+      const fallbackScienceCode = `import React from 'react';
+import { useCurrentFrame, useVideoConfig, spring, interpolate } from '../RemotionEngine';
+
+export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width || height === 1920;
+  const popSpring = spring({ frame, fps, config: { damping: 14, stiffness: 140 } });
+  const rotY = (frame * 1.2) % 360;
+  const laserY = interpolate(frame % (fps * 3), [0, fps * 3], [0, 100], { extrapolateRight: 'clamp' });
+
+  return (
+    <div style={{ width: '100%', height: '100%', backgroundColor: '#060B18', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono', monospace", perspective: 1200 }}>
+      <div style={{ position: 'absolute', width: '200%', height: '200%', top: '-50%', left: '-50%', backgroundImage: 'radial-gradient(rgba(0, 240, 255, 0.12) 1px, transparent 1px)', backgroundSize: '36px 36px', transform: 'rotateX(65deg)', opacity: 0.8 }} />
+      <div style={{ position: 'absolute', top: \`\${laserY}%\`, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #00F0FF, #10B981, transparent)', boxShadow: '0 0 20px #00F0FF', zIndex: 5 }} />
+      <div style={{ transform: \`scale(\${popSpring})\`, zIndex: 10, textAlign: 'center', color: '#00F0FF' }}>
+        <h2 style={{ fontSize: isPortrait ? 32 : 48, fontWeight: 900, textShadow: '0 0 20px rgba(0, 240, 255, 0.8)' }}>STEM EXPLAINER</h2>
+        <p style={{ color: '#E2E8F0', marginTop: 8, fontSize: 16 }}>${activeScene?.voice_transcript || activeScene?.title || 'Scientific Discovery & Quantum Dynamics'}</p>
+      </div>
+    </div>
+  );
+};`;
+
+      const currentCode = (activeScene as any)?.code || fallbackScienceCode;
+      const res = await wynmotionService.editScienceExplainerCode({
+        project_id: projectId,
+        scene_id: activeScene ? activeScene.scene_id : 1,
+        current_code: currentCode,
+        prompt: promptToSend,
+        aspect_ratio: aspectRatio,
+        science_domain: (projectData as any)?.science_domain || 'physics',
+        language_code: (projectData as any)?.language_code || 'vi',
+      });
+
+      if (res.success && res.new_code) {
+        setScenes((prev) =>
+          prev.map((s) =>
+            s.scene_id === (activeScene ? activeScene.scene_id : 1)
+              ? { ...s, code: res.new_code }
+              : s
+          )
+        );
+        if (res.version_history) {
+          setScienceVersions(res.version_history);
+        }
+        setScienceExplainingMsg(res.explanation || 'Đã cập nhật code hoạt họa!');
+        setChatInput('');
+      } else {
+        alert(res.message || 'Không thể chỉnh sửa code.');
+      }
+    } catch (err: any) {
+      console.error('Error editing science code:', err);
+      alert(err.message || 'Lỗi khi gửi yêu cầu chỉnh sửa AI.');
+    } finally {
+      setIsEditingScienceCode(false);
+    }
+  };
+
+  const handleApplyScienceVersion = async (versionId: string) => {
+    try {
+      const res = await wynmotionService.applyScienceExplainerVersion(
+        projectId,
+        activeScene ? activeScene.scene_id : 1,
+        versionId
+      );
+      if (res.code) {
+        setScenes((prev) =>
+          prev.map((s) =>
+            s.scene_id === (activeScene ? activeScene.scene_id : 1)
+              ? { ...s, code: res.code }
+              : s
+          )
+        );
+        if (res.version_history) {
+          setScienceVersions(res.version_history);
+        }
+        setScienceExplainingMsg(res.explanation || `Đã chuyển về phiên bản ${res.version_number}`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Không thể áp dụng phiên bản này.');
+    }
+  };
+
   const handleOpenRegenerateModal = (scene: DynamicSceneData) => {
     setSceneToRegenerate(scene);
     setRegeneratePrompt((scene as any).visual_concept || '');
@@ -1398,110 +1531,114 @@ function StudioInner({
           </div>
 
           {/* 2. Active Audio / Language Selector Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowAudioDropdown(!showAudioDropdown);
-                setShowAspectDropdown(false);
-              }}
-              title="Chọn ngôn ngữ giọng đọc audio của Slide"
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-[#1E2333] hover:bg-[#282F45] text-white rounded-lg border border-[#2D354E] shadow-xs transition-all"
-            >
-              <Radio className="w-3.5 h-3.5 text-cyan-400" />
-              <span>
-                {availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc))?.flag || '🎧'}{' '}
-                {availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc))?.label || 'Giọng đọc'}
-              </span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
+          {!isCommercialMusicStyle && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowAudioDropdown(!showAudioDropdown);
+                  setShowAspectDropdown(false);
+                }}
+                title="Chọn ngôn ngữ giọng đọc audio của Slide"
+                className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-[#1E2333] hover:bg-[#282F45] text-white rounded-lg border border-[#2D354E] shadow-xs transition-all"
+              >
+                <Radio className="w-3.5 h-3.5 text-cyan-400" />
+                <span>
+                  {availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc))?.flag || '🎧'}{' '}
+                  {availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc))?.label || 'Giọng đọc'}
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
 
-            {showAudioDropdown && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-64 bg-[#161926] rounded-2xl border border-[#2A3147] shadow-2xl p-2.5 z-50 text-xs text-white animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#252B3E]">
-                  <span className="font-black text-cyan-300 flex items-center gap-1.5">
-                    <Radio className="w-3.5 h-3.5" />
-                    <span>Chọn Audio Ngôn Ngữ</span>
-                  </span>
-                  <button onClick={() => setShowAudioDropdown(false)} className="text-slate-400 hover:text-white">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+              {showAudioDropdown && (
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-64 bg-[#161926] rounded-2xl border border-[#2A3147] shadow-2xl p-2.5 z-50 text-xs text-white animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#252B3E]">
+                    <span className="font-black text-cyan-300 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5" />
+                      <span>Chọn Audio Ngôn Ngữ</span>
+                    </span>
+                    <button onClick={() => setShowAudioDropdown(false)} className="text-slate-400 hover:text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
 
-                <div className="space-y-1 max-h-52 overflow-y-auto pr-0.5">
-                  {availableAudioTracks.map((track) => {
-                    const isSelected = (selectedExportAudioUrl || remotionAudioSrc) === track.url;
-                    const isPlaying = previewPlayingAudioId === track.id;
-                    return (
-                      <div
-                        key={track.id}
-                        className={`flex items-center justify-between p-2 rounded-xl text-xs transition-all border ${
-                          isSelected
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-black'
-                            : 'bg-[#1D2132] text-slate-300 border-[#282F45] hover:bg-[#252B3E]'
-                        }`}
-                      >
+                  <div className="space-y-1 max-h-52 overflow-y-auto pr-0.5 studio-scrollbar">
+                    {availableAudioTracks.map((track) => {
+                      const isSelected = (selectedExportAudioUrl || remotionAudioSrc) === track.url;
+                      const isPlaying = previewPlayingAudioId === track.id;
+                      return (
                         <div
-                          className="flex items-center gap-2 truncate cursor-pointer flex-1 mr-1"
-                          onClick={() => handleSelectAndSyncAudio(track, false)}
+                          key={track.id}
+                          className={`flex items-center justify-between p-2 rounded-xl text-xs transition-all border ${
+                            isSelected
+                              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-black'
+                              : 'bg-[#1D2132] text-slate-300 border-[#282F45] hover:bg-[#252B3E]'
+                          }`}
                         >
-                          <span className="text-sm">{track.flag}</span>
-                          <span className="truncate">{track.label}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleAudioPreview(track);
-                            }}
-                            className={`p-1 rounded-md transition-all ${
-                              isPlaying ? 'bg-cyan-500 text-slate-950 animate-pulse' : 'text-slate-400 hover:text-white'
-                            }`}
-                            title={isPlaying ? 'Dừng phát' : 'Nghe thử'}
+                          <div
+                            className="flex items-center gap-2 truncate cursor-pointer flex-1 mr-1"
+                            onClick={() => handleSelectAndSyncAudio(track, false)}
                           >
-                            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectAndSyncAudio(track, true)}
-                            title="Chọn và đồng bộ timeline theo audio này"
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                              isSelected ? 'bg-cyan-400 text-slate-950' : 'bg-[#2A3147] text-slate-300 hover:bg-cyan-500 hover:text-slate-950'
-                            }`}
-                          >
-                            {isSelected ? 'Đang chọn' : 'Dùng'}
-                          </button>
+                            <span className="text-sm">{track.flag}</span>
+                            <span className="truncate">{track.label}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleAudioPreview(track);
+                              }}
+                              className={`p-1 rounded-md transition-all ${
+                                isPlaying ? 'bg-cyan-500 text-slate-950 animate-pulse' : 'text-slate-400 hover:text-white'
+                              }`}
+                              title={isPlaying ? 'Dừng phát' : 'Nghe thử'}
+                            >
+                              {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectAndSyncAudio(track, true)}
+                              title="Chọn và đồng bộ timeline theo audio này"
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                isSelected ? 'bg-cyan-400 text-slate-950' : 'bg-[#2A3147] text-slate-300 hover:bg-cyan-500 hover:text-slate-950'
+                              }`}
+                            >
+                              {isSelected ? 'Đang chọn' : 'Dùng'}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* 3. Sync Timeline Button */}
-          <button
-            onClick={() => {
-              const currentTrack = availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc)) || availableAudioTracks[0];
-              if (currentTrack) {
-                handleSelectAndSyncAudio(currentTrack, true);
-              }
-            }}
-            disabled={isSyncingTimeline}
-            title="Tự động đồng bộ mốc thời gian các phân cảnh và phụ đề theo Audio đang chọn"
-            className="flex items-center gap-1.5 px-3 py-1 text-xs font-black bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50"
-          >
-            {isSyncingTimeline ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
-            )}
-            <span>Sync Animation</span>
-          </button>
+          {isAnimationSyncableTemplate && (
+            <button
+              onClick={() => {
+                const currentTrack = availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc)) || availableAudioTracks[0];
+                if (currentTrack) {
+                  handleSelectAndSyncAudio(currentTrack, true);
+                }
+              }}
+              disabled={isSyncingTimeline}
+              title="Tự động đồng bộ mốc thời gian các phân cảnh và phụ đề theo Audio đang chọn"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-black bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isSyncingTimeline ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              <span>Sync Animation</span>
+            </button>
+          )}
         </div>
 
-        {/* Right: History Button, AI Credits & Actions */}
+        {/* Right: AI Credits (Real API), Download & Info Modal */}
         <div className="flex items-center gap-2.5">
           {/* EXPORT SPINNER & NOTIFICATION */}
           {isExporting && (
@@ -1511,70 +1648,16 @@ function StudioInner({
             </div>
           )}
 
-          {/* HISTORY BUTTON */}
-          <div className="relative">
-            <button
-              onClick={() => setShowHistoryModal(!showHistoryModal)}
-              title="Lịch sử các Slide trong Module"
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#1E2333] hover:bg-[#282F45] border border-[#2D354E] text-slate-200 text-xs font-bold transition-all"
-            >
-              <History className="w-3.5 h-3.5 text-cyan-400" />
-              <span>History (Slide {slideIndex + 1})</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
-
-            {/* HISTORY DROPDOWN MODAL */}
-            {showHistoryModal && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-[#161926] rounded-2xl border border-[#2A3147] shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 text-white">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#252B3E]">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-white">
-                    <History className="w-4 h-4 text-cyan-400" />
-                    <span>Lịch sử Slide trong Module</span>
-                  </div>
-                  <button onClick={() => setShowHistoryModal(false)} className="text-slate-400 hover:text-slate-200">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
-                  {(moduleSlidesList.length > 0
-                    ? moduleSlidesList
-                    : Array.from({ length: 8 }).map((_, i) => ({
-                        index: i,
-                        title: `Slide ${i + 1}`,
-                        hasAnimation: i === slideIndex,
-                      }))
-                  ).map((s) => {
-                    const isCurrent = s.index === slideIndex;
-                    return (
-                      <a
-                        key={s.index}
-                        href={`/app/ai-video-editor/slide_${s.index}?moduleId=${moduleId || ''}&style=${visualStyle}`}
-                        className={`flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all ${
-                          isCurrent
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-black'
-                            : 'bg-[#1E2333] text-slate-300 hover:bg-[#282F45] border border-[#252B3E]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <span className="w-5 h-5 rounded-full bg-[#2A3147] flex items-center justify-center text-[10px] text-slate-300">
-                            {s.index + 1}
-                          </span>
-                          <span className="truncate max-w-[150px]">{s.title}</span>
-                        </div>
-                        {isCurrent && <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI CREDIT BADGE */}
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-black">
-            <span>💎 2</span>
-          </div>
+          {/* AI CREDIT BADGE (Real user points from API) */}
+          <button
+            type="button"
+            onClick={() => setIsUpgradeModalOpen(true)}
+            title="Điểm AI Khả Dụng - Bấm để nạp thêm điểm"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-black shadow-sm transition-all active:scale-95 cursor-pointer"
+          >
+            <span>💎</span>
+            <span>{pointsData ? pointsData.points_remaining.toLocaleString() : (pointsLoading ? '...' : 0)}</span>
+          </button>
 
           {/* DOWNLOAD AS MP4 BUTTON */}
           <button
@@ -1590,8 +1673,14 @@ function StudioInner({
             <span>Download MP4</span>
           </button>
 
-          <button className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#1E2333]">
-            <Settings className="w-4 h-4" />
+          {/* PROJECT INFO MODAL TRIGGER */}
+          <button
+            type="button"
+            onClick={() => setShowProjectInfoModal(true)}
+            title="Thông Tin Chi Tiết Dự Án (Project Info)"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#1E2333] transition-colors"
+          >
+            <Info className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -1600,85 +1689,193 @@ function StudioInner({
       {/* 2. MAIN BODY: LEFT CHAT + ICON BAR + FLYOUT DRAWER + CANVAS */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* COLUMN 1: LEFT CHAT SIDEBAR (WYNRISE AI - DARK) */}
-        <div className="w-80 border-r border-[#1E2230] bg-[#10121B] flex flex-col justify-between p-3.5 z-10">
-          <div className="space-y-3 overflow-y-auto pr-1">
-            <div className="flex items-center gap-1.5 text-xs font-black text-cyan-400">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>WYNRISE AI</span>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-[#161926] border border-[#22273B] text-xs text-slate-300 leading-relaxed shadow-sm">
-              What would you like to create? Just type your request.
-            </div>
-
-            {/* Active Scene Transcript / Subtitle Interactive Editor */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#161B2E] via-[#141829] to-[#0F1322] border border-cyan-500/30 text-white text-xs leading-relaxed shadow-lg shadow-cyan-950/20 space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-bold text-cyan-300">
-                <span className="flex items-center gap-1.5">
-                  <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Phụ Đề Phân Cảnh {activeScene ? activeScene.scene_id : 1}</span>
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono bg-[#0B0D14] px-1.5 py-0.5 rounded-md border border-[#202538]">
-                {activeScene ? `${(activeScene.start_sec ?? 0).toFixed(1)}s - ${(activeScene.end_sec ?? 0).toFixed(1)}s` : ''}
-                </span>
+        {/* COLUMN 1: LEFT CHAT SIDEBAR (Exclusive to Science Explainer) */}
+        {visualStyle === 'science_explainer' && (
+          <div className="w-80 h-full border-r border-[#1E2230] bg-[#10121B] flex flex-col justify-between p-3.5 z-10 animate-in slide-in-from-left duration-200 shrink-0 overflow-hidden">
+            <div className="space-y-3 overflow-y-auto pr-1 studio-scrollbar flex-1">
+              {/* Header with Title & Version Indicator */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#1E2230]">
+                <div className="flex items-center gap-2 text-xs font-black text-cyan-400">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <span className="tracking-wide">Edit by Chat with AI</span>
+                </div>
+                {scienceVersions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVersionHistoryDropdown((v) => !v)}
+                    className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all font-mono"
+                    title="Xem lịch sử phiên bản code"
+                  >
+                    <History className="w-3 h-3" />
+                    <span>v{scienceVersions.find((v) => v.is_applied)?.version_number || scienceVersions.length}</span>
+                  </button>
+                )}
               </div>
-              <textarea
-                value={activeScene?.voice_transcript || activeScene?.summary_text || activeScene?.title || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (!activeScene) return;
-                  const updated = scenes.map((s) =>
-                    s.scene_id === activeScene.scene_id
-                      ? { ...s, voice_transcript: val, summary_text: val, title: s.title || val.slice(0, 35) }
-                      : s
-                  );
-                  setScenes(updated);
-                }}
-                onBlur={() => {
-                  if (projectId) {
-                    wynmotionService.updateProject(projectId, { scenes: scenes as any }).catch((err) => {
-                      console.warn('Could not auto-save edited scenes:', err);
-                    });
+
+              {/* Version History Dropdown / Rollback List */}
+              {showVersionHistoryDropdown && scienceVersions.length > 0 && (
+                <div className="p-2.5 rounded-2xl bg-[#141828] border border-cyan-500/30 space-y-2 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Lịch Sử Phiên Bản (Version History)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowVersionHistoryDropdown(false)}
+                      className="text-slate-400 hover:text-white p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 studio-scrollbar">
+                    {scienceVersions.map((v: any) => (
+                      <div
+                        key={v.version_id}
+                        className={`p-2 rounded-xl text-xs flex items-center justify-between gap-2 border transition-all ${
+                          v.is_applied
+                            ? 'bg-cyan-950/40 border-cyan-500/50 text-white'
+                            : 'bg-[#0E101A] border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span className="font-mono text-cyan-400">v{v.version_number}</span>
+                            <span className="truncate">{v.prompt || 'Phiên bản gốc'}</span>
+                          </div>
+                          {v.explanation && (
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5">{v.explanation}</p>
+                          )}
+                        </div>
+                        {v.is_applied ? (
+                          <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            Đang dùng
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyScienceVersion(v.version_id)}
+                            className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-md bg-cyan-500 text-slate-950 hover:bg-cyan-400 active:scale-95 transition-all shadow-sm"
+                          >
+                            Apply
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Explanation of Recent Edit */}
+              {scienceExplainingMsg && (
+                <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 text-xs text-cyan-200 leading-relaxed animate-in fade-in duration-200 shadow-sm flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-white mb-0.5">Gemini 3.8 Flash</div>
+                    <div>{scienceExplainingMsg}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Suggestion Chips */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-slate-400">Gợi ý chỉnh sửa nhanh:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    '🟣 Đổi laser sang tím neon',
+                    '⚛️ Thêm quỹ đạo electron',
+                    '📐 Lưới 3D blueprint chuyển động',
+                    '⚡ Tăng tốc độ quay hạt',
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      disabled={isEditingScienceCode}
+                      onClick={() => handleSendScienceCodePrompt(chip)}
+                      className="text-[11px] px-2.5 py-1 rounded-xl bg-[#171B2B] hover:bg-[#1E243A] text-slate-300 hover:text-cyan-300 border border-[#262D44] transition-all disabled:opacity-50"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Scene Transcript / Subtitle Interactive Editor */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#161B2E] via-[#141829] to-[#0F1322] border border-cyan-500/30 text-white text-xs leading-relaxed shadow-lg shadow-cyan-950/20 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-cyan-300">
+                  <span className="flex items-center gap-1.5">
+                    <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Phụ Đề Phân Cảnh {activeScene ? activeScene.scene_id : 1}</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono bg-[#0B0D14] px-1.5 py-0.5 rounded-md border border-[#202538]">
+                    {activeScene ? `${(activeScene.start_sec ?? 0).toFixed(1)}s - ${(activeScene.end_sec ?? 0).toFixed(1)}s` : ''}
+                  </span>
+                </div>
+                <textarea
+                  value={activeScene?.voice_transcript || activeScene?.summary_text || activeScene?.title || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!activeScene) return;
+                    const updated = scenes.map((s) =>
+                      s.scene_id === activeScene.scene_id
+                        ? { ...s, voice_transcript: val, summary_text: val, title: s.title || val.slice(0, 35) }
+                        : s
+                    );
+                    setScenes(updated);
+                  }}
+                  onBlur={() => {
+                    if (projectId) {
+                      wynmotionService.updateProject(projectId, { scenes: scenes as any }).catch((err) => {
+                        console.warn('Could not auto-save edited scenes:', err);
+                      });
+                    }
+                  }}
+                  placeholder="Nhập hoặc chỉnh sửa phụ đề cho phân cảnh này..."
+                  rows={2}
+                  className="w-full bg-[#0B0D14]/90 border border-[#23293D] rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 resize-none transition-all leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Bottom Chat Prompt Input */}
+            <div className="pt-2">
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={chatInput}
+                  disabled={isEditingScienceCode}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSendScienceCodePrompt();
+                    }
+                  }}
+                  placeholder={
+                    isEditingScienceCode
+                      ? 'Gemini 3.8 Flash đang sửa code...'
+                      : 'Yêu cầu sửa hoạt họa STEM (Enter gửi)...'
                   }
-                }}
-                placeholder="Nhập hoặc chỉnh sửa phụ đề cho phân cảnh này..."
-                rows={3}
-                className="w-full bg-[#0B0D14]/90 border border-[#23293D] rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 resize-none transition-all leading-relaxed"
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5 text-xs font-black text-cyan-400 pt-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>WYNRISE AI</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-[#161926] border border-[#22273B] text-xs font-bold text-slate-300 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Created new clip (~{Math.round(totalDurationSec)}s) · with voiceover.</span>
-            </div>
-          </div>
-
-          {/* Bottom Chat Prompt Input */}
-          <div className="pt-2">
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type an edit or create request... (Enter to send)"
-                className="w-full pl-3 pr-16 py-2.5 text-xs rounded-xl bg-[#161926] border border-[#252B3E] text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-[#1A1E2E] transition-all"
-              />
-              <div className="absolute right-2 flex items-center gap-1 text-slate-400">
-                <button className="p-1 hover:text-white">
-                  <Mic className="w-3.5 h-3.5" />
-                </button>
-                <button className="p-1 text-cyan-400 hover:text-cyan-300">
-                  <Send className="w-3.5 h-3.5" />
-                </button>
+                  className="w-full pl-3 pr-16 py-2.5 text-xs rounded-xl bg-[#161926] border border-[#252B3E] text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-[#1A1E2E] transition-all disabled:opacity-60"
+                />
+                <div className="absolute right-2 flex items-center gap-1 text-slate-400">
+                  <button
+                    type="button"
+                    disabled={isEditingScienceCode || !chatInput.trim()}
+                    onClick={() => handleSendScienceCodePrompt()}
+                    className="p-1.5 rounded-lg text-cyan-400 hover:text-cyan-300 disabled:opacity-40 transition-all"
+                  >
+                    {isEditingScienceCode ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* COLUMN 2: VERTICAL ICON TOOLBAR (DARK) */}
         <div className="w-12 border-r border-[#1E2230] bg-[#0E1017] flex flex-col items-center py-3 space-y-3 z-10">
@@ -2357,6 +2554,102 @@ function StudioInner({
         exportStatusText={exportStatusText}
         exportElapsedSec={exportElapsedSec}
         exportProgress={exportProgress}
+      />
+
+      {/* PROJECT INFO MODAL */}
+      {showProjectInfoModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={() => setShowProjectInfoModal(false)}
+        >
+          <div
+            className="relative z-10 w-full max-w-md bg-[#121624] border border-[#2B334B] rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-cyan-400/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+                  <Info className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-black text-white">
+                  Thông Tin Chi Tiết Dự Án
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowProjectInfoModal(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl text-xs space-y-2.5 bg-slate-900/80 border border-slate-800 text-slate-300 font-medium">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Mã Dự Án (ID)</span>
+                <span className="font-mono text-cyan-400 font-bold">{projectId || (projectData as any)?.project_id || 'N/A'}</span>
+              </div>
+              {((projectData as any)?.title || (projectData as any)?.topic) && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-bold">Tiêu Đề (Title)</span>
+                  <span className="font-bold text-white max-w-[220px] truncate text-right">
+                    {(projectData as any)?.title || (projectData as any)?.topic}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Phong Cách Diễn Hoạt</span>
+                <span className="font-bold text-white uppercase text-[11px] bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">
+                  {visualStyle}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Tổng Số Scenes</span>
+                <span className="font-bold text-white">{scenes.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Thời Lượng Video</span>
+                <span className="font-bold text-cyan-400">
+                  {Math.round(totalDurationSec)}s ({Math.round(totalDurationSec * 30)} frames)
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Tỉ Lệ Khung Hình</span>
+                <span className="font-bold text-cyan-400">{aspectRatio}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Chế Độ Âm Thanh</span>
+                <span className="font-bold text-slate-200">
+                  {isCommercialMusicStyle ? 'Nhạc nền (BGM)' : 'Giọng đọc AI (Voiceover)'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Sync Animation</span>
+                <span className={`font-bold ${isAnimationSyncableTemplate ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {isAnimationSyncableTemplate ? 'Hỗ trợ đồng bộ' : 'Không áp dụng'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowProjectInfoModal(false)}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-xs hover:brightness-110 transition-all shadow-md active:scale-98"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TOP UP / UPGRADE POINTS MODAL */}
+      <WynMotionUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => {
+          setIsUpgradeModalOpen(false);
+          refetchPoints?.();
+        }}
+        defaultTab="points"
       />
     </div>
   );
