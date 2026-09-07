@@ -408,7 +408,14 @@ function StudioInner({
   const [captionTargetLang, setCaptionTargetLang] = useState<string>((projectData as any)?.whisper_target_language || 'en');
   const [subtitleMode, setSubtitleMode] = useState<'original' | 'translated'>(initialActiveMode);
   const [isCaptionReviewModalOpen, setIsCaptionReviewModalOpen] = useState<boolean>(false);
-  const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
+  const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>(() => {
+    return (
+      (projectData as any)?.caption_preset_style ||
+      (projectData as any)?.studio_config?.captions_config?.preset_style ||
+      (projectData as any)?.studio_config?.captions?.preset_style ||
+      'karaoke_glow'
+    );
+  });
   const [captionFontSize, setCaptionFontSize] = useState<number>(() => {
     return (
       (projectData as any)?.caption_font_size ||
@@ -652,9 +659,17 @@ function StudioInner({
 
   // 2-Layer Text Controls
   const [showSceneCards, setShowSceneCards] = useState<boolean>(true);
-  const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(true);
+  const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(() => {
+    const p = projectData as any;
+    if (typeof p?.show_whisper_subs === 'boolean') return p.show_whisper_subs;
+    if (typeof p?.studio_config?.settings?.show_whisper_subs === 'boolean') return p.studio_config.settings.show_whisper_subs;
+    return true;
+  });
   const [cardPosY, setCardPosY] = useState<'top' | 'middle' | 'bottom'>('middle');
-  const [subsPosY, setSubsPosY] = useState<'top' | 'middle' | 'bottom'>('bottom');
+  const [subsPosY, setSubsPosY] = useState<'top' | 'middle' | 'bottom'>(() => {
+    const p = projectData as any;
+    return p?.subs_pos_y || p?.studio_config?.captions_config?.position_y || p?.studio_config?.settings?.subs_pos_y || 'bottom';
+  });
 
   // Timer counting seconds while export is active (Max 10 mins)
   useEffect(() => {
@@ -800,11 +815,16 @@ function StudioInner({
         scenes: scenes as any,
         aspect_ratio: aspectRatio,
         bg_color: bgColor,
+        show_whisper_subs: showWhisperSubs,
+        subs_pos_y: subsPosY,
+        caption_preset_style: captionPresetStyle,
+        caption_font_size: captionFontSize,
+        caption_segments: captionSegments,
         studio_config: masterStudioConfig,
       } as any).catch(() => {});
     }, 1200);
     return () => clearTimeout(t);
-  }, [masterStudioConfig, projectId, scenes, aspectRatio, bgColor]);
+  }, [masterStudioConfig, projectId, scenes, aspectRatio, bgColor, showWhisperSubs, subsPosY, captionPresetStyle, captionFontSize, captionSegments]);
 
   // Custom User Uploaded Images
   const [uploadedImages, setUploadedImages] = useState<{ id: string; name: string; url: string }[]>([]);
@@ -1506,6 +1526,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           timeline_effects: timelineEffects,
           caption_segments: captionSegments,
           caption_preset_style: captionPresetStyle,
+          caption_font_size: captionFontSize,
           bgm_start_sec: audioTrim.startTime,
           bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
           resolution: selectedExportResolution,
@@ -2403,18 +2424,56 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onClose={() => setActiveFlyoutTab(null)}
                 audioUrl={selectedExportAudioUrl || remotionAudioSrc}
                 segments={captionSegments}
-                onChangeSegments={setCaptionSegments}
+                onChangeSegments={(newSegs) => {
+                  setCaptionSegments(newSegs);
+                  if (subtitleMode === 'translated') {
+                    setTranslatedCaptionSegments(newSegs);
+                  } else {
+                    setOriginalCaptionSegments(newSegs);
+                  }
+                  if (projectId) {
+                    wynmotionService.updateProject(projectId, {
+                      caption_segments: newSegs,
+                      whisper_translated_segments: subtitleMode === 'translated' ? newSegs : undefined,
+                      whisper_original_segments: subtitleMode === 'original' ? newSegs : undefined,
+                      whisper_segments: newSegs,
+                    } as any).catch(() => {});
+                  }
+                }}
                 presetStyle={captionPresetStyle}
-                onChangePresetStyle={setCaptionPresetStyle}
+                onChangePresetStyle={(st) => {
+                  setCaptionPresetStyle(st);
+                  if (projectId) {
+                    wynmotionService.updateProject(projectId, { caption_preset_style: st } as any).catch(() => {});
+                  }
+                }}
                 onTranscribeWhisper={handleTranscribeCaptions}
                 isTranscribing={isTranscribingCaptions}
                 visualStyle={visualStyle}
                 showSubs={showWhisperSubs}
-                onToggleSubs={() => setShowWhisperSubs((v) => !v)}
+                onToggleSubs={() => {
+                  setShowWhisperSubs((v) => {
+                    const nv = !v;
+                    if (projectId) {
+                      wynmotionService.updateProject(projectId, { show_whisper_subs: nv } as any).catch(() => {});
+                    }
+                    return nv;
+                  });
+                }}
                 subsPosY={subsPosY}
-                onChangeSubsPosY={setSubsPosY}
+                onChangeSubsPosY={(pos) => {
+                  setSubsPosY(pos);
+                  if (projectId) {
+                    wynmotionService.updateProject(projectId, { subs_pos_y: pos } as any).catch(() => {});
+                  }
+                }}
                 captionFontSize={captionFontSize}
-                onChangeCaptionFontSize={setCaptionFontSize}
+                onChangeCaptionFontSize={(sz) => {
+                  setCaptionFontSize(sz);
+                  if (projectId) {
+                    wynmotionService.updateProject(projectId, { caption_font_size: sz } as any).catch(() => {});
+                  }
+                }}
                 onOpenReviewModal={() => setIsCaptionReviewModalOpen(true)}
                 hasTranslatedSegments={translatedCaptionSegments.length > 0}
                 activeSubtitleMode={subtitleMode}

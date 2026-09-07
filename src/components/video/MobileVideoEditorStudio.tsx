@@ -235,9 +235,17 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
 
   // 2-Layer Text Controls
   const [showSceneCards, setShowSceneCards] = useState<boolean>(true);
-  const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(true);
+  const [showWhisperSubs, setShowWhisperSubs] = useState<boolean>(() => {
+    const p = project as any;
+    if (typeof p?.show_whisper_subs === 'boolean') return p.show_whisper_subs;
+    if (typeof p?.studio_config?.settings?.show_whisper_subs === 'boolean') return p.studio_config.settings.show_whisper_subs;
+    return true;
+  });
   const [cardPosY, setCardPosY] = useState<TextPosition>('middle');
-  const [subsPosY, setSubsPosY] = useState<TextPosition>('bottom');
+  const [subsPosY, setSubsPosY] = useState<TextPosition>(() => {
+    const p = project as any;
+    return p?.subs_pos_y || p?.studio_config?.captions_config?.position_y || p?.studio_config?.settings?.subs_pos_y || 'bottom';
+  });
   const [swapSpeakers, setSwapSpeakers] = useState<boolean>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -345,9 +353,52 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const [visualStyle, setVisualStyle] = useState<string>((project as any).visual_style || 'handdrawn_fast_doodle');
 
   // Auto-Captions Whisper & CapCut Subtitle State
-  const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>([]);
-  const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
+  const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>(() => {
+    const p = project as any;
+    if (p?.whisper_active_mode === 'translated' && p?.whisper_translated_segments?.length > 0) {
+      return p.whisper_translated_segments;
+    }
+    return p?.whisper_translated_segments?.length > 0
+      ? p.whisper_translated_segments
+      : (p?.whisper_original_segments || p?.caption_segments || p?.whisper_segments || []);
+  });
+  const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>(
+    (project as any)?.caption_preset_style || (project as any)?.studio_config?.captions_config?.preset_style || 'karaoke_glow'
+  );
+  const [captionFontSize, setCaptionFontSize] = useState<number>(
+    (project as any)?.caption_font_size || (project as any)?.studio_config?.captions_config?.font_size || 32
+  );
   const [isTranscribingCaptions, setIsTranscribingCaptions] = useState(false);
+
+  const handleChangeSegments = (newSegments: CaptionSegment[]) => {
+    setCaptionSegments(newSegments);
+    if (project?.project_id) {
+      wynmotionService.updateProject(project.project_id, {
+        caption_segments: newSegments,
+        whisper_translated_segments: newSegments,
+        whisper_segments: newSegments,
+        show_whisper_subs: true,
+      } as any).catch(console.warn);
+    }
+  };
+
+  const handleChangePresetStyle = (style: CaptionPresetStyle) => {
+    setCaptionPresetStyle(style);
+    if (project?.project_id) {
+      wynmotionService.updateProject(project.project_id, {
+        caption_preset_style: style,
+      } as any).catch(console.warn);
+    }
+  };
+
+  const handleChangeFontSize = (size: number) => {
+    setCaptionFontSize(size);
+    if (project?.project_id) {
+      wynmotionService.updateProject(project.project_id, {
+        caption_font_size: size,
+      } as any).catch(console.warn);
+    }
+  };
 
   const handleTranscribeCaptions = async (targetAudioUrl: string, language: string) => {
     try {
@@ -367,7 +418,7 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       }
       const data = await res.json();
       if (data.segments) {
-        setCaptionSegments(data.segments);
+        handleChangeSegments(data.segments);
         setShowWhisperSubs(true);
       }
     } catch (err: any) {
@@ -1072,6 +1123,10 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         bgm_duration_sec: bgmDurationSec,
         duration_sec: totalDurationSec,
         language_code: activeAudioLang,
+        caption_segments: captionSegments,
+        caption_preset_style: captionPresetStyle,
+        caption_font_size: captionFontSize,
+        subs_pos_y: subsPosY,
       });
 
       // Instant pre-rendered MP4 hit
@@ -1347,6 +1402,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               swapSpeakers={swapSpeakers}
               captionSegments={captionSegments}
               captionPresetStyle={captionPresetStyle}
+              captionFontSize={captionFontSize}
               onCardClick={() => setActiveBottomSheet('canvas')}
               onSubsClick={() => setActiveBottomSheet('canvas')}
             />
@@ -2533,16 +2589,31 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onClose={() => setActiveBottomSheet(null)}
                 audioUrl={audioSrc}
                 segments={captionSegments}
-                onChangeSegments={setCaptionSegments}
+                onChangeSegments={handleChangeSegments}
                 presetStyle={captionPresetStyle}
-                onChangePresetStyle={setCaptionPresetStyle}
+                onChangePresetStyle={handleChangePresetStyle}
+                captionFontSize={captionFontSize}
+                onChangeCaptionFontSize={handleChangeFontSize}
                 onTranscribeWhisper={handleTranscribeCaptions}
                 isTranscribing={isTranscribingCaptions}
                 visualStyle={project.visual_style || visualStyle}
                 showSubs={showWhisperSubs}
-                onToggleSubs={() => setShowWhisperSubs((v) => !v)}
+                onToggleSubs={() => {
+                  setShowWhisperSubs((v) => {
+                    const nv = !v;
+                    if (project?.project_id) {
+                      wynmotionService.updateProject(project.project_id, { show_whisper_subs: nv } as any).catch(console.warn);
+                    }
+                    return nv;
+                  });
+                }}
                 subsPosY={subsPosY}
-                onChangeSubsPosY={setSubsPosY}
+                onChangeSubsPosY={(pos) => {
+                  setSubsPosY(pos);
+                  if (project?.project_id) {
+                    wynmotionService.updateProject(project.project_id, { subs_pos_y: pos } as any).catch(console.warn);
+                  }
+                }}
                 activeScene={activeScene}
                 activeSceneIndex={activeSceneIndex}
                 onUpdateActiveSceneTranscript={(text) => {
@@ -2552,6 +2623,26 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 }}
                 hasVoiceAudio={hasVoiceAudio}
                 isCommercialMusicStyle={isCommercialMusicStyle}
+                sourceBadgeText={(activeScene as any)?.source_badge_text || (scenes[0] as any)?.source_badge_text || 'TIN MỚI TỪ VNEXPRESS'}
+                onChangeSourceBadgeText={(txt) => {
+                  if (activeScene) updateScene(activeScene.scene_id, { source_badge_text: txt } as any);
+                }}
+                sourceBadgePosX={(activeScene as any)?.source_badge_pos_x ?? (scenes[0] as any)?.source_badge_pos_x ?? 5}
+                onChangeSourceBadgePosX={(x) => {
+                  if (activeScene) updateScene(activeScene.scene_id, { source_badge_pos_x: x } as any);
+                }}
+                sourceBadgePosY={(activeScene as any)?.source_badge_pos_y ?? (scenes[0] as any)?.source_badge_pos_y ?? 5}
+                onChangeSourceBadgePosY={(y) => {
+                  if (activeScene) updateScene(activeScene.scene_id, { source_badge_pos_y: y } as any);
+                }}
+                captionPosY={(activeScene as any)?.caption_pos_y ?? (scenes[0] as any)?.caption_pos_y ?? 20}
+                onChangeCaptionPosY={(y) => {
+                  if (activeScene) updateScene(activeScene.scene_id, { caption_pos_y: y } as any);
+                }}
+                tickerText={(activeScene as any)?.ticker_text || (scenes[0] as any)?.ticker_text || '⚡ BẢN TIN NÓNG • Cập nhật liên tục 24/7'}
+                onChangeTickerText={(txt) => {
+                  if (activeScene) updateScene(activeScene.scene_id, { ticker_text: txt } as any);
+                }}
               />
             </div>
           )}

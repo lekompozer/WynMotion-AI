@@ -357,6 +357,10 @@ export const wynmotionService = {
       language_code?: string;
       resolution?: string;
       studio_config?: any;
+      caption_segments?: any[];
+      caption_preset_style?: string;
+      caption_font_size?: number;
+      subs_pos_y?: string;
     }
   ): Promise<{ success: boolean; job_id: string; message: string; mp4_url?: string; status?: string }> {
     const headers = await getAuthHeaders();
@@ -381,6 +385,10 @@ export const wynmotionService = {
         language_code: options?.language_code,
         resolution: options?.resolution || '1080p',
         studio_config: options?.studio_config,
+        caption_segments: options?.caption_segments,
+        caption_preset_style: options?.caption_preset_style,
+        caption_font_size: options?.caption_font_size,
+        subs_pos_y: options?.subs_pos_y,
       }),
     });
     const data = await res.json();
