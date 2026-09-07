@@ -70,6 +70,7 @@ import { DialogueScriptEditor } from '@/components/video/DialogueScriptEditor';
 import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStudio';
 import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
 import { CapCutGalleryModal } from '@/components/video/CapCutGalleryModal';
+import { EmptyProjectModal } from '@/components/video/modals/EmptyProjectModal';
 import { WynMotionIntroAnimation } from '@/components/intro/WynMotionIntroAnimation';
 import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 import { WynMotionNotificationsModal } from '@/components/modals/WynMotionNotificationsModal';
@@ -246,6 +247,7 @@ export const AiVideoTab: React.FC = () => {
   const [upgradeDefaultTab, setUpgradeDefaultTab] = useState<'subscriptions' | 'points'>('subscriptions');
   const [upgradeDefaultTier, setUpgradeDefaultTier] = useState<'premium' | 'pro' | 'vip'>('pro');
   const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro' | 'vip'>('free');
+  const [isEmptyProjectModalOpen, setIsEmptyProjectModalOpen] = useState(false);
 
   useEffect(() => {
     setUnreadNotifCount(wynmotionNotificationManager.getUnreadCount());
@@ -2080,6 +2082,39 @@ export const AiVideoTab: React.FC = () => {
                 )}
               </p>
             </div>
+
+            {/* Mục Nổi Bật: Dự Án Trống / Tải Lên Tự Do (Empty Project) */}
+            <button
+              type="button"
+              onClick={() => setIsEmptyProjectModalOpen(true)}
+              className={`w-full p-4 rounded-3xl border text-left transition-all flex items-center gap-4 active:scale-98 group cursor-pointer ${
+                isDark
+                  ? 'bg-gradient-to-r from-[#131728] via-[#101422] to-[#131728] border-cyan-500/40 text-white hover:border-cyan-400 shadow-xl shadow-cyan-500/10 hover:shadow-cyan-500/20'
+                  : 'bg-gradient-to-r from-cyan-50/70 via-white to-blue-50/70 border-cyan-300 text-slate-900 shadow-md hover:border-cyan-500'
+              }`}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-400 via-sky-500 to-blue-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-cyan-500/30 shrink-0 group-hover:scale-105 transition-transform duration-200">
+                <Plus className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className={`text-sm font-black leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {isVietnamese ? 'Dự Án Trống (Tải Lên Tự Do)' : 'Empty Project (Custom Upload)'}
+                  </div>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 uppercase tracking-wider">
+                    ⚡ Mới
+                  </span>
+                </div>
+                <div className={`text-xs mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {isVietnamese
+                    ? 'Tự do upload ảnh, video clip, nhạc để cắt ghép và tạo phụ đề tự động'
+                    : 'Upload your own media & audio clips to edit and create captions'}
+                </div>
+              </div>
+              <div className="p-2 rounded-xl bg-[#1E2538] text-slate-400 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 transition-all shrink-0">
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </button>
 
             {/* Nhóm 1: Video Ngắn Doanh Nghiệp (Business Short Videos) */}
             <div className="space-y-3">

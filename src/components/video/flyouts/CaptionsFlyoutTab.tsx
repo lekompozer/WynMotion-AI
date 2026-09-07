@@ -22,6 +22,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { CaptionSegment, CaptionPresetStyle, CAPTION_PRESET_LABELS } from '../subtitles/CapCutCaptionRenderer';
+import { filterVocalTrackFromAudioUrl } from '@/utils/audioVocalFilter';
 
 export type TextPosition = 'top' | 'middle' | 'bottom';
 
@@ -106,6 +107,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'presets' | 'timeline' | 'news_badge'>('presets');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editText, setEditText] = useState<string>('');
+  const [isSeparatingLyrics, setIsSeparatingLyrics] = useState(false);
 
 
   const isNewsStyle =
@@ -120,6 +122,26 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
       return;
     }
     await onTranscribeWhisper(audioUrl, selectedLanguage);
+  };
+
+  const handleStartAddLyrics = async () => {
+    if (!audioUrl) {
+      alert('Vui lòng chọn hoặc tải lên bài hát / audio trước khi tạo lời bài hát.');
+      return;
+    }
+    setIsSeparatingLyrics(true);
+    try {
+      // Step 1: Run lightweight DSP vocal separation on client (Mid-Side Extraction + Bandpass)
+      const cleanAudioUrl = await filterVocalTrackFromAudioUrl(audioUrl);
+      // Step 2: Feed into Whisper, which upon completion automatically triggers the 2-step CaptionReviewModal!
+      await onTranscribeWhisper(cleanAudioUrl, selectedLanguage);
+    } catch (err: any) {
+      console.error('Error in Add Lyrics:', err);
+      // Fallback directly to original audio
+      await onTranscribeWhisper(audioUrl, selectedLanguage);
+    } finally {
+      setIsSeparatingLyrics(false);
+    }
   };
 
   const handleUpdateText = (id: string | number) => {
@@ -358,7 +380,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
             <button
               onClick={handleStartTranscribe}
-              disabled={isTranscribing || !audioUrl || !hasVoiceAudio}
+              disabled={isTranscribing || isSeparatingLyrics || !audioUrl || !hasVoiceAudio}
               className={`w-full py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 ${
                 isTranscribing
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
@@ -375,7 +397,34 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
               ) : (
                 <>
                   <Wand2 className="w-4 h-4" />
-                  {segments.length > 0 ? 'Tạo Lại Phụ Đề Whisper' : 'Tạo Phụ Đề Tự Động (Auto-Generate)'}
+                  {segments.length > 0 ? 'Tạo Lại Phụ Đề Whisper' : 'Tạo Phụ Đề Giọng Đọc (Whisper)'}
+                </>
+              )}
+            </button>
+
+            {/* Dedicated "Add Lyrics" Button (Lọc Beat & Tách Giọng Siêu Nhẹ 100% On-Device) */}
+            <button
+              type="button"
+              onClick={handleStartAddLyrics}
+              disabled={isTranscribing || isSeparatingLyrics || !audioUrl}
+              className={`w-full py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                isSeparatingLyrics || isTranscribing
+                  ? 'bg-purple-950/60 border border-purple-500/40 text-purple-300 cursor-not-allowed'
+                  : !audioUrl
+                  ? 'bg-[#181B28] text-slate-500 cursor-not-allowed border border-[#242A3E]'
+                  : 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:brightness-110 text-white shadow-lg shadow-purple-500/20 active:scale-[0.98]'
+              }`}
+              title="Lọc bớt tiếng trống, bass & nhạc cụ stereo để Whisper nhận diện lời bài hát (lyrics) chính xác"
+            >
+              {isSeparatingLyrics ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
+                  <span>🎵 Đang lọc beat & tách vocal on-device...</span>
+                </>
+              ) : (
+                <>
+                  <Music className="w-4 h-4" />
+                  <span>🎵 Tạo Lời Bài Hát (Add Lyrics - Lọc Beat)</span>
                 </>
               )}
             </button>
