@@ -63,7 +63,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
               <span>Giọng đọc của Slide ({availableAudioTracks.length})</span>
             </span>
           </div>
-          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 studio-scrollbar">
             {availableAudioTracks.map((track) => {
               const isSelected = selectedExportAudioUrl === track.url;
               const isPlaying = previewPlayingAudioId === track.id;

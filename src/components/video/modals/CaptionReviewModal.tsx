@@ -23,6 +23,9 @@ export interface CaptionReviewModalProps {
   audioUrl?: string;
   originalLanguage?: string;
   segments: CaptionSegment[];
+  initialTranslatedSegments?: CaptionSegment[] | null;
+  initialTargetLang?: string;
+  initialActiveMode?: 'original' | 'translated';
   projectId?: string;
   onSeek?: (seconds: number) => void;
   onSaveOriginal: (segments: CaptionSegment[], lang: string) => Promise<void> | void;
@@ -58,58 +61,93 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
   audioUrl,
   originalLanguage = 'vi',
   segments: initialSegments,
+  initialTranslatedSegments = null,
+  initialTargetLang = 'en',
+  initialActiveMode = 'original',
   projectId,
   onSeek,
   onSaveOriginal,
   onSaveTranslated,
 }) => {
   const [segments, setSegments] = useState<CaptionSegment[]>(initialSegments);
-  const [selectedTargetLang, setSelectedTargetLang] = useState<string>('en');
+  const [selectedTargetLang, setSelectedTargetLang] = useState<string>(initialTargetLang || 'en');
   const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedSegments, setTranslatedSegments] = useState<CaptionSegment[] | null>(null);
-  const [activeViewMode, setActiveViewMode] = useState<'original' | 'translated'>('original');
+  const [translatedSegments, setTranslatedSegments] = useState<CaptionSegment[] | null>(initialTranslatedSegments || null);
+  const [activeViewMode, setActiveViewMode] = useState<'original' | 'translated'>(
+    initialTranslatedSegments && initialTranslatedSegments.length > 0 && initialActiveMode === 'translated'
+      ? 'translated'
+      : 'original'
+  );
   const [playingSegmentId, setPlayingSegmentId] = useState<string | number | null>(null);
 
-  // Synchronize when initialSegments change
+  // Synchronize when modal opens or initialSegments/initialTranslatedSegments change
   React.useEffect(() => {
-    setSegments(initialSegments);
-    setTranslatedSegments(null);
-    setActiveViewMode('original');
-  }, [initialSegments]);
+    if (isOpen) {
+      setSegments(initialSegments);
+      if (initialTranslatedSegments && initialTranslatedSegments.length > 0) {
+        setTranslatedSegments(initialTranslatedSegments);
+        setActiveViewMode(initialActiveMode || 'translated');
+      } else {
+        setTranslatedSegments(null);
+        setActiveViewMode('original');
+      }
+      if (initialTargetLang) {
+        setSelectedTargetLang(initialTargetLang);
+      }
+    }
+  }, [isOpen, initialSegments, initialTranslatedSegments, initialActiveMode, initialTargetLang]);
 
-  if (!isOpen) return null;
+  const regenerateWords = (text: string, start: number, end: number) => {
+    const wordList = (text || '').trim().split(/\s+/).filter(Boolean);
+    if (wordList.length === 0) return [];
+    const duration = Math.max(0.2, end - start);
+    const step = duration / wordList.length;
+    return wordList.map((w, idx) => ({
+      word: w,
+      start: Number((start + idx * step).toFixed(2)),
+      end: Number((start + (idx + 1) * step).toFixed(2)),
+      probability: 0.99,
+    }));
+  };
 
   const handleUpdateText = (id: string | number, text: string) => {
     if (activeViewMode === 'original') {
       setSegments((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, text } : s))
+        prev.map((s) => (String(s.id) === String(id) ? { ...s, text, words: regenerateWords(text, s.start, s.end) } : s))
       );
-    } else if (translatedSegments) {
+    } else {
       setTranslatedSegments((prev) =>
-        prev ? prev.map((s) => (s.id === id ? { ...s, text } : s)) : null
+        prev ? prev.map((s) => (String(s.id) === String(id) ? { ...s, text, words: regenerateWords(text, s.start, s.end) } : s)) : null
       );
     }
   };
 
   const handleDelete = (id: string | number) => {
-    setSegments((prev) => prev.filter((s) => s.id !== id));
-    if (translatedSegments) {
-      setTranslatedSegments((prev) => (prev ? prev.filter((s) => s.id !== id) : null));
+    if (activeViewMode === 'original') {
+      setSegments((prev) => prev.filter((s) => String(s.id) !== String(id)));
+    } else {
+      setTranslatedSegments((prev) => (prev ? prev.filter((s) => String(s.id) !== String(id)) : null));
     }
   };
 
-
   const handleAddSegment = () => {
-    const lastSeg = segments[segments.length - 1];
+    const targetList = activeViewMode === 'original' ? segments : (translatedSegments || segments);
+    const lastSeg = targetList[targetList.length - 1];
     const newStart = lastSeg ? lastSeg.end : 0;
     const newEnd = Number((newStart + 2.5).toFixed(2));
+    const newText = 'Lời thoại mới...';
     const newSeg: CaptionSegment = {
       id: Date.now(),
       start: newStart,
       end: newEnd,
-      text: 'Lời thoại mới...',
+      text: newText,
+      words: regenerateWords(newText, newStart, newEnd),
     };
-    setSegments((prev) => [...prev, newSeg]);
+    if (activeViewMode === 'original') {
+      setSegments((prev) => [...prev, newSeg]);
+    } else {
+      setTranslatedSegments((prev) => (prev ? [...prev, newSeg] : [newSeg]));
+    }
   };
 
   const handlePlayPreview = (seg: CaptionSegment) => {
@@ -122,7 +160,11 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
 
   // 1. Action: Save Original directly
   const handleConfirmOriginal = async () => {
-    await onSaveOriginal(segments, originalLanguage);
+    const finalOriginal = segments.map((s) => ({
+      ...s,
+      words: regenerateWords(s.text, s.start, s.end),
+    }));
+    await onSaveOriginal(finalOriginal, originalLanguage);
     onClose();
   };
 
@@ -137,7 +179,11 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
         originalLanguage
       );
       if (res && res.segments) {
-        setTranslatedSegments(res.segments);
+        const prepared = res.segments.map((s) => ({
+          ...s,
+          words: (s.words && s.words.length > 0) ? s.words : regenerateWords(s.text, s.start, s.end),
+        }));
+        setTranslatedSegments(prepared);
         setActiveViewMode('translated');
       }
     } catch (err: any) {
@@ -151,9 +197,17 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
   // 3. Action: Confirm and Save Both to DB
   const handleConfirmTranslated = async () => {
     if (!translatedSegments) return;
+    const finalTranslated = translatedSegments.map((s) => ({
+      ...s,
+      words: regenerateWords(s.text, s.start, s.end),
+    }));
+    const finalOriginal = segments.map((s) => ({
+      ...s,
+      words: regenerateWords(s.text, s.start, s.end),
+    }));
     await onSaveTranslated(
-      segments,
-      translatedSegments,
+      finalOriginal,
+      finalTranslated,
       originalLanguage,
       selectedTargetLang
     );

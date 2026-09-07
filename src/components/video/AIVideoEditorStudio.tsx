@@ -409,6 +409,14 @@ function StudioInner({
   const [subtitleMode, setSubtitleMode] = useState<'original' | 'translated'>(initialActiveMode);
   const [isCaptionReviewModalOpen, setIsCaptionReviewModalOpen] = useState<boolean>(false);
   const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
+  const [captionFontSize, setCaptionFontSize] = useState<number>(() => {
+    return (
+      (projectData as any)?.caption_font_size ||
+      (projectData as any)?.studio_config?.captions_config?.font_size ||
+      (projectData as any)?.studio_config?.captions?.font_size ||
+      32
+    );
+  });
   const [isTranscribingCaptions, setIsTranscribingCaptions] = useState(false);
   const [timelineEffects, setTimelineEffects] = useState<CustomTimelineEffect[]>([]);
   const [selectedTimelineItemId, setSelectedTimelineItemId] = useState<string | null>(null);
@@ -731,6 +739,8 @@ function StudioInner({
     const captionsPayload = {
       preset_style: captionPresetStyle,
       caption_segments: captionSegments,
+      font_size: captionFontSize,
+      position_y: subsPosY,
       max_width_pct: 85,
     };
 
@@ -776,6 +786,7 @@ function StudioInner({
     subsPosY,
     timelineEffects,
     captionPresetStyle,
+    captionFontSize,
     captionSegments,
     selectedExportResolution,
     projectId,
@@ -1857,12 +1868,12 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       {/* 2. MAIN BODY: LEFT CHAT + ICON BAR + FLYOUT DRAWER + CANVAS */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div
-        className={`flex w-full shrink-0 border-b border-[#1E2230] relative transition-all duration-200 ${
+        className={`flex w-full shrink-0 border-b border-[#1E2230] relative transition-all duration-200 overflow-hidden ${
           aspectRatio === '9:16'
-            ? 'min-h-[780px] lg:min-h-[820px]'
+            ? 'h-[calc(100vh-210px)] min-h-[500px] max-h-[620px]'
             : aspectRatio === '1:1'
-            ? 'min-h-[640px]'
-            : 'min-h-[580px] lg:min-h-[620px]'
+            ? 'h-[calc(100vh-210px)] min-h-[460px] max-h-[560px]'
+            : 'h-[calc(100vh-210px)] min-h-[440px] max-h-[540px]'
         }`}
       >
         {/* COLUMN 1: LEFT CHAT SIDEBAR (Exclusive to Science Explainer) */}
@@ -2162,7 +2173,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         )}
 
         {/* COLUMN 2: VERTICAL ICON TOOLBAR (DARK) */}
-        <div className="w-12 border-r border-[#1E2230] bg-[#0E1017] flex flex-col items-center py-3 space-y-3 z-10">
+        <div className="w-12 h-full border-r border-[#1E2230] bg-[#0E1017] flex flex-col items-center py-3 space-y-3 z-10 shrink-0">
           <button
             onClick={() => setActiveFlyoutTab(activeFlyoutTab === 'assets' ? null : 'assets')}
             title="Assets / Scenes (Option+2)"
@@ -2226,7 +2237,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
 
         {/* COLUMN 3: FLYOUT DRAWER (ASSETS / AUDIO MIXER / SETTINGS - DARK) */}
         {activeFlyoutTab && (
-          <div className="w-80 self-stretch border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto studio-scrollbar shrink-0">
+          <div className="w-80 h-full max-h-full min-h-0 border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto studio-scrollbar shrink-0">
             {/* TAB 1: ASSETS & SCENES GRID */}
             {activeFlyoutTab === 'assets' && (
               <AssetsFlyoutTab
@@ -2402,6 +2413,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onToggleSubs={() => setShowWhisperSubs((v) => !v)}
                 subsPosY={subsPosY}
                 onChangeSubsPosY={setSubsPosY}
+                captionFontSize={captionFontSize}
+                onChangeCaptionFontSize={setCaptionFontSize}
                 onOpenReviewModal={() => setIsCaptionReviewModalOpen(true)}
                 hasTranslatedSegments={translatedCaptionSegments.length > 0}
                 activeSubtitleMode={subtitleMode}
@@ -2466,7 +2479,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         )}
 
         {/* COLUMN 4: MAIN CANVAS STAGE PREVIEW WITH ZOOM (DARK BACKDROP) */}
-        <main className="flex-1 bg-[#090A10] flex items-center justify-center p-6 relative overflow-hidden">
+        <main className="flex-1 h-full max-h-full min-h-0 bg-[#090A10] flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
           {/* Floating Sync Timeline Status Banner */}
           {syncStatusMsg && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-900/95 backdrop-blur-md border border-cyan-500/50 rounded-2xl shadow-2xl shadow-cyan-500/20 text-white text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
@@ -2489,10 +2502,15 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             id="wynrise-video-stage"
             className="relative shadow-2xl rounded-2xl overflow-hidden border border-[#22273B] bg-white transition-transform duration-150 flex items-center justify-center shrink-0"
             style={{
-              width: aspectRatio === '16:9' ? '920px' : aspectRatio === '9:16' ? '420px' : '580px',
-              height: aspectRatio === '16:9' ? '517px' : aspectRatio === '9:16' ? '746px' : '580px',
-              maxWidth: '96%',
+              height:
+                aspectRatio === '16:9'
+                  ? 'min(440px, calc(100% - 24px))'
+                  : aspectRatio === '9:16'
+                  ? 'min(540px, calc(100% - 24px))'
+                  : 'min(480px, calc(100% - 24px))',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
+              maxWidth: '96%',
+              maxHeight: 'calc(100% - 16px)',
               transform: `scale(${canvasZoom})`,
               transformOrigin: 'center center',
             }}
@@ -2513,6 +2531,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               subsPosY={subsPosY}
               captionSegments={captionSegments}
               captionPresetStyle={captionPresetStyle}
+              captionFontSize={captionFontSize}
               timelineEffects={timelineEffects}
               onUpdateScene={(sceneId, updated) => {
                 setScenes((prev) =>
@@ -2640,9 +2659,35 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <span className="text-[10px] font-mono text-slate-400 w-8">{Math.round(canvasZoom * 100)}%</span>
-            <button onClick={() => seekTo(0)} className="text-slate-400 hover:text-white ml-1">
+            <button onClick={() => seekTo(0)} className="text-slate-400 hover:text-white ml-1" title="Về đầu video">
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
+
+            {/* Quick Caption Font Size Controls (Phóng to / Thu nhỏ Text Phụ đề) */}
+            {showWhisperSubs && captionSegments && captionSegments.length > 0 && (
+              <div className="flex items-center gap-1 pl-2 border-l border-[#252B3E]">
+                <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Cỡ Sub:</span>
+                <button
+                  type="button"
+                  onClick={() => setCaptionFontSize((s) => Math.max(16, s - 2))}
+                  className="px-1.5 py-0.5 rounded bg-[#202538] hover:bg-[#2A324B] text-[10px] text-slate-300 font-bold hover:text-white transition-all cursor-pointer"
+                  title="Thu nhỏ chữ phụ đề (A-)"
+                >
+                  A-
+                </button>
+                <span className="text-[10px] font-mono text-cyan-300 font-bold min-w-[26px] text-center">
+                  {captionFontSize}px
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCaptionFontSize((s) => Math.min(68, s + 2))}
+                  className="px-1.5 py-0.5 rounded bg-[#202538] hover:bg-[#2A324B] text-[10px] text-slate-300 font-bold hover:text-white transition-all cursor-pointer"
+                  title="Phóng to chữ phụ đề (A+)"
+                >
+                  A+
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2915,6 +2960,9 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         audioUrl={selectedExportAudioUrl || remotionAudioSrc || audioUrl}
         originalLanguage={captionOriginalLang}
         segments={originalCaptionSegments.length > 0 ? originalCaptionSegments : captionSegments}
+        initialTranslatedSegments={translatedCaptionSegments.length > 0 ? translatedCaptionSegments : null}
+        initialTargetLang={captionTargetLang}
+        initialActiveMode={subtitleMode}
         projectId={projectId}
         onSeek={(sec) => seekTo(Math.round(sec * fps))}
         onSaveOriginal={handleSaveOriginalCaptions}

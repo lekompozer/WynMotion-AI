@@ -90,17 +90,22 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       : { bottom: '15%' }),
   };
 
-  const words = activeSegment.words && activeSegment.words.length > 0
+  const textWordsStr = (activeSegment.text || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const wordsArrStr = (activeSegment.words || []).map((w) => w.word).join(' ').trim().replace(/\s+/g, ' ').toLowerCase();
+  const wordsMatchText = activeSegment.words && activeSegment.words.length > 0 && textWordsStr === wordsArrStr;
+
+  const words = wordsMatchText && activeSegment.words && activeSegment.words.length > 0
     ? activeSegment.words
-    : activeSegment.text.split(' ').map((w, idx, arr) => {
-        const segDuration = activeSegment.end - activeSegment.start;
-        const wDuration = segDuration / arr.length;
+    : (activeSegment.text || '').trim().split(/\s+/).filter(Boolean).map((w, idx, arr) => {
+        const segDuration = Math.max(0.2, activeSegment.end - activeSegment.start);
+        const wDuration = segDuration / Math.max(1, arr.length);
         return {
           word: w,
           start: activeSegment.start + idx * wDuration,
           end: activeSegment.start + (idx + 1) * wDuration,
         };
       });
+
 
   return (
     <div style={yPosStyle}>

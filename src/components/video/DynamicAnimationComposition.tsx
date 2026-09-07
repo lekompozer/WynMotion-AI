@@ -15,6 +15,7 @@ interface DynamicAnimationCompositionProps {
   subsPosY?: 'top' | 'middle' | 'bottom';
   captionSegments?: CaptionSegment[];
   captionPresetStyle?: CaptionPresetStyle;
+  captionFontSize?: number;
   timelineEffects?: CustomTimelineEffect[];
   swapSpeakers?: boolean;
   onCardClick?: () => void;
@@ -32,6 +33,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   subsPosY = 'bottom',
   captionSegments = [],
   captionPresetStyle = 'karaoke_glow',
+  captionFontSize = 32,
   timelineEffects = [],
   onUpdateScene,
 }) => {
@@ -156,6 +158,7 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
         <CapCutCaptionRenderer
           segments={captionSegments}
           presetStyle={captionPresetStyle}
+          fontSize={captionFontSize}
           positionY={subsPosY}
         />
       )}

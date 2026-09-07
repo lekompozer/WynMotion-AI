@@ -60,6 +60,8 @@ export interface CaptionsFlyoutTabProps {
   onChangeSubtitleMode?: (mode: 'original' | 'translated') => void;
   originalLanguage?: string;
   targetLanguage?: string;
+  captionFontSize?: number;
+  onChangeCaptionFontSize?: (size: number) => void;
 }
 
 export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
@@ -76,6 +78,8 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   onToggleSubs,
   subsPosY = 'bottom',
   onChangeSubsPosY,
+  captionFontSize = 32,
+  onChangeCaptionFontSize,
   activeScene,
   activeSceneIndex = 0,
   onUpdateActiveSceneTranscript,
@@ -119,14 +123,28 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   };
 
   const handleUpdateText = (id: string | number) => {
+    const wordList = (editText || '').trim().split(/\s+/).filter(Boolean);
     onChangeSegments(
-      segments.map((seg) => (seg.id === id ? { ...seg, text: editText } : seg))
+      segments.map((seg) => {
+        if (String(seg.id) === String(id)) {
+          const duration = Math.max(0.2, seg.end - seg.start);
+          const step = duration / Math.max(1, wordList.length);
+          const newWords = wordList.map((w, idx) => ({
+            word: w,
+            start: Number((seg.start + idx * step).toFixed(2)),
+            end: Number((seg.start + (idx + 1) * step).toFixed(2)),
+            probability: 0.99,
+          }));
+          return { ...seg, text: editText, words: newWords };
+        }
+        return seg;
+      })
     );
     setEditingId(null);
   };
 
   const handleDeleteSegment = (id: string | number) => {
-    onChangeSegments(segments.filter((seg) => seg.id !== id));
+    onChangeSegments(segments.filter((seg) => String(seg.id) !== String(id)));
   };
 
   const handleAddCustomSegment = () => {
@@ -189,38 +207,109 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
           )}
         </div>
 
-        {showSubs && onChangeSubsPosY && (
-          <div className="space-y-1.5 pt-2 border-t border-[#252B3E]">
-            <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-              <span>Vị trí hiển thị phụ đề:</span>
-              <span className="text-cyan-400 capitalize">
-                {subsPosY === 'top' ? 'Trên Cùng' : subsPosY === 'middle' ? 'Ở Giữa' : 'Phía Dưới'}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
-                { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
-                { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
-              ].map((pos) => {
-                const PosIcon = pos.icon;
-                return (
+        {showSubs && (
+          <div className="space-y-3 pt-2.5 border-t border-[#252B3E]">
+            {/* Vị trí hiển thị */}
+            {onChangeSubsPosY && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                  <span>Vị trí hiển thị phụ đề:</span>
+                  <span className="text-cyan-400 capitalize">
+                    {subsPosY === 'top' ? 'Trên Cùng' : subsPosY === 'middle' ? 'Ở Giữa' : 'Phía Dưới'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
+                    { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
+                    { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
+                  ].map((pos) => {
+                    const PosIcon = pos.icon;
+                    return (
+                      <button
+                        key={pos.id}
+                        type="button"
+                        onClick={() => onChangeSubsPosY(pos.id)}
+                        className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                          subsPosY === pos.id
+                            ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
+                            : 'border-slate-800 bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        <PosIcon className="w-3.5 h-3.5" />
+                        <span>{pos.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Phóng to / Thu nhỏ cỡ chữ (Font size zoom slider & controls) */}
+            {onChangeCaptionFontSize && (
+              <div className="space-y-2 pt-2.5 border-t border-[#202638]">
+                <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Type className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Cỡ chữ phụ đề (Zoom Text):</span>
+                  </span>
+                  <span className="text-cyan-400 font-mono font-bold bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20 text-xs">
+                    {captionFontSize}px
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <button
-                    key={pos.id}
                     type="button"
-                    onClick={() => onChangeSubsPosY(pos.id)}
-                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
-                      subsPosY === pos.id
-                        ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                        : 'border-slate-800 bg-slate-900 text-slate-400'
-                    }`}
+                    onClick={() => onChangeCaptionFontSize(Math.max(16, captionFontSize - 2))}
+                    className="w-8 h-8 rounded-xl bg-[#141828] hover:bg-[#1E253E] border border-[#252C42] text-white font-black text-xs flex items-center justify-center transition-all active:scale-95 shrink-0"
+                    title="Thu nhỏ chữ phụ đề (A-)"
                   >
-                    <PosIcon className="w-3.5 h-3.5" />
-                    <span>{pos.label}</span>
+                    A-
                   </button>
-                );
-              })}
-            </div>
+                  <input
+                    type="range"
+                    min={16}
+                    max={68}
+                    step={1}
+                    value={captionFontSize}
+                    onChange={(e) => onChangeCaptionFontSize(Number(e.target.value))}
+                    className="flex-1 accent-cyan-400 cursor-pointer h-1.5 bg-[#141828] rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onChangeCaptionFontSize(Math.min(68, captionFontSize + 2))}
+                    className="w-8 h-8 rounded-xl bg-[#141828] hover:bg-[#1E253E] border border-[#252C42] text-white font-black text-xs flex items-center justify-center transition-all active:scale-95 shrink-0"
+                    title="Phóng to chữ phụ đề (A+)"
+                  >
+                    A+
+                  </button>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                  {[
+                    { label: 'Nhỏ', size: 22 },
+                    { label: 'Vừa', size: 30 },
+                    { label: 'Lớn', size: 40 },
+                    { label: 'Cực Lớn', size: 52 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.size}
+                      type="button"
+                      onClick={() => onChangeCaptionFontSize(preset.size)}
+                      className={`py-1 text-[10px] font-bold rounded-lg border transition-all ${
+                        captionFontSize === preset.size
+                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-sm'
+                          : 'border-[#23293D] bg-[#121524] text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {preset.label} ({preset.size})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -399,7 +488,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
       {/* ── SUB-TAB: NEWS BADGE ── */}
       {activeSubTab === 'news_badge' && isNewsStyle && (
-        <div className="space-y-3.5 max-h-[440px] overflow-y-auto pr-1">
+        <div className="space-y-3.5 max-h-[440px] overflow-y-auto pr-1 studio-scrollbar">
           <div className="p-3 rounded-xl bg-[#181B28] border border-[#2A334C] space-y-2">
             <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Radio className="w-3.5 h-3.5 text-red-500 animate-pulse" />
@@ -509,7 +598,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
       {/* ── SUB-TAB: 10 KIỂU CAPCUT PRESETS ── */}
       {activeSubTab === 'presets' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[420px] overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[420px] overflow-y-auto pr-1 studio-scrollbar">
           {(Object.entries(CAPTION_PRESET_LABELS) as [CaptionPresetStyle, { label: string; desc: string; icon: string }][]).map(([id, preset]) => {
             const isSelected = presetStyle === id;
             return (
@@ -542,7 +631,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
       {/* ── SUB-TAB: TIMELINE SEGMENTS ── */}
       {activeSubTab === 'timeline' && (
-        <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+        <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1 studio-scrollbar">
           {segments.length === 0 ? (
             <div className="p-6 text-center text-slate-400 border border-dashed border-[#252B3E] rounded-2xl space-y-2">
               <Type className="w-8 h-8 mx-auto text-slate-600 mb-1" />
