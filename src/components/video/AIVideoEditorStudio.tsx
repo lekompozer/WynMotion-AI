@@ -422,6 +422,46 @@ function StudioInner({
   const [selectedExportResolution, setSelectedExportResolution] = useState<'1080p' | '4k'>('1080p');
   const [omniChatPrompt, setOmniChatPrompt] = useState('');
   const [isGeneratingOmni, setIsGeneratingOmni] = useState(false);
+  const [extensionDurationSec, setExtensionDurationSec] = useState<number>(5);
+  const [isExtendingVideo, setIsExtendingVideo] = useState<boolean>(false);
+  const [extensionHistory, setExtensionHistory] = useState<Array<{ prompt: string; duration: number; video_url: string; time: string }>>([]);
+  const [extendedVideoUrl, setExtendedVideoUrl] = useState<string | null>(null);
+
+  const handleExtendOmniVideo = async () => {
+    if (!omniChatPrompt.trim() || isExtendingVideo || !projectId) return;
+    setIsExtendingVideo(true);
+    try {
+      const res = await (wynmotionService as any).extendVeoVideo({
+        project_id: projectId,
+        extension_prompt: omniChatPrompt.trim(),
+        duration_seconds: extensionDurationSec,
+        resolution: (projectData?.resolution as any) || '720p',
+      });
+      if (res?.video_url) {
+        setExtendedVideoUrl(res.video_url);
+        setScenes((prev) =>
+          prev.map((s, idx) => (idx === 0 ? { ...s, video_url: res.video_url } : s))
+        );
+        setExtensionHistory((prev) => [
+          ...prev,
+          {
+            prompt: omniChatPrompt.trim(),
+            duration: res.duration_seconds || extensionDurationSec,
+            video_url: res.video_url,
+            time: new Date().toLocaleTimeString(),
+          },
+        ]);
+        setOmniChatPrompt('');
+        alert(`✅ Đã nối dài video thêm ${res.duration_seconds || extensionDurationSec}s thành công! (-${res.points_deducted} Điểm)`);
+      }
+    } catch (err: any) {
+      console.error('Failed to extend video:', err);
+      alert(err.message || 'Lỗi khi nối dài video');
+    } finally {
+      setIsExtendingVideo(false);
+    }
+  };
+
   const [swapSpeakers, setSwapSpeakers] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [previewPlayingAudioId, setPreviewPlayingAudioId] = useState<string | null>(null);
@@ -552,7 +592,7 @@ function StudioInner({
         : 'image_based',
       scenes,
       deleted_scene_ids: [],
-      omni_video_url: projectData?.mp4_url || (scenes[0] as any)?.video_url || undefined,
+      omni_video_url: extendedVideoUrl || projectData?.mp4_url || (scenes[0] as any)?.video_url || undefined,
     };
     const fxPayload = {
       timeline_effects: timelineEffects,
@@ -1877,6 +1917,114 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           </div>
         )}
 
+        {/* COLUMN 1: LEFT CHAT SIDEBAR (VIP Video Extension for Gemini Omni) */}
+        {(visualStyle === 'animation_ads_image_veo' || visualStyle === 'product_ads_omni') && (
+          <div className="w-80 h-full border-r border-[#1E2230] bg-[#10121B] flex flex-col justify-between p-3.5 z-10 animate-in slide-in-from-left duration-200 shrink-0 overflow-hidden">
+            <div className="space-y-3 overflow-y-auto pr-1 studio-scrollbar flex-1">
+              {/* Header with Title */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#1E2230]">
+                <div className="flex items-center gap-2 text-xs font-black text-cyan-400">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <span className="tracking-wide">AI Video Extension (Omni)</span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                  👑 VIP 3-10s
+                </span>
+              </div>
+
+              {/* Extension Duration Selector */}
+              <div className="p-2.5 rounded-2xl bg-[#141828] border border-cyan-500/20 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                  <span>⏱️ Số giây nối dài tiếp theo:</span>
+                  <span className="text-cyan-400 font-mono">+{extensionDurationSec}s</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {[3, 5, 7, 10].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setExtensionDurationSec(sec)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                        extensionDurationSec === sec
+                          ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-black shadow-sm'
+                          : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      +{sec}s
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+                  <span>Trừ: {extensionDurationSec * 4} Điểm (720p)</span>
+                  <span className="text-cyan-300 font-semibold">Gemini Omni Flash</span>
+                </div>
+              </div>
+
+              {/* Clip History / Status Card */}
+              <div className="space-y-2">
+                <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                  <span>🎬</span>
+                  <span>Tiến trình các phân đoạn video:</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#141828]/80 border border-[#22273B] text-xs space-y-1.5">
+                  <div className="flex items-center justify-between font-semibold text-white">
+                    <span>Phân đoạn gốc:</span>
+                    <span className="text-cyan-400 font-mono">{projectData?.duration_sec ? `${Math.round(projectData.duration_sec)}s` : '15s'}</span>
+                  </div>
+                  {extensionHistory.length > 0 && (
+                    <div className="space-y-1 pt-1 border-t border-white/10">
+                      {extensionHistory.map((h, i) => (
+                        <div key={i} className="text-[11px] text-slate-300 flex items-start justify-between gap-1">
+                          <span className="truncate text-slate-400">+{h.duration}s: {h.prompt}</span>
+                          <span className="text-emerald-400 text-[10px] font-mono shrink-0">✓ Xong</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Input for Extension Prompt */}
+            <div className="pt-2">
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={omniChatPrompt}
+                  disabled={isExtendingVideo}
+                  onChange={(e) => setOmniChatPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleExtendOmniVideo();
+                    }
+                  }}
+                  placeholder={
+                    isExtendingVideo
+                      ? 'Gemini Omni đang nối dài video...'
+                      : 'Nhập hướng nối dài (Enter gửi)...'
+                  }
+                  className="w-full pl-3 pr-16 py-2.5 text-xs rounded-xl bg-[#161926] border border-[#252B3E] text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-[#1A1E2E] transition-all disabled:opacity-60"
+                />
+                <div className="absolute right-2 flex items-center gap-1 text-slate-400">
+                  <button
+                    type="button"
+                    disabled={isExtendingVideo || !omniChatPrompt.trim()}
+                    onClick={() => handleExtendOmniVideo()}
+                    className="p-1.5 rounded-lg text-cyan-400 hover:text-cyan-300 disabled:opacity-40 transition-all"
+                  >
+                    {isExtendingVideo ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* COLUMN 2: VERTICAL ICON TOOLBAR (DARK) */}
         <div className="w-12 border-r border-[#1E2230] bg-[#0E1017] flex flex-col items-center py-3 space-y-3 z-10">
           <button
@@ -2244,10 +2392,10 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             <DynamicAnimationComposition
               scenes={
                 (visualStyle === 'animation_ads_image_veo' || visualStyle === 'product_ads_omni' || visualStyle === 'product_ads_motion') &&
-                projectData?.mp4_url &&
+                (extendedVideoUrl || projectData?.mp4_url) &&
                 scenes.length > 0 &&
                 !scenes[0].video_url
-                  ? scenes.map((s, idx) => (idx === 0 ? { ...s, video_url: projectData.mp4_url } : s))
+                  ? scenes.map((s, idx) => (idx === 0 ? { ...s, video_url: extendedVideoUrl || projectData.mp4_url } : s))
                   : scenes
               }
               visualStyle={visualStyle}

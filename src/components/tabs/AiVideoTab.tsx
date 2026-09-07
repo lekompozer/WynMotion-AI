@@ -1084,6 +1084,8 @@ export const AiVideoTab: React.FC = () => {
     bgmUrl: string;
     durationSec: number;
     aspectRatio?: '9:16' | '16:9';
+    resolution?: '360p' | '720p';
+    pointsCost?: number;
     hookText?: string;
     ctaText?: string;
     solidText?: string;
@@ -1103,14 +1105,16 @@ export const AiVideoTab: React.FC = () => {
     const isAnimationAdsImageVip =
       tpl.id?.startsWith('animation_ads_image') ||
       tpl.badge?.includes('VIP') ||
+      tpl.title_en?.includes('VIP') ||
+      tpl.title_vi?.includes('VIP') ||
       tpl.title_en?.includes('VEO') ||
       tpl.title_vi?.includes('VEO');
 
     if (isAnimationAdsImageVip && userTier !== 'vip') {
       showAuthToast(
         isVietnamese
-          ? '👑 Template Animation Ads Image (VEO 3.1) độc quyền cho gói VIP Studio. Vui lòng nâng cấp!'
-          : '👑 Animation Ads Image (VEO 3.1) template is exclusive to VIP Studio plan. Please upgrade!'
+          ? '👑 Template Animation Ads Image (VIP) độc quyền cho gói VIP Studio. Vui lòng nâng cấp!'
+          : '👑 Animation Ads Image (VIP) template is exclusive to VIP Studio plan. Please upgrade!'
       );
       setUpgradeDefaultTier('vip');
       setIsUpgradeModalOpen(true);
@@ -1195,7 +1199,7 @@ export const AiVideoTab: React.FC = () => {
     setCreationCountdownSec(600); // 10 minutes countdown
     setCreationStatusMessage(
       isVeo
-        ? (isVietnamese ? '👑 Đang khởi tạo VEO 3.1 Ads Animation (VIP)...' : '👑 Launching VEO 3.1 Ads Animation (VIP)...')
+        ? (isVietnamese ? '👑 Đang khởi tạo Animation Ads Image (VIP)...' : '👑 Launching Animation Ads Image (VIP)...')
         : (isVietnamese ? '⚡ Đang khởi tạo video theo mẫu CapCut...' : '⚡ Launching CapCut template video...')
     );
 
@@ -1217,13 +1221,15 @@ export const AiVideoTab: React.FC = () => {
       if (isVeo) {
         const firstImg = params.productImages[0] || '';
         if (!firstImg) {
-          throw new Error(isVietnamese ? 'Vui lòng tải lên 1 ảnh Ads Poster để tạo animation VEO 3.1' : 'Please upload 1 Ads Poster image for VEO 3.1 animation');
+          throw new Error(isVietnamese ? 'Vui lòng tải lên ít nhất 1 ảnh để tạo Animation Ads Image (VIP)' : 'Please upload at least 1 image for Animation Ads Image (VIP)');
         }
         res = await wynmotionService.generateVeoAdsAnimation({
           image_url: firstImg,
+          images: params.productImages,
           user_prompt: params.prompt,
           aspect_ratio: chosenAspectRatio,
-          duration_seconds: (params.durationSec ? Math.min(params.durationSec, 10) : 10) as any,
+          duration_seconds: params.durationSec || 15,
+          resolution: params.resolution || '720p',
         });
       } else {
         res = await wynmotionService.generateScenes({

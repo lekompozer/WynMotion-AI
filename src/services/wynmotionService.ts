@@ -472,13 +472,15 @@ export const wynmotionService = {
   },
 
   /**
-   * VIP Feature: Google VEO 3.1 Animation Ads Image
+   * VIP Feature: Gemini Omni 1.1 Flash / VEO 3.1 Animation Ads Image
    */
   async generateVeoAdsAnimation(params: {
     image_url?: string;
+    images?: string[];
     user_prompt?: string;
     aspect_ratio?: '9:16' | '1:1' | '16:9';
     duration_seconds?: number;
+    resolution?: '360p' | '720p';
     existing_video_url?: string;
     force_create_poster?: boolean;
   }): Promise<{
@@ -501,7 +503,35 @@ export const wynmotionService = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Lỗi tạo video VEO 3.1');
+      throw new Error(err.detail || 'Lỗi tạo video Animation Ads VIP');
+    }
+    return res.json();
+  },
+
+  /**
+   * VIP Feature: Extend Existing Video by 3-10 seconds via Gemini Omni Multi-turn
+   */
+  async extendVeoVideo(params: {
+    project_id: string;
+    extension_prompt: string;
+    duration_seconds?: number;
+    resolution?: '360p' | '720p';
+  }): Promise<{
+    success: boolean;
+    video_url: string;
+    duration_seconds: number;
+    points_deducted: number;
+    interaction_id?: string;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/extend-video`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Lỗi nối dài video với AI');
     }
     return res.json();
   },

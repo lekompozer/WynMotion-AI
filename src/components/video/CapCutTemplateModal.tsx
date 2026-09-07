@@ -31,16 +31,16 @@ export interface CapCutTemplateData {
 export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
   animation_ads_image_veo: {
     id: 'animation_ads_image_veo',
-    titleVi: 'Animation Ads Image (Google VEO 3.1 VIP)',
-    titleEn: 'Animation Ads Image (Google VEO 3.1 VIP)',
-    descVi: 'Tải 1 ảnh Ads Poster → AI Gemini 3.8 & Google VEO 3.1 sinh video chuyển động điện ảnh siêu thực 6s/9s/12s chuẩn Hollywood.',
-    descEn: 'Upload 1 Ads Poster → Gemini 3.8 & Google VEO 3.1 generate hyper-realistic cinematic commercial animation video.',
-    durationSec: 12.0,
+    titleVi: 'Animation Ads Image (VIP)',
+    titleEn: 'Animation Ads Image (VIP)',
+    descVi: 'Nhập text prompt & đính kèm tối đa 5 ảnh tham chiếu → Gemini Omni 1.1 Flash tự động biến thành video hoạt họa kèm âm thanh sống động.',
+    descEn: 'Enter text prompt & attach up to 5 reference photos → Gemini Omni 1.1 Flash generates animation video with native audio.',
+    durationSec: 15.0,
     videoUrl: '/templates/animation_ads_image_demo.mp4',
     bgmUrl: '',
-    badge: '👑 VIP VEO 3.1',
+    badge: '👑 VIP OMNI',
     usageCount: '95.4K',
-    maxImages: 1,
+    maxImages: 5,
     defaultHookVi: 'SIÊU PHẨM MỚI',
     defaultHookEn: 'NEW ARRIVAL',
     defaultSolidVi: 'LUXURY',
@@ -130,6 +130,8 @@ export interface CapCutTemplateModalProps {
     bgmUrl: string;
     durationSec: number;
     aspectRatio: '9:16' | '16:9';
+    resolution?: '360p' | '720p';
+    pointsCost?: number;
     hookText?: string;
     ctaText?: string;
     solidText?: string;
@@ -160,9 +162,13 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   };
 
   // Normalized template attributes supporting both snake_case API and camelCase legacy
+  const isVeoOmni =
+    template?.visual_style === 'animation_ads_image_veo' ||
+    template?.id === 'animation_ads_image_veo' ||
+    template?.template_id === 'animation_ads_image_veo';
   const title = template ? (isVietnamese ? (template.title_vi || template.titleVi || template.title) : (template.title_en || template.titleEn || template.title)) : '';
   const desc = template ? (isVietnamese ? (template.desc_vi || template.descVi) : (template.desc_en || template.descEn)) : '';
-  const durationSec = template ? (template.duration_sec || template.durationSec || 12) : 12;
+  const durationSec = template ? (template.duration_sec || template.durationSec || (isVeoOmni ? 15 : 12)) : (isVeoOmni ? 15 : 12);
   const localVideoPath = template?.local_video_path || template?.localVideoPath;
   const remoteVideoUrl = template?.video_demo_url || template?.videoUrl;
   const isLocalBundled = Boolean(localVideoPath && BUNDLED_LOCAL_FILES.has(localVideoPath));
@@ -175,7 +181,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const bgmUrl = template ? (template.bgm_url || template.bgmUrl || template.local_bgm_path || '') : '';
   const badge = template ? (template.badge || (template.is_vip ? '👑 VIP' : '💎 AI VIDEO')) : '💎 AI VIDEO';
   const usageCount = template ? (template.usage_count || template.usageCount || '50K') : '50K';
-  const maxImages = template ? (template.max_images || template.maxImages || (template.visual_style === 'animation_ads_image_veo' ? 1 : 10)) : 10;
+  const maxImages = template ? (template.max_images || template.maxImages || (isVeoOmni ? 5 : 10)) : (isVeoOmni ? 5 : 10);
   const defaultHook = template?.default_params ? (isVietnamese ? template.default_params.hook_text_vi : template.default_params.hook_text_en) : (isVietnamese ? (template?.defaultHookVi || 'SIÊU PHẨM MỚI') : (template?.defaultHookEn || 'NEW ARRIVAL'));
   const defaultSolid = template?.default_params ? (isVietnamese ? template.default_params.solid_text_vi : template.default_params.solid_text_en) : (isVietnamese ? (template?.defaultSolidVi || 'SPECIAL') : (template?.defaultSolidEn || 'SPECIAL'));
   const defaultOutline = template?.default_params ? (isVietnamese ? template.default_params.outline_text_vi : template.default_params.outline_text_en) : (isVietnamese ? (template?.defaultOutlineVi || 'CHOICE') : (template?.defaultOutlineEn || 'CHOICE'));
@@ -198,9 +204,16 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const [sloganText, setSloganText] = useState('');
   const [ctaText, setCtaText] = useState('ORDER NOW');
   const [selectedDuration, setSelectedDuration] = useState<number>(15);
+  const [resolution, setResolution] = useState<'360p' | '720p'>('720p');
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('');
   const [customAudioName, setCustomAudioName] = useState<string>('');
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+
+  const currentPointsCost = isVeoOmni
+    ? resolution === '360p'
+      ? selectedDuration === 15 ? 25 : 15
+      : selectedDuration === 15 ? 60 : 40
+    : 10;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -339,6 +352,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       bgmUrl: customAudioUrl || bgmUrl,
       durationSec: selectedDuration || durationSec,
       aspectRatio,
+      resolution,
+      pointsCost: currentPointsCost,
       hookText: hookText.trim() || undefined,
       ctaText: ctaText.trim() || undefined,
       solidText: solidText.trim() || undefined,
@@ -574,7 +589,9 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 <span>{t('Xem video', 'Back to video')}</span>
               </button>
               <h3 className="text-xs font-black uppercase tracking-wider text-white">
-                {t('Bước 1/2: Tải Ảnh & Tỉ Lệ', 'Step 1/2: Photos & Ratio')}
+                {isVeoOmni
+                  ? t('Bước 1/2: Ý Tưởng & Ảnh Tham Chiếu', 'Step 1/2: Prompt & Reference Media')
+                  : t('Bước 1/2: Tải Ảnh & Tỉ Lệ', 'Step 1/2: Photos & Ratio')}
               </h3>
               <button
                 onClick={handleBack}
@@ -618,83 +635,144 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 </div>
               </div>
 
-              {/* Video Duration Selector */}
-              <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                <label className="text-xs font-bold text-white/90 flex items-center justify-between">
-                  <span>⏱️ {t('Thời Lượng Video Ads', 'Video Ad Duration')}</span>
-                  <span className="text-[10px] text-cyan-300 font-bold">{selectedDuration}s</span>
-                </label>
-                <div className="grid grid-cols-5 gap-1.5 pt-1">
-                  {[10, 15, 20, 30, 60].map((dur) => (
-                    <button
-                      key={dur}
-                      type="button"
-                      onClick={() => setSelectedDuration(dur)}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
-                        selectedDuration === dur
-                          ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md'
-                          : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
-                      }`}
-                    >
-                      {dur === 10 ? '⚡ 10s' : dur === 15 ? '🔥 15s' : dur === 20 ? '✨ 20s' : dur === 30 ? '💼 30s' : '💎 60s'}
-                    </button>
-                  ))}
+              {/* Text Prompt & Concept for Gemini Omni (Step 1 for isVeoOmni) */}
+              {isVeoOmni && (
+                <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                  <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span>✨</span>
+                      <span>{t('Ý Tưởng / Mô Tả Hoạt Họa Quảng Cáo', 'Animation Prompt / Commercial Concept')}</span>
+                    </span>
+                    <span className="text-[10px] text-cyan-300 font-bold">Gemini Omni 1.1 Flash</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={
+                      isVietnamese
+                        ? 'Ví dụ: Cận cảnh giọt nước bắn tung tóe quanh sản phẩm, ánh sáng studio sang trọng, góc máy xoay chậm 360 độ đầy ma mị...'
+                        : 'E.g., Close-up of water splashing around the luxury product, cinematic studio lighting, slow hypnotic 360 camera rotation...'
+                    }
+                    className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
+                  />
                 </div>
-              </div>
+              )}
 
-              {/* Audio Track / Music Beat Selector */}
-              <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
-                    <span>🎵</span>
-                    <span>{t('Nhạc Nền / Audio (AI Phân Tích Beat-Sync)', 'Audio Track (AI Beat-Sync)')}</span>
-                  </label>
-                  {customAudioUrl && (
-                    <span className="text-[10px] text-emerald-400 font-bold">✓ Đã nạp ({selectedDuration}s)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomAudioUrl(template.bgmUrl);
-                      setCustomAudioName(t('Nhạc Mẫu Chuẩn (Beat Mặc Định)', 'Default Template Beat'));
-                      setSelectedDuration(15);
-                    }}
-                    className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all truncate border cursor-pointer ${
-                      customAudioUrl === template.bgmUrl
-                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
-                        : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
-                    }`}
-                  >
-                    🎵 {t('Nhạc Mẫu (15s Beat)', 'Default Beat')}
-                  </button>
-                  <label className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center border border-dashed border-white/20 bg-white/5 hover:border-cyan-400 hover:text-cyan-300 cursor-pointer truncate">
-                    <span>📁 {isUploadingAudio ? t('Đang tải...', 'Uploading...') : t('Tải Audio Riêng', 'Upload Audio')}</span>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={handleAudioUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                {customAudioName && (
-                  <p className="text-[11px] text-cyan-300 truncate">
-                    🎶 {customAudioName}
+              {/* Guide Banner for Gemini Omni (Max 5 images) */}
+              {isVeoOmni && (
+                <div className="p-3.5 bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-transparent border border-cyan-500/30 rounded-xl space-y-2">
+                  <div className="flex items-center gap-1.5 text-cyan-300 font-bold text-xs">
+                    <span>💡</span>
+                    <span>{t('Hướng dẫn ảnh tham chiếu (Tối đa 5 ảnh):', 'Reference Images Guide (Up to 5):')}</span>
+                  </div>
+                  <p className="text-[11px] text-white/90 leading-relaxed">
+                    {t(
+                      'Khi bạn muốn tải ảnh lên để Gemini Omni 1.1 Flash biến chúng thành một đoạn video hoạt họa, mô hình hỗ trợ tải lên tối đa 5 ảnh tham chiếu bổ trợ cho mỗi lần tạo.',
+                      'When uploading images for Gemini Omni 1.1 Flash to animate into video, the model supports up to 5 reference images per generation.'
+                    )}
                   </p>
-                )}
-              </div>
+                  <ul className="text-[11px] text-white/80 space-y-1 pl-4 list-disc leading-relaxed">
+                    <li>
+                      <strong className="text-cyan-300">{t('1 ảnh:', '1 image:')}</strong>{' '}
+                      {t('Tạo video hoạt họa chuyển động từ ảnh sản phẩm đơn lẻ.', 'Animate directly from a single product image.')}
+                    </li>
+                    <li>
+                      <strong className="text-amber-300">{t('2 ảnh (Nội suy mượt mà):', '2 images (Interpolation):')}</strong>{' '}
+                      {t('Mô hình nhận diện Khung hình đầu và Khung hình cuối để tạo chuyển cảnh mượt mà.', 'Model recognizes first & last frames to smoothly transition from image 1 to image 2.')}
+                    </li>
+                    <li>
+                      <strong className="text-emerald-300">{t('3 - 5 ảnh:', '3 - 5 images:')}</strong>{' '}
+                      {t('Cung cấp thêm các góc chụp, chi tiết nhận diện sản phẩm hoặc phong cách bổ trợ.', 'Provide multiple product angles, style references, or brand visual assets.')}
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              {/* Standard Duration and Audio selector (Only for non-isVeoOmni styles) */}
+              {!isVeoOmni && (
+                <>
+                  {/* Video Duration Selector */}
+                  <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                      <span>⏱️ {t('Thời Lượng Video Ads', 'Video Ad Duration')}</span>
+                      <span className="text-[10px] text-cyan-300 font-bold">{selectedDuration}s</span>
+                    </label>
+                    <div className="grid grid-cols-5 gap-1.5 pt-1">
+                      {[10, 15, 20, 30, 60].map((dur) => (
+                        <button
+                          key={dur}
+                          type="button"
+                          onClick={() => setSelectedDuration(dur)}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                            selectedDuration === dur
+                              ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md'
+                              : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                          }`}
+                        >
+                          {dur === 10 ? '⚡ 10s' : dur === 15 ? '🔥 15s' : dur === 20 ? '✨ 20s' : dur === 30 ? '💼 30s' : '💎 60s'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Audio Track / Music Beat Selector */}
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
+                        <span>🎵</span>
+                        <span>{t('Nhạc Nền / Audio (AI Phân Tích Beat-Sync)', 'Audio Track (AI Beat-Sync)')}</span>
+                      </label>
+                      {customAudioUrl && (
+                        <span className="text-[10px] text-emerald-400 font-bold">✓ Đã nạp ({selectedDuration}s)</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomAudioUrl(template.bgmUrl);
+                          setCustomAudioName(t('Nhạc Mẫu Chuẩn (Beat Mặc Định)', 'Default Template Beat'));
+                          setSelectedDuration(15);
+                        }}
+                        className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all truncate border cursor-pointer ${
+                          customAudioUrl === template.bgmUrl
+                            ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                            : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+                        }`}
+                      >
+                        🎵 {t('Nhạc Mẫu (15s Beat)', 'Default Beat')}
+                      </button>
+                      <label className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center border border-dashed border-white/20 bg-white/5 hover:border-cyan-400 hover:text-cyan-300 cursor-pointer truncate">
+                        <span>📁 {isUploadingAudio ? t('Đang tải...', 'Uploading...') : t('Tải Audio Riêng', 'Upload Audio')}</span>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={handleAudioUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {customAudioName && (
+                      <p className="text-[11px] text-cyan-300 truncate">
+                        🎶 {customAudioName}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
 
               {/* Product Images Slot */}
               <div className="space-y-2.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-white/90">
-                    {template.id === 'ads_cinematic_showcase'
+                    {isVeoOmni
+                      ? t('📸 Ảnh Tham Chiếu / Frame Đầu - Cuối (Tối đa 5 ảnh)', '📸 Reference Images / First-Last Frame (Up to 5)')
+                      : template.id === 'ads_cinematic_showcase'
                       ? t('📸 8 Ảnh Món Ăn / Menu (Tải 1-8 ảnh)', '📸 8 Food / Menu Images (Upload 1-8)')
                       : t('Ảnh Sản Phẩm / Clip Cuối', 'Hero Media')}
                   </label>
-                  <span className="text-[10px] text-cyan-300 font-semibold">{productImages.length}/{template.maxImages}</span>
+                  <span className="text-[10px] text-cyan-300 font-semibold">{productImages.length}/{maxImages}</span>
                 </div>
 
                 {template.id === 'ads_cinematic_showcase' && (
@@ -729,7 +807,11 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   ) : (
                     <>
                       <span>📂</span>
-                      <span>{t('Chọn ảnh từ thiết bị (1 hoặc nhiều ảnh, tối đa 10 ảnh)', 'Select photos (Single or Multiple, up to 10)')}</span>
+                      <span>
+                        {isVeoOmni
+                          ? t('Chọn ảnh từ thiết bị (Tối đa 5 ảnh)', 'Select photos (Up to 5)')
+                          : t('Chọn ảnh từ thiết bị (1 hoặc nhiều ảnh, tối đa 10 ảnh)', 'Select photos (Single or Multiple, up to 10)')}
+                      </span>
                     </>
                   )}
                   <input
@@ -743,9 +825,12 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 </label>
 
                 {/* Grid slots */}
-                <div className={`grid ${template.maxImages >= 8 ? 'grid-cols-4 sm:grid-cols-5' : template.maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 pt-1`}>
-                  {Array.from({ length: template.maxImages }).map((_, idx) => {
+                <div className={`grid ${maxImages >= 8 ? 'grid-cols-4 sm:grid-cols-5' : maxImages === 5 ? 'grid-cols-5' : maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 pt-1`}>
+                  {Array.from({ length: maxImages }).map((_, idx) => {
                     const img = productImages[idx];
+                    const slotLabel = isVeoOmni
+                      ? idx === 0 ? 'Frame 1' : idx === 1 ? 'Frame 2' : `#${idx + 1}`
+                      : `#${idx + 1}`;
                     return (
                       <div
                         key={idx}
@@ -761,7 +846,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                               <img src={img} alt={`Asset ${idx + 1}`} className="w-full h-full object-cover" />
                             )}
                             <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-black text-cyan-300">
-                              #{idx + 1}
+                              {slotLabel}
                             </div>
                             <button
                               type="button"
@@ -779,7 +864,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                               <>
                                 <span className="text-sm group-hover:scale-110 transition-transform">➕</span>
                                 <span className="text-[8px] text-white/60 font-bold mt-0.5">
-                                  #{idx + 1}
+                                  {slotLabel}
                                 </span>
                               </>
                             )}
@@ -807,7 +892,11 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 onClick={() => setStep('fill_texts')}
                 className="w-full py-3 px-6 rounded-2xl font-black text-xs uppercase tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-500 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/20"
               >
-                <span>{t('Tiếp theo: Điền Nội Dung Chữ (Bước 2) →', 'Next: Topic & Copywriting (Step 2) →')}</span>
+                <span>
+                  {isVeoOmni
+                    ? t('Tiếp theo: Thời Lượng & Độ Phân Giải (Bước 2) →', 'Next: Duration & Resolution (Step 2) →')
+                    : t('Tiếp theo: Điền Nội Dung Chữ (Bước 2) →', 'Next: Topic & Copywriting (Step 2) →')}
+                </span>
               </button>
             </div>
           </div>
@@ -825,10 +914,12 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 className="flex items-center gap-1 text-xs text-cyan-400 font-bold hover:underline cursor-pointer min-h-[36px]"
               >
                 <span>←</span>
-                <span>{t('Bước 1 (Ảnh)', 'Back to Step 1')}</span>
+                <span>{isVeoOmni ? t('Bước 1 (Ảnh & Prompt)', 'Back to Step 1') : t('Bước 1 (Ảnh)', 'Back to Step 1')}</span>
               </button>
               <h3 className="text-xs font-black uppercase tracking-wider text-white">
-                {t('Bước 2/2: Tên & Nội Dung Chữ', 'Step 2/2: Copywriting')}
+                {isVeoOmni
+                  ? t('Bước 2/2: Thời Lượng & Chất Lượng', 'Step 2/2: Duration & Quality')
+                  : t('Bước 2/2: Tên & Nội Dung Chữ', 'Step 2/2: Copywriting')}
               </h3>
               <button
                 onClick={handleBack}
@@ -840,70 +931,182 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
 
             {/* Scrollable Content */}
             <div className="flex-1 px-4 py-4 overflow-y-auto space-y-4">
-              {/* 1. Product Name / Detailed Description Prompt */}
-              <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                <label className="text-xs font-bold text-white/90 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <span>🏷️</span>
-                    <span>{t('Tên & Mô Tả Sản Phẩm / Ý Tưởng AI', 'Product Name & Description / AI Concept')}</span>
-                  </span>
-                  <span className="text-[10px] text-cyan-300 font-normal">{t('Kèm mô tả chi tiết', 'With description')}</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder={
-                    isVietnamese
-                      ? 'Ví dụ: Trà thảo mộc cao cấp chiết xuất hoa cúc tự nhiên, bao bì tinh tế sang trọng, phong cách trẻ trung hiện đại...'
-                      : 'E.g., Premium chamomile herbal tea with natural extract, elegant packaging, modern refreshing style...'
-                  }
-                  className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
-                />
-              </div>
+              {isVeoOmni ? (
+                <>
+                  {/* Audio Notice for Gemini Omni (No audio track required) */}
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-start gap-2.5">
+                    <span className="text-base">🎙️</span>
+                    <div className="text-[11px] text-emerald-200/90 leading-relaxed">
+                      <strong>{t('Âm thanh tự động đồng bộ bởi Gemini Omni:', 'Native Audio Sync by Gemini Omni:')}</strong>{' '}
+                      {t(
+                        'Mô hình tự sinh âm thanh chuyển động, tiếng động (SFX) và thoại/nhạc nền sống động đồng bộ theo từng khung hình. Bạn có thể chèn thêm nhạc nền hoặc điều chỉnh âm thanh trong Studio sau khi render.',
+                        'The model natively generates synchronized ambient audio, sound effects (SFX), and voiceover. You can still customize or add audio tracks in Studio later.'
+                      )}
+                    </div>
+                  </div>
 
-              {/* 2. Editable 2-Layer Typography (For Strobe & Product Ads) */}
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
-                  <span>🔤</span>
-                  <span>{t('Chữ Điểm Nhấn (Typography)', 'Emphasis Typography')}</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-white/80">{t('Chữ trên (Đặc)', 'Solid Text (Top)')}</label>
-                    <input
-                      type="text"
-                      value={solidText}
-                      onChange={(e) => setSolidText(e.target.value)}
-                      className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                  {/* Video Ad Duration (10s vs 15s) */}
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                      <span>⏱️ {t('Thời Lượng Video Quảng Cáo', 'Video Ad Duration')}</span>
+                      <span className="text-[10px] text-cyan-300 font-bold">{selectedDuration}s</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDuration(10)}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                          selectedDuration === 10
+                            ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md font-black'
+                            : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                        }`}
+                      >
+                        <span className="text-sm">⚡ 10s</span>
+                        <span className="text-[10px] opacity-80">{t('Quảng cáo ngắn / Teaser', 'Short Ads / Teaser')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDuration(15)}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                          selectedDuration === 15
+                            ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md font-black'
+                            : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                        }`}
+                      >
+                        <span className="text-sm">🔥 15s</span>
+                        <span className="text-[10px] opacity-80">{t('Chuẩn Vàng TikTok & Reels', 'TikTok & Reels Standard')}</span>
+                      </button>
+                    </div>
+
+                    {/* Description of Interpolation & Video Extension */}
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] text-white/80 space-y-1.5 leading-relaxed">
+                      <p>
+                        <strong className="text-cyan-300">{t('First and last frame interpolation:', 'First & Last Frame Interpolation:')}</strong>{' '}
+                        {t(
+                          'Gemini Omni Flash hỗ trợ tạo video chuyển động mượt mà giữa ảnh khởi đầu và ảnh kết thúc khi cung cấp 2 ảnh.',
+                          'Gemini Omni Flash generates seamless transitions between starting and ending frames when 2 images are provided.'
+                        )}
+                      </p>
+                      <p>
+                        <strong className="text-sky-300">{t('Video extension (Nối dài 3–10s):', 'Video Extension (3-10s):')}</strong>{' '}
+                        {t(
+                          'Tự động nối dài thêm 5s ở lượt gọi thứ 2 (Multi-turn qua previous_interaction_id) để hoàn thiện bản quảng cáo 15s trọn vẹn.',
+                          'Automatically extends by 5s in a 2nd turn via previous_interaction_id to produce a seamless 15s commercial.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Output Resolution (720p vs 360p) */}
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                      <span>📺 {t('Độ Phân Giải Xuất Bản (Resolution)', 'Output Resolution')}</span>
+                      <span className="text-[10px] text-cyan-300 font-bold">{resolution.toUpperCase()}</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setResolution('720p')}
+                        className={`p-2.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                          resolution === '720p'
+                            ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md font-black'
+                            : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                        }`}
+                      >
+                        <span className="text-xs">👑 720p (HD Chuẩn)</span>
+                        <span className="text-[10px] opacity-80">
+                          {selectedDuration === 15 ? t('60 Điểm (Khuyên dùng)', '60 Pts (Recommended)') : t('40 Điểm', '40 Pts')}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResolution('360p')}
+                        className={`p-2.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                          resolution === '360p'
+                            ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 shadow-md font-black'
+                            : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                        }`}
+                      >
+                        <span className="text-xs">⚡ 360p (Bản Nháp)</span>
+                        <span className="text-[10px] opacity-80">
+                          {selectedDuration === 15 ? t('25 Điểm (Tiết kiệm)', '25 Pts (Economy)') : t('15 Điểm', '15 Pts')}
+                        </span>
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-white/60 flex items-center justify-between pt-1">
+                      <span>💡 {t('Bản 360p tiết kiệm điểm để thử kịch bản', '360p economy mode to test concepts')}</span>
+                      <span className="text-cyan-300 font-semibold">{t('Có thể Upscale 1080p & 4K sau', 'Can upscale to 1080p & 4K later')}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* 1. Product Name / Detailed Description Prompt */}
+                  <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span>🏷️</span>
+                        <span>{t('Tên & Mô Tả Sản Phẩm / Ý Tưởng AI', 'Product Name & Description / AI Concept')}</span>
+                      </span>
+                      <span className="text-[10px] text-cyan-300 font-normal">{t('Kèm mô tả chi tiết', 'With description')}</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder={
+                        isVietnamese
+                          ? 'Ví dụ: Trà thảo mộc cao cấp chiết xuất hoa cúc tự nhiên, bao bì tinh tế sang trọng, phong cách trẻ trung hiện đại...'
+                          : 'E.g., Premium chamomile herbal tea with natural extract, elegant packaging, modern refreshing style...'
+                      }
+                      className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-white/80">{t('Chữ dưới (Viền rỗng)', 'Outlined Text (Bottom)')}</label>
+
+                  {/* 2. Editable 2-Layer Typography (For Strobe & Product Ads) */}
+                  <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                    <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
+                      <span>🔤</span>
+                      <span>{t('Chữ Điểm Nhấn (Typography)', 'Emphasis Typography')}</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-white/80">{t('Chữ trên (Đặc)', 'Solid Text (Top)')}</label>
+                        <input
+                          type="text"
+                          value={solidText}
+                          onChange={(e) => setSolidText(e.target.value)}
+                          className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-white/80">{t('Chữ dưới (Viền rỗng)', 'Outlined Text (Bottom)')}</label>
+                        <input
+                          type="text"
+                          value={outlineText}
+                          onChange={(e) => setOutlineText(e.target.value)}
+                          className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Editable Tagline / Marketing Slogan */}
+                  <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+                      <span>⚡</span>
+                      <span>{t('Câu Slogan Marketing Cuối (Editable)', 'Final Marketing Tagline (Editable)')}</span>
+                    </label>
                     <input
                       type="text"
-                      value={outlineText}
-                      onChange={(e) => setOutlineText(e.target.value)}
-                      className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                      value={sloganText}
+                      onChange={(e) => setSloganText(e.target.value)}
+                      placeholder={isVietnamese ? '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY' : '⚡ DISCOVER THE BEST - ORDER NOW'}
+                      className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* 3. Editable Tagline / Marketing Slogan */}
-              <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-                  <span>⚡</span>
-                  <span>{t('Câu Slogan Marketing Cuối (Editable)', 'Final Marketing Tagline (Editable)')}</span>
-                </label>
-                <input
-                  type="text"
-                  value={sloganText}
-                  onChange={(e) => setSloganText(e.target.value)}
-                  placeholder={isVietnamese ? '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY' : '⚡ DISCOVER THE BEST - ORDER NOW'}
-                  className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+                </>
+              )}
             </div>
 
             {/* Bottom Action Launch Button */}
@@ -913,7 +1116,11 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 className="w-full py-3.5 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 shadow-xl shadow-cyan-500/25 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>🚀</span>
-                <span>{t('TẠO VIDEO & MỞ STUDIO RESULT', 'GENERATE & OPEN STUDIO RESULT')}</span>
+                <span>
+                  {isVeoOmni
+                    ? `${t('TẠO VIDEO HOẠT HOẠ QUẢNG CÁO', 'GENERATE ANIMATION ADS')} (${currentPointsCost} ${t('ĐIỂM', 'PTS')})`
+                    : t('TẠO VIDEO & MỞ STUDIO RESULT', 'GENERATE & OPEN STUDIO RESULT')}
+                </span>
               </button>
             </div>
           </div>
@@ -922,3 +1129,4 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
     </div>
   );
 };
+
