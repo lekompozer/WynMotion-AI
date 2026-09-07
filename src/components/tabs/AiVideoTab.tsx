@@ -1136,6 +1136,87 @@ export const AiVideoTab: React.FC = () => {
 
     const isVeo = tpl.visual_style === 'animation_ads_image_veo' || tpl.is_vip || (typeof tpl.template_id === 'string' && tpl.template_id.startsWith('animation_ads'));
 
+    // ── SPECIFIC HANDLER: Apple Modern Motion Suite 50s ──
+    // Initializes full project with 20 scenes, default/uploaded assets, and opens AIVideoEditorStudio directly!
+    if (tplStyle === 'apple_modern_motion') {
+      const DEFAULT_CDN = 'https://static.wordai.pro/ai-generated-images/wynmotion/templates';
+      const pImgs = params.productImages || [];
+
+      const mainVideo1 = pImgs[0] || `${DEFAULT_CDN}/WynMotion-Video-phase1-7s.mp4`;
+      const trainVideos = [
+        pImgs[1] || `${DEFAULT_CDN}/cinematic_showcase_demo.mp4`,
+        pImgs[2] || `${DEFAULT_CDN}/science_explainer_rendered_demo2.mp4`,
+        pImgs[3] || `${DEFAULT_CDN}/whiteboard_stream_en_demo.mp4`,
+        pImgs[4] || `${DEFAULT_CDN}/video_animate_image_demo.mp4`,
+        pImgs[5] || `${DEFAULT_CDN}/WynMotion_character_animation_stickman_en_demo.mp4`,
+      ];
+      const mainVideo2 = pImgs[6] || `${DEFAULT_CDN}/Wynmotion_video_phase4.5.mp4`;
+      const mainVideo3 = pImgs[7] || `${DEFAULT_CDN}/WynMotion_Video_Phase6.mp4`;
+      const brandLogo = pImgs[8] || `${DEFAULT_CDN}/iconApp-WynAI-512.png`;
+
+      const brandCompany = (params as any).brandCompany || 'WynAI';
+      const brandName = (params as any).brandName || 'WynMotion';
+      const titlePrimary = (params as any).titlePrimary || 'AI Video Studio';
+      const tagline1 = (params as any).tagline1 || 'NEXT-GEN';
+      const tagline2 = (params as any).tagline2 || 'CREATIVE SUITE';
+      const sloganPrice = (params as any).sloganPrice || '$1';
+      const sloganText = (params as any).sloganText || 'Create Daily 60s AI Videos From Just';
+
+      const scenes = [
+        { scene_id: 1, title: 'Hero Video 1: Cinematic Intro', start_sec: 0.0, end_sec: 7.0, duration_frames: 210, video_url: mainVideo1, visual_style: 'apple_modern_motion' },
+        { scene_id: 2, title: `By ${brandCompany} & Logo`, start_sec: 7.0, end_sec: 9.0, duration_frames: 60, brand_company: brandCompany, brand_logo_url: brandLogo, visual_style: 'apple_modern_motion' },
+        { scene_id: 3, title: titlePrimary, start_sec: 9.0, end_sec: 10.2, duration_frames: 36, title_primary: titlePrimary, visual_style: 'apple_modern_motion' },
+        { scene_id: 4, title: tagline1, start_sec: 10.2, end_sec: 11.4, duration_frames: 36, tagline_1: tagline1, visual_style: 'apple_modern_motion' },
+        { scene_id: 5, title: tagline2, start_sec: 11.4, end_sec: 12.6, duration_frames: 36, tagline_2: tagline2, visual_style: 'apple_modern_motion' },
+        { scene_id: 6, title: 'DISCOVER OUR TEMPLATES', start_sec: 12.6, end_sec: 13.8, duration_frames: 36, templates_header: 'DISCOVER OUR TEMPLATES', visual_style: 'apple_modern_motion' },
+        { scene_id: 7, title: 'Category: Business.', start_sec: 13.8, end_sec: 15.0, duration_frames: 36, category_1: 'Business.', visual_style: 'apple_modern_motion' },
+        { scene_id: 8, title: 'Category: News.', start_sec: 15.0, end_sec: 16.2, duration_frames: 36, category_2: 'News.', visual_style: 'apple_modern_motion' },
+        { scene_id: 9, title: 'Category: Illustrative.', start_sec: 16.2, end_sec: 17.4, duration_frames: 36, category_3: 'Illustrative.', visual_style: 'apple_modern_motion' },
+        { scene_id: 10, title: 'Motion & Explainer Videos', start_sec: 17.4, end_sec: 19.5, duration_frames: 63, category_4: 'Motion & Explainer', category_4_sub: 'Videos', visual_style: 'apple_modern_motion' },
+        { scene_id: 11, title: '5-Video Conveyor Belt Showcase', start_sec: 19.5, end_sec: 28.5, duration_frames: 270, train_videos: trainVideos, visual_style: 'apple_modern_motion' },
+        { scene_id: 12, title: 'Hero Video 2: AI Audio Studio', start_sec: 28.5, end_sec: 30.5, duration_frames: 60, video_url: mainVideo2, visual_style: 'apple_modern_motion' },
+        { scene_id: 13, title: 'AI Audio Studio', start_sec: 30.5, end_sec: 32.5, duration_frames: 60, audio_title: 'AI Audio Studio', visual_style: 'apple_modern_motion' },
+        { scene_id: 14, title: 'Natural voices.', start_sec: 32.5, end_sec: 34.0, duration_frames: 45, visual_style: 'apple_modern_motion' },
+        { scene_id: 15, title: 'Every language.', start_sec: 34.0, end_sec: 35.5, duration_frames: 45, visual_style: 'apple_modern_motion' },
+        { scene_id: 16, title: 'Every conversation.', start_sec: 35.5, end_sec: 37.0, duration_frames: 45, visual_style: 'apple_modern_motion' },
+        { scene_id: 17, title: 'World Flags Wave', start_sec: 37.0, end_sec: 39.5, duration_frames: 75, visual_style: 'apple_modern_motion' },
+        { scene_id: 18, title: 'Hero Video 3: Video Editor Suite', start_sec: 39.5, end_sec: 44.5, duration_frames: 150, video_url: mainVideo3, visual_style: 'apple_modern_motion' },
+        { scene_id: 19, title: `Offer: From ${sloganPrice}`, start_sec: 44.5, end_sec: 47.5, duration_frames: 90, slogan_text: sloganText, slogan_price: sloganPrice, visual_style: 'apple_modern_motion' },
+        { scene_id: 20, title: `${brandName} Outro`, start_sec: 47.5, end_sec: 50.1, duration_frames: 78, brand_name: brandName, visual_style: 'apple_modern_motion' },
+      ];
+
+      const newProject: any = {
+        project_id: 'apple_modern_' + Date.now(),
+        title: `Modern Motion Suite 50s (${brandName})`,
+        prompt: params.prompt || 'Modern Motion Suite 50s Apple UI',
+        visual_style: 'apple_modern_motion',
+        aspect_ratio: params.aspectRatio || '9:16',
+        duration_sec: 50.1,
+        audio_url: params.bgmUrl || 'https://static.wordai.pro/ai-generated-images/wynmotion/WynMotion_Modern_Motion_Suite_Template.mp4',
+        status: 'ready',
+        scenes,
+        default_params: {
+          brand_company: brandCompany,
+          brand_name: brandName,
+          brand_logo_url: brandLogo,
+          title_primary: titlePrimary,
+          tagline_1: tagline1,
+          tagline_2: tagline2,
+          slogan_text: sloganText,
+          slogan_price: sloganPrice,
+          main_video_1: mainVideo1,
+          main_video_2: mainVideo2,
+          main_video_3: mainVideo3,
+          train_videos: trainVideos,
+        },
+      };
+
+      setCapcutModalTemplate(null);
+      setIsCapCutGalleryOpen(false);
+      openProjectInEditor(newProject);
+      return;
+    }
+
     // For interactive narrative styles or commercial templates without pre-uploaded images: prefill settings and launch Studio directly at Step 2
     if (
       tplStyle === 'whiteboard_stream_hand' ||
@@ -1144,7 +1225,6 @@ export const AiVideoTab: React.FC = () => {
       tplStyle === 'video_news_60s' ||
       tplStyle === 'science_explainer' ||
       tplStyle === 'character_animation' ||
-      tplStyle === 'apple_modern_motion' ||
       (!isVeo && (!params.productImages || params.productImages.length === 0))
     ) {
       setVisualStyle(tplStyle);
