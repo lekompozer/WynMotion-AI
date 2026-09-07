@@ -123,9 +123,15 @@ export interface MotionProject {
   status: string;
   mp4_url?: string;
   scenes: MotionScene[];
+  whisper_original_segments?: Array<{ id?: number | string; start: number; end: number; text: string; words?: any[] }>;
+  whisper_original_language?: string;
+  whisper_translated_segments?: Array<{ id?: number | string; start: number; end: number; text: string; words?: any[] }>;
+  whisper_target_language?: string;
+  whisper_active_mode?: 'original' | 'translated';
   created_at?: string;
   updated_at?: string;
 }
+
 
 export function calculateProjectPoints(style: MotionVisualStyle, durationSec: number = 60): number {
   const ratePer60s = style === 'science_explainer' ? 30 : 20;
@@ -684,4 +690,59 @@ export const wynmotionService = {
     }
     return [];
   },
+
+  /**
+   * Transcribe audio URL to Whisper subtitle segments
+   */
+  async transcribeCaptions(audioUrl: string, language: string = 'vi'): Promise<{
+    success: boolean;
+    language: string;
+    duration: number;
+    segments: Array<{ id: number; start: number; end: number; text: string; words?: any[] }>;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/transcribe-caption`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        audio_url: audioUrl,
+        language: language || 'vi',
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || err.message || 'Lỗi nhận diện phụ đề từ âm thanh');
+    }
+    return await res.json();
+  },
+
+  /**
+   * Translate subtitle segments to target language using DeepSeek AI
+   */
+  async translateCaptions(
+    segments: Array<{ id: number | string; start: number; end: number; text: string; words?: any[] }>,
+    targetLanguage: string,
+    sourceLanguage?: string
+  ): Promise<{
+    success: boolean;
+    target_language: string;
+    segments: Array<{ id: number | string; start: number; end: number; text: string; words?: any[] }>;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/translate-caption`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        segments,
+        target_language: targetLanguage,
+        source_language: sourceLanguage,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || err.message || 'Lỗi dịch phụ đề bằng DeepSeek AI');
+    }
+    return await res.json();
+  },
 };
+

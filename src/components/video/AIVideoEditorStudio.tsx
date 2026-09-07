@@ -68,6 +68,7 @@ import { EffectsFlyoutTab } from './flyouts/EffectsFlyoutTab';
 import { RegenerateSceneModal } from './modals/RegenerateSceneModal';
 import { ExportVideoModal } from './modals/ExportVideoModal';
 import { ExportProgressModal } from './modals/ExportProgressModal';
+import { CaptionReviewModal } from './modals/CaptionReviewModal';
 import { MultiTrackTimelineSlider } from './MultiTrackTimelineSlider';
 import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/types';
 import { CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
@@ -394,8 +395,19 @@ function StudioInner({
   const [scienceExplainingMsg, setScienceExplainingMsg] = useState<string | null>(null);
   const [showVersionHistoryDropdown, setShowVersionHistoryDropdown] = useState(false);
 
-  // Auto-Captions Whisper & CapCut Subtitle State
-  const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>([]);
+  // Auto-Captions Whisper & CapCut Subtitle State with Original/Translated Dual Storage
+  const initialOrigSegs: CaptionSegment[] = (projectData as any)?.whisper_original_segments || [];
+  const initialTransSegs: CaptionSegment[] = (projectData as any)?.whisper_translated_segments || [];
+  const initialActiveMode: 'original' | 'translated' = (projectData as any)?.whisper_active_mode || (initialTransSegs.length > 0 ? 'translated' : 'original');
+  const initialCurrentSegs: CaptionSegment[] = initialActiveMode === 'translated' && initialTransSegs.length > 0 ? initialTransSegs : initialOrigSegs;
+
+  const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>(initialCurrentSegs);
+  const [originalCaptionSegments, setOriginalCaptionSegments] = useState<CaptionSegment[]>(initialOrigSegs);
+  const [translatedCaptionSegments, setTranslatedCaptionSegments] = useState<CaptionSegment[]>(initialTransSegs);
+  const [captionOriginalLang, setCaptionOriginalLang] = useState<string>((projectData as any)?.whisper_original_language || 'vi');
+  const [captionTargetLang, setCaptionTargetLang] = useState<string>((projectData as any)?.whisper_target_language || 'en');
+  const [subtitleMode, setSubtitleMode] = useState<'original' | 'translated'>(initialActiveMode);
+  const [isCaptionReviewModalOpen, setIsCaptionReviewModalOpen] = useState<boolean>(false);
   const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>('karaoke_glow');
   const [isTranscribingCaptions, setIsTranscribingCaptions] = useState(false);
   const [timelineEffects, setTimelineEffects] = useState<CustomTimelineEffect[]>([]);
@@ -451,8 +463,22 @@ function StudioInner({
       }
       const data = await res.json();
       if (data.segments) {
-        setCaptionSegments(data.segments);
+        const segs: CaptionSegment[] = data.segments;
+        const detectedLang = data.language || language || 'vi';
+        setOriginalCaptionSegments(segs);
+        setCaptionSegments(segs);
+        setCaptionOriginalLang(detectedLang);
+        setSubtitleMode('original');
         setShowWhisperSubs(true);
+        // Automatically open the Review & Edit modal so user can check text before translating!
+        setIsCaptionReviewModalOpen(true);
+        if (projectId) {
+          wynmotionService.updateProject(projectId, {
+            whisper_original_segments: segs,
+            whisper_original_language: detectedLang,
+            whisper_active_mode: 'original',
+          } as any).catch(console.warn);
+        }
       }
     } catch (err: any) {
       console.error('Whisper caption error:', err);
@@ -461,6 +487,64 @@ function StudioInner({
       setIsTranscribingCaptions(false);
     }
   };
+
+  const handleSaveOriginalCaptions = async (editedSegments: CaptionSegment[], lang: string) => {
+    setOriginalCaptionSegments(editedSegments);
+    setCaptionSegments(editedSegments);
+    setCaptionOriginalLang(lang);
+    setSubtitleMode('original');
+    setShowWhisperSubs(true);
+    setSyncStatusMsg('Đã lưu phụ đề gốc vào dự án!');
+    setTimeout(() => setSyncStatusMsg(null), 2500);
+    if (projectId) {
+      await wynmotionService.updateProject(projectId, {
+        whisper_original_segments: editedSegments,
+        whisper_original_language: lang,
+        whisper_active_mode: 'original',
+      } as any).catch(console.warn);
+    }
+  };
+
+  const handleSaveTranslatedCaptions = async (
+    originalSegs: CaptionSegment[],
+    translatedSegs: CaptionSegment[],
+    sourceLang: string,
+    targetLang: string
+  ) => {
+    setOriginalCaptionSegments(originalSegs);
+    setTranslatedCaptionSegments(translatedSegs);
+    setCaptionSegments(translatedSegs);
+    setCaptionOriginalLang(sourceLang);
+    setCaptionTargetLang(targetLang);
+    setSubtitleMode('translated');
+    setShowWhisperSubs(true);
+    setSyncStatusMsg(`Đã dịch phụ đề sang ${targetLang.toUpperCase()} & lưu vào dự án!`);
+    setTimeout(() => setSyncStatusMsg(null), 3000);
+    if (projectId) {
+      await wynmotionService.updateProject(projectId, {
+        whisper_original_segments: originalSegs,
+        whisper_original_language: sourceLang,
+        whisper_translated_segments: translatedSegs,
+        whisper_target_language: targetLang,
+        whisper_active_mode: 'translated',
+      } as any).catch(console.warn);
+    }
+  };
+
+  const handleSwitchSubtitleMode = (mode: 'original' | 'translated') => {
+    setSubtitleMode(mode);
+    if (mode === 'translated' && translatedCaptionSegments.length > 0) {
+      setCaptionSegments(translatedCaptionSegments);
+    } else {
+      setCaptionSegments(originalCaptionSegments);
+    }
+    if (projectId) {
+      wynmotionService.updateProject(projectId, {
+        whisper_active_mode: mode,
+      } as any).catch(console.warn);
+    }
+  };
+
   const [selectedExportAspectRatio, setSelectedExportAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [selectedExportBgColor, setSelectedExportBgColor] = useState<string>('#FAF7EF');
   const [selectedExportResolution, setSelectedExportResolution] = useState<'1080p' | '4k'>('1080p');
@@ -1525,7 +1609,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-[#0C0D14] text-slate-200 font-sans select-none overflow-x-hidden">
+    <div className="flex flex-col min-h-screen w-full bg-[#0C0D14] text-slate-200 font-sans select-none overflow-x-hidden overflow-y-auto studio-scrollbar">
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. TOP DARK HEADER BAR */}
       {/* ───────────────────────────────────────────────────────────── */}
@@ -1772,7 +1856,15 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 2. MAIN BODY: LEFT CHAT + ICON BAR + FLYOUT DRAWER + CANVAS */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="flex w-full h-[520px] lg:h-[560px] min-h-[460px] max-h-[calc(100vh-200px)] shrink-0 overflow-hidden border-b border-[#1E2230]">
+      <div
+        className={`flex w-full shrink-0 border-b border-[#1E2230] relative transition-all duration-200 ${
+          aspectRatio === '9:16'
+            ? 'min-h-[780px] lg:min-h-[820px]'
+            : aspectRatio === '1:1'
+            ? 'min-h-[640px]'
+            : 'min-h-[580px] lg:min-h-[620px]'
+        }`}
+      >
         {/* COLUMN 1: LEFT CHAT SIDEBAR (Exclusive to Science Explainer) */}
         {visualStyle === 'science_explainer' && (
           <div className="w-80 h-full border-r border-[#1E2230] bg-[#10121B] flex flex-col justify-between p-3.5 z-10 animate-in slide-in-from-left duration-200 shrink-0 overflow-hidden">
@@ -2134,7 +2226,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
 
         {/* COLUMN 3: FLYOUT DRAWER (ASSETS / AUDIO MIXER / SETTINGS - DARK) */}
         {activeFlyoutTab && (
-          <div className="w-80 h-full border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto studio-scrollbar shrink-0">
+          <div className="w-80 self-stretch border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto studio-scrollbar shrink-0">
             {/* TAB 1: ASSETS & SCENES GRID */}
             {activeFlyoutTab === 'assets' && (
               <AssetsFlyoutTab
@@ -2238,90 +2330,56 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                   const boundarySec = sStart + sDur;
 
                   const dur = 0.8;
-                  // Center the transition right on the boundary between Scene i and Scene i+1
-                  const st = Math.max(0, snapToGrid(boundarySec - dur / 2, 0.05));
-                  const et = Math.min(totalDurationSec, st + dur);
+                  const half = dur / 2;
+                  const st = Math.max(0, boundarySec - half);
 
-                  const hasOverlapTrack0 = timelineEffects.some(
-                    (fx) => fx.trackIndex === 0 && ((st >= fx.startTime && st < fx.endTime) || (et > fx.startTime && et <= fx.endTime))
-                  );
-
-                  const nextIdx = targetIdx + 1 < scenes.length ? targetIdx + 1 : targetIdx;
-
-                  const newFx: CustomTimelineEffect = {
-                    id: `fx_trans_${Date.now()}`,
-                    effectId: shaderName,
-                    name: `${shaderName} (S${targetIdx + 1} ➔ S${nextIdx + 1})`,
-                    shaderName: shaderName,
-                    trackIndex: hasOverlapTrack0 ? 1 : 0,
-                    startTime: st,
-                    endTime: et,
-                    duration: dur,
-                  };
-
-                  setTimelineEffects((prev) => [...prev, newFx]);
-
-                  setScenes((prev) =>
-                    prev.map((s, idx) => {
-                      if (idx === targetIdx) {
-                        return {
-                          ...s,
-                          transition_out: { shader_name: shaderName, duration: dur },
+                  const updatedScenes = scenes.map((s, idx) => {
+                    if (idx === targetIdx) {
+                      return {
+                        ...s,
+                        shader_name: shaderName,
+                        transition_out: {
                           shader_name: shaderName,
-                        };
-                      }
-                      return s;
-                    })
-                  );
+                          duration_sec: dur,
+                        },
+                      };
+                    }
+                    return s;
+                  });
+                  updateScenesWithHistory(updatedScenes);
 
-                  seekTo(Math.round(Math.max(0, st - 0.2) * fps));
-                  setSyncStatusMsg(`Đã áp dụng chuyển cảnh ${shaderName} giữa Scene ${targetIdx + 1} và Scene ${nextIdx + 1}!`);
+                  setSyncStatusMsg(`Đã gán chuyển cảnh GLSL: ${shaderName} tại cuối phân cảnh ${targetIdx + 1}!`);
                   setTimeout(() => setSyncStatusMsg(null), 3000);
                 }}
                 onApplyEffect={(effId) => {
-                  const st = snapToGrid(currentSec, 0.05);
-                  const dur = 2.0;
-                  const et = Math.min(totalDurationSec, st + dur);
+                  let targetIdx = typeof activeSceneId === 'number' ? activeSceneId - 1 : -1;
+                  if (targetIdx < 0 || targetIdx >= scenes.length) {
+                    targetIdx = scenes.findIndex((s) => {
+                      const sSt = s.start_sec !== undefined ? s.start_sec : (s.start_frame || 0) / fps;
+                      const sDur = s.duration_sec !== undefined ? s.duration_sec : (s.duration_frames || 150) / fps;
+                      return currentSec >= sSt && currentSec <= sSt + sDur;
+                    });
+                    if (targetIdx < 0) targetIdx = 0;
+                  }
+                  const targetScene = scenes[targetIdx] || scenes[0];
+                  const st = targetScene.start_sec !== undefined ? targetScene.start_sec : (targetScene.start_frame || 0) / fps;
+                  const dur = targetScene.duration_sec !== undefined ? targetScene.duration_sec : (targetScene.duration_frames || 150) / fps;
 
                   const hasOverlapTrack0 = timelineEffects.some(
-                    (fx) => fx.trackIndex === 0 && ((st >= fx.startTime && st < fx.endTime) || (et > fx.startTime && et <= fx.endTime))
+                    (ef) => (ef.trackIndex === 0 || ef.trackIndex === undefined) && !(st + dur <= ef.startTime || st >= ef.startTime + ef.duration)
                   );
+                  const trackIndex = hasOverlapTrack0 ? 1 : 0;
 
                   const newFx: CustomTimelineEffect = {
-                    id: `fx_eff_${Date.now()}`,
+                    id: `fx_${Date.now()}`,
                     effectId: effId,
                     name: effId.replace(/_/g, ' ').toUpperCase(),
-                    trackIndex: hasOverlapTrack0 ? 1 : 0,
                     startTime: st,
-                    endTime: et,
+                    endTime: st + dur,
                     duration: dur,
+                    trackIndex: trackIndex,
                   };
-
                   setTimelineEffects((prev) => [...prev, newFx]);
-
-                  setScenes((prev) => {
-                    let targetIdx = typeof activeSceneId === 'number' ? activeSceneId - 1 : -1;
-                    if (targetIdx < 0 || targetIdx >= prev.length) {
-                      let accum = 0;
-                      targetIdx = prev.findIndex((s) => {
-                        const dur = (s.duration_frames || 150) / fps;
-                        const match = currentSec >= accum && currentSec <= accum + dur;
-                        accum += dur;
-                        return match;
-                      });
-                      if (targetIdx < 0) targetIdx = 0;
-                    }
-                    return prev.map((s, idx) => {
-                      if (idx === targetIdx) {
-                        return {
-                          ...s,
-                          underlayer_effect: effId,
-                          visual_effect: effId,
-                        };
-                      }
-                      return s;
-                    });
-                  });
                   setSyncStatusMsg(`Đã kích hoạt hiệu ứng: ${effId} tại ${st.toFixed(1)}s (Track ${hasOverlapTrack0 ? 2 : 1})!`);
                   setTimeout(() => setSyncStatusMsg(null), 3000);
                 }}
@@ -2344,6 +2402,12 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onToggleSubs={() => setShowWhisperSubs((v) => !v)}
                 subsPosY={subsPosY}
                 onChangeSubsPosY={setSubsPosY}
+                onOpenReviewModal={() => setIsCaptionReviewModalOpen(true)}
+                hasTranslatedSegments={translatedCaptionSegments.length > 0}
+                activeSubtitleMode={subtitleMode}
+                onChangeSubtitleMode={handleSwitchSubtitleMode}
+                originalLanguage={captionOriginalLang}
+                targetLanguage={captionTargetLang}
                 activeScene={scenes.find((s) => s.scene_id === activeSceneId) || scenes[0]}
                 activeSceneIndex={scenes.findIndex((s) => s.scene_id === (activeSceneId || 1))}
                 onUpdateActiveSceneTranscript={(text) => {
@@ -2420,14 +2484,14 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             }}
           />
 
-          {/* 16:9 Video Canvas WITH SCALABLE ZOOM */}
+          {/* Scalable Video Canvas with True Aspect Ratio */}
           <div
             id="wynrise-video-stage"
-            className="relative shadow-2xl rounded-2xl overflow-hidden border border-[#22273B] bg-white transition-transform duration-150 flex items-center justify-center"
+            className="relative shadow-2xl rounded-2xl overflow-hidden border border-[#22273B] bg-white transition-transform duration-150 flex items-center justify-center shrink-0"
             style={{
-              width: aspectRatio === '16:9' ? '880px' : aspectRatio === '9:16' ? '420px' : '580px',
-              maxWidth: '94%',
-              maxHeight: '86%',
+              width: aspectRatio === '16:9' ? '920px' : aspectRatio === '9:16' ? '420px' : '580px',
+              height: aspectRatio === '16:9' ? '517px' : aspectRatio === '9:16' ? '746px' : '580px',
+              maxWidth: '96%',
               aspectRatio: aspectRatio === '16:9' ? '16 / 9' : aspectRatio === '9:16' ? '9 / 16' : '1 / 1',
               transform: `scale(${canvasZoom})`,
               transformOrigin: 'center center',
@@ -2469,7 +2533,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         }`}
       >
         {/* Top Mini Control Toolbar with CapCut Tools */}
-        <div className="h-10 px-4 flex items-center justify-between border-b border-[#1E2330] bg-[#0E1017]">
+        <div className="h-10 px-4 flex items-center justify-between border-b border-[#1E2330] bg-[#0E1017] sticky top-12 z-20 shadow-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsTimelineCollapsed(!isTimelineCollapsed)}
@@ -2843,9 +2907,23 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         }}
         defaultTab="points"
       />
+
+      {/* WHISPER & DEEPSEEK CAPTION REVIEW & TRANSLATE MODAL */}
+      <CaptionReviewModal
+        isOpen={isCaptionReviewModalOpen}
+        onClose={() => setIsCaptionReviewModalOpen(false)}
+        audioUrl={selectedExportAudioUrl || remotionAudioSrc || audioUrl}
+        originalLanguage={captionOriginalLang}
+        segments={originalCaptionSegments.length > 0 ? originalCaptionSegments : captionSegments}
+        projectId={projectId}
+        onSeek={(sec) => seekTo(Math.round(sec * fps))}
+        onSaveOriginal={handleSaveOriginalCaptions}
+        onSaveTranslated={handleSaveTranslatedCaptions}
+      />
     </div>
   );
 }
+
 
 export const AIVideoEditorStudio: React.FC<{
   slideId?: string;

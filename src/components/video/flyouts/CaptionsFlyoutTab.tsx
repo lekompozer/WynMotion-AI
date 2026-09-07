@@ -54,6 +54,12 @@ export interface CaptionsFlyoutTabProps {
   onChangeCaptionPosY?: (y: number) => void;
   tickerText?: string;
   onChangeTickerText?: (text: string) => void;
+  onOpenReviewModal?: () => void;
+  hasTranslatedSegments?: boolean;
+  activeSubtitleMode?: 'original' | 'translated';
+  onChangeSubtitleMode?: (mode: 'original' | 'translated') => void;
+  originalLanguage?: string;
+  targetLanguage?: string;
 }
 
 export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
@@ -85,11 +91,18 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   onChangeCaptionPosY,
   tickerText = '⚡ BẢN TIN NÓNG • Cập nhật liên tục 24/7',
   onChangeTickerText,
+  onOpenReviewModal,
+  hasTranslatedSegments = false,
+  activeSubtitleMode = 'original',
+  onChangeSubtitleMode,
+  originalLanguage = 'vi',
+  targetLanguage = 'en',
 }) => {
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('vi');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(originalLanguage || 'vi');
   const [activeSubTab, setActiveSubTab] = useState<'presets' | 'timeline' | 'news_badge'>('presets');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editText, setEditText] = useState<string>('');
+
 
   const isNewsStyle =
     visualStyle === 'video_news_60s' ||
@@ -277,7 +290,54 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                 </>
               )}
             </button>
+
+            {/* Quick Switch between Original & Translated Subtitles */}
+            {hasTranslatedSegments && onChangeSubtitleMode && (
+              <div className="pt-2 border-t border-[#252B3E] space-y-1.5">
+                <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                  <span>Hiển thị trên video:</span>
+                  <span className="text-cyan-400 font-bold uppercase">{activeSubtitleMode}</span>
+                </div>
+                <div className="flex p-1 rounded-xl bg-[#141828] border border-[#262D42]">
+                  <button
+                    type="button"
+                    onClick={() => onChangeSubtitleMode('original')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeSubtitleMode === 'original'
+                        ? 'bg-cyan-500 text-slate-950 font-black shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Bản Gốc ({(originalLanguage || 'vi').toUpperCase()})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeSubtitleMode('translated')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeSubtitleMode === 'translated'
+                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Bản Dịch ({(targetLanguage || 'en').toUpperCase()})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Review & Edit Whisper JSON button */}
+            {segments.length > 0 && onOpenReviewModal && (
+              <button
+                type="button"
+                onClick={onOpenReviewModal}
+                className="w-full py-2 px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <span>Rà Soát & Dịch Phụ Đề (DeepSeek)</span>
+              </button>
+            )}
           </div>
+
 
           {/* Active Scene Transcript Editor (Transferred from Settings) */}
           {activeScene && onUpdateActiveSceneTranscript && (
