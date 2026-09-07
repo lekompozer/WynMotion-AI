@@ -36,7 +36,7 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     descVi: 'Nhập text prompt & đính kèm tối đa 5 ảnh tham chiếu → WynMotion tự động biến thành video hoạt họa kèm âm thanh sống động.',
     descEn: 'Enter text prompt & attach up to 5 reference photos → WynMotion generates animation video with native audio.',
     durationSec: 15.0,
-    videoUrl: '/templates/animation_ads_image_demo.mp4',
+    videoUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/templates/video_animate_image_demo.mp4',
     bgmUrl: '',
     badge: '👑 VIP OMNI',
     usageCount: '95.4K',
@@ -57,7 +57,7 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     descVi: 'Tải 1 ảnh Ads Poster → Google VEO 3.1 tạo video chuyển động điện ảnh mềm mại 6s chuẩn quảng cáo cao cấp.',
     descEn: 'Upload 1 Ads Poster → Google VEO 3.1 creates smooth 6s cinematic commercial animation video.',
     durationSec: 6.0,
-    videoUrl: '/templates/animation_ads_image_demo_2.mp4',
+    videoUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/templates/video_animate_image_demo_2.mp4',
     bgmUrl: '',
     badge: '👑 VIP VEO 6s',
     usageCount: '64.2K',
@@ -78,8 +78,8 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     descVi: 'Đập chữ nhịp điệu nhanh, chớp nháy vi mô R-E-A-D-Y & hé lộ sản phẩm với chữ 2 tầng Solid/Outline.',
     descEn: 'Fast-paced rhythmic strobe typography with READY letter-flash and cinematic reveal outro.',
     durationSec: 11.7,
-    videoUrl: '/templates/strobe_teaser_demo.mp4',
-    bgmUrl: '/templates/strobe_teaser_bgm.mp3',
+    videoUrl: 'https://static.wynai.pro/ai-generated-images/wynmotion/templates/strobe_teaser_demo.mp4',
+    bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/7fcf80645e11_templates/strobe_teaser_bgm.mp3',
     badge: '⚡ STROBE 11.7s',
     usageCount: '76.9K',
     maxImages: 3,
@@ -99,8 +99,8 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     descVi: 'Tải 1 ảnh Menu thực đơn → AI tự động quét 7 món ăn ngon mắt, hiệu ứng điện ảnh & Outro bìa Menu 3D.',
     descEn: 'Upload 1 Menu photo → AI automatically scans 7 dishes, cinematic food VFX & 3D Menu Outro.',
     durationSec: 22.0,
-    videoUrl: '/templates/cinematic_showcase_demo.mp4',
-    bgmUrl: '/templates/cinematic_showcase_bgm.mp3',
+    videoUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/templates/cinematic_showcase_demo.mp4',
+    bgmUrl: 'https://static.wordai.pro/ai-generated-images/wynmotion/0f52b6183344_templates/cinematic_showcase_bgm.mp3',
     badge: '💎 REEL 22.0s',
     usageCount: '41.2K',
     maxImages: 8,
@@ -137,6 +137,12 @@ export interface CapCutTemplateModalProps {
     solidText?: string;
     outlineText?: string;
     sloganText?: string;
+    brandCompany?: string;
+    brandName?: string;
+    titlePrimary?: string;
+    tagline1?: string;
+    tagline2?: string;
+    sloganPrice?: string;
   }) => void;
 }
 
@@ -208,6 +214,12 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('');
   const [customAudioName, setCustomAudioName] = useState<string>('');
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [brandCompany, setBrandCompany] = useState('WynAI');
+  const [brandName, setBrandName] = useState('WynMotion');
+  const [titlePrimary, setTitlePrimary] = useState('AI Video Studio');
+  const [tagline1, setTagline1] = useState('NEXT-GEN');
+  const [tagline2, setTagline2] = useState('CREATIVE SUITE');
+  const [sloganPrice, setSloganPrice] = useState('$1');
 
   const currentPointsCost = isVeoOmni
     ? resolution === '360p'
@@ -359,6 +371,12 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
       solidText: solidText.trim() || undefined,
       outlineText: outlineText.trim() || undefined,
       sloganText: sloganText.trim() || undefined,
+      brandCompany: brandCompany.trim() || 'WynAI',
+      brandName: brandName.trim() || 'WynMotion',
+      titlePrimary: titlePrimary.trim() || 'AI Video Studio',
+      tagline1: tagline1.trim() || 'NEXT-GEN',
+      tagline2: tagline2.trim() || 'CREATIVE SUITE',
+      sloganPrice: sloganPrice.trim() || '$1',
     });
     onClose();
   };
@@ -549,8 +567,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     template?.visual_style === 'whiteboard_stream_hand' ||
                     template?.visual_style === 'handdrawn_fast_doodle' ||
                     template?.visual_style === 'dialogue_scene' ||
-                    template?.visual_style === 'character_animation' ||
-                    template?.visual_style === 'apple_modern_motion';
+                    template?.visual_style === 'character_animation';
 
                   if (isNarrativeStyle) {
                     onApply({
@@ -827,8 +844,33 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 <div className={`grid ${maxImages >= 8 ? 'grid-cols-4 sm:grid-cols-5' : maxImages === 5 ? 'grid-cols-5' : maxImages > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 pt-1`}>
                   {Array.from({ length: maxImages }).map((_, idx) => {
                     const img = productImages[idx];
-                    const slotLabel = isVeoOmni
-                      ? idx === 0 ? 'Frame 1' : idx === 1 ? 'Frame 2' : `#${idx + 1}`
+                    const isAppleSuite =
+                      template?.visual_style === 'apple_modern_motion' ||
+                      template?.template_id === 'apple_modern_motion';
+                    const slotLabel = isAppleSuite
+                      ? idx === 0
+                        ? '🎬 Clip 1 (7s)'
+                        : idx === 1
+                        ? '📱 Mẫu 1 (9s)'
+                        : idx === 2
+                        ? '📱 Mẫu 2 (9s)'
+                        : idx === 3
+                        ? '📱 Mẫu 3 (9s)'
+                        : idx === 4
+                        ? '📱 Mẫu 4 (9s)'
+                        : idx === 5
+                        ? '📱 Mẫu 5 (9s)'
+                        : idx === 6
+                        ? '🎬 Clip 2 (9s)'
+                        : idx === 7
+                        ? '🎬 Clip 3 (5s)'
+                        : '🖼️ Logo PNG'
+                      : isVeoOmni
+                      ? idx === 0
+                        ? 'Frame 1'
+                        : idx === 1
+                        ? 'Frame 2'
+                        : `#${idx + 1}`
                       : `#${idx + 1}`;
                     return (
                       <div
@@ -1040,70 +1082,174 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 </>
               ) : (
                 <>
-                  {/* 1. Product Name / Detailed Description Prompt */}
-                  <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                    <label className="text-xs font-bold text-white/90 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <span>🏷️</span>
-                        <span>{t('Tên & Mô Tả Sản Phẩm / Ý Tưởng AI', 'Product Name & Description / AI Concept')}</span>
-                      </span>
-                      <span className="text-[10px] text-cyan-300 font-normal">{t('Kèm mô tả chi tiết', 'With description')}</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder={
-                        isVietnamese
-                          ? 'Ví dụ: Trà thảo mộc cao cấp chiết xuất hoa cúc tự nhiên, bao bì tinh tế sang trọng, phong cách trẻ trung hiện đại...'
-                          : 'E.g., Premium chamomile herbal tea with natural extract, elegant packaging, modern refreshing style...'
-                      }
-                      className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
-                    />
-                  </div>
+                  {template?.visual_style === 'apple_modern_motion' ? (
+                    <>
+                      {/* Brand & Second-8 Customization */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                        <label className="text-xs font-bold text-cyan-300 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span>🍏</span>
+                            <span>{t('Thương Hiệu (Giây thứ 8: By WynAI & Outro)', 'Brand Info (Second 8 & Outro)')}</span>
+                          </span>
+                          <span className="text-[10px] text-white/50">{t('Tùy chỉnh logo & tên', 'Custom logo & names')}</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-white/80">{t('Công ty / Byline (Giây 8)', 'Company (Sec 8 Byline)')}</label>
+                            <input
+                              type="text"
+                              value={brandCompany}
+                              onChange={(e) => setBrandCompany(e.target.value)}
+                              placeholder="WynAI"
+                              className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-white/80">{t('Tên Sản Phẩm (Outro)', 'Product Name (Outro)')}</label>
+                            <input
+                              type="text"
+                              value={brandName}
+                              onChange={(e) => setBrandName(e.target.value)}
+                              placeholder="WynMotion"
+                              className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400 font-bold"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-white/60">
+                          {t('💡 Logo thương hiệu được lấy từ Slot Logo PNG ở Bước 1 và xuất hiện tại Giây thứ 8 & Cảnh kết.',
+                             '💡 Brand logo is loaded from Logo slot in Step 1 and displays at Second 8 & Outro.')}
+                        </p>
+                      </div>
 
-                  {/* 2. Editable 2-Layer Typography (For Strobe & Product Ads) */}
-                  <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                    <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
-                      <span>🔤</span>
-                      <span>{t('Chữ Điểm Nhấn (Typography)', 'Emphasis Typography')}</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-white/80">{t('Chữ trên (Đặc)', 'Solid Text (Top)')}</label>
-                        <input
-                          type="text"
-                          value={solidText}
-                          onChange={(e) => setSolidText(e.target.value)}
-                          className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                      {/* Primary Title & Gradient Taglines */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                        <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
+                          <span>✨</span>
+                          <span>{t('Tiêu Đề Chính & Khẩu Hiệu', 'Primary Title & Taglines')}</span>
+                        </label>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-white/80">{t('Tiêu đề chính (Giây 10)', 'Primary Title (Sec 10)')}</label>
+                          <input
+                            type="text"
+                            value={titlePrimary}
+                            onChange={(e) => setTitlePrimary(e.target.value)}
+                            placeholder="AI Video Studio"
+                            className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-white/80">{t('Khẩu hiệu 1 (Gradient)', 'Tagline 1')}</label>
+                            <input
+                              type="text"
+                              value={tagline1}
+                              onChange={(e) => setTagline1(e.target.value)}
+                              placeholder="NEXT-GEN"
+                              className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-white/80">{t('Khẩu hiệu 2 (Gradient)', 'Tagline 2')}</label>
+                            <input
+                              type="text"
+                              value={tagline2}
+                              onChange={(e) => setTagline2(e.target.value)}
+                              placeholder="CREATIVE SUITE"
+                              className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400 font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Price Callout */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                        <label className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                          <span>💰</span>
+                          <span>{t('Giá Ưu Đãi / Khẩu Hiệu Giá (Xanh lá)', 'Special Price Callout (Green)')}</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={sloganPrice}
+                            onChange={(e) => setSloganPrice(e.target.value)}
+                            placeholder="$1"
+                            className="w-28 py-2 px-3 rounded-xl bg-white/10 border border-emerald-500/30 text-emerald-300 font-black text-sm focus:outline-none focus:border-emerald-400 text-center"
+                          />
+                          <span className="text-[11px] text-white/60">
+                            {t('Hiển thị trong câu: "Create Daily 60s AI Videos From Just [Giá]"',
+                               'Appears in: "Create Daily 60s AI Videos From Just [Price]"')}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* 1. Product Name / Detailed Description Prompt */}
+                      <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                        <label className="text-xs font-bold text-white/90 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span>🏷️</span>
+                            <span>{t('Tên & Mô Tả Sản Phẩm / Ý Tưởng AI', 'Product Name & Description / AI Concept')}</span>
+                          </span>
+                          <span className="text-[10px] text-cyan-300 font-normal">{t('Kèm mô tả chi tiết', 'With description')}</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={prompt}
+                          onChange={(e) => setPrompt(e.target.value)}
+                          placeholder={
+                            isVietnamese
+                              ? 'Ví dụ: Trà thảo mộc cao cấp chiết xuất hoa cúc tự nhiên, bao bì tinh tế sang trọng, phong cách trẻ trung hiện đại...'
+                              : 'E.g., Premium chamomile herbal tea with natural extract, elegant packaging, modern refreshing style...'
+                          }
+                          className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-white/80">{t('Chữ dưới (Viền rỗng)', 'Outlined Text (Bottom)')}</label>
+
+                      {/* 2. Editable 2-Layer Typography (For Strobe & Product Ads) */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                        <label className="text-xs font-bold text-white/90 flex items-center gap-1.5">
+                          <span>🔤</span>
+                          <span>{t('Chữ Điểm Nhấn (Typography)', 'Emphasis Typography')}</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-white/80">{t('Chữ trên (Đặc)', 'Solid Text (Top)')}</label>
+                            <input
+                              type="text"
+                              value={solidText}
+                              onChange={(e) => setSolidText(e.target.value)}
+                              className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-white/80">{t('Chữ dưới (Viền rỗng)', 'Outlined Text (Bottom)')}</label>
+                            <input
+                              type="text"
+                              value={outlineText}
+                              onChange={(e) => setOutlineText(e.target.value)}
+                              className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Editable Tagline / Marketing Slogan */}
+                      <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                        <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+                          <span>⚡</span>
+                          <span>{t('Câu Slogan Marketing Cuối (Editable)', 'Final Marketing Tagline (Editable)')}</span>
+                        </label>
                         <input
                           type="text"
-                          value={outlineText}
-                          onChange={(e) => setOutlineText(e.target.value)}
-                          className="w-full py-2 px-3 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-cyan-400"
+                          value={sloganText}
+                          onChange={(e) => setSloganText(e.target.value)}
+                          placeholder={isVietnamese ? '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY' : '⚡ DISCOVER THE BEST - ORDER NOW'}
+                          className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
                         />
                       </div>
-                    </div>
-                  </div>
-
-                  {/* 3. Editable Tagline / Marketing Slogan */}
-                  <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
-                    <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-                      <span>⚡</span>
-                      <span>{t('Câu Slogan Marketing Cuối (Editable)', 'Final Marketing Tagline (Editable)')}</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={sloganText}
-                      onChange={(e) => setSloganText(e.target.value)}
-                      placeholder={isVietnamese ? '⚡ ĐÓN ĐẦU XU HƯỚNG - ƯU ĐÃI HÔM NAY' : '⚡ DISCOVER THE BEST - ORDER NOW'}
-                      className="w-full py-2 px-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-cyan-400"
-                    />
-                  </div>
+                    </>
+                  )}
                 </>
               )}
             </div>

@@ -10,9 +10,12 @@ import { StrobeTeaserRenderer } from './StrobeTeaserRenderer';
 import { CinematicShowcaseRenderer } from './CinematicShowcaseRenderer';
 import { NewsVideoRenderer } from './NewsVideoRenderer';
 
+import { ModernMotionSuiteRenderer } from './ModernMotionSuiteRenderer';
+
 export {
   DialogueSceneRenderer,
   AppleModernRenderer,
+  ModernMotionSuiteRenderer,
   ScienceExplainerRenderer,
   CharacterMascotRenderer,
   ProductAdsRenderer,
@@ -29,8 +32,10 @@ export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps
   dialogue_scene: DialogueSceneRenderer,
   conversation: DialogueSceneRenderer,
   podcast_dual: DialogueSceneRenderer,
-  apple_modern_motion: AppleModernRenderer,
-  tech_ui: AppleModernRenderer,
+  apple_modern_motion: ModernMotionSuiteRenderer as any,
+  modern_motion: ModernMotionSuiteRenderer as any,
+  modern_motion_suite: ModernMotionSuiteRenderer as any,
+  tech_ui: ModernMotionSuiteRenderer as any,
   vector_motion: AppleModernRenderer,
   science_explainer: ScienceExplainerRenderer,
   stem_explainer: ScienceExplainerRenderer,

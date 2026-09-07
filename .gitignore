@@ -39,3 +39,8 @@ ios/App/DerivedData/
 
 # Local Documentation
 docs/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class

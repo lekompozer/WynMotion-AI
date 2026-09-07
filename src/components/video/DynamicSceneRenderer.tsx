@@ -285,8 +285,8 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     return (
       <ModularRenderer
         scene={scene}
-        showSceneCards={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showSceneCards}
-        showWhisperSubs={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' ? false : showWhisperSubs}
+        showSceneCards={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' || effectiveStyle === 'apple_modern_motion' ? false : showSceneCards}
+        showWhisperSubs={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' || effectiveStyle === 'apple_modern_motion' ? false : showWhisperSubs}
         cardPosY={cardPosY}
         subsPosY={subsPosY}
         swapSpeakers={swapSpeakers}

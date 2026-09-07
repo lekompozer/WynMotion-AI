@@ -70,6 +70,7 @@ import { DialogueScriptEditor } from '@/components/video/DialogueScriptEditor';
 import { MobileVideoEditorStudio } from '@/components/video/MobileVideoEditorStudio';
 import { CapCutTemplateModal } from '@/components/video/CapCutTemplateModal';
 import { CapCutGalleryModal } from '@/components/video/CapCutGalleryModal';
+import { WynMotionIntroAnimation } from '@/components/intro/WynMotionIntroAnimation';
 import { WynMotionUpgradeModal } from '@/components/modals/WynMotionUpgradeModal';
 import { WynMotionNotificationsModal } from '@/components/modals/WynMotionNotificationsModal';
 import { wynmotionNotificationManager } from '@/services/wynmotionNotificationManager';
@@ -385,6 +386,7 @@ export const AiVideoTab: React.FC = () => {
   const [ctaText, setCtaText] = useState('MUA NGAY');
   const [capcutModalTemplate, setCapcutModalTemplate] = useState<any | null>(null);
   const [isCapCutGalleryOpen, setIsCapCutGalleryOpen] = useState(false);
+  const [isIntroVideoOpen, setIsIntroVideoOpen] = useState(false);
 
   // Video News 60s States
   const [newsInputMode, setNewsInputMode] = useState<'url' | 'text'>('url');
@@ -1462,11 +1464,24 @@ export const AiVideoTab: React.FC = () => {
             <div className="text-[15px] font-medium text-white/90 tracking-tight">
               {t('Tạo video từ ý tưởng', 'Create videos from ideas')}
             </div>
-            <div className="text-3xl font-black text-white tracking-tight flex items-center gap-2 mt-0.5">
-              <span>{t('Bắt đầu', 'Get started')}</span>
-              <span className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm">
-                <ChevronRight className="w-4 h-4 stroke-[3]" />
-              </span>
+            <div className="flex items-center justify-between mt-0.5">
+              <div className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                <span>{t('Bắt đầu', 'Get started')}</span>
+                <span className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm">
+                  <ChevronRight className="w-4 h-4 stroke-[3]" />
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsIntroVideoOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 border border-white/30 text-white text-xs font-bold shadow-lg backdrop-blur-md active:scale-95 transition-all cursor-pointer"
+              >
+                <span>🎬</span>
+                <span>{t('Xem Intro 60s', 'Watch Intro')}</span>
+              </button>
             </div>
           </div>
         </HeroBackground>
@@ -1814,6 +1829,16 @@ export const AiVideoTab: React.FC = () => {
           onSelectTemplate={(tplId) => {
             setIsCapCutGalleryOpen(false);
             setCapcutModalTemplate(tplId);
+          }}
+        />
+
+        {/* ── WynMotion Fullscreen Keynote Intro Modal ── */}
+        <WynMotionIntroAnimation
+          isOpen={isIntroVideoOpen}
+          onClose={() => setIsIntroVideoOpen(false)}
+          onStartCreate={() => {
+            setIsIntroVideoOpen(false);
+            handleStartStudio();
           }}
         />
 
