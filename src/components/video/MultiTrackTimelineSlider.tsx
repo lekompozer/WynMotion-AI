@@ -294,7 +294,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
       <div
         ref={scrollContainerRef}
         onClick={handleTimelineClick}
-        className="w-full overflow-x-auto relative bg-[#090B12] cursor-crosshair scrollbar-thin scrollbar-thumb-slate-700"
+        className="w-full overflow-x-auto relative bg-[#090B12] cursor-crosshair studio-scrollbar"
       >
         <div className="relative py-1.5" style={{ width: `${totalWidth}px` }}>
           <div className="h-4 border-b border-[#1E2232] relative flex items-end">

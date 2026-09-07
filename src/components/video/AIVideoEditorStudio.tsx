@@ -1441,11 +1441,11 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#0C0D14] text-slate-200 font-sans select-none overflow-hidden">
+    <div className="flex flex-col min-h-screen w-full bg-[#0C0D14] text-slate-200 font-sans select-none overflow-x-hidden">
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. TOP DARK HEADER BAR */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <header className="h-12 border-b border-[#1E2230] bg-[#12141F] flex items-center justify-between px-4 z-20 shadow-md relative">
+      <header className="h-12 border-b border-[#1E2230] bg-[#12141F] flex items-center justify-between px-4 z-30 shadow-md sticky top-0 shrink-0">
         {/* Left: Back button & Title */}
         <div className="flex items-center gap-3">
           {onBack && (
@@ -1688,7 +1688,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 2. MAIN BODY: LEFT CHAT + ICON BAR + FLYOUT DRAWER + CANVAS */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex w-full h-[520px] lg:h-[560px] min-h-[460px] max-h-[calc(100vh-200px)] shrink-0 overflow-hidden border-b border-[#1E2230]">
         {/* COLUMN 1: LEFT CHAT SIDEBAR (Exclusive to Science Explainer) */}
         {visualStyle === 'science_explainer' && (
           <div className="w-80 h-full border-r border-[#1E2230] bg-[#10121B] flex flex-col justify-between p-3.5 z-10 animate-in slide-in-from-left duration-200 shrink-0 overflow-hidden">
@@ -1942,7 +1942,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
 
         {/* COLUMN 3: FLYOUT DRAWER (ASSETS / AUDIO MIXER / SETTINGS - DARK) */}
         {activeFlyoutTab && (
-          <div className="w-80 border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto">
+          <div className="w-80 h-full border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto studio-scrollbar shrink-0">
             {/* TAB 1: ASSETS & SCENES GRID */}
             {activeFlyoutTab === 'assets' && (
               <AssetsFlyoutTab
@@ -2272,8 +2272,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       {/* 3. CAPCUT PROFESSIONAL MULTI-TRACK TIMELINE */}
       {/* ───────────────────────────────────────────────────────────── */}
       <footer
-        className={`border-t border-[#1E2330] bg-[#12141F] flex flex-col z-20 transition-all duration-200 ${
-          isTimelineCollapsed ? 'h-10' : 'h-48 md:h-56'
+        className={`border-t border-[#1E2330] bg-[#12141F] flex flex-col z-20 transition-all duration-200 shrink-0 ${
+          isTimelineCollapsed ? 'h-10' : 'min-h-[380px] pb-8'
         }`}
       >
         {/* Top Mini Control Toolbar with CapCut Tools */}

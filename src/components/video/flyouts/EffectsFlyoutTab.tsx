@@ -137,7 +137,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5 studio-scrollbar">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
@@ -154,7 +154,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Grid of 125 Shaders with Animated Thumbnails */}
-          <div className="grid grid-cols-2 gap-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 studio-scrollbar">
             {transitions.map((item) => {
               const isSelected = selectedItem === item.id;
               return (
@@ -201,7 +201,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Effect Category Filter Pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5 studio-scrollbar">
             {EFFECT_CATEGORIES.map((cat: any) => (
               <button
                 key={cat.id}
@@ -218,7 +218,7 @@ export const EffectsFlyoutTab: React.FC<EffectsFlyoutTabProps> = ({
           </div>
 
           {/* Grid of 40 Filters with Animated Thumbnails */}
-          <div className="grid grid-cols-2 gap-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 studio-scrollbar">
             {filteredEffects.map((eff) => {
               const isSelected = selectedItem === eff.id;
               return (
