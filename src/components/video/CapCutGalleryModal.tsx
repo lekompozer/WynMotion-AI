@@ -93,10 +93,9 @@ export const CapCutGalleryModal: React.FC<CapCutGalleryModalProps> = ({
   // Update selectedCategory when initialCategory changes
   useEffect(() => {
     if (initialCategory) {
-      // Find matching category ID or map visual style
-      const matched = CAPCUT_CATEGORIES.find(
-        (c) => c.id === initialCategory || c.styles.includes(initialCategory)
-      );
+      // Prioritize exact category ID match first, then fall back to style group match
+      const exactMatch = CAPCUT_CATEGORIES.find((c) => c.id === initialCategory);
+      const matched = exactMatch || CAPCUT_CATEGORIES.find((c) => c.styles.includes(initialCategory));
       if (matched) {
         setSelectedCategoryId(matched.id);
       } else {

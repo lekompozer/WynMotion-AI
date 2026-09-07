@@ -33,8 +33,8 @@ export const CAPCUT_ADS_TEMPLATES: Record<string, CapCutTemplateData> = {
     id: 'animation_ads_image_veo',
     titleVi: 'Animation Ads Image (VIP)',
     titleEn: 'Animation Ads Image (VIP)',
-    descVi: 'Nhập text prompt & đính kèm tối đa 5 ảnh tham chiếu → Gemini Omni 1.1 Flash tự động biến thành video hoạt họa kèm âm thanh sống động.',
-    descEn: 'Enter text prompt & attach up to 5 reference photos → Gemini Omni 1.1 Flash generates animation video with native audio.',
+    descVi: 'Nhập text prompt & đính kèm tối đa 5 ảnh tham chiếu → WynMotion tự động biến thành video hoạt họa kèm âm thanh sống động.',
+    descEn: 'Enter text prompt & attach up to 5 reference photos → WynMotion generates animation video with native audio.',
     durationSec: 15.0,
     videoUrl: '/templates/animation_ads_image_demo.mp4',
     bgmUrl: '',
@@ -643,7 +643,6 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                       <span>✨</span>
                       <span>{t('Ý Tưởng / Mô Tả Hoạt Họa Quảng Cáo', 'Animation Prompt / Commercial Concept')}</span>
                     </span>
-                    <span className="text-[10px] text-cyan-300 font-bold">Gemini Omni 1.1 Flash</span>
                   </label>
                   <textarea
                     rows={3}
@@ -668,8 +667,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   </div>
                   <p className="text-[11px] text-white/90 leading-relaxed">
                     {t(
-                      'Khi bạn muốn tải ảnh lên để Gemini Omni 1.1 Flash biến chúng thành một đoạn video hoạt họa, mô hình hỗ trợ tải lên tối đa 5 ảnh tham chiếu bổ trợ cho mỗi lần tạo.',
-                      'When uploading images for Gemini Omni 1.1 Flash to animate into video, the model supports up to 5 reference images per generation.'
+                      'Khi bạn muốn tải ảnh lên để WynMotion biến chúng thành một đoạn video hoạt họa, mô hình hỗ trợ tải lên tối đa 5 ảnh tham chiếu bổ trợ cho mỗi lần tạo.',
+                      'When uploading images for WynMotion to animate into video, the model supports up to 5 reference images per generation.'
                     )}
                   </p>
                   <ul className="text-[11px] text-white/80 space-y-1 pl-4 list-disc leading-relaxed">
@@ -937,7 +936,7 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-start gap-2.5">
                     <span className="text-base">🎙️</span>
                     <div className="text-[11px] text-emerald-200/90 leading-relaxed">
-                      <strong>{t('Âm thanh tự động đồng bộ bởi Gemini Omni:', 'Native Audio Sync by Gemini Omni:')}</strong>{' '}
+                      <strong>{t('Âm thanh tự động đồng bộ bởi AI Model:', 'Native Audio Sync by AI Model:')}</strong>{' '}
                       {t(
                         'Mô hình tự sinh âm thanh chuyển động, tiếng động (SFX) và thoại/nhạc nền sống động đồng bộ theo từng khung hình. Bạn có thể chèn thêm nhạc nền hoặc điều chỉnh âm thanh trong Studio sau khi render.',
                         'The model natively generates synchronized ambient audio, sound effects (SFX), and voiceover. You can still customize or add audio tracks in Studio later.'
@@ -983,8 +982,8 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                       <p>
                         <strong className="text-cyan-300">{t('First and last frame interpolation:', 'First & Last Frame Interpolation:')}</strong>{' '}
                         {t(
-                          'Gemini Omni Flash hỗ trợ tạo video chuyển động mượt mà giữa ảnh khởi đầu và ảnh kết thúc khi cung cấp 2 ảnh.',
-                          'Gemini Omni Flash generates seamless transitions between starting and ending frames when 2 images are provided.'
+                          'AI Model hỗ trợ tạo video chuyển động mượt mà giữa ảnh khởi đầu và ảnh kết thúc khi cung cấp 2 ảnh.',
+                          'AI Model generates seamless transitions between starting and ending frames when 2 images are provided.'
                         )}
                       </p>
                       <p>
