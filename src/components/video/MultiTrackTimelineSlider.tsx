@@ -461,8 +461,9 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
         if (direction === 'right') {
           calcDur = Math.max(0.2, Math.min(totalDuration - item.startTime, snapToGrid(item.duration + deltaTime, 0.05)));
         } else {
-          calcStart = Math.max(0, snapToGrid(item.startTime + deltaTime, 0.05));
-          calcDur = Math.max(0.2, snapToGrid(item.duration - (calcStart - item.startTime), 0.05));
+          const origEnd = item.startTime + item.duration;
+          calcStart = Math.max(0, Math.min(origEnd - 0.2, snapToGrid(item.startTime + deltaTime, 0.05)));
+          calcDur = Math.max(0.2, snapToGrid(origEnd - calcStart, 0.05));
         }
 
         setActiveDrag((prev) =>

@@ -1,10 +1,10 @@
 export function timeToPixels(seconds: number, zoom: number): number {
-  return Math.max(0, seconds * zoom);
+  return seconds * zoom;
 }
 
 export function pixelsToTime(pixels: number, zoom: number): number {
   if (zoom <= 0) return 0;
-  return Math.max(0, pixels / zoom);
+  return pixels / zoom;
 }
 
 export function formatTimestamp(seconds: number): string {
