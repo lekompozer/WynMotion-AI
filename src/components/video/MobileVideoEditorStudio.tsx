@@ -1129,10 +1129,10 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         caption_preset_style: captionPresetStyle,
         caption_font_size: captionFontSize,
         subs_pos_y: subsPosY,
-        timeline_effects: timelineEffects,
+        timeline_effects: (project as any).timeline_effects || [],
         visual_style: visualStyle,
         bg_color: bgColor,
-        studio_config: studioConfig,
+        studio_config: (project as any).studio_config || undefined,
       });
 
       // Instant pre-rendered MP4 hit
