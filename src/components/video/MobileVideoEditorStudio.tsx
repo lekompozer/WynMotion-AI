@@ -2643,6 +2643,22 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onChangeTickerText={(txt) => {
                   if (activeScene) updateScene(activeScene.scene_id, { ticker_text: txt } as any);
                 }}
+                scenes={scenes as any}
+                originalLanguage={(project as any)?.whisper_original_language || 'vi'}
+                targetLanguage={(project as any)?.whisper_target_language || 'en'}
+                hasTranslatedSegments={Boolean((project as any)?.whisper_translated_segments?.length > 0)}
+                activeSubtitleMode={(project as any)?.whisper_active_mode || 'original'}
+                onChangeSubtitleMode={(mode) => {
+                  const p = project as any;
+                  if (mode === 'translated' && p?.whisper_translated_segments?.length > 0) {
+                    setCaptionSegments(p.whisper_translated_segments);
+                  } else {
+                    setCaptionSegments(p?.whisper_original_segments || p?.whisper_segments || captionSegments);
+                  }
+                  if (project?.project_id) {
+                    wynmotionService.updateProject(project.project_id, { whisper_active_mode: mode } as any).catch(console.warn);
+                  }
+                }}
               />
             </div>
           )}

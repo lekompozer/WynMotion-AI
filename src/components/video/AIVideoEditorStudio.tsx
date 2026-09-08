@@ -513,9 +513,11 @@ function StudioInner({
     setTimeout(() => setSyncStatusMsg(null), 2500);
     if (projectId) {
       await wynmotionService.updateProject(projectId, {
+        caption_segments: editedSegments,
         whisper_original_segments: editedSegments,
         whisper_original_language: lang,
         whisper_active_mode: 'original',
+        show_whisper_subs: true,
       } as any).catch(console.warn);
     }
   };
@@ -537,11 +539,13 @@ function StudioInner({
     setTimeout(() => setSyncStatusMsg(null), 3000);
     if (projectId) {
       await wynmotionService.updateProject(projectId, {
+        caption_segments: translatedSegs,
         whisper_original_segments: originalSegs,
         whisper_original_language: sourceLang,
         whisper_translated_segments: translatedSegs,
         whisper_target_language: targetLang,
         whisper_active_mode: 'translated',
+        show_whisper_subs: true,
       } as any).catch(console.warn);
     }
   };
@@ -2480,6 +2484,24 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onChangeSubtitleMode={handleSwitchSubtitleMode}
                 originalLanguage={captionOriginalLang}
                 targetLanguage={captionTargetLang}
+                originalSegments={originalCaptionSegments}
+                translatedSegments={translatedCaptionSegments}
+                scenes={scenes}
+                onSaveBothSegments={(orig, trans, mode) => {
+                  setOriginalCaptionSegments(orig);
+                  setTranslatedCaptionSegments(trans);
+                  const active = mode === 'translated' ? trans : orig;
+                  setCaptionSegments(active);
+                  setSubtitleMode(mode);
+                  if (projectId) {
+                    wynmotionService.updateProject(projectId, {
+                      caption_segments: active,
+                      whisper_original_segments: orig,
+                      whisper_translated_segments: trans,
+                      whisper_active_mode: mode,
+                    } as any).catch(() => {});
+                  }
+                }}
                 activeScene={scenes.find((s) => s.scene_id === activeSceneId) || scenes[0]}
                 activeSceneIndex={scenes.findIndex((s) => s.scene_id === (activeSceneId || 1))}
                 onUpdateActiveSceneTranscript={(text) => {

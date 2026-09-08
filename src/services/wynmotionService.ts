@@ -725,7 +725,7 @@ export const wynmotionService = {
   },
 
   /**
-   * Translate subtitle segments to target language using DeepSeek AI
+   * Translate subtitle segments to target language using AI translation
    */
   async translateCaptions(
     segments: Array<{ id: number | string; start: number; end: number; text: string; words?: any[] }>,
@@ -748,7 +748,7 @@ export const wynmotionService = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || err.message || 'Lỗi dịch phụ đề bằng DeepSeek AI');
+      throw new Error(err.detail || err.message || 'Lỗi dịch phụ đề bằng AI dịch');
     }
     return await res.json();
   },

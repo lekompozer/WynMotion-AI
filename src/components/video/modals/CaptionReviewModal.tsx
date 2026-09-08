@@ -168,8 +168,8 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
     onClose();
   };
 
-  // 2. Action: Translate using DeepSeek
-  const handleTranslateWithDeepSeek = async () => {
+  // 2. Action: Translate using AI
+  const handleTranslateWithAI = async () => {
     if (segments.length === 0) return;
     setIsTranslating(true);
     try {
@@ -187,8 +187,8 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
         setActiveViewMode('translated');
       }
     } catch (err: any) {
-      console.error('DeepSeek translation error:', err);
-      alert(err.message || 'Lỗi khi dịch phụ đề bằng DeepSeek AI');
+      console.error('AI translation error:', err);
+      alert(err.message || 'Lỗi khi dịch phụ đề bằng AI dịch');
     } finally {
       setIsTranslating(false);
     }
@@ -426,19 +426,19 @@ export const CaptionReviewModal: React.FC<CaptionReviewModalProps> = ({
             {!translatedSegments ? (
               <button
                 type="button"
-                onClick={handleTranslateWithDeepSeek}
+                onClick={handleTranslateWithAI}
                 disabled={isTranslating || segments.length === 0}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black text-xs shadow-lg shadow-purple-900/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 {isTranslating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>DeepSeek đang dịch...</span>
+                    <span>AI đang dịch...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Dịch Phụ Đề (DeepSeek)</span>
+                    <span>Dịch Phụ Đề (AI Dịch)</span>
                   </>
                 )}
               </button>

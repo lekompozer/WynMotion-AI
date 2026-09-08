@@ -63,6 +63,41 @@ export interface CaptionsFlyoutTabProps {
   targetLanguage?: string;
   captionFontSize?: number;
   onChangeCaptionFontSize?: (size: number) => void;
+  scenes?: any[];
+  originalSegments?: CaptionSegment[];
+  translatedSegments?: CaptionSegment[];
+  onSaveBothSegments?: (orig: CaptionSegment[], trans: CaptionSegment[], mode: 'original' | 'translated') => void;
+}
+
+function getLangFlag(lang?: string): string {
+  if (!lang) return '🌐';
+  const l = lang.toLowerCase();
+  if (l.includes('vi')) return '🇻🇳';
+  if (l.includes('en')) return '🇺🇸';
+  if (l.includes('zh') || l.includes('cn')) return '🇨🇳';
+  if (l.includes('ja') || l.includes('jp')) return '🇯🇵';
+  if (l.includes('ko') || l.includes('kr')) return '🇰🇷';
+  if (l.includes('fr')) return '🇫🇷';
+  if (l.includes('de')) return '🇩🇪';
+  if (l.includes('es')) return '🇪🇸';
+  return '🌐';
+}
+
+function formatTimestamp(sec?: number): string {
+  if (typeof sec !== 'number' || isNaN(sec)) return '00:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.floor((sec % 1) * 10);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${ms}`;
+}
+
+export interface SentenceItem {
+  id: string | number;
+  speaker?: string;
+  text: string;
+  start?: number;
+  end?: number;
+  segmentId?: string | number;
 }
 
 export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
@@ -83,6 +118,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   onChangeCaptionFontSize,
   activeScene,
   activeSceneIndex = 0,
+  scenes,
   onUpdateActiveSceneTranscript,
   hasVoiceAudio = true,
   isCommercialMusicStyle = false,
@@ -102,12 +138,17 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   onChangeSubtitleMode,
   originalLanguage = 'vi',
   targetLanguage = 'en',
+  originalSegments,
+  translatedSegments,
+  onSaveBothSegments,
 }) => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>(originalLanguage || 'vi');
   const [activeSubTab, setActiveSubTab] = useState<'presets' | 'timeline' | 'news_badge'>('presets');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editText, setEditText] = useState<string>('');
   const [isSeparatingLyrics, setIsSeparatingLyrics] = useState(false);
+  const [sceneSentences, setSceneSentences] = useState<SentenceItem[]>([]);
+  const [isAppliedSuccess, setIsAppliedSuccess] = useState(false);
 
 
   const isNewsStyle =
@@ -167,6 +208,157 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
   const handleDeleteSegment = (id: string | number) => {
     onChangeSegments(segments.filter((seg) => String(seg.id) !== String(id)));
+  };
+
+  // ── Calculate Active Scene Time Window ──
+  const sceneTimeWindow = React.useMemo(() => {
+    if (!scenes || scenes.length === 0) {
+      return { start: 0, end: 999999 };
+    }
+    let start = 0;
+    for (let i = 0; i < activeSceneIndex && i < scenes.length; i++) {
+      start += (scenes[i].duration_frames || 150) / 30;
+    }
+    const dur = (activeScene?.duration_frames || scenes[activeSceneIndex]?.duration_frames || 150) / 30;
+    return { start, end: start + dur };
+  }, [scenes, activeSceneIndex, activeScene]);
+
+  // ── Synchronize Sentences for Active Scene & Language ──
+  React.useEffect(() => {
+    const currentList = segments || [];
+
+    // Find segments falling into this scene's window
+    const matched = scenes && scenes.length > 1
+      ? currentList.filter(s => (s.start >= sceneTimeWindow.start - 0.15 && s.start < sceneTimeWindow.end) || (s.end > sceneTimeWindow.start && s.end <= sceneTimeWindow.end + 0.15))
+      : currentList;
+
+    if (matched.length > 0) {
+      const parsedItems: SentenceItem[] = matched.map((seg, idx) => {
+        const raw = seg.text || '';
+        const match = raw.match(/^\[(.*?)\]\s*:\s*([\s\S]+)$/);
+        return {
+          id: seg.id || `seg_${idx}`,
+          segmentId: seg.id,
+          speaker: match ? match[1].trim() : undefined,
+          text: match ? match[2].trim() : raw.trim(),
+          start: seg.start,
+          end: seg.end,
+        };
+      });
+      setSceneSentences(parsedItems);
+    } else {
+      // Fallback: parse from activeScene transcript
+      const rawText = (activeScene?.voice_transcript || activeScene?.summary_text || '').trim();
+      if (!rawText) {
+        setSceneSentences([]);
+        return;
+      }
+      const regex = /\[(.*?)\]\s*:\s*([^\[]+)/g;
+      const turnItems: SentenceItem[] = [];
+      let m;
+      while ((m = regex.exec(rawText)) !== null) {
+        turnItems.push({
+          id: `raw_${turnItems.length}`,
+          speaker: m[1].trim(),
+          text: m[2].trim(),
+        });
+      }
+      if (turnItems.length > 0) {
+        setSceneSentences(turnItems);
+      } else {
+        const lines = rawText.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
+        setSceneSentences(lines.map((l: string, i: number) => ({
+          id: `line_${i}`,
+          text: l,
+        })));
+      }
+    }
+  }, [activeScene?.scene_id, activeSceneIndex, activeSubtitleMode, segments, sceneTimeWindow.start, sceneTimeWindow.end]);
+
+  const handleEditSentenceText = (idx: number, newText: string) => {
+    setSceneSentences(prev => prev.map((item, i) => i === idx ? { ...item, text: newText } : item));
+  };
+
+  const handleAddSentence = () => {
+    const newId = `new_${Date.now()}`;
+    const last = sceneSentences[sceneSentences.length - 1];
+    const newStart = last?.end !== undefined ? last.end : sceneTimeWindow.start;
+    const newEnd = Math.min(sceneTimeWindow.end, newStart + 2.5);
+    setSceneSentences(prev => [
+      ...prev,
+      {
+        id: newId,
+        text: 'Nội dung phụ đề mới...',
+        start: Number(newStart.toFixed(1)),
+        end: Number(newEnd.toFixed(1)),
+      }
+    ]);
+  };
+
+  const handleDeleteSentence = (idx: number) => {
+    setSceneSentences(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleApplyToVideo = () => {
+    let updatedSegments = [...segments];
+
+    sceneSentences.forEach((item) => {
+      const fullText = item.speaker ? `[${item.speaker}]: ${item.text}` : item.text;
+      const existingIdx = updatedSegments.findIndex(s => String(s.id) === String(item.segmentId));
+      if (existingIdx !== -1) {
+        const seg = updatedSegments[existingIdx];
+        const words = (item.text || '').trim().split(/\s+/).filter(Boolean);
+        const dur = Math.max(0.2, (seg.end - seg.start));
+        const step = dur / Math.max(1, words.length);
+        const newWords = words.map((w, wIdx) => ({
+          word: w,
+          start: Number((seg.start + wIdx * step).toFixed(2)),
+          end: Number((seg.start + (wIdx + 1) * step).toFixed(2)),
+          probability: 0.99,
+        }));
+        updatedSegments[existingIdx] = {
+          ...seg,
+          text: fullText,
+          words: newWords,
+        };
+      } else if (item.start !== undefined && item.end !== undefined) {
+        const words = (item.text || '').trim().split(/\s+/).filter(Boolean);
+        const dur = Math.max(0.2, (item.end - item.start));
+        const step = dur / Math.max(1, words.length);
+        const newWords = words.map((w, wIdx) => ({
+          word: w,
+          start: Number((item.start! + wIdx * step).toFixed(2)),
+          end: Number((item.start! + (wIdx + 1) * step).toFixed(2)),
+          probability: 0.99,
+        }));
+        updatedSegments.push({
+          id: item.id,
+          start: item.start,
+          end: item.end,
+          text: fullText,
+          words: newWords,
+        });
+      }
+    });
+
+    updatedSegments.sort((a, b) => a.start - b.start);
+    onChangeSegments(updatedSegments);
+
+    if (onSaveBothSegments) {
+      if (activeSubtitleMode === 'translated') {
+        onSaveBothSegments(originalSegments || [], updatedSegments, 'translated');
+      } else {
+        onSaveBothSegments(updatedSegments, translatedSegments || [], 'original');
+      }
+    }
+
+    const fullTranscript = sceneSentences
+      .map(item => item.speaker ? `[${item.speaker}]: ${item.text}` : item.text)
+      .join('\n');
+    onUpdateActiveSceneTranscript?.(fullTranscript);
+
+    setIsAppliedSuccess(true);
+    setTimeout(() => setIsAppliedSuccess(false), 2500);
   };
 
   const handleAddCustomSegment = () => {
@@ -471,28 +663,121 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                 className="w-full py-2 px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>Rà Soát & Dịch Phụ Đề (DeepSeek)</span>
+                <span>Rà Soát & Dịch Phụ Đề (AI Dịch)</span>
               </button>
             )}
           </div>
 
-
-          {/* Active Scene Transcript Editor (Transferred from Settings) */}
-          {activeScene && onUpdateActiveSceneTranscript && (
-            <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-700/60 space-y-2">
-              <div className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+          {/* ── SỬA PHỤ ĐỀ (TỪNG CÂU & DROPDOWN BẢN DỊCH / BẢN GỐC) ── */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#161A28] to-[#10131E] border border-[#262F47] space-y-3">
+            {/* Header: Tiêu đề + Badge phân cảnh + Dropdown ngôn ngữ đã dịch */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
                 <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Sửa Lời Thoại / Phụ Đề Whisper (Phân cảnh {activeSceneIndex + 1})</span>
+                <span className="text-xs font-black text-white">Sửa phụ đề</span>
+                {activeScene && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 font-bold border border-cyan-500/20">
+                    Cảnh {activeSceneIndex + 1}
+                  </span>
+                )}
               </div>
-              <textarea
-                value={activeScene.voice_transcript || activeScene.summary_text || ''}
-                onChange={(e) => onUpdateActiveSceneTranscript(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-xl text-xs leading-relaxed border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-mono"
-                placeholder="Nhập lời thoại hoặc phụ đề khớp giọng đọc phân cảnh này..."
-              />
+
+              {/* Dropdown chọn ngôn ngữ đã có bản dịch */}
+              <div className="flex items-center gap-1">
+                <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <select
+                  value={activeSubtitleMode}
+                  onChange={(e) => onChangeSubtitleMode?.(e.target.value as 'original' | 'translated')}
+                  className="text-[11px] font-bold bg-[#141828] border border-[#2D364D] text-cyan-300 rounded-xl px-2 py-1 focus:outline-none focus:border-cyan-400 cursor-pointer shadow-sm"
+                  title="Chọn ngôn ngữ phụ đề để hiển thị và chỉnh sửa"
+                >
+                  <option value="original">
+                    {getLangFlag(originalLanguage)} Bản Gốc ({(originalLanguage || 'vi').toUpperCase()})
+                  </option>
+                  {hasTranslatedSegments && (
+                    <option value="translated">
+                      {getLangFlag(targetLanguage)} Bản Dịch ({(targetLanguage || 'en').toUpperCase()})
+                    </option>
+                  )}
+                </select>
+              </div>
             </div>
-          )}
+
+            {/* Danh sách các câu phụ đề của phân cảnh hiện tại */}
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 studio-scrollbar">
+              {sceneSentences.length === 0 ? (
+                <div className="p-4 text-center text-slate-400 border border-dashed border-[#232A3E] rounded-xl text-xs space-y-1">
+                  <p className="font-bold text-slate-300">Chưa có câu phụ đề nào ở phân cảnh này</p>
+                  <p className="text-[10px] text-slate-500">Bấm nút "Thêm câu" bên dưới để tạo phụ đề mới.</p>
+                </div>
+              ) : (
+                sceneSentences.map((item, idx) => (
+                  <div
+                    key={item.id || idx}
+                    className="p-2.5 rounded-xl bg-[#121524] border border-[#232B40] space-y-1.5 focus-within:border-cyan-400/50 transition-all"
+                  >
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-cyan-400">#{idx + 1}</span>
+                        {item.speaker && (
+                          <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                            {item.speaker}
+                          </span>
+                        )}
+                        {item.start !== undefined && (
+                          <span className="font-mono text-[10px] text-slate-400">
+                            ⏱️ {formatTimestamp(item.start)} → {formatTimestamp(item.end)}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSentence(idx)}
+                        className="p-1 text-slate-500 hover:text-red-400 rounded transition-colors"
+                        title="Xóa câu này"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    <textarea
+                      value={item.text}
+                      onChange={(e) => handleEditSentenceText(idx, e.target.value)}
+                      rows={2}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs leading-relaxed border border-[#262F47] bg-[#0C0E18] text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-mono"
+                      placeholder="Nhập nội dung phụ đề câu này..."
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Thanh công cụ: Thêm câu & Nút Áp Dụng Vào Video */}
+            <div className="flex items-center gap-2 pt-1 border-t border-[#20273D]">
+              <button
+                type="button"
+                onClick={handleAddSentence}
+                className="py-2 px-3 rounded-xl border border-[#2A3550] bg-[#141828] hover:bg-[#1C2238] text-slate-300 font-bold text-xs flex items-center gap-1 transition-all active:scale-95 shrink-0"
+                title="Thêm một câu phụ đề mới vào phân cảnh này"
+              >
+                <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Thêm câu</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyToVideo}
+                className={`flex-1 py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-md cursor-pointer ${
+                  isAppliedSuccess
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-emerald-500/30'
+                    : 'bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-cyan-500/20'
+                }`}
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>{isAppliedSuccess ? 'Đã Áp Dụng Vào Video!' : 'Áp Dụng Vào Video'}</span>
+              </button>
+            </div>
+          </div>
         </>
       )}
 
