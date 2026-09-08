@@ -12,10 +12,13 @@ interface DynamicAnimationCompositionProps {
   showSceneCards?: boolean;
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';
-  subsPosY?: 'top' | 'middle' | 'bottom';
+  subsPosY?: 'top' | 'middle' | 'bottom' | string | number;
   captionSegments?: CaptionSegment[];
   captionPresetStyle?: CaptionPresetStyle;
   captionFontSize?: number;
+  captionFontFamily?: string;
+  captionTextColor?: string;
+  captionHighlightColor?: string;
   timelineEffects?: CustomTimelineEffect[];
   swapSpeakers?: boolean;
   onCardClick?: () => void;
@@ -34,6 +37,9 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
   captionSegments = [],
   captionPresetStyle = 'karaoke_glow',
   captionFontSize = 32,
+  captionFontFamily,
+  captionTextColor,
+  captionHighlightColor,
   timelineEffects = [],
   onUpdateScene,
 }) => {
@@ -160,6 +166,9 @@ export const DynamicAnimationComposition: React.FC<DynamicAnimationCompositionPr
           presetStyle={captionPresetStyle}
           fontSize={captionFontSize}
           positionY={subsPosY}
+          fontFamily={captionFontFamily}
+          customColor={captionTextColor}
+          highlightColor={captionHighlightColor}
         />
       )}
     </div>

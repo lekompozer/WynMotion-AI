@@ -242,9 +242,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
     return true;
   });
   const [cardPosY, setCardPosY] = useState<TextPosition>('middle');
-  const [subsPosY, setSubsPosY] = useState<TextPosition>(() => {
+  const [subsPosY, setSubsPosY] = useState<any>(() => {
     const p = project as any;
-    return p?.subs_pos_y || p?.studio_config?.captions_config?.position_y || p?.studio_config?.settings?.subs_pos_y || 'bottom';
+    return p?.subs_pos_y ?? p?.studio_config?.captions_config?.position_y ?? p?.studio_config?.settings?.subs_pos_y ?? 82;
   });
   const [swapSpeakers, setSwapSpeakers] = useState<boolean>(() => {
     try {

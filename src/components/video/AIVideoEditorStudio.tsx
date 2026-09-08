@@ -71,7 +71,8 @@ import { ExportProgressModal } from './modals/ExportProgressModal';
 import { CaptionReviewModal } from './modals/CaptionReviewModal';
 import { MultiTrackTimelineSlider } from './MultiTrackTimelineSlider';
 import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/types';
-import { CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
+import { CapCutCaptionRenderer, CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
+import { CapCutTextInspector } from './CapCutTextInspector';
 import { CustomTimelineEffect } from './styles/ActiveEffectsOverlay';
 import { snapToGrid } from '../../../packages/timeline-core/math_timeline';
 import { wordaiAuth } from '@/lib/wordai-firebase';
@@ -798,10 +799,23 @@ function StudioInner({
     return true;
   });
   const [cardPosY, setCardPosY] = useState<'top' | 'middle' | 'bottom'>('middle');
-  const [subsPosY, setSubsPosY] = useState<'top' | 'middle' | 'bottom'>(() => {
+  const [subsPosY, setSubsPosY] = useState<any>(() => {
     const p = projectData as any;
-    return p?.subs_pos_y || p?.studio_config?.captions_config?.position_y || p?.studio_config?.settings?.subs_pos_y || 'bottom';
+    return p?.subs_pos_y ?? p?.studio_config?.captions_config?.position_y ?? p?.studio_config?.settings?.subs_pos_y ?? 82;
   });
+  const [captionFontFamily, setCaptionFontFamily] = useState<string>(() => {
+    const p = projectData as any;
+    return p?.caption_font_family || p?.studio_config?.captions_config?.font_family || 'Outfit, Montserrat, sans-serif';
+  });
+  const [captionTextColor, setCaptionTextColor] = useState<string>(() => {
+    const p = projectData as any;
+    return p?.caption_text_color || p?.studio_config?.captions_config?.text_color || '#FFFFFF';
+  });
+  const [captionHighlightColor, setCaptionHighlightColor] = useState<string>(() => {
+    const p = projectData as any;
+    return p?.caption_highlight_color || p?.studio_config?.captions_config?.highlight_color || '#FACC15';
+  });
+  const [isCapCutInspectorOpen, setIsCapCutInspectorOpen] = useState<boolean>(false);
 
   // Timer counting seconds while export is active (Max 10 mins)
   useEffect(() => {
@@ -900,6 +914,9 @@ function StudioInner({
       caption_segments: captionSegments,
       font_size: captionFontSize,
       position_y: subsPosY,
+      font_family: captionFontFamily,
+      text_color: captionTextColor,
+      highlight_color: captionHighlightColor,
       max_width_pct: 85,
     };
 
@@ -946,6 +963,9 @@ function StudioInner({
     timelineEffects,
     captionPresetStyle,
     captionFontSize,
+    captionFontFamily,
+    captionTextColor,
+    captionHighlightColor,
     captionSegments,
     selectedExportResolution,
     projectId,
@@ -963,12 +983,15 @@ function StudioInner({
         subs_pos_y: subsPosY,
         caption_preset_style: captionPresetStyle,
         caption_font_size: captionFontSize,
+        caption_font_family: captionFontFamily,
+        caption_text_color: captionTextColor,
+        caption_highlight_color: captionHighlightColor,
         caption_segments: captionSegments,
         studio_config: masterStudioConfig,
       } as any).catch(() => {});
     }, 1200);
     return () => clearTimeout(t);
-  }, [masterStudioConfig, projectId, scenes, aspectRatio, bgColor, showWhisperSubs, subsPosY, captionPresetStyle, captionFontSize, captionSegments]);
+  }, [masterStudioConfig, projectId, scenes, aspectRatio, bgColor, showWhisperSubs, subsPosY, captionPresetStyle, captionFontSize, captionFontFamily, captionTextColor, captionHighlightColor, captionSegments]);
 
   // Custom User Uploaded Images
   const [uploadedImages, setUploadedImages] = useState<{ id: string; name: string; url: string }[]>([]);
@@ -1681,6 +1704,9 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           caption_segments: captionSegments,
           caption_preset_style: captionPresetStyle,
           caption_font_size: captionFontSize,
+          caption_font_family: captionFontFamily,
+          caption_text_color: captionTextColor,
+          caption_highlight_color: captionHighlightColor,
           voice_start_sec: audioTrim.startTime,
           voice_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
           bgm_start_sec: audioTrim.startTime,
@@ -2840,6 +2866,9 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               captionSegments={captionSegments}
               captionPresetStyle={captionPresetStyle}
               captionFontSize={captionFontSize}
+              captionFontFamily={captionFontFamily}
+              captionTextColor={captionTextColor}
+              captionHighlightColor={captionHighlightColor}
               timelineEffects={timelineEffects}
               onUpdateScene={(sceneId, updated) => {
                 setScenes((prev) =>
@@ -2848,6 +2877,37 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               }}
             />
           </div>
+
+          {/* Quick floating Inspector trigger on canvas */}
+          {showWhisperSubs && captionSegments && captionSegments.length > 0 && !isCapCutInspectorOpen && (
+            <button
+              type="button"
+              onClick={() => setIsCapCutInspectorOpen(true)}
+              className="absolute top-4 right-4 z-30 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 backdrop-blur-md shadow-xl flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95 cursor-pointer hover:border-cyan-400"
+              title="Mở bảng điều chỉnh phông chữ, cỡ chữ, màu sắc CapCut"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Kiểu Chữ CapCut</span>
+            </button>
+          )}
+
+          {/* CapCut Text Inspector Slide Panel (Right of canvas) */}
+          <CapCutTextInspector
+            isOpen={isCapCutInspectorOpen}
+            onClose={() => setIsCapCutInspectorOpen(false)}
+            presetStyle={captionPresetStyle}
+            onChangePresetStyle={setCaptionPresetStyle}
+            fontSize={captionFontSize}
+            onChangeFontSize={setCaptionFontSize}
+            positionY={subsPosY}
+            onChangePositionY={setSubsPosY}
+            fontFamily={captionFontFamily}
+            onChangeFontFamily={setCaptionFontFamily}
+            textColor={captionTextColor}
+            onChangeTextColor={setCaptionTextColor}
+            highlightColor={captionHighlightColor}
+            onChangeHighlightColor={setCaptionHighlightColor}
+          />
         </main>
       </div>
 
@@ -2971,15 +3031,15 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
-            {/* Quick Caption Font Size Controls (Phóng to / Thu nhỏ Text Phụ đề) */}
+            {/* Quick Caption Font Size Controls & CapCut Text Studio Button */}
             {showWhisperSubs && captionSegments && captionSegments.length > 0 && (
-              <div className="flex items-center gap-1 pl-2 border-l border-[#252B3E]">
+              <div className="flex items-center gap-1.5 pl-2 border-l border-[#252B3E]">
                 <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Cỡ Sub:</span>
                 <button
                   type="button"
-                  onClick={() => setCaptionFontSize((s) => Math.max(16, s - 2))}
+                  onClick={() => setCaptionFontSize((s) => Math.max(4, s - 2))}
                   className="px-1.5 py-0.5 rounded bg-[#202538] hover:bg-[#2A324B] text-[10px] text-slate-300 font-bold hover:text-white transition-all cursor-pointer"
-                  title="Thu nhỏ chữ phụ đề (A-)"
+                  title="Thu nhỏ chữ phụ đề (A-) - Cỡ thấp nhất 4px"
                 >
                   A-
                 </button>
@@ -2988,11 +3048,24 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setCaptionFontSize((s) => Math.min(68, s + 2))}
+                  onClick={() => setCaptionFontSize((s) => Math.min(72, s + 2))}
                   className="px-1.5 py-0.5 rounded bg-[#202538] hover:bg-[#2A324B] text-[10px] text-slate-300 font-bold hover:text-white transition-all cursor-pointer"
                   title="Phóng to chữ phụ đề (A+)"
                 >
                   A+
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCapCutInspectorOpen((v) => !v)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer ${
+                    isCapCutInspectorOpen
+                      ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                      : 'bg-[#202538] hover:bg-[#2A324B] text-cyan-300 border border-cyan-500/30'
+                  }`}
+                  title="Mở bảng điều chỉnh phông chữ, cỡ chữ, vị trí Y và màu sắc CapCut"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Chỉnh Chữ CapCut</span>
                 </button>
               </div>
             )}

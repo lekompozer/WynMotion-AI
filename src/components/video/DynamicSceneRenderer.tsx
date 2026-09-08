@@ -88,7 +88,7 @@ export interface DynamicSceneRendererProps {
   showSceneCards?: boolean;
   showWhisperSubs?: boolean;
   cardPosY?: 'top' | 'middle' | 'bottom';
-  subsPosY?: 'top' | 'middle' | 'bottom';
+  subsPosY?: 'top' | 'middle' | 'bottom' | string | number;
   swapSpeakers?: boolean;
   onCardClick?: () => void;
   onSubsClick?: () => void;
@@ -288,7 +288,7 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
         showSceneCards={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' || effectiveStyle === 'apple_modern_motion' ? false : showSceneCards}
         showWhisperSubs={effectiveStyle === 'product_ads_motion' || effectiveStyle === 'ads_strobe_teaser' || effectiveStyle === 'apple_modern_motion' ? false : showWhisperSubs}
         cardPosY={cardPosY}
-        subsPosY={subsPosY}
+        subsPosY={subsPosY as any}
         swapSpeakers={swapSpeakers}
         onCardClick={onCardClick}
         onSubsClick={onSubsClick}
@@ -312,6 +312,18 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   };
 
   const getSubsStyle = (): React.CSSProperties => {
+    if (typeof subsPosY === 'number') {
+      return { top: `${subsPosY}%`, left: '50%', transform: 'translate(-50%, -50%)' };
+    }
+    if (typeof subsPosY === 'string') {
+      if (subsPosY.endsWith('%') || subsPosY.endsWith('px')) {
+        return { top: subsPosY, left: '50%', transform: 'translate(-50%, -50%)' };
+      }
+      const num = parseFloat(subsPosY);
+      if (!isNaN(num)) {
+        return { top: `${num}%`, left: '50%', transform: 'translate(-50%, -50%)' };
+      }
+    }
     if (subsPosY === 'top') {
       return { top: isPortrait ? 8 : 10, left: '50%', transform: 'translateX(-50%)' };
     }

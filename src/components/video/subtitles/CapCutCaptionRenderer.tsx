@@ -13,7 +13,11 @@ export type CaptionPresetStyle =
   | 'gradient_wave'
   | 'fashion_serif'
   | 'news_flash'
-  | 'typewriter_cursor';
+  | 'typewriter_cursor'
+  | 'clean_white'
+  | 'clean_black'
+  | 'block_white_on_black'
+  | 'block_black_on_white';
 
 export interface CaptionWord {
   word: string;
@@ -34,20 +38,25 @@ export interface CapCutCaptionRendererProps {
   segments: CaptionSegment[];
   presetStyle?: CaptionPresetStyle;
   fontSize?: number;
-  positionY?: 'top' | 'middle' | 'bottom';
+  positionY?: 'top' | 'middle' | 'bottom' | string | number;
   customColor?: string;
   highlightColor?: string;
+  fontFamily?: string;
   uppercase?: boolean;
 }
 
 export const CAPTION_PRESET_LABELS: Record<CaptionPresetStyle, { label: string; desc: string; icon: string }> = {
   karaoke_glow: { label: 'Karaoke Glow', desc: 'Từ đang nói đổi màu vàng chanh & phát sáng', icon: '🎤' },
   spring_bounce: { label: 'Spring Bounce', desc: 'Chữ nảy nhún 3D theo từng từ phát âm', icon: '⚡' },
+  block_white_on_black: { label: 'Hộp Đen Chữ Trắng', desc: 'Cả câu chữ trắng trên nền đen bo góc tĩnh', icon: '⬛' },
+  block_black_on_white: { label: 'Hộp Trắng Chữ Đen', desc: 'Cả câu chữ đen trên nền trắng thanh lịch', icon: '⬜' },
+  clean_white: { label: 'Trắng Điện Ảnh', desc: 'Chữ trắng không nền, bóng mờ dịu mắt', icon: '⚪' },
+  clean_black: { label: 'Đen Tương Phản', desc: 'Chữ đen không nền, sắc nét tinh tế', icon: '⚫' },
+  gradient_wave: { label: 'Gradient Wave', desc: 'Dải màu chuyển sắc cầu vồng, từ đọc sáng rực', icon: '🌊' },
+  comic_slant: { label: 'Comic Slant', desc: 'Nghiêng 4°, viền nét vẽ Manga rõ nét', icon: '💥' },
   cyberpunk_neon: { label: 'Cyberpunk Neon', desc: 'Viền đèn neon phát sáng Cyan & Magenta', icon: '🌆' },
   pill_badge: { label: 'Pill Badge', desc: 'Từ đang nói nằm trong khung bo góc gradient', icon: '💊' },
-  comic_slant: { label: 'Comic Slant', desc: 'Nghiêng 6°, viền đen dày phong cách Manga', icon: '💥' },
-  minimal_bar: { label: 'Minimal Glass', desc: 'Dải kính mờ thanh lịch ở đáy màn hình', icon: '✨' },
-  gradient_wave: { label: 'Gradient Wave', desc: 'Vệt màu chuyển sắc lướt qua theo giọng đọc', icon: '🌊' },
+  minimal_bar: { label: 'Minimal Glass', desc: 'Dải kính mờ thanh lịch bo tròn ở chân màn hình', icon: '✨' },
   fashion_serif: { label: 'Luxury Serif', desc: 'Chữ nghiêng Playfair sang trọng quý phái', icon: '👑' },
   news_flash: { label: 'News Flash', desc: 'Bật từ in đậm cỡ lớn ngay giữa tâm màn hình', icon: '🔥' },
   typewriter_cursor: { label: 'Typewriter', desc: 'Đánh máy từng chữ kèm con trỏ nhấp nháy', icon: '⌨️' },
@@ -60,10 +69,11 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
   positionY = 'bottom',
   customColor,
   highlightColor = '#FFE600',
+  fontFamily,
   uppercase = false,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, height } = useVideoConfig();
+  const { fps } = useVideoConfig();
   const currentTime = frame / fps;
 
   // Find active segment at currentTime
@@ -73,21 +83,45 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
 
   if (!activeSegment) return null;
 
-  const yPosStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: '5%',
-    right: '5%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    textAlign: 'center',
-    pointerEvents: 'none',
-    zIndex: 40,
-    ...(positionY === 'top'
-      ? { top: '12%' }
-      : positionY === 'middle'
-      ? { top: '50%', transform: 'translateY(-50%)' }
-      : { bottom: '15%' }),
+  // Calculate dynamic position Y style supporting slider percentages, numbers and presets
+  const getYPosStyle = (): React.CSSProperties => {
+    let topVal: string | undefined = undefined;
+    let bottomVal: string | undefined = undefined;
+    let transformStr = 'translateX(-50%)';
+
+    if (typeof positionY === 'number') {
+      const clamped = Math.min(95, Math.max(5, positionY));
+      topVal = `${clamped}%`;
+      transformStr = 'translate(-50%, -50%)';
+    } else if (typeof positionY === 'string' && (positionY.endsWith('%') || !isNaN(Number(positionY)))) {
+      const num = positionY.endsWith('%') ? Number(positionY.replace('%', '')) : Number(positionY);
+      const clamped = Math.min(95, Math.max(5, num));
+      topVal = `${clamped}%`;
+      transformStr = 'translate(-50%, -50%)';
+    } else if (positionY === 'top') {
+      topVal = '12%';
+    } else if (positionY === 'middle') {
+      topVal = '50%';
+      transformStr = 'translate(-50%, -50%)';
+    } else {
+      bottomVal = '14%';
+    }
+
+    return {
+      position: 'absolute',
+      left: '50%',
+      width: '90%',
+      maxWidth: '92%',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      textAlign: 'center',
+      pointerEvents: 'none',
+      zIndex: 40,
+      ...(topVal !== undefined ? { top: topVal } : {}),
+      ...(bottomVal !== undefined ? { bottom: bottomVal } : {}),
+      transform: transformStr,
+    };
   };
 
   const textWordsStr = (activeSegment.text || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -106,20 +140,22 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         };
       });
 
+  const resolvedFont = fontFamily || '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif';
+  const wordSpacing = Math.max(2, Math.round(fontSize * 0.1));
 
   return (
-    <div style={yPosStyle}>
+    <div style={getYPosStyle()}>
       {/* ─────────────────────────────────────────────────────────────
           1. KARAOKE GLOW (Default CapCut Style)
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'karaoke_glow' && (
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '8px',
-            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
             fontSize: `${fontSize}px`,
             fontWeight: 900,
             textTransform: uppercase ? 'uppercase' : 'none',
@@ -132,13 +168,14 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
               <span
                 key={idx}
                 style={{
-                  color: isActive ? highlightColor : isPassed ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
-                  textShadow: isActive
-                    ? `0 0 20px ${highlightColor}, 0 4px 12px rgba(0,0,0,0.9), 0 0 4px #000`
-                    : '0 4px 12px rgba(0,0,0,0.9), 0 0 4px #000',
-                  transform: isActive ? 'scale(1.18)' : 'scale(1.0)',
-                  transition: 'transform 0.08s ease-out',
                   display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive ? (highlightColor || '#FFE600') : isPassed ? '#FFFFFF' : 'rgba(255,255,255,0.75)',
+                  textShadow: isActive
+                    ? `0 0 20px ${highlightColor || '#FFE600'}, 0 3px 10px rgba(0,0,0,0.95), 0 0 4px #000`
+                    : '0 3px 10px rgba(0,0,0,0.95), 0 0 4px #000',
+                  transform: isActive ? 'scale(1.15) translateY(-1px)' : 'scale(1.0)',
+                  transition: 'transform 0.08s ease-out',
                 }}
               >
                 {item.word}
@@ -154,11 +191,11 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       {presetStyle === 'spring_bounce' && (
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '10px',
-            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
             fontSize: `${fontSize * 1.05}px`,
             fontWeight: 900,
             textTransform: uppercase ? 'uppercase' : 'none',
@@ -168,16 +205,17 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             const isActive = currentTime >= item.start && currentTime <= item.end;
             const wordFrame = Math.max(0, (currentTime - item.start) * fps);
             const bounce = spring({ frame: wordFrame, fps, config: { damping: 10, stiffness: 160 } });
-            const scale = isActive ? interpolate(bounce, [0, 1], [0.8, 1.25]) : 1.0;
+            const scale = isActive ? interpolate(bounce, [0, 1], [0.85, 1.22]) : 1.0;
 
             return (
               <span
                 key={idx}
                 style={{
-                  color: isActive ? (customColor || '#00F0FF') : '#FFFFFF',
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive ? (customColor || highlightColor || '#00F0FF') : '#FFFFFF',
                   textShadow: '0 4px 15px rgba(0,0,0,0.95), 0 0 6px #000',
                   transform: `scale(${scale})`,
-                  display: 'inline-block',
                 }}
               >
                 {item.word}
@@ -188,19 +226,228 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          3. CYBERPUNK NEON
+          3. BLOCK WHITE ON BLACK (Hộp Đen Chữ Trắng - Cả câu tĩnh)
+          ───────────────────────────────────────────────────────────── */}
+      {presetStyle === 'block_white_on_black' && (
+        <div
+          style={{
+            display: 'inline-block',
+            maxWidth: '88%',
+            padding: `${Math.max(4, Math.round(fontSize * 0.24))}px ${Math.max(10, Math.round(fontSize * 0.5))}px`,
+            borderRadius: `${Math.max(6, Math.round(fontSize * 0.3))}px`,
+            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize}px`,
+            fontWeight: 700,
+            color: '#FFFFFF',
+          }}
+        >
+          {activeSegment.text}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          4. BLOCK BLACK ON WHITE (Hộp Trắng Chữ Đen - Cả câu tĩnh)
+          ───────────────────────────────────────────────────────────── */}
+      {presetStyle === 'block_black_on_white' && (
+        <div
+          style={{
+            display: 'inline-block',
+            maxWidth: '88%',
+            padding: `${Math.max(4, Math.round(fontSize * 0.24))}px ${Math.max(10, Math.round(fontSize * 0.5))}px`,
+            borderRadius: `${Math.max(6, Math.round(fontSize * 0.3))}px`,
+            backgroundColor: 'rgba(255, 255, 255, 0.94)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+            border: '1.5px solid rgba(0, 0, 0, 0.08)',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize}px`,
+            fontWeight: 800,
+            color: '#0F172A',
+          }}
+        >
+          {activeSegment.text}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          5. CLEAN WHITE (Chữ Trắng Điện Ảnh Không Nền)
+          ───────────────────────────────────────────────────────────── */}
+      {presetStyle === 'clean_white' && (
+        <div
+          style={{
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize}px`,
+            fontWeight: 800,
+            color: '#FFFFFF',
+            textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 4px 20px rgba(0,0,0,0.85), 0 0 4px #000',
+          }}
+        >
+          {words.map((item, idx) => {
+            const isActive = currentTime >= item.start && currentTime <= item.end;
+            return (
+              <span
+                key={idx}
+                style={{
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive ? (highlightColor || '#FFE600') : '#FFFFFF',
+                  transform: isActive ? 'scale(1.14)' : 'scale(1.0)',
+                  transition: 'transform 0.06s ease-out',
+                }}
+              >
+                {item.word}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          6. CLEAN BLACK (Chữ Đen Tương Phản Cao Không Nền)
+          ───────────────────────────────────────────────────────────── */}
+      {presetStyle === 'clean_black' && (
+        <div
+          style={{
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize}px`,
+            fontWeight: 900,
+            color: '#0F172A',
+            textShadow: '0 1px 2px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.4)',
+          }}
+        >
+          {words.map((item, idx) => {
+            const isActive = currentTime >= item.start && currentTime <= item.end;
+            return (
+              <span
+                key={idx}
+                style={{
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive ? (customColor || '#0284C7') : '#0F172A',
+                  transform: isActive ? 'scale(1.14)' : 'scale(1.0)',
+                  transition: 'transform 0.06s ease-out',
+                }}
+              >
+                {item.word}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          7. GRADIENT WAVE (Sửa lỗi khung trắng - Gradient chuyển sắc mượt toàn câu)
+          ───────────────────────────────────────────────────────────── */}
+      {presetStyle === 'gradient_wave' && (
+        <div
+          style={{
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize}px`,
+            fontWeight: 900,
+            textShadow: '0 3px 12px rgba(0,0,0,0.95), 0 0 4px #000',
+          }}
+        >
+          {words.map((item, idx) => {
+            const isActive = currentTime >= item.start && currentTime <= item.end;
+            const isPassed = currentTime > item.end;
+            return (
+              <span
+                key={idx}
+                style={{
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive
+                    ? (highlightColor || '#FFE600')
+                    : isPassed
+                    ? '#38BDF8'
+                    : '#C084FC',
+                  transform: isActive ? 'scale(1.18) translateY(-2px)' : 'scale(1.0)',
+                  transition: 'transform 0.08s ease-out',
+                  textShadow: isActive
+                    ? `0 0 16px ${highlightColor || '#FFE600'}, 0 3px 12px rgba(0,0,0,0.95)`
+                    : '0 3px 12px rgba(0,0,0,0.95)',
+                }}
+              >
+                {item.word}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          8. COMIC SLANT (Sửa lỗi chữ đè đôi - 1 lớp truyện tranh rõ nét)
+          ───────────────────────────────────────────────────────────── */}
+      {presetStyle === 'comic_slant' && (
+        <div
+          style={{
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize * 1.08}px`,
+            fontWeight: 900,
+            transform: 'rotate(-4deg)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {words.map((item, idx) => {
+            const isActive = currentTime >= item.start && currentTime <= item.end;
+            const strokeWidth = Math.max(0.8, Math.min(2, fontSize * 0.04));
+            return (
+              <span
+                key={idx}
+                style={{
+                  display: 'inline-block',
+                  margin: `0 ${Math.max(2, Math.round(fontSize * 0.09))}px`,
+                  color: isActive ? (highlightColor || '#FFF500') : '#FFFFFF',
+                  WebkitTextStroke: `${strokeWidth}px #000000`,
+                  textShadow: '0 3px 8px rgba(0,0,0,0.9), 0 1px 2px #000000',
+                  transform: isActive ? 'scale(1.14) translateY(-2px)' : 'scale(1.0)',
+                  transition: 'transform 0.06s ease-out',
+                }}
+              >
+                {item.word}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          9. CYBERPUNK NEON
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'cyberpunk_neon' && (
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '8px',
-            fontFamily: '"Courier New", monospace',
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: fontFamily || '"Courier New", monospace',
             fontSize: `${fontSize * 0.95}px`,
             fontWeight: 900,
-            letterSpacing: '2px',
+            letterSpacing: '1.5px',
             textTransform: 'uppercase',
           }}
         >
@@ -210,12 +457,13 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
               <span
                 key={idx}
                 style={{
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
                   color: isActive ? '#00FFFF' : '#FF007F',
                   textShadow: isActive
                     ? '0 0 10px #00FFFF, 0 0 25px #00FFFF, 0 0 40px #00FFFF'
                     : '0 0 8px #FF007F, 0 0 16px rgba(255,0,127,0.5)',
                   transform: isActive ? 'scale(1.15)' : 'scale(1.0)',
-                  display: 'inline-block',
                 }}
               >
                 {item.word}
@@ -226,16 +474,16 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          4. PILL BADGE
+          10. PILL BADGE
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'pill_badge' && (
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '8px',
-            fontFamily: '"Montserrat", sans-serif',
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.45,
+            fontFamily: resolvedFont,
             fontSize: `${fontSize}px`,
             fontWeight: 800,
           }}
@@ -246,17 +494,18 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
               <span
                 key={idx}
                 style={{
-                  padding: isActive ? '3px 12px' : '3px 6px',
-                  borderRadius: '16px',
+                  display: 'inline-block',
+                  margin: `2px ${Math.max(2, Math.round(fontSize * 0.08))}px`,
+                  padding: isActive ? '2px 10px' : '2px 6px',
+                  borderRadius: '14px',
                   background: isActive
                     ? 'linear-gradient(90deg, #FF7A00 0%, #FFB800 100%)'
-                    : 'rgba(0,0,0,0.5)',
+                    : 'rgba(0,0,0,0.55)',
                   color: isActive ? '#000000' : '#FFFFFF',
                   fontWeight: isActive ? 900 : 700,
                   boxShadow: isActive ? '0 4px 15px rgba(255,122,0,0.8)' : 'none',
                   transform: isActive ? 'scale(1.12)' : 'scale(1.0)',
                   transition: 'all 0.08s ease-out',
-                  display: 'inline-block',
                 }}
               >
                 {item.word}
@@ -267,59 +516,23 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. COMIC SLANT
-          ───────────────────────────────────────────────────────────── */}
-      {presetStyle === 'comic_slant' && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '10px',
-            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
-            fontSize: `${fontSize * 1.15}px`,
-            transform: 'rotate(-4deg)',
-            textTransform: 'uppercase',
-          }}
-        >
-          {words.map((item, idx) => {
-            const isActive = currentTime >= item.start && currentTime <= item.end;
-            return (
-              <span
-                key={idx}
-                style={{
-                  color: isActive ? '#FFF500' : '#FFFFFF',
-                  WebkitTextStroke: '2.5px #000000',
-                  textShadow: '4px 4px 0px #000000',
-                  transform: isActive ? 'scale(1.2) translateY(-4px)' : 'scale(1.0)',
-                  display: 'inline-block',
-                }}
-              >
-                {item.word}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          6. MINIMAL GLASS BAR
+          11. MINIMAL GLASS BAR (Sửa kích cỡ gọn gàng)
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'minimal_bar' && (
         <div
           style={{
-            padding: '10px 24px',
-            borderRadius: '14px',
-            background: 'rgba(15, 23, 42, 0.75)',
+            display: 'inline-block',
+            maxWidth: '88%',
+            padding: `${Math.max(6, Math.round(fontSize * 0.24))}px ${Math.max(12, Math.round(fontSize * 0.5))}px`,
+            borderRadius: `${Math.max(8, Math.round(fontSize * 0.32))}px`,
+            background: 'rgba(15, 23, 42, 0.78)',
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '8px',
-            fontFamily: 'system-ui, sans-serif',
-            fontSize: `${fontSize * 0.88}px`,
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize * 0.9}px`,
             fontWeight: 700,
           }}
         >
@@ -329,10 +542,11 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
               <span
                 key={idx}
                 style={{
-                  color: isActive ? (customColor || '#38BDF8') : '#F1F5F9',
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive ? (customColor || highlightColor || '#38BDF8') : '#F1F5F9',
                   fontWeight: isActive ? 900 : 600,
                   transform: isActive ? 'scale(1.08)' : 'scale(1.0)',
-                  display: 'inline-block',
                 }}
               >
                 {item.word}
@@ -343,56 +557,18 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          7. GRADIENT WAVE
-          ───────────────────────────────────────────────────────────── */}
-      {presetStyle === 'gradient_wave' && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '8px',
-            fontFamily: '"Montserrat", sans-serif',
-            fontSize: `${fontSize}px`,
-            fontWeight: 900,
-          }}
-        >
-          {words.map((item, idx) => {
-            const isActive = currentTime >= item.start && currentTime <= item.end;
-            return (
-              <span
-                key={idx}
-                style={{
-                  background: isActive
-                    ? 'linear-gradient(90deg, #EC4899, #8B5CF6, #3B82F6)'
-                    : 'linear-gradient(90deg, #FFFFFF, #E2E8F0)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: isActive ? 'drop-shadow(0 0 15px rgba(236,72,153,0.9))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.9))',
-                  transform: isActive ? 'scale(1.2)' : 'scale(1.0)',
-                  display: 'inline-block',
-                }}
-              >
-                {item.word}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          8. LUXURY SERIF ITALIC
+          12. LUXURY SERIF ITALIC
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'fashion_serif' && (
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '10px',
-            fontFamily: '"Playfair Display", "Times New Roman", Georgia, serif',
+            display: 'inline-block',
+            maxWidth: '88%',
+            textAlign: 'center',
+            lineHeight: 1.35,
+            fontFamily: fontFamily || '"Playfair Display", "Times New Roman", Georgia, serif',
             fontStyle: 'italic',
-            fontSize: `${fontSize * 1.1}px`,
+            fontSize: `${fontSize * 1.05}px`,
             fontWeight: 800,
           }}
         >
@@ -402,12 +578,13 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
               <span
                 key={idx}
                 style={{
-                  color: isActive ? '#F5E8B7' : '#FFFFFF',
+                  display: 'inline-block',
+                  margin: `0 ${wordSpacing}px`,
+                  color: isActive ? (highlightColor || '#F5E8B7') : '#FFFFFF',
                   textShadow: isActive
                     ? '0 0 20px rgba(245,232,183,0.9), 0 4px 15px rgba(0,0,0,0.9)'
                     : '0 4px 12px rgba(0,0,0,0.9)',
-                  transform: isActive ? 'scale(1.15) translateY(-2px)' : 'scale(1.0)',
-                  display: 'inline-block',
+                  transform: isActive ? 'scale(1.14) translateY(-2px)' : 'scale(1.0)',
                 }}
               >
                 {item.word}
@@ -418,21 +595,23 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          9. NEWS FLASH (Big Center Word Pop)
+          13. NEWS FLASH (Big Center Word Pop)
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'news_flash' && (
         <div
           style={{
-            fontFamily: '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif',
-            fontSize: `${fontSize * 1.6}px`,
+            fontFamily: resolvedFont,
+            fontSize: `${fontSize * 1.45}px`,
             fontWeight: 900,
             textTransform: 'uppercase',
             color: '#FFFFFF',
             background: 'rgba(230, 81, 0, 0.95)',
-            padding: '6px 28px',
+            padding: `${Math.max(4, Math.round(fontSize * 0.2))}px ${Math.max(16, Math.round(fontSize * 0.7))}px`,
             borderRadius: '8px',
             boxShadow: '0 10px 40px rgba(230,81,0,0.8), 0 4px 12px rgba(0,0,0,0.9)',
-            letterSpacing: '3px',
+            letterSpacing: '2px',
+            maxWidth: '90%',
+            textAlign: 'center',
           }}
         >
           {(() => {
@@ -443,20 +622,24 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          10. TYPEWRITER CURSOR
+          14. TYPEWRITER CURSOR
           ───────────────────────────────────────────────────────────── */}
       {presetStyle === 'typewriter_cursor' && (
         <div
           style={{
+            display: 'inline-block',
+            maxWidth: '88%',
             background: 'rgba(0, 0, 0, 0.85)',
-            padding: '8px 18px',
+            padding: `${Math.max(4, Math.round(fontSize * 0.2))}px ${Math.max(12, Math.round(fontSize * 0.45))}px`,
             borderRadius: '6px',
-            fontFamily: '"Courier New", monospace',
-            fontSize: `${fontSize * 0.88}px`,
+            fontFamily: fontFamily || '"Courier New", monospace',
+            fontSize: `${fontSize * 0.9}px`,
             color: '#A7F3D0',
             fontWeight: 700,
             boxShadow: '0 4px 20px rgba(0,0,0,0.9)',
             border: '1px solid rgba(167, 243, 208, 0.3)',
+            textAlign: 'center',
+            lineHeight: 1.35,
           }}
         >
           {(() => {

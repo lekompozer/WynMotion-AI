@@ -24,7 +24,7 @@ import {
 import { CaptionSegment, CaptionPresetStyle, CAPTION_PRESET_LABELS } from '../subtitles/CapCutCaptionRenderer';
 import { filterVocalTrackFromAudioUrl } from '@/utils/audioVocalFilter';
 
-export type TextPosition = 'top' | 'middle' | 'bottom';
+export type TextPosition = 'top' | 'middle' | 'bottom' | string | number;
 
 export interface CaptionsFlyoutTabProps {
   onClose: () => void;
@@ -39,7 +39,7 @@ export interface CaptionsFlyoutTabProps {
   showSubs?: boolean;
   onToggleSubs?: () => void;
   subsPosY?: TextPosition;
-  onChangeSubsPosY?: (pos: TextPosition) => void;
+  onChangeSubsPosY?: (pos: any) => void;
   activeScene?: any;
   activeSceneIndex?: number;
   onUpdateActiveSceneTranscript?: (text: string) => void;
@@ -503,43 +503,74 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
         {showSubs && (
           <div className="space-y-3 pt-2.5 border-t border-[#252B3E]">
-            {/* Vị trí hiển thị */}
-            {onChangeSubsPosY && (
-              <div className="space-y-1.5">
-                <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                  <span>Vị trí hiển thị phụ đề:</span>
-                  <span className="text-cyan-400 capitalize">
-                    {subsPosY === 'top' ? 'Trên Cùng' : subsPosY === 'middle' ? 'Ở Giữa' : 'Phía Dưới'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'bottom' as TextPosition, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới' },
-                    { id: 'middle' as TextPosition, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa' },
-                    { id: 'top' as TextPosition, icon: AlignVerticalJustifyStart, label: 'Trên Cùng' },
-                  ].map((pos) => {
-                    const PosIcon = pos.icon;
-                    return (
-                      <button
-                        key={pos.id}
-                        type="button"
-                        onClick={() => onChangeSubsPosY(pos.id)}
-                        className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
-                          subsPosY === pos.id
-                            ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                            : 'border-slate-800 bg-slate-900 text-slate-400'
-                        }`}
-                      >
-                        <PosIcon className="w-3.5 h-3.5" />
-                        <span>{pos.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* Vị trí hiển thị (Thanh trượt liên tục 5% - 95% + Quick Jump Presets) */}
+            {onChangeSubsPosY && (() => {
+              const numericSubsPosY = (() => {
+                if (typeof subsPosY === 'number') return Math.min(95, Math.max(5, subsPosY));
+                if (typeof subsPosY === 'string') {
+                  if (subsPosY === 'top') return 15;
+                  if (subsPosY === 'middle') return 50;
+                  if (subsPosY === 'bottom') return 82;
+                  const parsed = parseFloat(subsPosY);
+                  if (!isNaN(parsed)) return Math.min(95, Math.max(5, parsed));
+                }
+                return 82;
+              })();
 
-            {/* Phóng to / Thu nhỏ cỡ chữ (Font size zoom slider & controls) */}
+              return (
+                <div className="space-y-2">
+                  <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Move className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Vị trí hiển thị phụ đề (Trục Y):</span>
+                    </span>
+                    <span className="text-cyan-400 font-mono font-bold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 text-xs">
+                      {numericSubsPosY}%
+                    </span>
+                  </div>
+
+                  <div className="pt-0.5">
+                    <input
+                      type="range"
+                      min={5}
+                      max={95}
+                      step={1}
+                      value={numericSubsPosY}
+                      onChange={(e) => onChangeSubsPosY(Number(e.target.value))}
+                      className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-[#141828] rounded-lg"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-0.5">
+                    {[
+                      { id: 82, icon: AlignVerticalJustifyEnd, label: 'Phía Dưới (82%)' },
+                      { id: 50, icon: AlignVerticalJustifyCenter, label: 'Ở Giữa (50%)' },
+                      { id: 12, icon: AlignVerticalJustifyStart, label: 'Trên Cùng (12%)' },
+                    ].map((pos) => {
+                      const PosIcon = pos.icon;
+                      const isSelected = Math.abs(numericSubsPosY - pos.id) <= 3;
+                      return (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => onChangeSubsPosY(pos.id)}
+                          className={`py-1.5 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                            isSelected
+                              ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-sm'
+                              : 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <PosIcon className="w-3.5 h-3.5" />
+                          <span>{pos.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Phóng to / Thu nhỏ cỡ chữ (Font size zoom slider: 4px - 72px) */}
             {onChangeCaptionFontSize && (
               <div className="space-y-2 pt-2.5 border-t border-[#202638]">
                 <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
@@ -555,7 +586,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => onChangeCaptionFontSize(Math.max(16, captionFontSize - 2))}
+                    onClick={() => onChangeCaptionFontSize(Math.max(4, captionFontSize - 2))}
                     className="w-8 h-8 rounded-xl bg-[#141828] hover:bg-[#1E253E] border border-[#252C42] text-white font-black text-xs flex items-center justify-center transition-all active:scale-95 shrink-0"
                     title="Thu nhỏ chữ phụ đề (A-)"
                   >
@@ -563,8 +594,8 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                   </button>
                   <input
                     type="range"
-                    min={16}
-                    max={68}
+                    min={4}
+                    max={72}
                     step={1}
                     value={captionFontSize}
                     onChange={(e) => onChangeCaptionFontSize(Number(e.target.value))}
@@ -572,7 +603,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                   />
                   <button
                     type="button"
-                    onClick={() => onChangeCaptionFontSize(Math.min(68, captionFontSize + 2))}
+                    onClick={() => onChangeCaptionFontSize(Math.min(72, captionFontSize + 2))}
                     className="w-8 h-8 rounded-xl bg-[#141828] hover:bg-[#1E253E] border border-[#252C42] text-white font-black text-xs flex items-center justify-center transition-all active:scale-95 shrink-0"
                     title="Phóng to chữ phụ đề (A+)"
                   >
@@ -581,24 +612,26 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                 </div>
 
                 {/* Quick Presets */}
-                <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                <div className="grid grid-cols-6 gap-1 pt-0.5">
                   {[
-                    { label: 'Nhỏ', size: 22 },
-                    { label: 'Vừa', size: 30 },
-                    { label: 'Lớn', size: 40 },
-                    { label: 'Cực Lớn', size: 52 },
+                    { label: 'Cực nhỏ', size: 6 },
+                    { label: 'Nhỏ', size: 12 },
+                    { label: 'Vừa', size: 20 },
+                    { label: 'Chuẩn', size: 28 },
+                    { label: 'Lớn', size: 38 },
+                    { label: 'Banner', size: 52 },
                   ].map((preset) => (
                     <button
                       key={preset.size}
                       type="button"
                       onClick={() => onChangeCaptionFontSize(preset.size)}
-                      className={`py-1 text-[10px] font-bold rounded-lg border transition-all ${
+                      className={`py-1 text-[9px] font-bold rounded-lg border transition-all ${
                         captionFontSize === preset.size
                           ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-sm'
                           : 'border-[#23293D] bg-[#121524] text-slate-400 hover:text-white'
                       }`}
                     >
-                      {preset.label} ({preset.size})
+                      {preset.size}px
                     </button>
                   ))}
                 </div>
