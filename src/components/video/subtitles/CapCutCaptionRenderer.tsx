@@ -76,9 +76,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
   const { fps } = useVideoConfig();
   const currentTime = frame / fps;
 
-  // Find active segment at currentTime
+  // Find active segment at currentTime (with smooth 0.2s tail buffer so captions don't disappear during micro-pauses)
   const activeSegment = segments.find(
-    (seg) => currentTime >= seg.start && currentTime <= seg.end + 0.1
+    (seg) => currentTime >= seg.start && currentTime <= seg.end + 0.2
   );
 
   if (!activeSegment) return null;
@@ -643,16 +643,18 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
           }}
         >
           {(() => {
-            const segDuration = activeSegment.end - activeSegment.start;
-            const progress = Math.min(1.0, Math.max(0, (currentTime - activeSegment.start) / segDuration));
-            const charCount = Math.floor(progress * activeSegment.text.length);
+            const segDuration = Math.max(0.3, activeSegment.end - activeSegment.start);
+            // Complete typing at 65% - 70% of segment duration (or 26 chars/sec) so full sentence stays completely visible
+            const typingDuration = Math.max(0.4, Math.min(segDuration * 0.7, activeSegment.text.length / 26));
+            const progress = Math.min(1.0, Math.max(0, (currentTime - activeSegment.start) / typingDuration));
+            const charCount = Math.min(activeSegment.text.length, Math.ceil(progress * activeSegment.text.length));
             const displayText = activeSegment.text.slice(0, charCount);
-            const isBlink = Math.floor(frame / 10) % 2 === 0;
+            const isBlink = Math.floor(frame / 8) % 2 === 0;
 
             return (
               <span>
                 {displayText}
-                <span style={{ opacity: isBlink ? 1 : 0, color: '#10B981', fontWeight: 900 }}>▌</span>
+                <span style={{ opacity: isBlink ? 1 : 0, color: '#10B981', fontWeight: 900, marginLeft: '2px' }}>▌</span>
               </span>
             );
           })()}

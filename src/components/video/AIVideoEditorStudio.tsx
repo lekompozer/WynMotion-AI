@@ -1712,6 +1712,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           bgm_start_sec: audioTrim.startTime,
           bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
           resolution: selectedExportResolution,
+          fps: fps || 30,
           studio_config: masterStudioConfig,
         });
         jobId = expRes.job_id;
@@ -3146,6 +3147,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                     if (setDurationInFrames) setDurationInFrames(calculatedFrames);
                     return;
                   }
+                  return;
                 }
 
                 // Case 1B: Edge Trimming (Shorten or lengthen duration)
