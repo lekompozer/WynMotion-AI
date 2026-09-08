@@ -257,24 +257,19 @@ export const AiVideoTab: React.FC = () => {
       return;
     }
 
-    const count = 3;
-    const perSceneDur = 4.0;
-    let curStartSec = 0;
-    const scenes: MotionScene[] = [];
-
-    for (let i = 0; i < count; i++) {
-      scenes.push({
-        scene_id: String(i + 1),
-        order: i + 1,
-        title: isVietnamese ? `Phân cảnh ${i + 1}` : `Scene ${i + 1}`,
-        image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1080',
+    const count = 1;
+    const perSceneDur = 5.0;
+    const scenes: MotionScene[] = [
+      {
+        scene_id: '1',
+        order: 1,
+        title: isVietnamese ? 'Phân cảnh 1' : 'Scene 1',
         voice_transcript: '',
         duration_sec: perSceneDur,
-        start_time_sec: Number(curStartSec.toFixed(1)),
+        start_time_sec: 0,
         actions: [],
-      });
-      curStartSec += perSceneDur;
-    }
+      },
+    ];
 
     const emptyProject: MotionProject = {
       project_id: `empty_${Date.now()}`,
@@ -284,7 +279,7 @@ export const AiVideoTab: React.FC = () => {
       prompt: 'Custom Empty Project with user uploaded media and audio',
       aspect_ratio: '9:16',
       visual_style: 'product_ads_motion',
-      duration_sec: count * perSceneDur,
+      duration_sec: perSceneDur,
       fps: 30,
       language_code: 'vi',
       status: 'ready',
@@ -1975,7 +1970,11 @@ export const AiVideoTab: React.FC = () => {
           }}
           onSelectTemplate={(tplId) => {
             setIsCapCutGalleryOpen(false);
-            setCapcutModalTemplate(tplId);
+            if (tplId === 'apple_modern_motion' || (typeof tplId === 'string' && tplId.includes('apple_modern'))) {
+              setIsModernMotionWizardOpen(true);
+            } else {
+              setCapcutModalTemplate(tplId);
+            }
           }}
         />
 

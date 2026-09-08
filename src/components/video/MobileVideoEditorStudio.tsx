@@ -1075,6 +1075,91 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
     [project.project_id, swapSpeakers, visualStyle]
   );
 
+  // ── Thêm Phân Cảnh Mới (New Scene) ──
+  const handleAddNewScene = useCallback(() => {
+    const newId = String(Date.now());
+    const newOrder = scenes.length + 1;
+    const newSceneDur = 5.0;
+
+    let totalFrames = 0;
+    let totalSec = 0;
+    scenes.forEach((s) => {
+      const durSec = getSceneDuration(s);
+      totalSec += durSec;
+      totalFrames += Math.round(durSec * fps);
+    });
+
+    const newScene: DynamicSceneData = {
+      scene_id: newId,
+      title: isVietnamese ? `Phân cảnh ${newOrder}` : `Scene ${newOrder}`,
+      duration_sec: newSceneDur,
+      duration_frames: Math.round(newSceneDur * fps),
+      start_sec: Number(totalSec.toFixed(2)),
+      start_frame: totalFrames,
+      voice_transcript: '',
+      actions: [],
+    } as any;
+
+    const next = [...scenes, newScene];
+    setScenes(next);
+    seekTo(totalFrames);
+    const newTotalSec = totalSec + newSceneDur;
+    setDurationInFrames?.(Math.round(newTotalSec * fps));
+
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          `wynmotion_draft_${project.project_id}`,
+          JSON.stringify({ scenes: next, swap_speakers: swapSpeakers, visual_style: visualStyle })
+        );
+      }
+    } catch (e) {}
+
+    setSyncStatusMsg(isVietnamese ? '✨ Đã thêm phân cảnh mới!' : '✨ Added new scene!');
+    setTimeout(() => setSyncStatusMsg(null), 2500);
+  }, [scenes, fps, isVietnamese, seekTo, setDurationInFrames, project.project_id, swapSpeakers, visualStyle]);
+
+  // ── Upload Ảnh hoặc Video cho từng phân cảnh + Đồng bộ thời lượng video ──
+  const handleMediaUploadForScene = useCallback(
+    (sceneId: string | number, file: File) => {
+      const isVideo = file.type.startsWith('video/');
+      const localUrl = URL.createObjectURL(file);
+
+      if (isVideo) {
+        const tempVideo = document.createElement('video');
+        tempVideo.preload = 'metadata';
+        tempVideo.src = localUrl;
+        tempVideo.onloadedmetadata = () => {
+          const exactDur = Math.max(1, Number(tempVideo.duration.toFixed(2)));
+          updateScene(sceneId, {
+            video_url: localUrl,
+            image_url: undefined,
+            duration_sec: exactDur,
+            duration_frames: Math.round(exactDur * fps),
+            _rawFile: file,
+          } as any);
+
+          setSyncStatusMsg(
+            isVietnamese
+              ? `🎥 Đã gắn video & đồng bộ thời lượng: ${exactDur}s`
+              : `🎥 Attached video & synced duration: ${exactDur}s`
+          );
+          setTimeout(() => setSyncStatusMsg(null), 2500);
+        };
+      } else {
+        updateScene(sceneId, {
+          image_url: localUrl,
+          video_url: undefined,
+          _rawFile: file,
+        } as any);
+
+        setSyncStatusMsg(isVietnamese ? '🖼️ Đã gắn hình ảnh vào phân cảnh!' : '🖼️ Attached image to scene!');
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      }
+    },
+    [updateScene, fps, isVietnamese]
+  );
+
   // ── Native Share / Save to Camera Roll Helper (Local File:// with Save Video option) ──
   const triggerNativeShare = async (url: string) => {
     await saveAndShareMedia(url, `WynMotion_${project.project_id.slice(0, 8)}.mp4`);
@@ -1103,13 +1188,44 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
     }, 1000);
 
     try {
+      // Pre-upload local blob / raw media files to R2 before exporting
+      setExportModalState((prev) =>
+        prev ? { ...prev, message: t('📤 Đang chuẩn bị và tải media phân cảnh lên...', 'Uploading scene media...') } : null
+      );
+
+      const processedScenes = await Promise.all(
+        scenes.map(async (s) => {
+          const sc = { ...s };
+          const rawFile = (s as any)._rawFile as File | undefined;
+          if (rawFile) {
+            try {
+              const fd = new FormData();
+              fd.append('file', rawFile);
+              const upRes = await wynmotionService.uploadMedia(fd);
+              if (upRes.url) {
+                if (rawFile.type.startsWith('video/')) {
+                  sc.video_url = upRes.url;
+                  sc.image_url = undefined;
+                } else {
+                  sc.image_url = upRes.url;
+                  sc.video_url = undefined;
+                }
+              }
+            } catch (err) {
+              console.warn(`Could not upload media for scene ${s.scene_id}:`, err);
+            }
+          }
+          return sc;
+        })
+      );
+
       const currentActiveAudioUrl =
         multilingualAudios[activeAudioLang]?.audio_url ||
         (activeAudioLang === 'en' || activeAudioLang === 'en-US' ? (project as any).audio_url_en : project.audio_url) ||
         audioSrc ||
         '';
 
-      const res = await wynmotionService.exportMP4(project.project_id, scenes as any, {
+      const res = await wynmotionService.exportMP4(project.project_id, processedScenes as any, {
         swap_speakers: swapSpeakers,
         aspect_ratio: aspectRatio,
         show_scene_cards: showSceneCards,
@@ -1264,19 +1380,32 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         }`}
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
-        <button
-          type="button"
-          onClick={onBack}
-          className={`p-2 rounded-2xl transition-all active:scale-90 ${
-            isDark
-              ? 'text-slate-300 hover:text-white hover:bg-slate-800'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onBack}
+            className={`p-2 rounded-2xl transition-all active:scale-90 ${
+              isDark
+                ? 'text-slate-300 hover:text-white hover:bg-slate-800'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
 
-        <div className="flex flex-col items-center min-w-0 flex-1 mx-3">
+          {/* + New Scene Button on Header */}
+          <button
+            type="button"
+            onClick={handleAddNewScene}
+            title={t('Thêm Phân Cảnh Mới', 'Add New Scene')}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25 active:scale-90 transition-all font-bold text-xs cursor-pointer shadow-sm"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span className="hidden sm:inline">{t('Cảnh Mới', 'New Scene')}</span>
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center min-w-0 flex-1 mx-2">
           <h1
             className={`text-sm font-black truncate max-w-full tracking-tight ${
               isDark ? 'text-white' : 'text-slate-900'
@@ -1701,82 +1830,109 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              <label
-                className={`flex items-center gap-2.5 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
-                  isDark
-                    ? 'border-slate-700 hover:border-cyan-400 bg-slate-800/40'
-                    : 'border-slate-300 hover:border-cyan-400 bg-slate-50'
-                }`}
+              {/* Nút Thêm Cảnh Mới trong Sheet */}
+              <button
+                type="button"
+                onClick={handleAddNewScene}
+                className="w-full flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/30 active:scale-98 transition-all font-black text-xs shadow-md"
               >
-                <Upload className="w-5 h-5 text-cyan-400" />
-                <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                  {t('+ Tải Ảnh Tùy Biến Lên Scene Này', '+ Upload Custom Image to Scene')}
-                </span>
-                <input
-                  ref={assetFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && activeScene) {
-                      const url = URL.createObjectURL(file);
-                      updateScene(activeScene.scene_id, { image_url: url });
-                    }
-                  }}
-                />
-              </label>
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>{t('+ Thêm Phân Cảnh Mới (5s Nền Đen)', '+ Add New Scene (5s Black BG)')}</span>
+              </button>
 
-              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {/* Danh sách phân cảnh với Upload Ảnh/Video + Xoá cảnh */}
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                 {scenes.map((s, idx) => {
                   const isActive = idx === activeSceneIndex;
                   const dur = getSceneDuration(s);
+                  const isVideo = Boolean(s.video_url);
+                  const isImage = Boolean(s.image_url);
+
                   return (
-                    <button
+                    <div
                       key={s.scene_id || idx}
-                      type="button"
-                      onClick={() => {
-                        seekTo(s.start_frame || 0);
-                        setActiveBottomSheet(null);
-                      }}
-                      className={`w-full flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all active:scale-[0.98] ${
+                      className={`p-3.5 rounded-2xl border transition-all ${
                         isActive
                           ? isDark
-                            ? 'border-cyan-500/60 bg-cyan-500/15 shadow-sm'
+                            ? 'border-cyan-500/60 bg-cyan-500/10 shadow-sm'
                             : 'border-cyan-400 bg-cyan-50'
                           : isDark
                           ? 'border-slate-800 bg-slate-900/80 hover:border-slate-700'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      <div
-                        className={`w-16 rounded-xl overflow-hidden flex-shrink-0 ${
-                          isDark ? 'bg-slate-800' : 'bg-slate-100'
-                        }`}
-                        style={{ aspectRatio: '16/9' }}
-                      >
-                        {s.image_url ? (
-                          <img src={s.image_url} alt={s.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Layers className="w-4 h-4 text-slate-400" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center gap-3">
+                        {/* Thumbnail */}
                         <div
-                          className={`text-sm font-black truncate ${
-                            isActive ? 'text-cyan-400' : isDark ? 'text-white' : 'text-slate-900'
+                          onClick={() => {
+                            seekTo(s.start_frame || 0);
+                            setActiveBottomSheet(null);
+                          }}
+                          className={`w-16 h-12 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer relative ${
+                            isDark ? 'bg-black border border-slate-700' : 'bg-black border border-slate-300'
                           }`}
                         >
-                          Scene {idx + 1}: {s.title}
+                          {isVideo ? (
+                            <video src={s.video_url} className="w-full h-full object-cover" />
+                          ) : isImage ? (
+                            <img src={s.image_url} alt={s.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-black flex items-center justify-center">
+                              <Layers className="w-4 h-4 text-slate-500" />
+                            </div>
+                          )}
+                          <span className="absolute bottom-0.5 right-0.5 px-1 rounded bg-black/70 text-[9px] font-mono text-cyan-300">
+                            {isVideo ? 'VID' : isImage ? 'IMG' : 'BLK'}
+                          </span>
                         </div>
-                        <div className="text-xs text-slate-400 mt-0.5">
-                          {Math.round(dur)}s duration
+
+                        {/* Info & Duration */}
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => {
+                            seekTo(s.start_frame || 0);
+                            setActiveBottomSheet(null);
+                          }}
+                        >
+                          <div className={`text-xs font-black truncate ${isActive ? 'text-cyan-400' : isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {t('Cảnh', 'Scene')} {idx + 1}: {s.title}
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                            <span className="font-mono text-cyan-300">{dur.toFixed(1)}s</span>
+                            <span>•</span>
+                            <span className="text-[10px]">{isVideo ? t('Video clip', 'Video clip') : isImage ? t('Hình ảnh', 'Image') : t('Nền đen', 'Black background')}</span>
+                          </div>
+                        </div>
+
+                        {/* Actions: Upload & Delete */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Upload Media Button */}
+                          <label className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition-all active:scale-95 flex items-center justify-center" title={t('Tải ảnh / video lên cảnh này', 'Upload image/video')}>
+                            <Upload className="w-3.5 h-3.5" />
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleMediaUploadForScene(s.scene_id, f);
+                              }}
+                            />
+                          </label>
+
+                          {/* Delete Scene Button */}
+                          <button
+                            type="button"
+                            disabled={scenes.length <= 1}
+                            onClick={() => deleteScene(s.scene_id)}
+                            title={t('Xoá phân cảnh này', 'Delete scene')}
+                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      {isActive && <Check className="w-5 h-5 text-cyan-400 flex-shrink-0" />}
-                    </button>
+                    </div>
                   );
                 })}
               </div>

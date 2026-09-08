@@ -1677,12 +1677,39 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       const chosenAspect = targetAspectRatio || aspectRatio;
       const chosenBg = targetBgColor || bgColor || '#FAF7EF';
 
+      // Pre-upload raw / local blob media files
+      const processedScenes = await Promise.all(
+        scenes.map(async (s) => {
+          const sc = { ...s };
+          const rawFile = (s as any)._rawFile as File | undefined;
+          if (rawFile) {
+            try {
+              const fd = new FormData();
+              fd.append('file', rawFile);
+              const upRes = await wynmotionService.uploadMedia(fd);
+              if (upRes.url) {
+                if (rawFile.type.startsWith('video/')) {
+                  sc.video_url = upRes.url;
+                  sc.image_url = undefined;
+                } else {
+                  sc.image_url = upRes.url;
+                  sc.video_url = undefined;
+                }
+              }
+            } catch (err) {
+              console.warn(`Could not upload media for scene ${s.scene_id}:`, err);
+            }
+          }
+          return sc;
+        })
+      );
+
       // Step 1: Trigger backend export MP4 job
       let jobId: string | null = null;
       if (projectId) {
         // Save latest state to project doc so backend worker reads up-to-date configuration
         wynmotionService.updateProject(projectId, {
-          scenes: scenes as any,
+          scenes: processedScenes as any,
           studio_config: masterStudioConfig,
           timeline_effects: timelineEffects,
           bg_color: chosenBg,
@@ -1690,7 +1717,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           caption_segments: captionSegments,
         } as any).catch(() => {});
 
-        const expRes = await (wynmotionService as any).exportMP4(projectId, scenes, {
+        const expRes = await (wynmotionService as any).exportMP4(projectId, processedScenes, {
           aspect_ratio: chosenAspect,
           show_scene_cards: showSceneCards,
           show_whisper_subs: showWhisperSubs,
