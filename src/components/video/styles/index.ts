@@ -9,6 +9,7 @@ import { ProductAdsRenderer } from './ProductAdsRenderer';
 import { StrobeTeaserRenderer } from './StrobeTeaserRenderer';
 import { CinematicShowcaseRenderer } from './CinematicShowcaseRenderer';
 import { NewsVideoRenderer } from './NewsVideoRenderer';
+import { AnimationAdsVeoRenderer } from './AnimationAdsVeoRenderer';
 
 import { ModernMotionSuiteRenderer } from './ModernMotionSuiteRenderer';
 
@@ -22,6 +23,7 @@ export {
   StrobeTeaserRenderer,
   CinematicShowcaseRenderer,
   NewsVideoRenderer,
+  AnimationAdsVeoRenderer,
 };
 export type { StyleRendererProps };
 
@@ -57,6 +59,10 @@ export const MODULAR_STYLE_RENDERERS: Record<string, React.FC<StyleRendererProps
   news_video: NewsVideoRenderer as any,
   video_news: NewsVideoRenderer as any,
   breaking_news: NewsVideoRenderer as any,
+  animation_ads_image_veo: AnimationAdsVeoRenderer as any,
+  animation_ads_image: AnimationAdsVeoRenderer as any,
+  product_ads_omni: AnimationAdsVeoRenderer as any,
+  veo_ads: AnimationAdsVeoRenderer as any,
 };
 
 export function getModularStyleRenderer(visualStyle?: string): React.FC<StyleRendererProps> | null {

@@ -318,8 +318,9 @@ export const wynmotionService = {
       headers,
       body: JSON.stringify(updates),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi cập nhật dự án');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.detail || data?.message || `Lỗi cập nhật dự án (Mã lỗi ${res.status})`);
+    if (!data) throw new Error('Không nhận được phản hồi từ máy chủ khi lưu dự án');
     return data;
   },
 
@@ -332,8 +333,9 @@ export const wynmotionService = {
       method: 'DELETE',
       headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi xóa dự án');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.detail || data?.message || `Lỗi xóa dự án (Mã lỗi ${res.status})`);
+    if (!data) throw new Error('Không nhận được phản hồi từ máy chủ');
     return data;
   },
 

@@ -302,13 +302,14 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
           {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             const isPassed = currentTime > item.end;
+            const baseColor = customColor || '#FFFFFF';
             return (
               <span
                 key={idx}
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? (highlightColor || '#FFE600') : isPassed ? '#FFFFFF' : 'rgba(255,255,255,0.75)',
+                  color: isActive ? (highlightColor || '#FFE600') : isPassed ? baseColor : (customColor ? `${customColor}D0` : 'rgba(255,255,255,0.75)'),
                   textShadow: isActive
                     ? `0 0 20px ${highlightColor || '#FFE600'}, 0 3px 10px rgba(0,0,0,0.95), 0 0 4px #000`
                     : '0 3px 10px rgba(0,0,0,0.95), 0 0 4px #000',
@@ -351,7 +352,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? (customColor || highlightColor || '#00F0FF') : '#FFFFFF',
+                  color: isActive ? (highlightColor || '#00F0FF') : (customColor || '#FFFFFF'),
                   textShadow: '0 4px 15px rgba(0,0,0,0.95), 0 0 6px #000',
                   transform: `scale(${scale})`,
                 }}
@@ -383,7 +384,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontFamily: resolvedFont,
             fontSize: `${effectiveFontSize}px`,
             fontWeight: 700,
-            color: '#FFFFFF',
+            color: customColor || '#FFFFFF',
           }}
         >
           {renderTextLines()}
@@ -409,7 +410,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontFamily: resolvedFont,
             fontSize: `${effectiveFontSize}px`,
             fontWeight: 800,
-            color: '#0F172A',
+            color: (customColor && customColor !== '#FFFFFF') ? customColor : '#0F172A',
           }}
         >
           {renderTextLines()}
@@ -429,7 +430,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontFamily: resolvedFont,
             fontSize: `${effectiveFontSize}px`,
             fontWeight: 800,
-            color: '#FFFFFF',
+            color: customColor || '#FFFFFF',
             textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 4px 20px rgba(0,0,0,0.85), 0 0 4px #000',
           }}
         >
@@ -441,7 +442,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? (highlightColor || '#FFE600') : '#FFFFFF',
+                  color: isActive ? (highlightColor || '#FFE600') : (customColor || '#FFFFFF'),
                   transform: isActive ? 'scale(1.14)' : 'scale(1.0)',
                   transition: 'transform 0.06s ease-out',
                 }}
@@ -466,7 +467,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontFamily: resolvedFont,
             fontSize: `${effectiveFontSize}px`,
             fontWeight: 900,
-            color: '#0F172A',
+            color: (customColor && customColor !== '#FFFFFF') ? customColor : '#0F172A',
             textShadow: '0 1px 2px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.4)',
           }}
         >
@@ -478,7 +479,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? (customColor || '#0284C7') : '#0F172A',
+                  color: isActive ? (highlightColor || '#0284C7') : ((customColor && customColor !== '#FFFFFF') ? customColor : '#0F172A'),
                   transform: isActive ? 'scale(1.14)' : 'scale(1.0)',
                   transition: 'transform 0.06s ease-out',
                 }}
@@ -518,7 +519,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                   color: isActive
                     ? (highlightColor || '#FFE600')
                     : isPassed
-                    ? '#38BDF8'
+                    ? (customColor || '#38BDF8')
                     : '#C084FC',
                   transform: isActive ? 'scale(1.18) translateY(-2px)' : 'scale(1.0)',
                   transition: 'transform 0.08s ease-out',
@@ -560,7 +561,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                 style={{
                   display: 'inline-block',
                   margin: `0 ${Math.max(2, Math.round(fontSize * 0.09))}px`,
-                  color: isActive ? (highlightColor || '#FFF500') : '#FFFFFF',
+                  color: isActive ? (highlightColor || '#FFF500') : (customColor || '#FFFFFF'),
                   WebkitTextStroke: `${strokeWidth}px #000000`,
                   textShadow: '0 3px 8px rgba(0,0,0,0.9), 0 1px 2px #000000',
                   transform: isActive ? 'scale(1.14) translateY(-2px)' : 'scale(1.0)',
@@ -593,16 +594,17 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         >
           {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
+            const baseColor = (customColor && customColor !== '#FFFFFF') ? customColor : '#FF007F';
             return (
               <span
                 key={idx}
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? '#00FFFF' : '#FF007F',
+                  color: isActive ? (highlightColor || '#00FFFF') : baseColor,
                   textShadow: isActive
-                    ? '0 0 10px #00FFFF, 0 0 25px #00FFFF, 0 0 40px #00FFFF'
-                    : '0 0 8px #FF007F, 0 0 16px rgba(255,0,127,0.5)',
+                    ? `0 0 10px ${highlightColor || '#00FFFF'}, 0 0 25px ${highlightColor || '#00FFFF'}, 0 0 40px ${highlightColor || '#00FFFF'}`
+                    : `0 0 8px ${baseColor}, 0 0 16px rgba(255,0,127,0.5)`,
                   transform: isActive ? 'scale(1.15)' : 'scale(1.0)',
                 }}
               >
@@ -639,9 +641,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                   padding: isActive ? '2px 10px' : '2px 6px',
                   borderRadius: '14px',
                   background: isActive
-                    ? 'linear-gradient(90deg, #FF7A00 0%, #FFB800 100%)'
+                    ? `linear-gradient(90deg, ${highlightColor || '#FF7A00'} 0%, #FFB800 100%)`
                     : 'rgba(0,0,0,0.55)',
-                  color: isActive ? '#000000' : '#FFFFFF',
+                  color: isActive ? '#000000' : (customColor || '#FFFFFF'),
                   fontWeight: isActive ? 900 : 700,
                   boxShadow: isActive ? '0 4px 15px rgba(255,122,0,0.8)' : 'none',
                   transform: isActive ? 'scale(1.12)' : 'scale(1.0)',
@@ -684,7 +686,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? (customColor || highlightColor || '#38BDF8') : '#F1F5F9',
+                  color: isActive ? (highlightColor || '#38BDF8') : (customColor || '#F1F5F9'),
                   fontWeight: isActive ? 900 : 600,
                   transform: isActive ? 'scale(1.08)' : 'scale(1.0)',
                 }}
@@ -720,9 +722,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
                 style={{
                   display: 'inline-block',
                   margin: `0 ${wordSpacing}px`,
-                  color: isActive ? (highlightColor || '#F5E8B7') : '#FFFFFF',
+                  color: isActive ? (highlightColor || '#F5E8B7') : (customColor || '#FFFFFF'),
                   textShadow: isActive
-                    ? '0 0 20px rgba(245,232,183,0.9), 0 4px 15px rgba(0,0,0,0.9)'
+                    ? `0 0 20px rgba(245,232,183,0.9), 0 4px 15px rgba(0,0,0,0.9)`
                     : '0 4px 12px rgba(0,0,0,0.9)',
                   transform: isActive ? 'scale(1.14) translateY(-2px)' : 'scale(1.0)',
                 }}
@@ -744,7 +746,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontSize: `${fontSize * 1.45}px`,
             fontWeight: 900,
             textTransform: 'uppercase',
-            color: '#FFFFFF',
+            color: customColor || '#FFFFFF',
             background: 'rgba(230, 81, 0, 0.95)',
             padding: `${Math.max(4, Math.round(fontSize * 0.2))}px ${Math.max(16, Math.round(fontSize * 0.7))}px`,
             borderRadius: '8px',
@@ -774,7 +776,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             borderRadius: '6px',
             fontFamily: fontFamily || '"Courier New", monospace',
             fontSize: `${effectiveFontSize * 0.9}px`,
-            color: '#A7F3D0',
+            color: customColor || '#A7F3D0',
             fontWeight: 700,
             boxShadow: '0 4px 20px rgba(0,0,0,0.9)',
             border: '1px solid rgba(167, 243, 208, 0.3)',

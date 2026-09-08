@@ -2589,7 +2589,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 return;
               }
               try {
-                setSyncStatusMsg('Đang lưu toàn bộ dự án & phụ đề lên máy chủ...');
+                setSyncStatusMsg('Đang lưu toàn bộ dự án & 5 tabs cấu hình lên máy chủ...');
                 await wynmotionService.updateProject(projectId, {
                   scenes: scenes as any,
                   caption_segments: captionSegments,
@@ -2601,12 +2601,27 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                   show_whisper_subs: showWhisperSubs,
                   caption_preset_style: captionPresetStyle,
                   caption_font_size: captionFontSize,
+                  caption_font_family: captionFontFamily,
+                  caption_text_color: captionTextColor,
+                  caption_highlight_color: captionHighlightColor,
                   subs_pos_y: subsPosY,
                   aspect_ratio: aspectRatio,
                   bg_color: bgColor || '#FAF7EF',
                   fps: fps,
+                  studio_config: masterStudioConfig,
+                  audio_url: selectedExportAudioUrl,
+                  voice_volume: volume,
+                  voice_start_sec: audioTrim.startTime,
+                  voice_duration_sec: voiceDurationSecState || (audioTrim.duration > 0 ? audioTrim.duration : undefined),
+                  bgm_url: customBgmFile || bgmAudioUrl || (projectData as any)?.bgm_url,
+                  bgm_volume: bgmVolume,
+                  bgm_start_sec: audioTrim.startTime,
+                  bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
+                  video_audio_volume: videoAudioVolume,
+                  is_video_audio_muted: isVideoAudioMuted,
+                  timeline_effects: timelineEffects,
                 } as any);
-                setSyncStatusMsg('✅ Đã lưu dự án & phụ đề lên máy chủ thành công!');
+                setSyncStatusMsg('✅ Đã lưu toàn bộ 5 tabs & timeline lên máy chủ thành công!');
                 setTimeout(() => setSyncStatusMsg(null), 3000);
               } catch (err: any) {
                 console.error('Save project error:', err);

@@ -9,8 +9,7 @@ import {
   Sparkles,
   Sliders,
   Check,
-  ChevronRight,
-  RotateCcw,
+  Pipette,
 } from 'lucide-react';
 import {
   CaptionPresetStyle,
@@ -41,6 +40,8 @@ const AVAILABLE_FONTS = [
   { id: "'Courier New', Courier, monospace", label: 'Typewriter (Máy đánh chữ)', style: 'font-mono' },
   { id: "'Inter', sans-serif", label: 'Inter (Sạch sẽ)', style: 'font-sans' },
   { id: "'Cinzel', serif", label: 'Cinzel (Điện ảnh)', style: 'font-serif font-black tracking-widest' },
+  { id: "'Be Vietnam Pro', sans-serif", label: 'Be Vietnam Pro', style: 'font-sans font-bold' },
+  { id: "'Montserrat', sans-serif", label: 'Montserrat', style: 'font-sans font-semibold' },
 ];
 
 const TEXT_COLORS = [
@@ -51,6 +52,8 @@ const TEXT_COLORS = [
   { label: 'Hồng Neon', value: '#F43F5E', bg: 'bg-rose-500' },
   { label: 'Cam', value: '#FB923C', bg: 'bg-orange-400' },
   { label: 'Xanh Lá', value: '#4ADE80', bg: 'bg-green-400' },
+  { label: 'Tím', value: '#A855F7', bg: 'bg-purple-500' },
+  { label: 'Đỏ', value: '#EF4444', bg: 'bg-red-500' },
 ];
 
 const HIGHLIGHT_COLORS = [
@@ -60,6 +63,7 @@ const HIGHLIGHT_COLORS = [
   { label: 'Hồng Neon', value: '#EC4899', bg: 'bg-pink-500' },
   { label: 'Cam Cháy', value: '#F97316', bg: 'bg-orange-500' },
   { label: 'Tím Điện', value: '#A855F7', bg: 'bg-purple-500' },
+  { label: 'Trắng', value: '#FFFFFF', bg: 'bg-white' },
 ];
 
 export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
@@ -95,7 +99,7 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
 
   return (
     <aside
-      className="absolute top-3 right-3 bottom-3 w-80 max-w-[calc(100vw-32px)] bg-[#101321]/95 backdrop-blur-xl border border-[#2B344D] rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden animate-in slide-in-from-right-4 fade-in duration-200"
+      className="absolute top-3 right-3 bottom-3 w-84 max-w-[calc(100vw-32px)] bg-[#101321]/95 backdrop-blur-xl border border-[#2B344D] rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden animate-in slide-in-from-right-4 fade-in duration-200"
       style={{
         boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 1px 1px rgba(255,255,255,0.08)',
       }}
@@ -107,8 +111,8 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-xs font-black text-white uppercase tracking-wider">CapCut Text Studio</h3>
-            <p className="text-[10px] text-slate-400">Tùy biến phông chữ, cỡ & hiệu ứng</p>
+            <h3 className="text-xs font-black text-white uppercase tracking-wider">Caption Text Studio</h3>
+            <p className="text-[10px] text-slate-400">Tùy biến phông chữ, cỡ & màu sắc phụ đề</p>
           </div>
         </div>
         <button
@@ -122,7 +126,7 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
 
       {/* ── SCROLLABLE BODY ── */}
       <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 text-slate-200">
-        {/* 1. CỠ CHỮ PHỤ ĐỀ (Slider: 4px - 72px) */}
+        {/* 1. CỠ CHỮ PHỤ ĐỀ (Slider: 8px - 80px) */}
         <section className="space-y-2 bg-[#161B2E] p-3 rounded-xl border border-[#232B44]">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
@@ -139,7 +143,7 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
-              onClick={() => onChangeFontSize(Math.max(4, fontSize - 2))}
+              onClick={() => onChangeFontSize(Math.max(8, fontSize - 2))}
               className="w-7 h-7 rounded-lg bg-[#20273D] hover:bg-[#2A3450] text-white text-xs font-black flex items-center justify-center border border-[#2C3754] transition-transform active:scale-95 shrink-0"
               title="Thu nhỏ chữ (A-)"
             >
@@ -147,8 +151,8 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
             </button>
             <input
               type="range"
-              min={4}
-              max={72}
+              min={8}
+              max={80}
               step={1}
               value={fontSize}
               onChange={(e) => onChangeFontSize(Number(e.target.value))}
@@ -156,7 +160,7 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
             />
             <button
               type="button"
-              onClick={() => onChangeFontSize(Math.min(72, fontSize + 2))}
+              onClick={() => onChangeFontSize(Math.min(80, fontSize + 2))}
               className="w-7 h-7 rounded-lg bg-[#20273D] hover:bg-[#2A3450] text-white text-xs font-black flex items-center justify-center border border-[#2C3754] transition-transform active:scale-95 shrink-0"
               title="Phóng to chữ (A+)"
             >
@@ -165,8 +169,8 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
           </div>
 
           {/* Quick Font Size Presets */}
-          <div className="grid grid-cols-6 gap-1 pt-1">
-            {[4, 8, 14, 20, 28, 40].map((sz) => (
+          <div className="grid grid-cols-7 gap-1 pt-1">
+            {[12, 16, 20, 24, 28, 36, 48].map((sz) => (
               <button
                 key={sz}
                 type="button"
@@ -260,14 +264,17 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
         <section className="space-y-3 bg-[#161B2E] p-3 rounded-xl border border-[#232B44]">
           {onChangeTextColor && (
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                   <Palette className="w-3.5 h-3.5 text-yellow-400" />
                   <span>Màu Chữ Chính</span>
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">{textColor}</span>
-              </label>
-              <div className="flex items-center gap-1.5">
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded-full border border-slate-600" style={{ backgroundColor: textColor }} />
+                  <span className="text-[10px] font-mono text-slate-400">{textColor}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {TEXT_COLORS.map((c) => (
                   <button
                     key={c.value}
@@ -285,20 +292,36 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
                     )}
                   </button>
                 ))}
+                {/* Custom Color Input */}
+                <label
+                  className="w-6 h-6 rounded-full bg-gradient-to-tr from-rose-500 via-yellow-400 to-cyan-400 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-sm relative overflow-hidden"
+                  title="Chọn màu tùy chỉnh"
+                >
+                  <Pipette className="w-3 h-3 text-slate-950 font-bold" />
+                  <input
+                    type="color"
+                    value={textColor.startsWith('#') ? textColor : '#FFFFFF'}
+                    onChange={(e) => onChangeTextColor(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </label>
               </div>
             </div>
           )}
 
           {onChangeHighlightColor && (
-            <div className="space-y-1.5 pt-2 border-t border-[#232B44]">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
+            <div className="space-y-1.5 pt-2.5 border-t border-[#232B44]">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Màu Nhấn (Từ Đang Đọc)</span>
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">{highlightColor}</span>
-              </label>
-              <div className="flex items-center gap-1.5">
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded-full border border-slate-600" style={{ backgroundColor: highlightColor }} />
+                  <span className="text-[10px] font-mono text-slate-400">{highlightColor}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {HIGHLIGHT_COLORS.map((c) => (
                   <button
                     key={c.value}
@@ -312,10 +335,23 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
                     title={c.label}
                   >
                     {highlightColor.toLowerCase() === c.value.toLowerCase() && (
-                      <Check className="w-3 h-3 text-slate-950 font-bold" />
+                      <Check className={`w-3 h-3 ${c.value === '#FFFFFF' ? 'text-black' : 'text-slate-950'} font-bold`} />
                     )}
                   </button>
                 ))}
+                {/* Custom Highlight Color Input */}
+                <label
+                  className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-sm relative overflow-hidden"
+                  title="Chọn màu nhấn tùy chỉnh"
+                >
+                  <Pipette className="w-3 h-3 text-white font-bold" />
+                  <input
+                    type="color"
+                    value={highlightColor.startsWith('#') ? highlightColor : '#FACC15'}
+                    onChange={(e) => onChangeHighlightColor(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </label>
               </div>
             </div>
           )}
@@ -326,7 +362,7 @@ export const CapCutTextInspector: React.FC<CapCutTextInspectorProps> = ({
           <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Mẫu Kiểu Chữ CapCut (14 Kiểu)</span>
+              <span>Mẫu Kiểu Chữ Phụ Đề (14 Kiểu)</span>
             </span>
           </label>
 
