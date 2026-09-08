@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ArrowLeft, ArrowRight, Upload, CheckCircle, Loader2, Download, Play, Pause, Film, Image as ImageIcon, Type, Music } from 'lucide-react';
-import { wynmotionService, ModernMotionParams } from '@/services/wynmotionService';
+import { X, ArrowLeft, ArrowRight, Upload, CheckCircle, Loader2, Download, Play, Pause, Film, Image as ImageIcon, Type, Music, Plus, Trash2, Globe, Sliders } from 'lucide-react';
+import { wynmotionService, ModernMotionParams, MotionProject } from '@/services/wynmotionService';
+import { convertModernMotionParamsToMotionProject, DEFAULT_LANGUAGE_FLAGS, DEFAULT_MODERN_MOTION_BGM } from '@/services/modernMotionProjectAdapter';
 
 const V9_URL = 'https://static.wordai.pro/ai-generated-images/wynmotion/WynMotion_Official_Intro_v9.mp4';
-const DEFAULT_BGM = 'https://static.wordai.pro/ai-generated-images/wynmotion/templates/Intro-Music.mp3';
 
 interface PhaseDefinition {
   id: string;
@@ -37,6 +37,7 @@ const PHASES: PhaseDefinition[] = [
   { id:'phase_3',    label:'Carousel',     title:'Phase 3 — Template Carousel 5 Videos (9s)', subtitle:'5 clip xếp dọc scroll từ dưới lên. Mỗi clip 380px wide.',     startSec:16.4, endSec:25.4, type:'video_upload',  paramKey:'train_videos', maxDurationSec:9, required:true, hint:'Upload 5 video (mỗi clip ≥9s) — backend cắt 9s đầu mỗi clip' },
   { id:'phase_4',    label:'Audio Title',  title:'Phase 4 — AI Audio Studio Title (1.2s)',     subtitle:'Nền trắng. "AI" hộp đen + text slide lên, font 76px.',        startSec:25.4, endSec:26.6, type:'text',         paramKey:'audio_title', placeholders:['VD: AI Audio Studio'], labels:['Tiêu đề Audio Studio'] },
   { id:'phase_4_1',  label:'Audio Tags',   title:'Phase 4.1 — Audio Taglines (1.4s)',          subtitle:'Nền trắng. 3 cặp từ stagger slide in.',                       startSec:26.6, endSec:28.0, type:'special'  },
+  { id:'phase_4_2',  label:'Flags Beat',   title:'Phase 4.2 — Lá Cờ Ngôn Ngữ Beat Sync (1.5s)', subtitle:'Nền trắng. Cờ và tên ngôn ngữ nhảy zoom đập nhanh theo từng nhịp beat.', startSec:28.0, endSec:29.5, type:'special', hint:'Tùy chỉnh các quốc gia / ngôn ngữ muốn xuất hiện trong hiệu ứng đập beat.' },
   { id:'phase_4_5',  label:'Clip 2',       title:'Phase 4.5 — Hero Video 2 (9s)',              subtitle:'Video thứ hai full screen 9:16 sau phần Audio Studio.',       startSec:29.5, endSec:38.5, type:'video_upload',  paramKey:'main_video_2', maxDurationSec:9, required:true, hint:'Upload video ≥9s — backend cắt lấy 9s đầu' },
   { id:'phase_5_5',  label:'Headline',     title:'Phase 5.5 — Editor Headline (1.6s)',         subtitle:'Nền đen. 2 dòng text IN HOA stagger từng chữ, font 58px.',   startSec:38.5, endSec:40.1, type:'text_multi',   paramKeys:['editor_headline_1','editor_headline_2'], placeholders:['VD: A COMPLETE','VD: VIDEO EDITOR.'], labels:['Dòng 1 (IN HOA)','Dòng 2 (IN HOA)'] },
   { id:'phase_6',    label:'Clip 3',       title:'Phase 6 — Hero Video 3, Fast-forward (5s)', subtitle:'3s đầu chạy 2.67× + 2s cuối bình thường = 5s output.',       startSec:40.1, endSec:45.1, type:'video_upload',  paramKey:'main_video_3', maxDurationSec:10, required:true, hint:'⚠️ Cần video ≥10s — backend lấy 0-10s rồi fast-forward thành 5s' },
@@ -45,9 +46,21 @@ const PHASES: PhaseDefinition[] = [
 
 interface UploadSlot { file?: File; localUrl?: string; remoteUrl?: string; uploading?: boolean; error?: string; durationSec?: number; }
 
-interface Props { isOpen: boolean; onClose: () => void; isVietnamese?: boolean; }
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  isVietnamese?: boolean;
+  onOpenStudio?: (project: MotionProject) => void;
+  user?: any;
+}
 
-export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnamese = true }) => {
+export const ModernMotionWizard: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  isVietnamese = true,
+  onOpenStudio,
+  user,
+}) => {
   const [currentPhaseIdx, setCurrentPhaseIdx] = useState(0);
   const [view, setView] = useState<'wizard'|'result'>('wizard');
   const [params, setParams] = useState<ModernMotionParams>({
@@ -55,8 +68,9 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
     templates_header:'DISCOVER OUR TEMPLATES', category_1:'Business.', category_2:'News.',
     category_3:'Illustrative.', category_4:'Motion & Explainer', category_4_sub:'Videos',
     audio_title:'AI Audio Studio', audio_taglines:['Natural voices.','Every language.','Every conversation.'],
+    language_flags: [...DEFAULT_LANGUAGE_FLAGS],
     editor_headline_1:'A COMPLETE', editor_headline_2:'VIDEO EDITOR.',
-    slogan_text:'Create Daily 60s AI Videos From Just', slogan_price:'$1', bgm_url:DEFAULT_BGM,
+    slogan_text:'Create Daily 60s AI Videos From Just', slogan_price:'$1', bgm_url:DEFAULT_MODERN_MOTION_BGM,
   });
   const [clip1, setClip1] = useState<UploadSlot>({});
   const [clip2, setClip2] = useState<UploadSlot>({});
@@ -69,6 +83,7 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
   const [exportProgress, setExportProgress] = useState(0);
   const [mp4Url, setMp4Url] = useState<string|null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isOpeningStudio, setIsOpeningStudio] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
   const phase = PHASES[currentPhaseIdx];
@@ -176,6 +191,29 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
     finally { setIsSaving(false); }
   };
 
+  const handleOpenStudio = async () => {
+    setIsOpeningStudio(true);
+    try {
+      const motionProject = convertModernMotionParamsToMotionProject(params, undefined, user);
+      // Persist directly into MongoDB db.wynmotion_projects so it is saved in Recent Projects & Library
+      await wynmotionService.updateProject(motionProject.project_id, motionProject);
+      if (onOpenStudio) {
+        onOpenStudio(motionProject);
+      }
+      onClose();
+    } catch (err) {
+      console.error('Lỗi khi mở Studio:', err);
+      // Fallback: still open studio even if background save had network glitch
+      const motionProject = convertModernMotionParamsToMotionProject(params, undefined, user);
+      if (onOpenStudio) {
+        onOpenStudio(motionProject);
+      }
+      onClose();
+    } finally {
+      setIsOpeningStudio(false);
+    }
+  };
+
   const isExporting = ['saving','queued','rendering'].includes(exportStatus);
 
   const renderPhaseInput = () => {
@@ -210,6 +248,63 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
         </div>
       );
     }
+    if (phase.id === 'phase_4_2') {
+      const flags = params.language_flags || DEFAULT_LANGUAGE_FLAGS;
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-white/70">Danh sách Quốc kỳ & Ngôn ngữ</span>
+            <button
+              type="button"
+              onClick={() => setParams(p => ({ ...p, language_flags: [...(p.language_flags || DEFAULT_LANGUAGE_FLAGS), { flag: '🌐', name: 'Global' }] }))}
+              className="text-[10px] text-cyan-400 font-bold flex items-center gap-1 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20 active:opacity-70"
+            >
+              <Plus className="w-3 h-3" /> Thêm cờ
+            </button>
+          </div>
+          <div className="space-y-2">
+            {flags.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2 bg-white/5 p-2.5 rounded-xl border border-white/10">
+                <input
+                  type="text"
+                  value={item.flag}
+                  onChange={e => {
+                    const n = [...flags];
+                    n[idx] = { ...n[idx], flag: e.target.value };
+                    setParams(p => ({ ...p, language_flags: n }));
+                  }}
+                  className="w-12 py-1.5 text-center text-lg bg-black/40 border border-white/15 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  placeholder="🇻🇳"
+                />
+                <input
+                  type="text"
+                  value={item.name}
+                  onChange={e => {
+                    const n = [...flags];
+                    n[idx] = { ...n[idx], name: e.target.value };
+                    setParams(p => ({ ...p, language_flags: n }));
+                  }}
+                  className="flex-1 py-1.5 px-3 text-xs bg-black/40 border border-white/15 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  placeholder="Tên ngôn ngữ"
+                />
+                {flags.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const n = flags.filter((_, i) => i !== idx);
+                      setParams(p => ({ ...p, language_flags: n }));
+                    }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
     if (phase.type === 'text' && phase.paramKey) return (
       <Field label={phase.labels?.[0]||String(phase.paramKey)} value={(params[phase.paramKey]as string)||''} placeholder={phase.placeholders?.[0]||''} onChange={v=>setParams(p=>({...p,[phase.paramKey!]:v}))} />
     );
@@ -232,7 +327,7 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
         <div className="text-center">
           <div className="text-[9px] text-white/30 uppercase tracking-widest">Modern Motion Suite</div>
           {view==='wizard'&&<div className="text-xs font-black text-white mt-0.5">{currentPhaseIdx+1}/{PHASES.length}</div>}
-          {view==='result'&&<div className="text-xs font-black text-cyan-400 mt-0.5">Kết Quả</div>}
+          {view==='result'&&<div className="text-xs font-black text-cyan-400 mt-0.5">Kết Quả & Lựa Chọn Chỉnh Sửa</div>}
         </div>
         <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 active:opacity-70"><X className="w-4 h-4"/></button>
       </div>
@@ -274,7 +369,7 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
           <div className="px-4 pb-8 pt-3 bg-[#08090f] border-t border-white/10 shrink-0 space-y-2">
             <button onClick={()=>{if(currentPhaseIdx<PHASES.length-1)setCurrentPhaseIdx(i=>i+1);else setView('result');}} disabled={!canGoNext()}
               className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${canGoNext()?'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-lg shadow-cyan-500/30':'bg-white/10 text-white/30 cursor-not-allowed'}`}>
-              {currentPhaseIdx<PHASES.length-1?<><span>Tiếp: {PHASES[currentPhaseIdx+1].label}</span><ArrowRight className="w-4 h-4"/></>:<span>✅ Xem kết quả & Export</span>}
+              {currentPhaseIdx<PHASES.length-1?<><span>Tiếp: {PHASES[currentPhaseIdx+1].label}</span><ArrowRight className="w-4 h-4"/></>:<span>✅ Xem kết quả & Lựa chọn</span>}
             </button>
             {/* Dot pills */}
             <div className="flex gap-1 justify-center flex-wrap pt-0.5">
@@ -287,12 +382,12 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
       {/* RESULT VIEW */}
       {view==='result'&&(
         <>
-          <div className="flex-1 overflow-y-auto pb-40">
+          <div className="flex-1 overflow-y-auto pb-48">
             {/* Summary banner */}
             <div className="mx-4 mt-4 p-4 rounded-2xl bg-gradient-to-br from-cyan-500/15 via-blue-500/10 to-purple-500/10 border border-cyan-500/30">
               <div className="flex items-center gap-2 mb-2"><CheckCircle className="w-4 h-4 text-cyan-400"/><span className="text-sm font-black text-white">Dự án Modern Motion Suite 50.1s</span></div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                {[['3','Hero Clips'],['5','Carousel'],['50.1s','Output']].map(([v,l],i)=>(
+                {[['3','Hero Clips'],['5','Carousel'],['19','Scenes Studio']].map(([v,l],i)=>(
                   <div key={i} className="bg-white/5 rounded-xl p-2"><div className="text-base font-black text-cyan-400">{v}</div><div className="text-[9px] text-white/40">{l}</div></div>
                 ))}
               </div>
@@ -300,12 +395,29 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
             {/* BGM */}
             <div className="mx-4 mt-3 flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
               <Music className="w-4 h-4 text-cyan-400 shrink-0"/>
-              <div className="flex-1"><div className="text-xs font-bold text-white">BGM: Intro-Music.mp3</div><div className="text-[10px] text-white/40">Nhạc nền mặc định 50.1s fade out</div></div>
+              <div className="flex-1"><div className="text-xs font-bold text-white">BGM: Intro-Music.mp3</div><div className="text-[10px] text-white/40">Nhạc nền mặc định 50.1s beat sync & fade out</div></div>
               <span className="text-[9px] text-cyan-400">Default ✓</span>
             </div>
-            {/* 12 scene cards */}
+
+            {/* Quick Actions Callout */}
+            <div className="mx-4 mt-3 p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between gap-3">
+              <div className="text-xs text-white">
+                <div className="font-black text-cyan-300">Tùy biến sâu từng Scene trong Studio?</div>
+                <div className="text-[10px] text-white/60 mt-0.5">Tách thành 19 scene độc lập để xoá/thêm/sửa và đổi thứ tự.</div>
+              </div>
+              <button
+                onClick={handleOpenStudio}
+                disabled={isOpeningStudio}
+                className="px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 shrink-0 active:scale-95"
+              >
+                {isOpeningStudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sliders className="w-3.5 h-3.5" />}
+                Mở Studio 🎬
+              </button>
+            </div>
+
+            {/* 19 scene cards */}
             <div className="px-4 mt-4 space-y-2">
-              <div className="text-[10px] font-black text-white/40 uppercase tracking-wider mb-3">12 Scenes — Modern Motion 50.1s</div>
+              <div className="text-[10px] font-black text-white/40 uppercase tracking-wider mb-3">19 Scenes Độc Lập — Modern Motion 50.1s</div>
               {[
                 {label:'Phase 1 — Hero Clip 1 (7s)',            icon:'video', slot:clip1, extra:'', phaseIdx:0 },
                 {label:'Phase 1.5 — By Brand + Logo (2s)',      icon:'brand', slot:logo,  extra:`${params.brand_company||'—'} / ${params.brand_name||'—'}`, phaseIdx:1},
@@ -315,14 +427,15 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
                 {label:'Phase 3 — Carousel 5 Videos (9s)',      icon:'carousel',slot:null,extra:`${carousel.filter(c=>!!c.remoteUrl).length}/5 clips`, phaseIdx:9},
                 {label:'Phase 4 — AI Audio Title (1.2s)',       icon:'text',  slot:null,  extra:params.audio_title||'—', phaseIdx:10},
                 {label:'Phase 4.1 — Audio Taglines (1.4s)',     icon:'text',  slot:null,  extra:(params.audio_taglines||[]).join(' · '), phaseIdx:11},
-                {label:'Phase 4.5 — Hero Clip 2 (9s)',          icon:'video', slot:clip2, extra:'', phaseIdx:12},
-                {label:'Phase 5.5 — Editor Headline (1.6s)',    icon:'text',  slot:null,  extra:`${params.editor_headline_1||'—'} ${params.editor_headline_2||'—'}`, phaseIdx:13},
-                {label:'Phase 6 — Hero Clip 3, Fast-fwd (5s)', icon:'video', slot:clip3, extra:'', phaseIdx:14},
-                {label:'Phase 7+7.5 — Slogan + Outro (5s)',    icon:'text',  slot:null,  extra:`${params.slogan_text||'—'} ${params.slogan_price||'—'}`, phaseIdx:15},
+                {label:'Phase 4.2 — Language Flags Beat (1.5s)',icon:'flag',  slot:null,  extra:(params.language_flags||DEFAULT_LANGUAGE_FLAGS).map(f=>f.flag).join(' '), phaseIdx:12},
+                {label:'Phase 4.5 — Hero Clip 2 (9s)',          icon:'video', slot:clip2, extra:'', phaseIdx:13},
+                {label:'Phase 5.5 — Editor Headline (1.6s)',    icon:'text',  slot:null,  extra:`${params.editor_headline_1||'—'} ${params.editor_headline_2||'—'}`, phaseIdx:14},
+                {label:'Phase 6 — Hero Clip 3, Fast-fwd (5s)', icon:'video', slot:clip3, extra:'', phaseIdx:15},
+                {label:'Phase 7+7.5 — Slogan + Outro (5s)',    icon:'text',  slot:null,  extra:`${params.slogan_text||'—'} ${params.slogan_price||'—'}`, phaseIdx:16},
               ].map((s,i)=>(
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
                   <div className="w-11 h-11 rounded-xl overflow-hidden bg-black/40 shrink-0 flex items-center justify-center">
-                    {s.icon==='video'&&(s.slot as UploadSlot)?.localUrl?<video src={(s.slot as UploadSlot).localUrl} className="w-full h-full object-cover" muted playsInline/>:s.icon==='brand'&&logo.localUrl?<img src={logo.localUrl} className="w-full h-full object-cover bg-white" alt="logo"/>:s.icon==='carousel'?<Film className="w-4 h-4 text-cyan-400/60"/>:<Type className="w-4 h-4 text-blue-400/60"/>}
+                    {s.icon==='video'&&(s.slot as UploadSlot)?.localUrl?<video src={(s.slot as UploadSlot).localUrl} className="w-full h-full object-cover" muted playsInline/>:s.icon==='brand'&&logo.localUrl?<img src={logo.localUrl} className="w-full h-full object-cover bg-white" alt="logo"/>:s.icon==='carousel'?<Film className="w-4 h-4 text-cyan-400/60"/>:s.icon==='flag'?<Globe className="w-4 h-4 text-emerald-400/60"/>:<Type className="w-4 h-4 text-blue-400/60"/>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-bold text-white leading-tight">{s.label}</div>
@@ -334,7 +447,7 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
             </div>
           </div>
 
-          {/* Fixed Export Footer */}
+          {/* Dual Action Bottom Bar */}
           <div className="fixed bottom-0 left-0 right-0 z-10 px-4 pb-8 pt-3 bg-[#08090f]/95 backdrop-blur-xl border-t border-white/10 space-y-2">
             {isExporting&&(
               <div className="space-y-1">
@@ -352,10 +465,24 @@ export const ModernMotionWizard: React.FC<Props> = ({ isOpen, onClose, isVietnam
               </a>
             )}
             {exportStatus!=='completed'&&(
-              <button onClick={handleExport} disabled={isExporting}
-                className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isExporting?'bg-white/10 text-white/30 cursor-not-allowed':'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-lg shadow-cyan-500/30'}`}>
-                {isExporting?<><Loader2 className="w-4 h-4 animate-spin"/>Đang xử lý...</>:<><Film className="w-4 h-4"/>🎬 Export MP4 (50.1s) — 30pts</>}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleOpenStudio}
+                  disabled={isOpeningStudio || isExporting}
+                  className="py-3.5 px-3 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-lg shadow-cyan-500/30 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isOpeningStudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sliders className="w-4 h-4" />}
+                  Mở trong Studio 🎬
+                </button>
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting || isOpeningStudio}
+                  className="py-3.5 px-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all bg-white/10 hover:bg-white/15 border border-white/15 text-white active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Film className="w-4 h-4 text-cyan-400" />}
+                  Xuất MP4 Nhanh ⚡
+                </button>
+              </div>
             )}
           </div>
         </>

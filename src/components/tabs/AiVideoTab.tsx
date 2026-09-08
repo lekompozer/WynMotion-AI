@@ -236,10 +236,13 @@ export const AiVideoTab: React.FC = () => {
       setActiveEditorProject(projectOrId);
       setIsStudioOpen(true);
       if (projectOrId?.project_id) {
-        wynmotionService.getProject(projectOrId.project_id).then((res) => {
-          if (res.success && res.project) {
-            setActiveEditorProject(res.project);
-          }
+        // Automatically persist in MongoDB if not already saved to ensure it appears in Recent Projects & Library
+        wynmotionService.updateProject(projectOrId.project_id, projectOrId).then(() => {
+          wynmotionService.listProjects(20).then((res) => {
+            if (res.success && res.projects) {
+              setRecentProjects(res.projects);
+            }
+          }).catch(() => {});
         }).catch(() => {});
       }
     }
@@ -287,6 +290,17 @@ export const AiVideoTab: React.FC = () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    // Save immediately to MongoDB so it appears in Recent Projects & Library Tab
+    wynmotionService.updateProject(emptyProject.project_id, emptyProject).then(() => {
+      wynmotionService.listProjects(20).then((res) => {
+        if (res.success && res.projects) {
+          setRecentProjects(res.projects);
+        }
+      }).catch(() => {});
+    }).catch((err) => {
+      console.warn('Could not persist initial empty project:', err);
+    });
 
     openProjectInEditor(emptyProject);
   };
@@ -1983,6 +1997,15 @@ export const AiVideoTab: React.FC = () => {
           isOpen={isModernMotionWizardOpen}
           onClose={() => setIsModernMotionWizardOpen(false)}
           isVietnamese={isVietnamese}
+          onOpenStudio={(project) => {
+            openProjectInEditor(project);
+            wynmotionService.listProjects(20).then((res) => {
+              if (res.success && res.projects) {
+                setRecentProjects(res.projects);
+              }
+            }).catch(() => {});
+          }}
+          user={user}
         />
 
         {/* ── WynMotion Fullscreen Keynote Intro Modal ── */}

@@ -852,6 +852,7 @@ export interface ModernMotionParams {
   category_4_sub?: string;
   audio_title?: string;
   audio_taglines?: string[];
+  language_flags?: Array<{ flag: string; name: string }>;
   editor_headline_1?: string;
   editor_headline_2?: string;
   slogan_text?: string;
