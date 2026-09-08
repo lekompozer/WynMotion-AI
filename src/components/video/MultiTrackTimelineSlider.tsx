@@ -679,53 +679,6 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
           />
         </div>
 
-        {/* Center: Quick Add Buttons */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {onAddScene && (
-            <button
-              type="button"
-              onClick={onAddScene}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[10px] font-black transition-all active:scale-95 shadow-xs"
-              title="Thêm phân cảnh mới (Scene màu nền hoặc Video/Ảnh)"
-            >
-              <Plus className="w-2.5 h-2.5 text-cyan-400" />
-              <span className="hidden sm:inline">+ Scene</span>
-            </button>
-          )}
-          {onOpenAudioTab && (
-            <button
-              type="button"
-              onClick={onOpenAudioTab}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-black transition-all active:scale-95 shadow-xs"
-              title="Thêm nhạc nền hoặc giọng đọc AI"
-            >
-              <Music className="w-2.5 h-2.5 text-emerald-400" />
-              <span className="hidden sm:inline">+ Audio</span>
-            </button>
-          )}
-          {onAddCaptionSegment && (
-            <button
-              type="button"
-              onClick={onAddCaptionSegment}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-black transition-all active:scale-95 shadow-xs"
-              title="Thêm phân đoạn phụ đề / chữ tại vị trí con trỏ"
-            >
-              <Type className="w-2.5 h-2.5 text-amber-400" />
-              <span className="hidden sm:inline">+ Sub</span>
-            </button>
-          )}
-          {selectedItemId && onDeleteItem && (
-            <button
-              onClick={() => onDeleteItem(selectedItemId)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black transition-all shadow-md active:scale-95 shrink-0"
-              title="Xóa clip đang chọn"
-            >
-              <Trash2 className="w-2.5 h-2.5" />
-              <span>Xóa</span>
-            </button>
-          )}
-        </div>
-
         {/* Right: Zoom Controls & Timestamp Indicator */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1 bg-[#090B12] px-1.5 py-0.5 rounded-lg border border-[#1E2232]">

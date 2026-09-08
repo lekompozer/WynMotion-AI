@@ -1681,38 +1681,84 @@ function StudioInner({
     seekTo(scene.start_frame ?? 0);
   };
 
-  // CapCut Split Tool (✂️)
+  // CapCut Split Tool (✂️ Cắt Scene thành 2 ngay vị trí giây)
   const handleSplitClipAtPlayhead = () => {
-    const targetIdx = scenes.findIndex(
-      (s) => frame > (s.start_frame || 0) && frame < (s.start_frame || 0) + (s.duration_frames || 150)
-    );
+    const playheadSec = currentSec || (frame / fps);
+    let accumulatedSec = 0;
+    let targetIdx = -1;
+    let sceneStartSec = 0;
+    let sceneDurSec = 0;
+
+    for (let i = 0; i < scenes.length; i++) {
+      const s = scenes[i];
+      const dur = s.duration_sec ?? ((s.duration_frames || 150) / fps);
+      const start = s.start_sec ?? accumulatedSec;
+      const end = start + dur;
+
+      if (playheadSec > start + 0.25 && playheadSec < end - 0.25) {
+        targetIdx = i;
+        sceneStartSec = start;
+        sceneDurSec = dur;
+        break;
+      }
+      accumulatedSec += dur;
+    }
 
     if (targetIdx === -1) return;
 
     const currentScene = scenes[targetIdx];
-    const splitFrameOffset = frame - (currentScene.start_frame || 0);
-    const remainingFrames = (currentScene.duration_frames || 150) - splitFrameOffset;
+    const splitOffsetSec = parseFloat((playheadSec - sceneStartSec).toFixed(2));
+    const remainingDurSec = parseFloat((sceneDurSec - splitOffsetSec).toFixed(2));
 
-    if (splitFrameOffset < 15 || remainingFrames < 15) return;
+    if (splitOffsetSec < 0.25 || remainingDurSec < 0.25) return;
+
+    const splitFrameOffset = Math.round(splitOffsetSec * fps);
+    const remainingFrames = Math.round(remainingDurSec * fps);
 
     const scenePart1: DynamicSceneData = {
       ...currentScene,
+      duration_sec: splitOffsetSec,
       duration_frames: splitFrameOffset,
-      end_sec: parseFloat((((currentScene.start_frame ?? 0) + splitFrameOffset) / fps).toFixed(2)),
+      start_sec: sceneStartSec,
+      end_sec: parseFloat((sceneStartSec + splitOffsetSec).toFixed(2)),
     };
 
+    const newId = Date.now();
     const scenePart2: DynamicSceneData = {
       ...currentScene,
-      scene_id: scenes.length + 1,
-      title: `${currentScene.title} (Phần 2)`,
-      start_frame: frame,
+      scene_id: newId,
+      title: `${currentScene.title || `Scene ${targetIdx + 1}`} (Phần 2)`,
+      duration_sec: remainingDurSec,
       duration_frames: remainingFrames,
-      start_sec: parseFloat((frame / fps).toFixed(2)),
-      end_sec: currentScene.end_sec,
+      start_sec: parseFloat((sceneStartSec + splitOffsetSec).toFixed(2)),
+      end_sec: parseFloat((sceneStartSec + sceneDurSec).toFixed(2)),
+      start_frame: frame,
     };
 
     const newScenes = [...scenes.slice(0, targetIdx), scenePart1, scenePart2, ...scenes.slice(targetIdx + 1)];
-    updateScenesWithHistory(newScenes);
+
+    let curSec = 0;
+    let curFrame = 0;
+    const finalScenes = newScenes.map((s, idx) => {
+      const durSec = s.duration_sec || (s.duration_frames || 150) / fps;
+      const durFrames = Math.round(durSec * fps);
+      const start = Number(curSec.toFixed(2));
+      const end = Number((curSec + durSec).toFixed(2));
+      const sFrame = curFrame;
+      curSec += durSec;
+      curFrame += durFrames;
+      return {
+        ...s,
+        order: idx + 1,
+        start_sec: start,
+        end_sec: end,
+        start_frame: sFrame,
+        duration_frames: durFrames,
+        duration_sec: durSec,
+      };
+    });
+
+    updateScenesWithHistory(finalScenes);
   };
 
   // Trim Scene Handle
@@ -3394,10 +3440,10 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               type="button"
               onClick={() => setIsCapCutInspectorOpen(true)}
               className="absolute top-4 right-4 z-30 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 backdrop-blur-md shadow-xl flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95 cursor-pointer hover:border-cyan-400"
-              title="Mở bảng điều chỉnh phông chữ, cỡ chữ, màu sắc CapCut"
+              title="Mở bảng điều chỉnh phông chữ, cỡ chữ, màu sắc Captions"
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Kiểu Chữ CapCut</span>
+              <span>Kiểu Chữ Captions</span>
             </button>
           )}
 
@@ -3490,30 +3536,6 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               <Scissors className="w-3 h-3" />
               <span>Split (Cắt)</span>
             </button>
-            <button
-              onClick={() => setIsColorSceneModalOpen(true)}
-              title="Thêm Phân Cảnh Mới (+ Scene Màu/Ảnh/Video)"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition-all"
-            >
-              <Plus className="w-3 h-3" />
-              <span>+ Scene</span>
-            </button>
-            <button
-              onClick={() => setActiveFlyoutTab('audio')}
-              title="Thêm Nhạc nền / Giọng đọc (+ Audio)"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition-all"
-            >
-              <Plus className="w-3 h-3" />
-              <span>+ Audio</span>
-            </button>
-            <button
-              onClick={handleAddCaptionAtPlayhead}
-              title="Thêm Phụ Đề tại vị trí con trỏ (+ Subtitle)"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition-all"
-            >
-              <Plus className="w-3 h-3" />
-              <span>+ Chữ</span>
-            </button>
           </div>
 
           {/* Center Playback Controls */}
@@ -3588,45 +3610,6 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             <button onClick={() => seekTo(0)} className="text-slate-400 hover:text-white ml-1" title="Về đầu video">
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
-
-            {/* Quick Caption Font Size Controls & CapCut Text Studio Button */}
-            {showWhisperSubs && captionSegments && captionSegments.length > 0 && (
-              <div className="flex items-center gap-1.5 pl-2 border-l border-[#252B3E]">
-                <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Cỡ Sub:</span>
-                <button
-                  type="button"
-                  onClick={() => setCaptionFontSize((s) => Math.max(4, s - 2))}
-                  className="px-1.5 py-0.5 rounded bg-[#202538] hover:bg-[#2A324B] text-[10px] text-slate-300 font-bold hover:text-white transition-all cursor-pointer"
-                  title="Thu nhỏ chữ phụ đề (A-) - Cỡ thấp nhất 4px"
-                >
-                  A-
-                </button>
-                <span className="text-[10px] font-mono text-cyan-300 font-bold min-w-[26px] text-center">
-                  {captionFontSize}px
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCaptionFontSize((s) => Math.min(72, s + 2))}
-                  className="px-1.5 py-0.5 rounded bg-[#202538] hover:bg-[#2A324B] text-[10px] text-slate-300 font-bold hover:text-white transition-all cursor-pointer"
-                  title="Phóng to chữ phụ đề (A+)"
-                >
-                  A+
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsCapCutInspectorOpen((v) => !v)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer ${
-                    isCapCutInspectorOpen
-                      ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                      : 'bg-[#202538] hover:bg-[#2A324B] text-cyan-300 border border-cyan-500/30'
-                  }`}
-                  title="Mở bảng điều chỉnh phông chữ, cỡ chữ, vị trí Y và màu sắc CapCut"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Chỉnh Chữ CapCut</span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
