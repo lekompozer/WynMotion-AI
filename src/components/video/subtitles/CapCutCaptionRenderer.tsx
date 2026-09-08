@@ -190,9 +190,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
 
   const textLines = getBalancedTextLines(activeSegment.text || '');
   const maxLineChars = Math.max(...textLines.map((l) => l.length), 1);
-  // Auto-fit font size so long lines strictly fit in at most 2 lines without wrapping
-  const autoFitScale = maxLineChars > 20 ? Math.max(0.62, 20 / maxLineChars) : 1.0;
-  const effectiveFontSize = Math.max(10, Math.round(fontSize * autoFitScale));
+  // Auto-fit font size so long lines strictly fit in at most 2 lines without aggressive shrinking
+  const autoFitScale = maxLineChars > 36 ? Math.max(0.85, 36 / maxLineChars) : 1.0;
+  const effectiveFontSize = Math.max(14, Math.round(fontSize * autoFitScale));
 
   const renderTextLines = (extraLineStyle?: React.CSSProperties) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', width: '100%' }}>
@@ -340,15 +340,16 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
+            minWidth: '55%',
             maxWidth: '92%',
-            padding: `${Math.max(4, Math.round(effectiveFontSize * 0.22))}px ${Math.max(12, Math.round(effectiveFontSize * 0.55))}px`,
-            borderRadius: `${Math.max(6, Math.round(effectiveFontSize * 0.3))}px`,
-            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            padding: `${Math.max(6, Math.round(effectiveFontSize * 0.28))}px ${Math.max(16, Math.round(effectiveFontSize * 0.75))}px`,
+            borderRadius: `${Math.max(8, Math.round(effectiveFontSize * 0.35))}px`,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
             backdropFilter: 'blur(10px)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
             border: '1px solid rgba(255, 255, 255, 0.12)',
             textAlign: 'center',
-            lineHeight: 1.32,
+            lineHeight: 1.35,
             fontFamily: resolvedFont,
             fontSize: `${effectiveFontSize}px`,
             fontWeight: 700,
@@ -366,14 +367,15 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
+            minWidth: '55%',
             maxWidth: '92%',
-            padding: `${Math.max(4, Math.round(effectiveFontSize * 0.22))}px ${Math.max(12, Math.round(effectiveFontSize * 0.55))}px`,
-            borderRadius: `${Math.max(6, Math.round(effectiveFontSize * 0.3))}px`,
-            backgroundColor: 'rgba(255, 255, 255, 0.94)',
+            padding: `${Math.max(6, Math.round(effectiveFontSize * 0.28))}px ${Math.max(16, Math.round(effectiveFontSize * 0.75))}px`,
+            borderRadius: `${Math.max(8, Math.round(effectiveFontSize * 0.35))}px`,
+            backgroundColor: 'rgba(255, 255, 255, 0.96)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
             border: '1.5px solid rgba(0, 0, 0, 0.08)',
             textAlign: 'center',
-            lineHeight: 1.32,
+            lineHeight: 1.35,
             fontFamily: resolvedFont,
             fontSize: `${effectiveFontSize}px`,
             fontWeight: 800,
