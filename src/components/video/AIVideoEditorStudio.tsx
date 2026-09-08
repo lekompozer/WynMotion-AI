@@ -623,6 +623,22 @@ function StudioInner({
   const [selectedTimelineItemId, setSelectedTimelineItemId] = useState<string | null>(null);
 
   const handleDeleteItem = (itemId: string) => {
+    if (itemId === 'audio_voice' || itemId === 'track_voice') {
+      handleRemoveVoice();
+      setSelectedTimelineItemId(null);
+      setSyncStatusMsg('Đã xóa Voiceover khỏi Timeline!');
+      setTimeout(() => setSyncStatusMsg(null), 2500);
+      return;
+    }
+
+    if (itemId === 'audio_bgm' || itemId === 'track_bgm' || itemId === 'bgm_main') {
+      handleRemoveBgm();
+      setSelectedTimelineItemId(null);
+      setSyncStatusMsg('Đã xóa BGM khỏi Timeline!');
+      setTimeout(() => setSyncStatusMsg(null), 2500);
+      return;
+    }
+
     if (itemId.startsWith('media_')) {
       const sId = parseInt(itemId.replace('media_', ''), 10);
       setScenes((prev) => {
@@ -630,7 +646,29 @@ function StudioInner({
           alert('Video cần có tối thiểu 1 phân cảnh.');
           return prev;
         }
-        return prev.filter((s, idx) => s.scene_id !== sId && idx + 1 !== sId);
+        const remaining = prev.filter((s, idx) => s.scene_id !== sId && idx + 1 !== sId);
+        let curSec = 0;
+        let curFrame = 0;
+        const reindexed = remaining.map((s, idx) => {
+          const durSec = s.duration_sec || (s.duration_frames || 150) / fps;
+          const durFrames = Math.round(durSec * fps);
+          const startSec = Number(curSec.toFixed(2));
+          const startFrame = curFrame;
+          curSec += durSec;
+          curFrame += durFrames;
+          return {
+            ...s,
+            scene_id: idx + 1,
+            start_sec: startSec,
+            duration_sec: durSec,
+            end_sec: Number(curSec.toFixed(2)),
+            start_frame: startFrame,
+            duration_frames: durFrames,
+          };
+        });
+        const calculatedFrames = reindexed.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+        if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+        return reindexed;
       });
       setSelectedTimelineItemId(null);
       setSyncStatusMsg('Đã xóa phân cảnh khỏi Timeline!');
@@ -652,6 +690,7 @@ function StudioInner({
       setSelectedTimelineItemId(null);
       setSyncStatusMsg('Đã xóa đoạn phụ đề!');
       setTimeout(() => setSyncStatusMsg(null), 2500);
+      return;
     }
   };
 
@@ -1447,35 +1486,64 @@ function StudioInner({
       };
     });
 
-    const audioDur = audioTrim.duration > 0 ? audioTrim.duration : totalDurationSec;
-    const audioItems: TimelineItem[] = [
-      {
-        id: 'bgm_main',
-        trackId: 'track_audio',
-        trackType: 'audio',
-        startTime: audioTrim.startTime,
-        endTime: audioTrim.startTime + audioDur,
-        duration: audioDur,
-        title: '🎵 BGM & Voiceover Audio',
-      },
-    ];
+    const hasVoiceAudio = Boolean(selectedExportAudioUrl || remotionAudioSrc || audioUrl);
+    const hasBgmAudio = Boolean(bgmAudioUrl || customBgmFile || (projectData as any)?.bgm_url);
 
     const tracksList: TimelineTrack[] = [
-      { id: 'track_media', type: 'video', name: 'Media Scenes', items: mediaItems },
-      { id: 'track_fx_0', type: 'transitions', name: 'FX Shaders 1', items: fxItems0 },
+      { id: 'track_media', type: 'video', name: 'Phân cảnh (Scenes)', items: mediaItems },
+      { id: 'track_fx_0', type: 'transitions', name: 'Hiệu ứng (FX Shaders 1)', items: fxItems0 },
     ];
 
     if (fxItems1.length > 0) {
-      tracksList.push({ id: 'track_fx_1', type: 'transitions', name: 'FX Shaders 2 (Hàng dưới)', items: fxItems1 });
+      tracksList.push({ id: 'track_fx_1', type: 'transitions', name: 'Hiệu ứng (FX Shaders 2)', items: fxItems1 });
     }
 
-    tracksList.push(
-      { id: 'track_captions', type: 'captions', name: 'Auto Captions', items: captionItems },
-      { id: 'track_audio', type: 'audio', name: 'Audio Track', items: audioItems }
-    );
+    tracksList.push({ id: 'track_captions', type: 'captions', name: 'Phụ đề (Captions)', items: captionItems });
+
+    if (hasVoiceAudio) {
+      const voiceDur = voiceDurationSecState || (audioTrim.duration > 0 ? audioTrim.duration : totalDurationSec);
+      tracksList.push({
+        id: 'track_voice',
+        type: 'audio',
+        name: isCommercialMusicStyle ? 'Nhạc Đính Kèm Mẫu' : 'Giọng Đọc (Voiceover)',
+        items: [
+          {
+            id: 'audio_voice',
+            trackId: 'track_voice',
+            trackType: 'audio',
+            startTime: audioTrim.startTime,
+            endTime: audioTrim.startTime + voiceDur,
+            duration: voiceDur,
+            title: isCommercialMusicStyle
+              ? `🎵 Nhạc đính kèm: ${(projectData as any)?.bgm_title || projectData?.title || 'Cinematic Showcase'}`
+              : `🎙️ Voice: ${availableAudioTracks.find((t) => t.url === (selectedExportAudioUrl || remotionAudioSrc))?.label || 'Giọng đọc AI'}`,
+          },
+        ],
+      });
+    }
+
+    if (hasBgmAudio) {
+      const bgmDur = audioTrim.duration > 0 ? audioTrim.duration : totalDurationSec;
+      tracksList.push({
+        id: 'track_bgm',
+        type: 'audio',
+        name: 'Nhạc Nền (BGM)',
+        items: [
+          {
+            id: 'audio_bgm',
+            trackId: 'track_bgm',
+            trackType: 'audio',
+            startTime: audioTrim.startTime,
+            endTime: audioTrim.startTime + bgmDur,
+            duration: bgmDur,
+            title: `🎵 BGM: ${bgmTrackTitle || customBgmFile || 'Background Music'}`,
+          },
+        ],
+      });
+    }
 
     return tracksList;
-  }, [scenes, fps, totalDurationSec, captionSegments, timelineEffects, audioTrim]);
+  }, [scenes, fps, totalDurationSec, captionSegments, timelineEffects, audioTrim, selectedExportAudioUrl, remotionAudioSrc, audioUrl, bgmAudioUrl, customBgmFile, projectData, isCommercialMusicStyle, voiceDurationSecState, availableAudioTracks, bgmTrackTitle]);
 
   // Handle click or drag on timeline scrubber
   const handleTimelineScrub = useCallback(
@@ -3305,9 +3373,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                     duration_frames: durFrames,
                   };
                 });
-                setScenes(updatedScenes);
-                const calculatedFrames = updatedScenes.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
-                if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+                updateScenesWithHistory(updatedScenes);
                 return;
               }
 
@@ -3411,16 +3477,19 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 return;
               }
 
-              // 4. Move & Resize Audio Track (CapCut Audio Windowing & Master Clock Sync)
-              if (itemId === 'bgm_main' || itemId.startsWith('audio_')) {
+              // 4. Move & Resize Audio Track (Voice or BGM)
+              if (itemId === 'audio_voice' || itemId === 'track_voice') {
                 const safeStart = Math.max(0, Math.min(Math.max(0, totalDurationSec - 0.2), newStart));
                 const safeDur = Math.max(0.2, Math.min(totalDurationSec - safeStart, newDur));
-                setAudioTrim({
-                  startTime: safeStart,
-                  duration: safeDur,
-                });
                 setVoiceStartSec?.(safeStart);
                 setVoiceDurationSec?.(safeDur);
+                setVoiceDurationSecState(safeDur);
+                return;
+              }
+
+              if (itemId === 'audio_bgm' || itemId === 'track_bgm' || itemId === 'bgm_main') {
+                const safeStart = Math.max(0, Math.min(Math.max(0, totalDurationSec - 0.2), newStart));
+                const safeDur = Math.max(0.2, Math.min(totalDurationSec - safeStart, newDur));
                 setBgmStartSec?.(safeStart);
                 setBgmDurationSec?.(safeDur);
                 return;
@@ -3428,7 +3497,6 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             }}
             onUpdateItemEnd={(itemId) => {
               if (itemId.startsWith('media_')) {
-                updateScenesWithHistory(scenes);
                 setSyncStatusMsg('Đã đồng bộ vị trí & thời lượng Scene!');
                 setTimeout(() => setSyncStatusMsg(null), 2000);
               } else if (itemId.startsWith('fx_')) {
@@ -3437,7 +3505,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               } else if (itemId.startsWith('cap_')) {
                 setSyncStatusMsg('Đã đồng bộ thời gian phụ đề & nhịp Karaoke!');
                 setTimeout(() => setSyncStatusMsg(null), 2000);
-              } else if (itemId === 'bgm_main' || itemId.startsWith('audio_')) {
+              } else if (itemId.startsWith('audio_') || itemId === 'bgm_main') {
                 setSyncStatusMsg('Đã đồng bộ cửa sổ phát Audio!');
                 setTimeout(() => setSyncStatusMsg(null), 2000);
               }
