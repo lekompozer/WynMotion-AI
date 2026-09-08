@@ -69,6 +69,7 @@ import { RegenerateSceneModal } from './modals/RegenerateSceneModal';
 import { ExportVideoModal } from './modals/ExportVideoModal';
 import { ExportProgressModal } from './modals/ExportProgressModal';
 import { CaptionReviewModal } from './modals/CaptionReviewModal';
+import { ColorSceneModal, CreatedColorSceneData } from './modals/ColorSceneModal';
 import { MultiTrackTimelineSlider } from './MultiTrackTimelineSlider';
 import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/types';
 import { CapCutCaptionRenderer, CaptionSegment, CaptionPresetStyle } from './subtitles/CapCutCaptionRenderer';
@@ -186,6 +187,17 @@ function SceneMiniThumbnail({ scene, className = 'w-full h-full' }: { scene: Dyn
     );
   }
 
+  if (scene.video_url) {
+    return (
+      <video
+        src={scene.video_url}
+        className={`${className} object-cover rounded`}
+        muted
+        playsInline
+      />
+    );
+  }
+
   return (
     <div className={`${className} bg-slate-100 flex flex-col items-center justify-center text-slate-700 font-bold text-[10px] p-1 text-center truncate`}>
       <span className="text-xs mb-0.5">🎨</span>
@@ -239,7 +251,13 @@ function StudioInner({
     setVoiceDurationSec,
     setBgmStartSec,
     setBgmDurationSec,
+    bgmOffsetSec,
+    setBgmOffsetSec,
     setBgmAudioSrc: setRemotionBgmAudioSrc,
+    videoAudioVolume,
+    setVideoAudioVolume,
+    isVideoAudioMuted,
+    setIsVideoAudioMuted,
   } = useRemotion();
 
   const [visualStyle, setVisualStyle] = useState<string>(initialStyle || projectData?.visual_style || 'product_ads_motion');
@@ -425,6 +443,91 @@ function StudioInner({
     } catch (e) {}
   };
 
+  const DEFAULT_TIMELINE_HEIGHT = 280;
+  const MIN_TIMELINE_HEIGHT = 40;
+  const MAX_TIMELINE_HEIGHT = 700;
+
+  const [timelineHeight, setTimelineHeight] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('wynmotion_timeline_height');
+        if (saved) {
+          const val = parseInt(saved, 10);
+          if (!isNaN(val) && val >= MIN_TIMELINE_HEIGHT && val <= MAX_TIMELINE_HEIGHT) {
+            return val;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return DEFAULT_TIMELINE_HEIGHT;
+  });
+
+  const [isResizingTimeline, setIsResizingTimeline] = useState(false);
+  const isResizingTimelineRef = useRef(false);
+  const timelineStartYRef = useRef(0);
+  const timelineStartHeightRef = useRef(DEFAULT_TIMELINE_HEIGHT);
+
+  const handleTimelineResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizingTimeline(true);
+    isResizingTimelineRef.current = true;
+    timelineStartYRef.current = e.clientY;
+    timelineStartHeightRef.current = isTimelineCollapsed ? 40 : timelineHeight;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingTimelineRef.current) return;
+      const deltaY = moveEvent.clientY - timelineStartYRef.current;
+      const nextHeight = Math.min(
+        MAX_TIMELINE_HEIGHT,
+        Math.max(MIN_TIMELINE_HEIGHT, timelineStartHeightRef.current - deltaY)
+      );
+      if (nextHeight <= 50) {
+        setIsTimelineCollapsed(true);
+      } else {
+        setIsTimelineCollapsed(false);
+      }
+      setTimelineHeight(nextHeight);
+    };
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      if (!isResizingTimelineRef.current) return;
+      isResizingTimelineRef.current = false;
+      setIsResizingTimeline(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+
+      const deltaY = upEvent.clientY - timelineStartYRef.current;
+      const finalHeight = Math.min(
+        MAX_TIMELINE_HEIGHT,
+        Math.max(MIN_TIMELINE_HEIGHT, timelineStartHeightRef.current - deltaY)
+      );
+      if (finalHeight <= 50) {
+        setIsTimelineCollapsed(true);
+      } else {
+        setIsTimelineCollapsed(false);
+      }
+      try {
+        localStorage.setItem('wynmotion_timeline_height', String(finalHeight));
+      } catch (e) {}
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTimelineResizeReset = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsTimelineCollapsed(false);
+    setTimelineHeight(DEFAULT_TIMELINE_HEIGHT);
+    try {
+      localStorage.setItem('wynmotion_timeline_height', String(DEFAULT_TIMELINE_HEIGHT));
+    } catch (e) {}
+  };
+
   const [assetCategory, setAssetCategory] = useState<string>('All');
   const [searchAssetQuery, setSearchAssetQuery] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -441,6 +544,7 @@ function StudioInner({
   const [isMusicLibraryOpen, setIsMusicLibraryOpen] = useState(false);
   const [availableAudioTracks, setAvailableAudioTracks] = useState<AvailableAudioTrack[]>([]);
   const [selectedExportAudioUrl, setSelectedExportAudioUrl] = useState<string>(audioUrl || '');
+  const [isColorSceneModalOpen, setIsColorSceneModalOpen] = useState<boolean>(false);
 
   // ── Voice & BGM Track Handlers ──
   const handleUploadVoiceFile = async (file: File) => {
@@ -1433,6 +1537,9 @@ function StudioInner({
         duration: dur,
         title: s.title || `Scene ${idx + 1}`,
         thumbnailUrl: s.image_url || s.original_image_url,
+        params: {
+          maxDuration: (s as any).video_duration || (s as any).orig_duration || (s as any)._videoDuration || 600,
+        },
       });
 
       const shaderName = (s as any).shader_name || (s as any).transition_out?.shader_name;
@@ -1755,17 +1862,183 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
     }
   };
 
-  // Handle Custom Image Upload
+  // Handle Custom Image or Video Upload (Multi-file Project Asset Bin)
   const handleUploadImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = reader.result as string;
-      setUploadedImages((prev) => [...prev, { id: `${Date.now()}`, name: file.name, url }]);
+    const targetId = activeSceneId || (scenes[0]?.scene_id) || 1;
+
+    Array.from(files).forEach((file, idx) => {
+      const isVid = file.type.startsWith('video/') || /\.(mp4|mov|webm|mkv)$/i.test(file.name);
+      if (isVid) {
+        const localUrl = URL.createObjectURL(file);
+        setUploadedImages((prev) => [...prev, { id: `${Date.now()}_${idx}`, name: file.name, url: localUrl, isVideo: true }]);
+        if (files.length === 1) {
+          handleReplaceSceneImage(targetId, file);
+        }
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const url = reader.result as string;
+          setUploadedImages((prev) => [...prev, { id: `${Date.now()}_${idx}`, name: file.name, url, isVideo: false }]);
+          if (files.length === 1) {
+            handleReplaceSceneImage(targetId, file);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    setSyncStatusMsg(`📁 Đã tải ${files.length} tệp vào Thư viện Tệp Dự Án!`);
+    setTimeout(() => setSyncStatusMsg(null), 2500);
+    if (e.target) e.target.value = '';
+  };
+
+  // Add Color Scene Modal Submission Handler
+  const handleAddColorScene = (data: CreatedColorSceneData) => {
+    const startSec = scenes.length > 0 ? (scenes[scenes.length - 1].end_sec ?? totalDurationSec) : 0;
+    const durSec = data.durationSec || 3.0;
+    const endSec = Number((startSec + durSec).toFixed(2));
+    const durFrames = Math.round(durSec * (fps || 30));
+    const startFrame = Math.round(startSec * (fps || 30));
+    const nextSceneId = scenes.length > 0 ? Math.max(...scenes.map((s) => Number(s.scene_id) || 0)) + 1 : 1;
+
+    const newScene: DynamicSceneData = {
+      scene_id: nextSceneId,
+      title: data.title || (data.initialText ? data.initialText.slice(0, 30) : `Cảnh ${nextSceneId}`),
+      start_sec: Number(startSec.toFixed(2)),
+      end_sec: endSec,
+      duration_sec: durSec,
+      start_frame: startFrame,
+      duration_frames: durFrames,
+      summary_text: data.initialText || '',
+      image_url: data.imageUrl,
+      voice_transcript: data.initialText || '',
     };
-    reader.readAsDataURL(file);
+
+    if (data.initialText) {
+      const newCap: CaptionSegment = {
+        id: `cap_col_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        start: Number(startSec.toFixed(2)),
+        end: endSec,
+        text: data.initialText,
+        words: data.initialText.split(' ').map((w, idx, arr) => ({
+          word: w,
+          start: Number((startSec + (idx / Math.max(1, arr.length)) * durSec).toFixed(2)),
+          end: Number((startSec + ((idx + 1) / Math.max(1, arr.length)) * durSec).toFixed(2)),
+        })),
+      };
+      const nextCaps = [...(captionSegments || []), newCap];
+      setCaptionSegments(nextCaps);
+      if (subtitleMode === 'translated') {
+        setTranslatedCaptionSegments(nextCaps);
+      } else {
+        setOriginalCaptionSegments(nextCaps);
+      }
+    }
+
+    const updated = [...scenes, newScene];
+    updateScenesWithHistory(updated);
+    const calculatedFrames = updated.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+    if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+    setActiveSceneId(nextSceneId);
+    setSelectedTimelineItemId(`media_${nextSceneId}`);
+    setIsColorSceneModalOpen(false);
+    setSyncStatusMsg(`🎨 Đã thêm Phân Cảnh Màu mới (${durSec}s)!`);
+    setTimeout(() => setSyncStatusMsg(null), 2500);
+  };
+
+  // Add Quick Caption Segment at Current Playhead
+  const handleAddCaptionAtPlayhead = () => {
+    const start = Number(currentSec.toFixed(2));
+    const duration = 2.5;
+    const end = Number((start + duration).toFixed(2));
+    const newSeg: CaptionSegment = {
+      id: `cap_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      start,
+      end,
+      text: 'Văn bản mới',
+      words: [
+        { word: 'Văn', start, end: Number((start + 0.8).toFixed(2)) },
+        { word: 'bản', start: Number((start + 0.8).toFixed(2)), end: Number((start + 1.6).toFixed(2)) },
+        { word: 'mới', start: Number((start + 1.6).toFixed(2)), end },
+      ],
+    };
+    const nextSegments = [...(captionSegments || []), newSeg].sort((a, b) => (a.start || 0) - (b.start || 0));
+    setCaptionSegments(nextSegments);
+    if (subtitleMode === 'translated') {
+      setTranslatedCaptionSegments(nextSegments);
+    } else {
+      setOriginalCaptionSegments(nextSegments);
+    }
+    setActiveFlyoutTab('captions');
+    setSyncStatusMsg('✍️ Đã thêm phụ đề mới tại con trỏ phát!');
+    setTimeout(() => setSyncStatusMsg(null), 2000);
+  };
+
+  // Add Asset from Media Bin directly to Timeline as a new Scene
+  const handleAddAssetAsScene = (asset: { id: string; name: string; url: string; isVideo?: boolean }) => {
+    const startSec = scenes.length > 0 ? (scenes[scenes.length - 1].end_sec ?? totalDurationSec) : 0;
+    const nextSceneId = scenes.length > 0 ? Math.max(...scenes.map((s) => Number(s.scene_id) || 0)) + 1 : 1;
+
+    const isVid = asset.isVideo || /\.(mp4|mov|webm|mkv)$/i.test(asset.name);
+    if (isVid) {
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      tempVideo.src = asset.url;
+      tempVideo.onloadedmetadata = () => {
+        const exactDur = Math.max(1, Number(tempVideo.duration.toFixed(2)));
+        const endSec = Number((startSec + exactDur).toFixed(2));
+        const durFrames = Math.round(exactDur * (fps || 30));
+        const startFrame = Math.round(startSec * (fps || 30));
+        const newScene: DynamicSceneData = {
+          scene_id: nextSceneId,
+          title: asset.name.replace(/\.[^/.]+$/, ''),
+          start_sec: Number(startSec.toFixed(2)),
+          end_sec: endSec,
+          duration_sec: exactDur,
+          start_frame: startFrame,
+          duration_frames: durFrames,
+          video_url: asset.url,
+        };
+        const updated = [...scenes, newScene];
+        updateScenesWithHistory(updated);
+        const calculatedFrames = updated.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+        if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+        setActiveSceneId(nextSceneId);
+        setSelectedTimelineItemId(`media_${nextSceneId}`);
+        setSyncStatusMsg(`🎬 Đã thêm Video vào Timeline (${exactDur}s)!`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      };
+    } else {
+      const durSec = 4.0;
+      const endSec = Number((startSec + durSec).toFixed(2));
+      const durFrames = Math.round(durSec * (fps || 30));
+      const startFrame = Math.round(startSec * (fps || 30));
+      const newScene: DynamicSceneData = {
+        scene_id: nextSceneId,
+        title: asset.name.replace(/\.[^/.]+$/, ''),
+        start_sec: Number(startSec.toFixed(2)),
+        end_sec: endSec,
+        duration_sec: durSec,
+        start_frame: startFrame,
+        duration_frames: durFrames,
+        image_url: asset.url,
+      };
+      const updated = [...scenes, newScene];
+      updateScenesWithHistory(updated);
+      const calculatedFrames = updated.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+      if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+      setActiveSceneId(nextSceneId);
+      setSelectedTimelineItemId(`media_${nextSceneId}`);
+      setSyncStatusMsg(`🖼️ Đã thêm Ảnh vào Timeline (${durSec}s)!`);
+      setTimeout(() => setSyncStatusMsg(null), 2500);
+    }
+  };
+
+  const handleRemoveUploadedAsset = (id: string) => {
+    setUploadedImages((prev) => prev.filter((a) => a.id !== id));
   };
 
   // Handle Replace Scene Media directly (Image or Video)
@@ -1785,6 +2058,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               ...sc,
               video_url: localUrl,
               image_url: undefined,
+              thumbnailUrl: localUrl,
               duration_sec: exactDur,
               duration_frames: Math.round(exactDur * (fps || 30)),
               _rawFile: file,
@@ -1807,6 +2081,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               ...sc,
               image_url: dataUrl,
               video_url: undefined,
+              thumbnailUrl: dataUrl,
               generated_image_url: dataUrl,
               sketch_image_url: dataUrl,
               _rawFile: file,
@@ -1839,9 +2114,33 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       const user = wordaiAuth?.currentUser;
       const token = user ? await user.getIdToken() : null;
 
-      const chosenAudio = targetAudioUrl !== undefined ? targetAudioUrl : (selectedExportAudioUrl || audioUrl);
+      let chosenAudio = targetAudioUrl !== undefined ? targetAudioUrl : (selectedExportAudioUrl || audioUrl);
       const chosenAspect = targetAspectRatio || aspectRatio;
       const chosenBg = targetBgColor || bgColor || '#FAF7EF';
+
+      // Pre-upload raw / local blob audio file if present
+      const rawAudio = (projectData as any)?._rawAudioFile as File | undefined;
+      if (rawAudio) {
+        try {
+          const afd = new FormData();
+          afd.append('file', rawAudio);
+          const aUp = await wynmotionService.uploadMedia(afd);
+          if (aUp.url) chosenAudio = aUp.url;
+        } catch (aErr) {
+          console.warn('Could not pre-upload audio for export:', aErr);
+        }
+      } else if (chosenAudio && chosenAudio.startsWith('blob:')) {
+        try {
+          const aRes = await fetch(chosenAudio);
+          const aBlob = await aRes.blob();
+          const afd = new FormData();
+          afd.append('file', aBlob, 'audio_track.mp3');
+          const aUp = await wynmotionService.uploadMedia(afd);
+          if (aUp.url) chosenAudio = aUp.url;
+        } catch (aErr) {
+          console.warn('Could not pre-upload blob audio for export:', aErr);
+        }
+      }
 
       // Pre-upload raw / local blob media files
       const processedScenes = await Promise.all(
@@ -2698,7 +2997,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                   seekTo(sc.start_frame || 0);
                   setActiveSceneId(sc.scene_id);
                 }}
-                onAddScene={handleAddScene}
+                onAddScene={() => setIsColorSceneModalOpen(true)}
                 onDeleteScene={handleDeleteScene}
                 onUpdateScenes={updateScenesWithHistory}
                 onOpenRegenerateModal={handleOpenRegenerateModal}
@@ -2706,6 +3005,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 uploadedImages={uploadedImages}
                 onUploadImageFile={handleUploadImageFile}
                 onReplaceSceneImage={handleReplaceSceneImage}
+                onAddAssetAsScene={handleAddAssetAsScene}
+                onRemoveUploadedAsset={handleRemoveUploadedAsset}
                 isGeneratingOmni={isGeneratingOmni}
                 projectData={projectData}
               />
@@ -2741,6 +3042,12 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onUploadBgmFile={handleUploadBgmFile}
                 onRemoveBgm={handleRemoveBgm}
                 onOpenMusicLibrary={() => setIsMusicLibraryOpen(true)}
+                videoAudioVolume={videoAudioVolume}
+                setVideoAudioVolume={setVideoAudioVolume}
+                isVideoAudioMuted={isVideoAudioMuted}
+                setIsVideoAudioMuted={setIsVideoAudioMuted}
+                bgmOffsetSec={bgmOffsetSec}
+                setBgmOffsetSec={setBgmOffsetSec}
               />
             )}
 
@@ -3118,12 +3425,36 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       {/* 3. CAPCUT PROFESSIONAL MULTI-TRACK TIMELINE */}
       {/* ───────────────────────────────────────────────────────────── */}
       <footer
-        className={`border-t border-[#1E2330] bg-[#12141F] flex flex-col z-20 transition-all duration-200 shrink-0 ${
-          isTimelineCollapsed ? 'h-10' : 'min-h-[380px] pb-8'
+        style={{ height: isTimelineCollapsed ? '40px' : `${timelineHeight}px` }}
+        className={`border-t border-[#1E2330] bg-[#12141F] flex flex-col z-20 shrink-0 relative ${
+          isTimelineCollapsed ? '' : 'overflow-hidden'
         }`}
       >
+        {/* Resize Splitter Handle (Top Edge of Footer) */}
+        <div
+          onMouseDown={handleTimelineResizeStart}
+          onDoubleClick={handleTimelineResizeReset}
+          title="Kéo lên/xuống để thay đổi độ cao Timeline & Canvas Preview (Double-click để đặt lại chuẩn 280px)"
+          className={`absolute top-0 left-0 right-0 h-4 -translate-y-1/2 z-40 cursor-row-resize group flex items-center justify-center transition-colors select-none ${
+            isResizingTimeline ? 'bg-cyan-500/40' : 'hover:bg-cyan-500/25'
+          }`}
+        >
+          <div
+            className={`w-20 h-1.5 rounded-full transition-all duration-150 ${
+              isResizingTimeline
+                ? 'bg-cyan-400 w-32 h-2 shadow-[0_0_12px_rgba(6,182,212,0.9)]'
+                : 'bg-slate-500/80 group-hover:bg-cyan-400 group-hover:w-28'
+            }`}
+          />
+        </div>
+
+        {/* Global overlay during timeline dragging to prevent iframe / canvas interference */}
+        {isResizingTimeline && (
+          <div className="fixed inset-0 z-50 cursor-row-resize select-none pointer-events-auto" />
+        )}
+
         {/* Top Mini Control Toolbar with CapCut Tools */}
-        <div className="h-10 px-4 flex items-center justify-between border-b border-[#1E2330] bg-[#0E1017] sticky top-12 z-20 shadow-sm">
+        <div className="h-10 px-4 flex items-center justify-between border-b border-[#1E2330] bg-[#0E1017] sticky top-0 z-20 shadow-sm shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsTimelineCollapsed(!isTimelineCollapsed)}
@@ -3158,6 +3489,30 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             >
               <Scissors className="w-3 h-3" />
               <span>Split (Cắt)</span>
+            </button>
+            <button
+              onClick={() => setIsColorSceneModalOpen(true)}
+              title="Thêm Phân Cảnh Mới (+ Scene Màu/Ảnh/Video)"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition-all"
+            >
+              <Plus className="w-3 h-3" />
+              <span>+ Scene</span>
+            </button>
+            <button
+              onClick={() => setActiveFlyoutTab('audio')}
+              title="Thêm Nhạc nền / Giọng đọc (+ Audio)"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition-all"
+            >
+              <Plus className="w-3 h-3" />
+              <span>+ Audio</span>
+            </button>
+            <button
+              onClick={handleAddCaptionAtPlayhead}
+              title="Thêm Phụ Đề tại vị trí con trỏ (+ Subtitle)"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition-all"
+            >
+              <Plus className="w-3 h-3" />
+              <span>+ Chữ</span>
             </button>
           </div>
 
@@ -3296,6 +3651,9 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             onZoomChange={setTimelineZoom}
             onDeleteItem={handleDeleteItem}
             onOpenFXTab={() => setActiveFlyoutTab('effects')}
+            onAddScene={() => setIsColorSceneModalOpen(true)}
+            onOpenAudioTab={() => setActiveFlyoutTab('audio')}
+            onAddCaptionSegment={handleAddCaptionAtPlayhead}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
               // 1. Move & Resize Media Scene Clip (CapCut Magnetic Timeline Trimming & Reordering)
               if (itemId.startsWith('media_')) {
@@ -3374,6 +3732,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                   };
                 });
                 updateScenesWithHistory(updatedScenes);
+                const calculatedFrames = updatedScenes.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+                if (setDurationInFrames) setDurationInFrames(calculatedFrames);
                 return;
               }
 
@@ -3515,8 +3875,14 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       </footer>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 4. MODALS (REGENERATE SCENE WITH 3 POINTS, EXPORT VIDEO, EXPORT PROGRESS) */}
+      {/* 4. MODALS (COLOR SCENE, REGENERATE SCENE, EXPORT VIDEO, EXPORT PROGRESS) */}
       {/* ───────────────────────────────────────────────────────────── */}
+      <ColorSceneModal
+        isOpen={isColorSceneModalOpen}
+        onClose={() => setIsColorSceneModalOpen(false)}
+        onAddColorScene={handleAddColorScene}
+      />
+
       <RegenerateSceneModal
         scene={sceneToRegenerate}
         isOpen={Boolean(sceneToRegenerate)}

@@ -127,10 +127,15 @@ export const MobileDynamicSceneRenderer: React.FC<MobileDynamicSceneRendererProp
         <video
           src={scene.video_url}
           playsInline
-          loop
-          autoPlay
           muted
           className="w-full h-full object-cover"
+          ref={(el) => {
+            if (el && typeof currentTimeSec === 'number' && !isNaN(currentTimeSec)) {
+              if (Math.abs(el.currentTime - currentTimeSec) > 0.15) {
+                el.currentTime = Math.max(0, currentTimeSec);
+              }
+            }
+          }}
         />
         {showWhisperSubs && displayVoice && (
           <div

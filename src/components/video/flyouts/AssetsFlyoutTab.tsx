@@ -31,9 +31,11 @@ export interface AssetsFlyoutTabProps {
   onUpdateScenes: (scenes: DynamicSceneData[]) => void;
   onOpenRegenerateModal: (scene: DynamicSceneData) => void;
   onClose: () => void;
-  uploadedImages: Array<{ id: string; name: string; url: string }>;
+  uploadedImages: Array<{ id: string; name: string; url: string; isVideo?: boolean }>;
   onUploadImageFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onReplaceSceneImage?: (sceneId: number | string, file: File) => void;
+  onAddAssetAsScene?: (asset: { id: string; name: string; url: string; isVideo?: boolean }) => void;
+  onRemoveUploadedAsset?: (id: string) => void;
   isGeneratingOmni?: boolean;
   onOpenOmniModal?: () => void;
   projectData?: any;
@@ -48,6 +50,16 @@ const SceneMiniThumbnail: React.FC<{ scene: DynamicSceneData }> = ({ scene }) =>
         src={imgUrl}
         alt={scene.title || 'Scene preview'}
         className="w-full h-full object-cover rounded-lg"
+      />
+    );
+  }
+  if (scene.video_url) {
+    return (
+      <video
+        src={scene.video_url}
+        className="w-full h-full object-cover rounded-lg"
+        muted
+        playsInline
       />
     );
   }
@@ -76,6 +88,8 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
   uploadedImages,
   onUploadImageFile,
   onReplaceSceneImage,
+  onAddAssetAsScene,
+  onRemoveUploadedAsset,
   isGeneratingOmni,
   onOpenOmniModal,
   projectData,
@@ -136,6 +150,83 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
           <X className="w-4 h-4" />
         </button>
+      </div>
+
+      {/* ── PROJECT MEDIA BIN (CAPCUT ASSETS TAB) ── */}
+      <div className="p-3 rounded-2xl bg-[#141824] border border-[#252B3E] space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-xs font-bold text-slate-200">Media Dự Án (Project Assets)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
+              {uploadedImages.length}
+            </span>
+          </div>
+          <label className="cursor-pointer text-[10px] font-bold px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 transition-all">
+            <Upload className="w-3 h-3" />
+            <span>+ Tải tệp</span>
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={onUploadImageFile}
+            />
+          </label>
+        </div>
+
+        {uploadedImages.length === 0 ? (
+          <div className="p-3 rounded-xl border border-dashed border-[#22273B] text-center text-[11px] text-slate-500 flex flex-col items-center gap-1">
+            <ImageIcon className="w-5 h-5 text-slate-600" />
+            <span>Tải nhiều ảnh / video vào đây và bấm &quot;Thêm vào Dự Án&quot; để đưa nhanh vào Timeline</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            {uploadedImages.map((asset) => {
+              const isVid = asset.isVideo || /\.(mp4|mov|webm|mkv)$/i.test(asset.name);
+              return (
+                <div key={asset.id} className="p-2 rounded-xl bg-[#0D1018] border border-[#22273B] flex flex-col justify-between group hover:border-cyan-500/40 transition-all">
+                  <div className="aspect-video w-full rounded-lg bg-black/40 overflow-hidden relative mb-1.5 flex items-center justify-center">
+                    {isVid ? (
+                      <video src={asset.url} className="w-full h-full object-cover" muted />
+                    ) : (
+                      <img src={asset.url} alt={asset.name} className="w-full h-full object-cover" />
+                    )}
+                    {isVid && (
+                      <span className="absolute top-1 left-1 px-1 py-0.2 bg-black/70 text-cyan-300 text-[8px] font-bold rounded">
+                        VID
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] font-medium text-slate-300 truncate mb-1.5" title={asset.name}>
+                    {asset.name}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onAddAssetAsScene?.(asset)}
+                      className="flex-1 py-1 px-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                      title="Thêm tệp này vào Timeline"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      <span>+ Thêm</span>
+                    </button>
+                    {onRemoveUploadedAsset && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveUploadedAsset(asset.id)}
+                        className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                        title="Xoá khỏi thư viện"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}

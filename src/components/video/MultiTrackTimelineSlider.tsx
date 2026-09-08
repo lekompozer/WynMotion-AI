@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { Play, Pause, ZoomIn, ZoomOut, Sparkles, RefreshCw, Trash2, Scissors } from 'lucide-react';
+import { Play, Pause, ZoomIn, ZoomOut, Sparkles, RefreshCw, Trash2, Scissors, Plus, Music, Type, Film } from 'lucide-react';
 import { TimelineTrack, TimelineItem } from '../../../packages/timeline-core/types';
 import { formatTimestamp, timeToPixels, pixelsToTime, snapToGrid } from '../../../packages/timeline-core/math_timeline';
 
@@ -18,6 +18,9 @@ export interface MultiTrackTimelineSliderProps {
   onDeleteItem?: (itemId: string) => void;
   selectedItemId?: string | null;
   onOpenFXTab?: () => void;
+  onOpenAudioTab?: () => void;
+  onAddScene?: () => void;
+  onAddCaptionSegment?: () => void;
   isMobile?: boolean;
   zoomLevel?: number;
   onZoomChange?: (newZoom: number) => void;
@@ -35,6 +38,62 @@ interface ActiveDragState {
   clientX: number;
   clientY: number;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// AUDIO WAVEFORM SVG COMPONENT (Rhythmic Waveform Peaks for BGM & Voice)
+// ─────────────────────────────────────────────────────────────────
+interface AudioWaveformSvgProps {
+  width: number;
+  height: number;
+  seedId: string;
+}
+
+const AudioWaveformSvg: React.FC<AudioWaveformSvgProps> = React.memo(({ width, height, seedId }) => {
+  const barSpacing = 4;
+  const numBars = Math.max(6, Math.floor(width / barSpacing));
+
+  const bars = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < seedId.length; i++) hash = (hash << 5) - hash + seedId.charCodeAt(i);
+    const result: number[] = [];
+    for (let i = 0; i < numBars; i++) {
+      const wave = Math.sin(i * 0.18 + hash) * 0.35 + Math.cos(i * 0.42) * 0.25;
+      const pseudoRand = Math.abs(Math.sin(hash + i * 997)) * 0.35;
+      const normalizedHeight = Math.min(0.95, Math.max(0.18, 0.42 + wave + pseudoRand));
+      result.push(normalizedHeight);
+    }
+    return result;
+  }, [numBars, seedId]);
+
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none opacity-40 overflow-hidden"
+      preserveAspectRatio="none"
+      viewBox={`0 0 ${numBars * barSpacing} ${height}`}
+    >
+      {bars.map((h, idx) => {
+        const barH = h * (height - 14);
+        const y = (height - barH) / 2;
+        const x = idx * barSpacing + 1;
+        const isBeat = idx % 8 === 0;
+        return (
+          <rect
+            key={idx}
+            x={x}
+            y={y}
+            width={2.2}
+            height={barH}
+            rx={1.1}
+            fill={isBeat ? '#34D399' : '#A7F3D0'}
+            opacity={isBeat ? 0.95 : 0.65}
+          />
+        );
+      })}
+    </svg>
+  );
+});
+
+AudioWaveformSvg.displayName = 'AudioWaveformSvg';
 
 // ─────────────────────────────────────────────────────────────────
 // 1. ISOLATED MEMOIZED CLIP ITEM COMPONENT
@@ -89,7 +148,7 @@ const TimelineClipItem = React.memo<TimelineClipItemProps>(
 
     return (
       <div
-        className={`absolute top-1 bottom-1 rounded-xl bg-gradient-to-r ${bgGradient} text-white flex items-center justify-between border shadow-md group transition-shadow ${
+        className={`absolute top-1 bottom-1 rounded-xl bg-gradient-to-r ${bgGradient} text-white flex items-center justify-between border shadow-md group transition-shadow overflow-hidden ${
           isThisItemActive
             ? 'border-white ring-2 ring-cyan-400 shadow-xl shadow-cyan-500/50 z-30 scale-[1.01]'
             : isSelected
@@ -106,6 +165,10 @@ const TimelineClipItem = React.memo<TimelineClipItemProps>(
           onSelectItem?.(item.id);
         }}
       >
+        {/* AUDIO WAVEFORM BACKGROUND VISUALIZER */}
+        {track.type === 'audio' && (
+          <AudioWaveformSvg width={itemWidth} height={isMobile ? 48 : 54} seedId={item.id} />
+        )}
         {/* LEFT RESIZE HANDLE (Generous 20px hit-zone) */}
         <div
           onMouseDown={(e) => onStartResize(e, item, track, 'left')}
@@ -184,6 +247,10 @@ interface TimelineTrackRowProps {
     track: TimelineTrack,
     direction: 'left' | 'right'
   ) => void;
+  onAddScene?: () => void;
+  onOpenAudioTab?: () => void;
+  onAddCaptionSegment?: () => void;
+  onOpenFXTab?: () => void;
 }
 
 const TimelineTrackRow = React.memo<TimelineTrackRowProps>(
@@ -197,7 +264,14 @@ const TimelineTrackRow = React.memo<TimelineTrackRowProps>(
     onDeleteItem,
     onStartDragMove,
     onStartResize,
+    onAddScene,
+    onOpenAudioTab,
+    onAddCaptionSegment,
+    onOpenFXTab,
   }) => {
+    const lastItem = track.items[track.items.length - 1];
+    const lastEndPx = lastItem ? timeToPixels(lastItem.endTime, zoom) : 4;
+
     return (
       <div
         className={`relative rounded-xl bg-[#141724]/70 border border-[#1E2232]/90 flex items-center ${
@@ -211,6 +285,59 @@ const TimelineTrackRow = React.memo<TimelineTrackRowProps>(
             {track.type === 'transitions' && (track.id === 'track_fx_1' ? '⚡ FX 2' : '⚡ FX')}
             {track.type === 'captions' && '💬 Caption'}
           </div>
+        )}
+
+        {/* Quick Add Button for empty or end of track */}
+        {track.type === 'video' && onAddScene && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddScene();
+            }}
+            style={{ left: `${lastEndPx + 8}px` }}
+            className="absolute top-1 bottom-1 px-3 rounded-xl border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 flex items-center gap-1.5 text-xs font-bold transition-all z-10 cursor-pointer shadow-xs active:scale-95 shrink-0 whitespace-nowrap"
+            title="Thêm phân cảnh mới (Scene màu nền hoặc Video/Ảnh)"
+          >
+            <Plus className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Thêm Scene</span>
+          </button>
+        )}
+
+        {track.type === 'audio' && onOpenAudioTab && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenAudioTab();
+            }}
+            style={{
+              left: track.items.length > 0 ? `${lastEndPx + 8}px` : '8px',
+            }}
+            className="absolute top-1 bottom-1 px-2.5 rounded-xl border-2 border-dashed border-emerald-500/40 hover:border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 flex items-center gap-1 text-[11px] font-black transition-all z-10 cursor-pointer shadow-xs active:scale-95 shrink-0 whitespace-nowrap"
+            title="Thêm nhạc nền hoặc giọng đọc AI"
+          >
+            <Plus className="w-3 h-3 text-emerald-400" />
+            <span>Thêm Nhạc / Voice</span>
+          </button>
+        )}
+
+        {track.type === 'captions' && onAddCaptionSegment && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddCaptionSegment();
+            }}
+            style={{
+              left: track.items.length > 0 ? `${lastEndPx + 8}px` : '8px',
+            }}
+            className="absolute top-1 bottom-1 px-2.5 rounded-xl border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 flex items-center gap-1 text-[11px] font-black transition-all z-10 cursor-pointer shadow-xs active:scale-95 shrink-0 whitespace-nowrap"
+            title="Thêm phân đoạn chữ/phụ đề"
+          >
+            <Plus className="w-3 h-3 text-amber-400" />
+            <span>Thêm Chữ / Sub</span>
+          </button>
         )}
 
         {track.items.map((item) => (
@@ -251,6 +378,9 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   onDeleteItem,
   selectedItemId,
   onOpenFXTab,
+  onAddScene,
+  onOpenAudioTab,
+  onAddCaptionSegment,
   isMobile = false,
   zoomLevel,
   onZoomChange,
@@ -459,7 +589,10 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
         let calcDur = item.duration;
 
         if (direction === 'right') {
-          calcDur = Math.max(0.2, Math.min(totalDuration - item.startTime, snapToGrid(item.duration + deltaTime, 0.05)));
+          // For video/media clips, allow stretching up to original clip length (or composition max),
+          // instead of clamping to current totalDuration which prevents dragging back up!
+          const maxAllowed = item.params?.maxDuration || (track.type === 'video' ? 600 : Math.max(totalDuration - item.startTime, 600));
+          calcDur = Math.max(0.2, Math.min(maxAllowed, snapToGrid(item.duration + deltaTime, 0.05)));
         } else {
           const origEnd = item.startTime + item.duration;
           calcStart = Math.max(0, Math.min(origEnd - 0.2, snapToGrid(item.startTime + deltaTime, 0.05)));
@@ -518,19 +651,19 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   const playheadLeft = timeToPixels(currentTime, zoom);
 
   return (
-    <div className={`w-full bg-[#0D0F18] border-t border-[#1E2232] flex flex-col select-none ${isMobile ? 'text-xs' : 'text-sm'}`}>
+    <div className={`w-full flex-1 min-h-0 bg-[#0D0F18] border-t border-[#1E2232] flex flex-col select-none ${isMobile ? 'text-xs' : 'text-sm'}`}>
       {/* ─────────────────────────────────────────────────────────────
-          1. TOP CONTROL BAR (2 COMPACT ROWS: PLAY + TIME SCRUBBER | ZOOM % + TIMESTAMPS)
+          1. TOP CONTROL BAR (SINGLE COMPACT ROW: PLAY + SCRUBBER | QUICK ADD | ZOOM + TIMESTAMPS)
           ───────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col px-3 py-1.5 bg-[#121522] border-b border-[#1E2232] gap-1.5">
-        {/* ROW 1: Play/Pause Button + Time Scrubber Slider (+ Delete button if selected) */}
-        <div className="flex items-center gap-2.5 w-full">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#121522] border-b border-[#1E2232] gap-2.5 shrink-0 h-9">
+        {/* Left: Play/Pause Button + Time Scrubber Slider */}
+        <div className="flex items-center gap-2 flex-1 min-w-[140px] max-w-sm">
           <button
             onClick={onPlayPause}
-            className="p-1.5 rounded-xl bg-gradient-to-tr from-cyan-400 to-blue-600 text-slate-950 hover:brightness-110 shadow-md font-bold transition-all shrink-0 active:scale-95"
+            className="p-1 rounded-lg bg-gradient-to-tr from-cyan-400 to-blue-600 text-slate-950 hover:brightness-110 shadow-md font-bold transition-all shrink-0 active:scale-95"
             title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}
           >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
           </button>
 
           {/* Interactive Time Scrubber Slider */}
@@ -541,32 +674,67 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
             step={0.02}
             value={currentTime}
             onChange={(e) => onSeek(parseFloat(e.target.value))}
-            className="flex-1 accent-cyan-400 h-1.5 bg-[#1F2438] rounded-lg cursor-pointer transition-all"
+            className="w-full accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer transition-all"
             title="Kéo để tua nhanh thời gian phát"
           />
+        </div>
 
+        {/* Center: Quick Add Buttons */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onAddScene && (
+            <button
+              type="button"
+              onClick={onAddScene}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[10px] font-black transition-all active:scale-95 shadow-xs"
+              title="Thêm phân cảnh mới (Scene màu nền hoặc Video/Ảnh)"
+            >
+              <Plus className="w-2.5 h-2.5 text-cyan-400" />
+              <span className="hidden sm:inline">+ Scene</span>
+            </button>
+          )}
+          {onOpenAudioTab && (
+            <button
+              type="button"
+              onClick={onOpenAudioTab}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-black transition-all active:scale-95 shadow-xs"
+              title="Thêm nhạc nền hoặc giọng đọc AI"
+            >
+              <Music className="w-2.5 h-2.5 text-emerald-400" />
+              <span className="hidden sm:inline">+ Audio</span>
+            </button>
+          )}
+          {onAddCaptionSegment && (
+            <button
+              type="button"
+              onClick={onAddCaptionSegment}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-black transition-all active:scale-95 shadow-xs"
+              title="Thêm phân đoạn phụ đề / chữ tại vị trí con trỏ"
+            >
+              <Type className="w-2.5 h-2.5 text-amber-400" />
+              <span className="hidden sm:inline">+ Sub</span>
+            </button>
+          )}
           {selectedItemId && onDeleteItem && (
             <button
               onClick={() => onDeleteItem(selectedItemId)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black transition-all shadow-md active:scale-95 shrink-0"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black transition-all shadow-md active:scale-95 shrink-0"
               title="Xóa clip đang chọn"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-2.5 h-2.5" />
               <span>Xóa</span>
             </button>
           )}
         </div>
 
-        {/* ROW 2: Zoom Slider (%) + Dynamic Timestamp Indicator */}
-        <div className="flex items-center justify-between w-full pt-0.5">
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-1.5 bg-[#090B12] px-2 py-0.5 rounded-xl border border-[#1E2232]">
+        {/* Right: Zoom Controls & Timestamp Indicator */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 bg-[#090B12] px-1.5 py-0.5 rounded-lg border border-[#1E2232]">
             <button
               onClick={() => handleZoomUpdate(activeZoom - 0.1)}
               className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
               title="Thu nhỏ timeline (-)"
             >
-              <ZoomOut className="w-3 h-3" />
+              <ZoomOut className="w-2.5 h-2.5" />
             </button>
             <input
               type="range"
@@ -575,16 +743,16 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
               step="0.05"
               value={activeZoom}
               onChange={(e) => handleZoomUpdate(parseFloat(e.target.value))}
-              className="w-16 sm:w-24 accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer"
+              className="w-12 sm:w-16 accent-cyan-400 h-1 bg-[#1F2438] rounded-lg cursor-pointer"
             />
             <button
               onClick={() => handleZoomUpdate(activeZoom + 0.1)}
               className="p-0.5 text-slate-400 hover:text-white rounded transition-colors"
               title="Phóng to timeline (+)"
             >
-              <ZoomIn className="w-3 h-3" />
+              <ZoomIn className="w-2.5 h-2.5" />
             </button>
-            <span className="text-[10px] font-mono text-cyan-400 font-bold ml-0.5 min-w-[32px]">
+            <span className="text-[9px] font-mono text-cyan-400 font-bold ml-0.5 min-w-[28px]">
               {Math.round(activeZoom * 100)}%
             </span>
             <button
@@ -593,17 +761,16 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                 setHasUserCustomizedZoom(false);
                 handleZoomUpdate(fitZoom);
               }}
-              className="ml-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-[#192238] hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all"
+              className="px-1 py-0.2 text-[8px] font-bold rounded bg-[#192238] hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all"
               title="Khớp toàn bộ chiều ngang màn hình (Fit to Screen Width)"
             >
               Fit
             </button>
           </div>
 
-          {/* Changing Timecode */}
-          <div className="font-mono text-[11px] font-black tracking-wider text-slate-300">
+          <div className="font-mono text-[10px] font-bold tracking-wide text-slate-300">
             <span className="text-cyan-400">{formatTimestamp(currentTime)}</span>
-            <span className="text-slate-500 mx-1">/</span>
+            <span className="text-slate-500 mx-0.5">/</span>
             <span className="text-slate-400">{formatTimestamp(totalDuration)}</span>
           </div>
         </div>
@@ -615,7 +782,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
       <div
         ref={scrollContainerRef}
         onClick={handleTimelineClick}
-        className="w-full overflow-x-auto relative bg-[#090B12] cursor-crosshair studio-scrollbar"
+        className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-auto relative bg-[#090B12] cursor-crosshair studio-scrollbar"
       >
         <div className="relative py-1.5" style={{ width: `${totalWidth}px` }}>
           {/* Ruler */}
@@ -646,6 +813,10 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
                 onDeleteItem={onDeleteItem}
                 onStartDragMove={handleStartDragMove}
                 onStartResize={handleStartResize}
+                onAddScene={onAddScene}
+                onOpenAudioTab={onOpenAudioTab}
+                onAddCaptionSegment={onAddCaptionSegment}
+                onOpenFXTab={onOpenFXTab}
               />
             ))}
           </div>

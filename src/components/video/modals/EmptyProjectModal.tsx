@@ -89,16 +89,32 @@ export const EmptyProjectModal: React.FC<EmptyProjectModalProps> = ({
 
     const newItems: UploadedMediaItem[] = [];
     Array.from(files).forEach((file) => {
-      const isVid = file.type.startsWith('video/');
+      const isVid = file.type.startsWith('video/') || /\.(mp4|mov|webm|mkv)$/i.test(file.name);
       const previewUrl = URL.createObjectURL(file);
-      newItems.push({
+      const itemObj: UploadedMediaItem = {
         id: `media_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
         type: isVid ? 'video' : 'image',
         file,
         previewUrl,
         durationSec: isVid ? 5.0 : 4.0,
         name: file.name,
-      });
+      };
+      newItems.push(itemObj);
+
+      // Measure exact video duration
+      if (isVid) {
+        const tempVid = document.createElement('video');
+        tempVid.preload = 'metadata';
+        tempVid.src = previewUrl;
+        tempVid.onloadedmetadata = () => {
+          if (tempVid.duration && isFinite(tempVid.duration) && tempVid.duration > 0) {
+            const exact = Number(tempVid.duration.toFixed(2));
+            setMediaItems((currentList) =>
+              currentList.map((m) => (m.id === itemObj.id ? { ...m, durationSec: exact } : m))
+            );
+          }
+        };
+      }
     });
 
     setMediaItems((prev) => [...prev, ...newItems]);
@@ -176,53 +192,22 @@ export const EmptyProjectModal: React.FC<EmptyProjectModalProps> = ({
     setIsPlayingAudio(false);
   };
 
-  // 3. Create Empty Project and Launch Editor
-  const handleCreateAndOpenStudio = async () => {
+  // 3. Create Empty Project and Launch Editor Instantly (0ms local blob, upload on MP4 export)
+  const handleCreateAndOpenStudio = () => {
     setIsProcessing(true);
     try {
-      // 1. Upload media files if needed (or fallback to object URLs for fast local preview)
-      const uploadedMedia = await Promise.all(
-        mediaItems.map(async (item) => {
-          try {
-            const formData = new FormData();
-            formData.append('file', item.file);
-            const res = await wynmotionService.uploadMedia(formData);
-            if (res.url) {
-              return { ...item, remoteUrl: res.url };
-            }
-          } catch (err) {
-            console.warn('Local asset upload fallback:', err);
-          }
-          return item;
-        })
-      );
-
-      // 2. Upload audio if present
-      let uploadedAudioUrl = audioPreviewUrl || undefined;
-      if (audioFile) {
-        try {
-          const formData = new FormData();
-          formData.append('file', audioFile);
-          const res = await wynmotionService.uploadMedia(formData);
-          if (res.url) uploadedAudioUrl = res.url;
-        } catch (err) {
-          console.warn('Audio upload fallback:', err);
-        }
-      }
-
-      // 3. Build Scenes from uploaded media (or default 3 scenes if empty)
-      const count = uploadedMedia.length > 0 ? uploadedMedia.length : 3;
+      const count = mediaItems.length > 0 ? mediaItems.length : 3;
       const totalAudioDur = audioDurationSec || count * 4.0;
       const perSceneDur = Number((totalAudioDur / count).toFixed(1));
 
       let curStartSec = 0;
-      const scenes: MotionScene[] = [];
+      const scenes: (MotionScene & { _rawFile?: File })[] = [];
 
       for (let i = 0; i < count; i++) {
-        const item = uploadedMedia[i];
-        const scDur = item?.durationSec ? Math.max(2.0, item.durationSec) : perSceneDur;
-        const mediaUrl = item ? (item.remoteUrl || item.previewUrl) : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1080';
+        const item = mediaItems[i];
         const isVideo = item?.type === 'video';
+        const scDur = item?.durationSec ? Math.max(1.0, item.durationSec) : perSceneDur;
+        const mediaUrl = item ? item.previewUrl : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1080';
 
         scenes.push({
           scene_id: String(i + 1),
@@ -234,11 +219,12 @@ export const EmptyProjectModal: React.FC<EmptyProjectModalProps> = ({
           duration_sec: scDur,
           start_time_sec: Number(curStartSec.toFixed(1)),
           actions: [],
-        });
+          _rawFile: item?.file,
+        } as any);
         curStartSec += scDur;
       }
 
-      const newProject: MotionProject = {
+      const newProject: MotionProject & { _rawAudioFile?: File } = {
         project_id: `empty_${Date.now()}`,
         title: isVietnamese ? `Dự Án Mới (${new Date().toLocaleDateString('vi-VN')})` : `Custom Project (${new Date().toLocaleDateString()})`,
         prompt: 'Custom Empty Project with user uploaded media and audio',
@@ -248,8 +234,9 @@ export const EmptyProjectModal: React.FC<EmptyProjectModalProps> = ({
         fps: 30,
         language_code: 'vi',
         status: 'ready',
-        audio_url: uploadedAudioUrl,
-        scenes,
+        audio_url: audioPreviewUrl || undefined,
+        _rawAudioFile: audioFile || undefined,
+        scenes: scenes as any,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

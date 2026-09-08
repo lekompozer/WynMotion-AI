@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from '../RemotionEngine';
 
 export type CaptionPresetStyle =
@@ -73,7 +73,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
   uppercase = false,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
   const currentTime = frame / fps;
 
   // Find active segment at currentTime (with smooth 0.2s tail buffer so captions don't disappear during micro-pauses)
@@ -188,11 +188,41 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
     return [wArr.slice(0, bestSplit).join(' '), wArr.slice(bestSplit).join(' ')];
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [stageWidth, setStageWidth] = useState<number>(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const update = () => {
+      if (containerRef.current) {
+        setStageWidth(containerRef.current.clientWidth);
+      }
+    };
+    update();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(update);
+      ro.observe(containerRef.current);
+      return () => ro.disconnect();
+    }
+  }, []);
+
+  const isLandscape = (width || 1080) > (height || 1920);
+  const masterWidth = width || (isLandscape ? 1920 : 1080);
+  const refPreviewWidth = isLandscape ? 640 : 360;
+
+  const currentRenderWidth = stageWidth > 0 ? stageWidth : masterWidth;
+  const isExportRender = currentRenderWidth >= 700;
+
+  const resolutionScale = isExportRender
+    ? (masterWidth / refPreviewWidth)
+    : (currentRenderWidth / refPreviewWidth);
+
   const textLines = getBalancedTextLines(activeSegment.text || '');
   const maxLineChars = Math.max(...textLines.map((l) => l.length), 1);
   // Auto-fit font size so long lines strictly fit in at most 2 lines without aggressive shrinking
   const autoFitScale = maxLineChars > 36 ? Math.max(0.85, 36 / maxLineChars) : 1.0;
-  const effectiveFontSize = Math.max(14, Math.round(fontSize * autoFitScale));
+  const scaledBaseFontSize = Math.round(fontSize * resolutionScale);
+  const effectiveFontSize = Math.max(12, Math.round(scaledBaseFontSize * autoFitScale));
 
   const renderTextLines = (extraLineStyle?: React.CSSProperties) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', width: '100%' }}>
@@ -252,7 +282,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
   );
 
   return (
-    <div style={getYPosStyle()}>
+    <div ref={containerRef} style={getYPosStyle()}>
       {/* ─────────────────────────────────────────────────────────────
           1. KARAOKE GLOW (Default CapCut Style)
           ───────────────────────────────────────────────────────────── */}
@@ -264,7 +294,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 900,
             textTransform: uppercase ? 'uppercase' : 'none',
           }}
@@ -397,7 +427,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 800,
             color: '#FFFFFF',
             textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 4px 20px rgba(0,0,0,0.85), 0 0 4px #000',
@@ -434,7 +464,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 900,
             color: '#0F172A',
             textShadow: '0 1px 2px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.4)',
@@ -471,7 +501,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 900,
             textShadow: '0 3px 12px rgba(0,0,0,0.95), 0 0 4px #000',
           }}
@@ -594,7 +624,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textAlign: 'center',
             lineHeight: 1.45,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 800,
           }}
         >

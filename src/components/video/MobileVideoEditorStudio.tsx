@@ -650,6 +650,9 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
         duration: dur,
         title: s.title || `Scene ${idx + 1}`,
         thumbnailUrl: s.image_url || (s as any).original_image_url,
+        params: {
+          maxDuration: (s as any).video_duration || (s as any).orig_duration || (s as any)._videoDuration || 600,
+        },
       });
 
       const shaderName = (s as any).shader_name || (s as any).transition_out?.shader_name;
@@ -1930,6 +1933,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
               }
             }}
             onOpenFXTab={() => setActiveBottomSheet('effects')}
+            onOpenAudioTab={() => setActiveBottomSheet('audio')}
+            onAddCaptionSegment={() => setActiveBottomSheet('captions')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
               if (itemId === 'audio_bgm') {
                 setBgmStartSec(newStart);

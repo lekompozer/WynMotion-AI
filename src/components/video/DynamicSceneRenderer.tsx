@@ -167,6 +167,62 @@ function evaluateDynamicSceneCode(codeStr: string, context: Record<string, any>)
   }
 }
 
+export const SynchronizedVideoScenePlayer: React.FC<{
+  videoUrl: string;
+  frame: number;
+  fps: number;
+  isPlaying: boolean;
+}> = ({ videoUrl, frame, fps, isPlaying }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoAudioVolume = 1.0, isVideoAudioMuted = false, isMuted = false } = useRemotion();
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const targetSec = Math.max(0, frame / (fps || 30));
+    if (!isPlaying || Math.abs(video.currentTime - targetSec) > 0.12) {
+      video.currentTime = targetSec;
+    }
+  }, [frame, fps, isPlaying]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const effectiveMuted = isVideoAudioMuted || isMuted || videoAudioVolume === 0;
+    video.muted = effectiveMuted;
+    if (!effectiveMuted) {
+      video.volume = Math.min(1.0, Math.max(0.0, videoAudioVolume));
+    }
+  }, [videoAudioVolume, isVideoAudioMuted, isMuted]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={videoUrl}
+      playsInline
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        pointerEvents: 'none',
+      }}
+    />
+  );
+};
+
 export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
   scene,
   visualStyle = 'handdrawn_fast_doodle',
@@ -201,7 +257,7 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
 
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
-  const { bgColor } = useRemotion();
+  const { bgColor, isPlaying } = useRemotion();
 
   const isPortrait = height > width || height === 1920;
   const isSquare = width === height;
@@ -316,17 +372,11 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
           backgroundColor: '#000000',
         }}
       >
-        <video
-          src={scene.video_url}
-          playsInline
-          loop
-          autoPlay
-          muted
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
+        <SynchronizedVideoScenePlayer
+          videoUrl={scene.video_url}
+          frame={frame}
+          fps={fps}
+          isPlaying={isPlaying}
         />
         {showWhisperSubs && (scene.voice_transcript || scene.summary_text) && (
           <div

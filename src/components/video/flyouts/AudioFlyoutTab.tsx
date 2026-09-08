@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { X, Radio, Play, Pause, Volume2, Music, Upload, Trash2, CheckCircle2 } from 'lucide-react';
+import { X, Radio, Play, Pause, Volume2, Music, Upload, Trash2, CheckCircle2, Clock } from 'lucide-react';
 
 export interface AudioTrackItem {
   id: string;
@@ -37,6 +37,13 @@ export interface AudioFlyoutTabProps {
   onUploadBgmFile?: (file: File) => void;
   onRemoveBgm?: () => void;
   onOpenMusicLibrary?: () => void;
+  bgmOffsetSec?: number;
+  setBgmOffsetSec?: (offset: number) => void;
+  bgmTotalDurationSec?: number;
+  videoAudioVolume?: number;
+  setVideoAudioVolume?: (vol: number) => void;
+  isVideoAudioMuted?: boolean;
+  setIsVideoAudioMuted?: (muted: boolean) => void;
 }
 
 export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
@@ -63,6 +70,13 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
   onUploadBgmFile,
   onRemoveBgm,
   onOpenMusicLibrary,
+  bgmOffsetSec = 0,
+  setBgmOffsetSec,
+  bgmTotalDurationSec,
+  videoAudioVolume = 1.0,
+  setVideoAudioVolume,
+  isVideoAudioMuted = false,
+  setIsVideoAudioMuted,
 }) => {
   const voiceFileInputRef = useRef<HTMLInputElement | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -115,7 +129,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
             <span>Quản Lý Âm Thanh & Audio Tracks</span>
           </h3>
           <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-            Voiceover & Background Music Management
+            Voiceover, BGM & Original Video Audio Mixer
           </p>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
@@ -161,7 +175,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
           <button
             type="button"
             onClick={() => voiceFileInputRef.current?.click()}
-            className="py-2 px-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm"
+            className="py-2 px-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>{hasVoice ? 'Đổi File Giọng' : 'Tải File Giọng (.mp3)'}</span>
@@ -171,7 +185,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
             type="button"
             disabled={!hasVoice}
             onClick={onRemoveVoice}
-            className="py-2 px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="py-2 px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
             <span>Xoá Giọng Đọc</span>
@@ -182,7 +196,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
         {availableAudioTracks.length > 0 && (
           <div className="space-y-1.5 pt-1 border-t border-[#23293D]">
             <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-              <Radio className="w-3.5 h-3.5 text-cyan-400" />
+              <Radio className="w-3 h-3 text-cyan-400" />
               <span>Giọng AI có sẵn trong dự án ({availableAudioTracks.length}):</span>
             </span>
             <div className="space-y-1 max-h-32 overflow-y-auto pr-1 studio-scrollbar">
@@ -258,7 +272,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsMuted(!isMuted)}
-                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${
                     isMuted ? 'bg-rose-500/20 text-rose-300' : 'bg-[#252B3E] text-slate-300'
                   }`}
                 >
@@ -320,7 +334,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
           <button
             type="button"
             onClick={() => bgmFileInputRef.current?.click()}
-            className="py-2 px-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
+            className="py-2 px-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer"
             title="Tải tệp MP3 nhạc nền từ máy tính"
           >
             <Upload className="w-3.5 h-3.5 shrink-0" />
@@ -331,7 +345,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
             <button
               type="button"
               onClick={onOpenMusicLibrary}
-              className="py-2 px-1.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-400/40 text-purple-200 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
+              className="py-2 px-1.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-400/40 text-purple-200 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer"
               title="Mở kho nhạc nền bản quyền"
             >
               <Music className="w-3.5 h-3.5 text-pink-400 shrink-0" />
@@ -343,7 +357,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
             type="button"
             disabled={!hasBgm}
             onClick={onRemoveBgm}
-            className="py-2 px-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="py-2 px-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
             title="Xoá bỏ nhạc nền khỏi video"
           >
             <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
@@ -368,6 +382,91 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
             value={bgmVolume}
             onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
             className="w-full accent-purple-400 h-1.5 bg-[#252B3E] rounded-lg cursor-pointer"
+          />
+        </div>
+
+        {/* Audio Slip / Tua đoạn nhạc trong bài hát */}
+        {hasBgm && (
+          <div className="mt-2.5 p-2.5 rounded-xl bg-[#090B12] border border-[#23293F] space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Tua đoạn nhạc (Audio Slip)</span>
+              </span>
+              <span className="font-mono text-cyan-400 font-bold">
+                {Math.floor(bgmOffsetSec || 0)}s
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max={Math.max(10, Math.floor(bgmTotalDurationSec || 180))}
+              step="1"
+              value={bgmOffsetSec || 0}
+              onChange={(e) => setBgmOffsetSec?.(parseFloat(e.target.value))}
+              className="w-full accent-cyan-400 h-1.5 bg-[#1B2032] rounded-lg cursor-pointer"
+            />
+            <div className="flex items-center justify-between text-[10px] text-slate-400">
+              <span>Bắt đầu từ 0s</span>
+              <span>Phát từ {Math.floor(bgmOffsetSec || 0)}s</span>
+              <span>{Math.floor(bgmTotalDurationSec || 180)}s</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 3. ORIGINAL VIDEO AUDIO (ÂM THANH VIDEO GỐC) */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <div className="p-3.5 rounded-2xl bg-[#141724] border border-[#282F45] space-y-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" />
+            <span className="text-xs font-black text-white">
+              🎬 Âm Thanh Video Gốc (Original Video Audio)
+            </span>
+          </div>
+          {setIsVideoAudioMuted && (
+            <button
+              type="button"
+              onClick={() => setIsVideoAudioMuted(!isVideoAudioMuted)}
+              className={`text-[10px] font-mono px-2 py-0.5 border rounded-md font-bold transition-all cursor-pointer ${
+                isVideoAudioMuted
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+              }`}
+            >
+              {isVideoAudioMuted ? '🔇 Đã Tắt Tiếng Gốc' : '🔊 Bật Tiếng Gốc'}
+            </button>
+          )}
+        </div>
+
+        <p className="text-[11px] text-slate-400 leading-snug">
+          Bật/Tắt tiếng hoặc điều chỉnh âm lượng tiếng gốc từ các đoạn clip Video bạn vừa tải lên.
+        </p>
+
+        {/* Video Audio Volume Slider */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <span className="flex items-center gap-1">
+              <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Âm lượng Video gốc</span>
+            </span>
+            <span className="font-mono text-[11px] text-amber-400">
+              {isVideoAudioMuted ? '0%' : `${Math.round(videoAudioVolume * 100)}%`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isVideoAudioMuted ? 0 : videoAudioVolume}
+            onChange={(e) => {
+              setIsVideoAudioMuted?.(false);
+              setVideoAudioVolume?.(parseFloat(e.target.value));
+            }}
+            className="w-full accent-amber-400 h-1.5 bg-[#252B3E] rounded-lg cursor-pointer"
           />
         </div>
       </div>
