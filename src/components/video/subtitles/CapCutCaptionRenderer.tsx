@@ -167,10 +167,10 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
     return [wList.slice(0, bestSplit), wList.slice(bestSplit)];
   };
 
-  const splitTextBalanced = (str: string): string => {
-    if (!str) return '';
+  const getBalancedTextLines = (str: string): string[] => {
+    if (!str) return [];
     const wArr = str.trim().split(/\s+/).filter(Boolean);
-    if (wArr.length <= 5 && str.length <= 26) return str;
+    if (wArr.length <= 4 && str.length <= 22) return [str.trim()];
     const targetMid = str.length / 2;
     let bestSplit = Math.floor(wArr.length / 2);
     let minDiff = 999999;
@@ -185,37 +185,58 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         bestSplit = i + 1;
       }
     }
-    return wArr.slice(0, bestSplit).join(' ') + '\n' + wArr.slice(bestSplit).join(' ');
+    return [wArr.slice(0, bestSplit).join(' '), wArr.slice(bestSplit).join(' ')];
   };
 
-  const formatTypewriterBalanced = (text: string, count: number): string => {
-    if (!text) return '';
-    const wArr = text.trim().split(/\s+/).filter(Boolean);
-    if (wArr.length <= 5 && text.length <= 26) {
-      return text.slice(0, count);
+  const textLines = getBalancedTextLines(activeSegment.text || '');
+  const maxLineChars = Math.max(...textLines.map((l) => l.length), 1);
+  // Auto-fit font size so long lines strictly fit in at most 2 lines without wrapping
+  const autoFitScale = maxLineChars > 20 ? Math.max(0.62, 20 / maxLineChars) : 1.0;
+  const effectiveFontSize = Math.max(10, Math.round(fontSize * autoFitScale));
+
+  const renderTextLines = (extraLineStyle?: React.CSSProperties) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', width: '100%' }}>
+      {textLines.map((line, idx) => (
+        <div key={idx} style={{ whiteSpace: 'nowrap', display: 'block', textAlign: 'center', ...extraLineStyle }}>
+          {line}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderTypewriterBalanced = (text: string, count: number, isBlink: boolean) => {
+    const lines = getBalancedTextLines(text);
+    if (lines.length <= 1) {
+      const displayText = (lines[0] || '').slice(0, count);
+      return (
+        <div style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+          {displayText}
+          <span style={{ opacity: isBlink ? 1 : 0, color: '#10B981', fontWeight: 900, marginLeft: '2px' }}>▌</span>
+        </div>
+      );
     }
-    const targetMid = text.length / 2;
-    let bestSplit = Math.floor(wArr.length / 2);
-    let minDiff = 999999;
-    let curChars = 0;
-    for (let i = 0; i < wArr.length - 1; i++) {
-      curChars += wArr[i].length + (i > 0 ? 1 : 0);
-      let diff = Math.abs(curChars - targetMid);
-      const lastChar = wArr[i].slice(-1);
-      if (',.!?:;'.includes(lastChar)) diff -= 4;
-      if (diff < minDiff) {
-        minDiff = diff;
-        bestSplit = i + 1;
-      }
-    }
-    const line1 = wArr.slice(0, bestSplit).join(' ');
-    const line2 = wArr.slice(bestSplit).join(' ');
-    if (count <= line1.length) {
-      return line1.slice(0, count);
-    } else {
-      const count2 = Math.max(0, Math.min(line2.length, count - line1.length - 1));
-      return line1 + '\n' + line2.slice(0, count2);
-    }
+    const line1 = lines[0];
+    const line2 = lines[1];
+    const c1 = Math.min(line1.length, count);
+    const c2 = Math.max(0, Math.min(line2.length, count - line1.length - 1));
+    const showCursorOnLine1 = count <= line1.length;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', width: '100%' }}>
+        <div style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+          {line1.slice(0, c1)}
+          {showCursorOnLine1 && (
+            <span style={{ opacity: isBlink ? 1 : 0, color: '#10B981', fontWeight: 900, marginLeft: '2px' }}>▌</span>
+          )}
+        </div>
+        {count > line1.length && (
+          <div style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+            {line2.slice(0, c2)}
+            <span style={{ opacity: isBlink ? 1 : 0, color: '#10B981', fontWeight: 900, marginLeft: '2px' }}>▌</span>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const wordLines = splitWordsBalanced(words);
@@ -319,24 +340,22 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '82%',
-            padding: `${Math.max(4, Math.round(fontSize * 0.24))}px ${Math.max(10, Math.round(fontSize * 0.5))}px`,
-            borderRadius: `${Math.max(6, Math.round(fontSize * 0.3))}px`,
+            maxWidth: '92%',
+            padding: `${Math.max(4, Math.round(effectiveFontSize * 0.22))}px ${Math.max(12, Math.round(effectiveFontSize * 0.55))}px`,
+            borderRadius: `${Math.max(6, Math.round(effectiveFontSize * 0.3))}px`,
             backgroundColor: 'rgba(0, 0, 0, 0.82)',
             backdropFilter: 'blur(10px)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
             border: '1px solid rgba(255, 255, 255, 0.12)',
             textAlign: 'center',
-            lineHeight: 1.35,
+            lineHeight: 1.32,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 700,
             color: '#FFFFFF',
-            whiteSpace: 'pre-line',
-            textWrap: 'balance' as any,
           }}
         >
-          {splitTextBalanced(activeSegment.text)}
+          {renderTextLines()}
         </div>
       )}
 
@@ -347,23 +366,21 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '82%',
-            padding: `${Math.max(4, Math.round(fontSize * 0.24))}px ${Math.max(10, Math.round(fontSize * 0.5))}px`,
-            borderRadius: `${Math.max(6, Math.round(fontSize * 0.3))}px`,
+            maxWidth: '92%',
+            padding: `${Math.max(4, Math.round(effectiveFontSize * 0.22))}px ${Math.max(12, Math.round(effectiveFontSize * 0.55))}px`,
+            borderRadius: `${Math.max(6, Math.round(effectiveFontSize * 0.3))}px`,
             backgroundColor: 'rgba(255, 255, 255, 0.94)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
             border: '1.5px solid rgba(0, 0, 0, 0.08)',
             textAlign: 'center',
-            lineHeight: 1.35,
+            lineHeight: 1.32,
             fontFamily: resolvedFont,
-            fontSize: `${fontSize}px`,
+            fontSize: `${effectiveFontSize}px`,
             fontWeight: 800,
             color: '#0F172A',
-            whiteSpace: 'pre-line',
-            textWrap: 'balance' as any,
           }}
         >
-          {splitTextBalanced(activeSegment.text)}
+          {renderTextLines()}
         </div>
       )}
 
@@ -719,20 +736,18 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '84%',
+            maxWidth: '92%',
             background: 'rgba(0, 0, 0, 0.85)',
-            padding: `${Math.max(4, Math.round(fontSize * 0.2))}px ${Math.max(12, Math.round(fontSize * 0.45))}px`,
+            padding: `${Math.max(4, Math.round(effectiveFontSize * 0.2))}px ${Math.max(12, Math.round(effectiveFontSize * 0.45))}px`,
             borderRadius: '6px',
             fontFamily: fontFamily || '"Courier New", monospace',
-            fontSize: `${fontSize * 0.9}px`,
+            fontSize: `${effectiveFontSize * 0.9}px`,
             color: '#A7F3D0',
             fontWeight: 700,
             boxShadow: '0 4px 20px rgba(0,0,0,0.9)',
             border: '1px solid rgba(167, 243, 208, 0.3)',
             textAlign: 'center',
-            lineHeight: 1.35,
-            whiteSpace: 'pre-line',
-            textWrap: 'balance' as any,
+            lineHeight: 1.32,
           }}
         >
           {(() => {
@@ -740,15 +755,9 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             const typingDuration = Math.max(0.4, Math.min(segDuration * 0.7, activeSegment.text.length / 26));
             const progress = Math.min(1.0, Math.max(0, (currentTime - activeSegment.start) / typingDuration));
             const charCount = Math.min(activeSegment.text.length, Math.ceil(progress * activeSegment.text.length));
-            const displayText = formatTypewriterBalanced(activeSegment.text, charCount);
             const isBlink = Math.floor(frame / 8) % 2 === 0;
 
-            return (
-              <span>
-                {displayText}
-                <span style={{ opacity: isBlink ? 1 : 0, color: '#10B981', fontWeight: 900, marginLeft: '2px' }}>▌</span>
-              </span>
-            );
+            return renderTypewriterBalanced(activeSegment.text, charCount, isBlink);
           })()}
         </div>
       )}
