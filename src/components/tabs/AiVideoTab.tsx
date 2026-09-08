@@ -233,6 +233,13 @@ export const AiVideoTab: React.FC = () => {
     } else {
       setActiveEditorProject(projectOrId);
       setIsStudioOpen(true);
+      if (projectOrId?.project_id) {
+        wynmotionService.getProject(projectOrId.project_id).then((res) => {
+          if (res.success && res.project) {
+            setActiveEditorProject(res.project);
+          }
+        }).catch(() => {});
+      }
     }
   };
 

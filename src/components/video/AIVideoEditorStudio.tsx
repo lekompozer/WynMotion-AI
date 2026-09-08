@@ -343,6 +343,82 @@ function StudioInner({
 
   const [activeSceneId, setActiveSceneId] = useState<string | number>(1);
   const [activeFlyoutTab, setActiveFlyoutTab] = useState<'assets' | 'audio' | 'settings' | 'effects' | 'captions' | null>('assets');
+
+  // Resizable flyout width (min: 320px, max: 640px - max gấp đôi default)
+  const DEFAULT_FLYOUT_WIDTH = 320;
+  const MIN_FLYOUT_WIDTH = 320;
+  const MAX_FLYOUT_WIDTH = 640;
+
+  const [flyoutWidth, setFlyoutWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('wynmotion_flyout_width');
+        if (saved) {
+          const val = parseInt(saved, 10);
+          if (!isNaN(val) && val >= MIN_FLYOUT_WIDTH && val <= MAX_FLYOUT_WIDTH) {
+            return val;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return DEFAULT_FLYOUT_WIDTH;
+  });
+
+  const [isResizingFlyout, setIsResizingFlyout] = useState(false);
+  const isResizingFlyoutRef = useRef(false);
+  const flyoutStartXRef = useRef(0);
+  const flyoutStartWidthRef = useRef(DEFAULT_FLYOUT_WIDTH);
+
+  const handleFlyoutResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizingFlyout(true);
+    isResizingFlyoutRef.current = true;
+    flyoutStartXRef.current = e.clientX;
+    flyoutStartWidthRef.current = flyoutWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingFlyoutRef.current) return;
+      const deltaX = moveEvent.clientX - flyoutStartXRef.current;
+      const nextWidth = Math.min(
+        MAX_FLYOUT_WIDTH,
+        Math.max(MIN_FLYOUT_WIDTH, flyoutStartWidthRef.current + deltaX)
+      );
+      setFlyoutWidth(nextWidth);
+    };
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      if (!isResizingFlyoutRef.current) return;
+      isResizingFlyoutRef.current = false;
+      setIsResizingFlyout(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+
+      const deltaX = upEvent.clientX - flyoutStartXRef.current;
+      const finalWidth = Math.min(
+        MAX_FLYOUT_WIDTH,
+        Math.max(MIN_FLYOUT_WIDTH, flyoutStartWidthRef.current + deltaX)
+      );
+      try {
+        localStorage.setItem('wynmotion_flyout_width', String(finalWidth));
+      } catch (e) {}
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleFlyoutResizeReset = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFlyoutWidth(DEFAULT_FLYOUT_WIDTH);
+    try {
+      localStorage.setItem('wynmotion_flyout_width', String(DEFAULT_FLYOUT_WIDTH));
+    } catch (e) {}
+  };
+
   const [assetCategory, setAssetCategory] = useState<string>('All');
   const [searchAssetQuery, setSearchAssetQuery] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -401,12 +477,60 @@ function StudioInner({
   const initialActiveMode: 'original' | 'translated' = (projectData as any)?.whisper_active_mode || (initialTransSegs.length > 0 ? 'translated' : 'original');
   const initialCurrentSegs: CaptionSegment[] = initialActiveMode === 'translated' && initialTransSegs.length > 0 ? initialTransSegs : initialOrigSegs;
 
+  // Language auto-detection helper from content
+  const detectLanguageFromContent = useCallback((data: any, sceneList: DynamicSceneData[]): string => {
+    if (data?.whisper_original_language) return data.whisper_original_language;
+    if (data?.language_code) return data.language_code;
+    if (data?.language) return data.language;
+    const textToCheck = [
+      data?.script || '',
+      ...(sceneList || []).map((s: any) => `${s.voice_transcript || ''} ${s.dialogue || ''} ${s.voiceover || ''} ${s.summary_text || ''}`),
+    ].join(' ');
+    if (/[\u4e00-\u9fa5]/.test(textToCheck)) return 'zh';
+    if (/[\u3040-\u30ff]/.test(textToCheck)) return 'ja';
+    if (/[\uac00-\ud7af]/.test(textToCheck)) return 'ko';
+    if (/[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(textToCheck)) return 'vi';
+    return 'vi';
+  }, []);
+
+  const detectedOrigLang = useMemo(() => detectLanguageFromContent(projectData, scenes), [projectData, scenes, detectLanguageFromContent]);
+  const defaultTargetLang = detectedOrigLang === 'vi' ? 'en' : 'vi';
+
   const [captionSegments, setCaptionSegments] = useState<CaptionSegment[]>(initialCurrentSegs);
   const [originalCaptionSegments, setOriginalCaptionSegments] = useState<CaptionSegment[]>(initialOrigSegs);
   const [translatedCaptionSegments, setTranslatedCaptionSegments] = useState<CaptionSegment[]>(initialTransSegs);
-  const [captionOriginalLang, setCaptionOriginalLang] = useState<string>((projectData as any)?.whisper_original_language || 'vi');
-  const [captionTargetLang, setCaptionTargetLang] = useState<string>((projectData as any)?.whisper_target_language || 'en');
+  const [captionOriginalLang, setCaptionOriginalLang] = useState<string>(
+    () => (projectData as any)?.whisper_original_language || (projectData as any)?.language_code || detectedOrigLang
+  );
+  const [captionTargetLang, setCaptionTargetLang] = useState<string>(
+    () => (projectData as any)?.whisper_target_language || defaultTargetLang
+  );
   const [subtitleMode, setSubtitleMode] = useState<'original' | 'translated'>(initialActiveMode);
+
+  // Synchronize caption states when projectData changes or loads from API
+  useEffect(() => {
+    if (!projectData) return;
+    const p = projectData as any;
+    const orig = p.whisper_original_segments || (p.whisper_active_mode !== 'translated' ? p.caption_segments : []) || [];
+    const trans = p.whisper_translated_segments || (p.whisper_active_mode === 'translated' ? p.caption_segments : []) || [];
+    const mode = p.whisper_active_mode || (trans.length > 0 ? 'translated' : 'original');
+    const active = mode === 'translated' && trans.length > 0 ? trans : orig;
+
+    if (orig && orig.length > 0) setOriginalCaptionSegments(orig);
+    if (trans && trans.length > 0) setTranslatedCaptionSegments(trans);
+    if (active && active.length > 0) setCaptionSegments(active);
+
+    const lang = p.whisper_original_language || p.language_code || detectLanguageFromContent(p, scenes);
+    if (lang) setCaptionOriginalLang(lang);
+    if (p.whisper_target_language) {
+      setCaptionTargetLang(p.whisper_target_language);
+    } else {
+      setCaptionTargetLang(lang === 'vi' ? 'en' : 'vi');
+    }
+    if (mode) setSubtitleMode(mode);
+    if (p.show_whisper_subs !== undefined) setShowWhisperSubs(Boolean(p.show_whisper_subs));
+  }, [projectData?.project_id, projectData?.updated_at]);
+
   const [isCaptionReviewModalOpen, setIsCaptionReviewModalOpen] = useState<boolean>(false);
   const [captionPresetStyle, setCaptionPresetStyle] = useState<CaptionPresetStyle>(() => {
     return (
@@ -1863,6 +1987,47 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             <span>{pointsData ? pointsData.points_remaining.toLocaleString() : (pointsLoading ? '...' : 0)}</span>
           </button>
 
+          {/* SAVE PROJECT TO SERVER BUTTON */}
+          <button
+            type="button"
+            onClick={async () => {
+              if (!projectId) {
+                alert('Không tìm thấy ID dự án để lưu.');
+                return;
+              }
+              try {
+                setSyncStatusMsg('Đang lưu toàn bộ dự án & phụ đề lên máy chủ...');
+                await wynmotionService.updateProject(projectId, {
+                  scenes: scenes as any,
+                  caption_segments: captionSegments,
+                  whisper_original_segments: originalCaptionSegments,
+                  whisper_translated_segments: translatedCaptionSegments,
+                  whisper_original_language: captionOriginalLang,
+                  whisper_target_language: captionTargetLang,
+                  whisper_active_mode: subtitleMode,
+                  show_whisper_subs: showWhisperSubs,
+                  caption_preset_style: captionPresetStyle,
+                  caption_font_size: captionFontSize,
+                  subs_pos_y: subsPosY,
+                  aspect_ratio: aspectRatio,
+                  bg_color: bgColor || '#FAF7EF',
+                  fps: fps,
+                } as any);
+                setSyncStatusMsg('✅ Đã lưu dự án & phụ đề lên máy chủ thành công!');
+                setTimeout(() => setSyncStatusMsg(null), 3000);
+              } catch (err: any) {
+                console.error('Save project error:', err);
+                alert(`Lỗi khi lưu dự án: ${err.message || 'Vui lòng thử lại'}`);
+                setSyncStatusMsg(null);
+              }
+            }}
+            title="Lưu toàn bộ phân cảnh, phụ đề gốc và phụ đề dịch vào cơ sở dữ liệu"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2333] hover:bg-[#2A3146] border border-[#2F374E] text-slate-200 hover:text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Lưu Dự Án</span>
+          </button>
+
           {/* DOWNLOAD AS MP4 BUTTON */}
           <button
             onClick={() => {
@@ -2262,7 +2427,14 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
 
         {/* COLUMN 3: FLYOUT DRAWER (ASSETS / AUDIO MIXER / SETTINGS - DARK) */}
         {activeFlyoutTab && (
-          <div className="w-80 h-full max-h-full min-h-0 border-r border-[#1E2230] bg-[#12141F] flex flex-col p-4 z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 overflow-y-auto studio-scrollbar shrink-0">
+          <div
+            style={{ width: `${flyoutWidth}px` }}
+            className={`relative h-full max-h-full min-h-0 border-r border-[#1E2230] bg-[#12141F] flex flex-col z-10 shadow-lg animate-in slide-in-from-left-4 duration-150 shrink-0 ${
+              isResizingFlyout ? 'select-none transition-none' : 'transition-[width] duration-150'
+            }`}
+          >
+            {/* Scrollable Flyout Content */}
+            <div className="w-full h-full p-4 overflow-y-auto studio-scrollbar flex flex-col min-h-0">
             {/* TAB 1: ASSETS & SCENES GRID */}
             {activeFlyoutTab === 'assets' && (
               <AssetsFlyoutTab
@@ -2556,7 +2728,34 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 }}
               />
             )}
+            </div>
+
+            {/* Drag Handle to Resize Flyout Width (min: 320px, max: 640px) */}
+            <div
+              onMouseDown={handleFlyoutResizeStart}
+              onDoubleClick={handleFlyoutResizeReset}
+              title="Kéo sang phải để mở rộng (320px - 640px) • Nhấp đúp để đặt lại mặc định"
+              className={`absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-30 group flex items-center justify-center transition-colors select-none ${
+                isResizingFlyout ? 'bg-cyan-500/20' : 'hover:bg-cyan-500/10'
+              }`}
+            >
+              <div
+                className={`w-1 h-8 rounded-full transition-all duration-200 ${
+                  isResizingFlyout
+                    ? 'bg-cyan-400 scale-y-125 shadow-[0_0_8px_rgba(34,211,238,0.8)]'
+                    : 'bg-slate-600/60 group-hover:bg-cyan-400 group-hover:scale-y-110'
+                }`}
+              />
+            </div>
           </div>
+        )}
+
+        {/* Global drag overlay to prevent canvas / iframe capture during resize */}
+        {isResizingFlyout && (
+          <div
+            className="fixed inset-0 z-50 cursor-col-resize select-none pointer-events-auto"
+            style={{ userSelect: 'none' }}
+          />
         )}
 
         {/* COLUMN 4: MAIN CANVAS STAGE PREVIEW WITH ZOOM (DARK BACKDROP) */}

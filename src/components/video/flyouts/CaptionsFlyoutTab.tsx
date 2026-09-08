@@ -142,7 +142,42 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   translatedSegments,
   onSaveBothSegments,
 }) => {
-  const [selectedLanguage, setSelectedLanguage] = useState<string>(originalLanguage || 'vi');
+  const effectiveOriginalLang = React.useMemo(() => {
+    if (originalLanguage && originalLanguage !== 'vi') return originalLanguage;
+    const allText = [
+      ...(originalSegments || []).map((s) => s.text || ''),
+      ...(segments || []).map((s) => s.text || ''),
+      ...(scenes || []).map(
+        (s) => `${s.voice_transcript || ''} ${s.dialogue || ''} ${s.voiceover || ''} ${s.summary_text || ''}`
+      ),
+    ].join(' ');
+    if (/[\u4e00-\u9fa5]/.test(allText)) return 'zh';
+    if (/[\u3040-\u30ff]/.test(allText)) return 'ja';
+    if (/[\uac00-\ud7af]/.test(allText)) return 'ko';
+    return originalLanguage || 'vi';
+  }, [originalLanguage, originalSegments, segments, scenes]);
+
+  const effectiveTargetLang = React.useMemo(() => {
+    if (targetLanguage && targetLanguage !== 'en') return targetLanguage;
+    if (
+      effectiveOriginalLang === 'zh' ||
+      effectiveOriginalLang === 'ja' ||
+      effectiveOriginalLang === 'ko' ||
+      effectiveOriginalLang === 'en'
+    ) {
+      return 'vi';
+    }
+    return targetLanguage || 'en';
+  }, [targetLanguage, effectiveOriginalLang]);
+
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(() => effectiveOriginalLang || 'vi');
+
+  React.useEffect(() => {
+    if (effectiveOriginalLang) {
+      setSelectedLanguage(effectiveOriginalLang);
+    }
+  }, [effectiveOriginalLang]);
+
   const [activeSubTab, setActiveSubTab] = useState<'presets' | 'timeline' | 'news_badge'>('presets');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editText, setEditText] = useState<string>('');
@@ -225,12 +260,31 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
   // ── Synchronize Sentences for Active Scene & Language ──
   React.useEffect(() => {
-    const currentList = segments || [];
+    let currentList: CaptionSegment[] = [];
+
+    if (activeSubtitleMode === 'translated') {
+      currentList =
+        translatedSegments && translatedSegments.length > 0
+          ? translatedSegments
+          : hasTranslatedSegments
+          ? segments || []
+          : [];
+    } else {
+      currentList =
+        originalSegments && originalSegments.length > 0
+          ? originalSegments
+          : segments || [];
+    }
 
     // Find segments falling into this scene's window
-    const matched = scenes && scenes.length > 1
-      ? currentList.filter(s => (s.start >= sceneTimeWindow.start - 0.15 && s.start < sceneTimeWindow.end) || (s.end > sceneTimeWindow.start && s.end <= sceneTimeWindow.end + 0.15))
-      : currentList;
+    const matched =
+      scenes && scenes.length > 1
+        ? currentList.filter(
+            (s) =>
+              (s.start >= sceneTimeWindow.start - 0.15 && s.start < sceneTimeWindow.end) ||
+              (s.end > sceneTimeWindow.start && s.end <= sceneTimeWindow.end + 0.15)
+          )
+        : currentList;
 
     if (matched.length > 0) {
       const parsedItems: SentenceItem[] = matched.map((seg, idx) => {
@@ -246,9 +300,12 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
         };
       });
       setSceneSentences(parsedItems);
+    } else if (activeSubtitleMode === 'translated') {
+      // In translated mode, do not fallback to original transcript!
+      setSceneSentences([]);
     } else {
-      // Fallback: parse from activeScene transcript
-      const rawText = (activeScene?.voice_transcript || activeScene?.summary_text || '').trim();
+      // Fallback only for original mode: parse from activeScene transcript
+      const rawText = (activeScene?.voice_transcript || activeScene?.dialogue || activeScene?.voiceover || activeScene?.summary_text || '').trim();
       if (!rawText) {
         setSceneSentences([]);
         return;
@@ -273,7 +330,17 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
         })));
       }
     }
-  }, [activeScene?.scene_id, activeSceneIndex, activeSubtitleMode, segments, sceneTimeWindow.start, sceneTimeWindow.end]);
+  }, [
+    activeScene?.scene_id,
+    activeSceneIndex,
+    activeSubtitleMode,
+    segments,
+    originalSegments,
+    translatedSegments,
+    hasTranslatedSegments,
+    sceneTimeWindow.start,
+    sceneTimeWindow.end,
+  ]);
 
   const handleEditSentenceText = (idx: number, newText: string) => {
     setSceneSentences(prev => prev.map((item, i) => i === idx ? { ...item, text: newText } : item));
@@ -300,7 +367,12 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   };
 
   const handleApplyToVideo = () => {
-    let updatedSegments = [...segments];
+    const baseSegments =
+      activeSubtitleMode === 'translated'
+        ? (translatedSegments && translatedSegments.length > 0 ? translatedSegments : segments)
+        : (originalSegments && originalSegments.length > 0 ? originalSegments : segments);
+
+    let updatedSegments = [...baseSegments];
 
     sceneSentences.forEach((item) => {
       const fullText = item.speaker ? `[${item.speaker}]: ${item.text}` : item.text;
@@ -347,15 +419,23 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
     if (onSaveBothSegments) {
       if (activeSubtitleMode === 'translated') {
         onSaveBothSegments(originalSegments || [], updatedSegments, 'translated');
+        // NOTE: In translated mode, DO NOT overwrite scene.voice_transcript with translation!
+        // The character's speech bubbles in dialogue scene stay in original spoken language.
       } else {
         onSaveBothSegments(updatedSegments, translatedSegments || [], 'original');
+        const fullTranscript = sceneSentences
+          .map(item => item.speaker ? `[${item.speaker}]: ${item.text}` : item.text)
+          .join('\n');
+        onUpdateActiveSceneTranscript?.(fullTranscript);
+      }
+    } else {
+      if (activeSubtitleMode === 'original') {
+        const fullTranscript = sceneSentences
+          .map(item => item.speaker ? `[${item.speaker}]: ${item.text}` : item.text)
+          .join('\n');
+        onUpdateActiveSceneTranscript?.(fullTranscript);
       }
     }
-
-    const fullTranscript = sceneSentences
-      .map(item => item.speaker ? `[${item.speaker}]: ${item.text}` : item.text)
-      .join('\n');
-    onUpdateActiveSceneTranscript?.(fullTranscript);
 
     setIsAppliedSuccess(true);
     setTimeout(() => setIsAppliedSuccess(false), 2500);
@@ -638,7 +718,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Bản Gốc ({(originalLanguage || 'vi').toUpperCase()})
+                    {getLangFlag(effectiveOriginalLang)} Bản Gốc ({effectiveOriginalLang.toUpperCase()})
                   </button>
                   <button
                     type="button"
@@ -649,7 +729,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Bản Dịch ({(targetLanguage || 'en').toUpperCase()})
+                    {getLangFlag(effectiveTargetLang)} Bản Dịch ({effectiveTargetLang.toUpperCase()})
                   </button>
                 </div>
               </div>
@@ -692,13 +772,11 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
                   title="Chọn ngôn ngữ phụ đề để hiển thị và chỉnh sửa"
                 >
                   <option value="original">
-                    {getLangFlag(originalLanguage)} Bản Gốc ({(originalLanguage || 'vi').toUpperCase()})
+                    {getLangFlag(effectiveOriginalLang)} Bản Gốc ({effectiveOriginalLang.toUpperCase()})
                   </option>
-                  {hasTranslatedSegments && (
-                    <option value="translated">
-                      {getLangFlag(targetLanguage)} Bản Dịch ({(targetLanguage || 'en').toUpperCase()})
-                    </option>
-                  )}
+                  <option value="translated">
+                    {getLangFlag(effectiveTargetLang)} Bản Dịch ({effectiveTargetLang.toUpperCase()})
+                  </option>
                 </select>
               </div>
             </div>
@@ -706,10 +784,27 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
             {/* Danh sách các câu phụ đề của phân cảnh hiện tại */}
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 studio-scrollbar">
               {sceneSentences.length === 0 ? (
-                <div className="p-4 text-center text-slate-400 border border-dashed border-[#232A3E] rounded-xl text-xs space-y-1">
-                  <p className="font-bold text-slate-300">Chưa có câu phụ đề nào ở phân cảnh này</p>
-                  <p className="text-[10px] text-slate-500">Bấm nút "Thêm câu" bên dưới để tạo phụ đề mới.</p>
-                </div>
+                activeSubtitleMode === 'translated' ? (
+                  <div className="p-4 text-center text-slate-400 border border-dashed border-[#232A3E] rounded-xl text-xs space-y-2">
+                    <p className="font-bold text-slate-300">Chưa có phụ đề Bản Dịch ({effectiveTargetLang.toUpperCase()}) cho phân cảnh này</p>
+                    <p className="text-[10px] text-slate-400">Bấm nút bên dưới để mở AI dịch tự động từ Bản Gốc ({effectiveOriginalLang.toUpperCase()}) sang Bản Dịch ({effectiveTargetLang.toUpperCase()}).</p>
+                    {onOpenReviewModal && (
+                      <button
+                        type="button"
+                        onClick={onOpenReviewModal}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 text-purple-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 mx-auto cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                        <span>Dịch sang {effectiveTargetLang.toUpperCase()} bằng AI</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-slate-400 border border-dashed border-[#232A3E] rounded-xl text-xs space-y-1">
+                    <p className="font-bold text-slate-300">Chưa có câu phụ đề nào ở phân cảnh này</p>
+                    <p className="text-[10px] text-slate-500">Bấm nút "Thêm câu" bên dưới để tạo phụ đề mới.</p>
+                  </div>
+                )
               ) : (
                 sceneSentences.map((item, idx) => (
                   <div
