@@ -234,6 +234,10 @@ function StudioInner({
     audioSrc: remotionAudioSrc,
     setAudioSrc,
     setDurationInFrames,
+    setVoiceStartSec,
+    setVoiceDurationSec,
+    setBgmStartSec,
+    setBgmDurationSec,
   } = useRemotion();
 
   const [visualStyle, setVisualStyle] = useState<string>(initialStyle || projectData?.visual_style || 'product_ads_motion');
@@ -837,6 +841,18 @@ function StudioInner({
     duration: 0,
   });
 
+  // Keep RemotionEngine voice & bgm windowed playback in sync with audioTrim
+  useEffect(() => {
+    setVoiceStartSec?.(audioTrim.startTime);
+    if (audioTrim.duration > 0) {
+      setVoiceDurationSec?.(audioTrim.duration);
+    }
+    setBgmStartSec?.(audioTrim.startTime);
+    if (audioTrim.duration > 0) {
+      setBgmDurationSec?.(audioTrim.duration);
+    }
+  }, [audioTrim, setVoiceStartSec, setVoiceDurationSec, setBgmStartSec, setBgmDurationSec]);
+
   // Master Studio Config - Single Source of Truth for all 5 Tabs
   const masterStudioConfig = useMemo(() => {
     const audioPayload = {
@@ -1368,7 +1384,7 @@ function StudioInner({
     );
 
     return tracksList;
-  }, [scenes, fps, totalDurationSec, captionSegments, timelineEffects]);
+  }, [scenes, fps, totalDurationSec, captionSegments, timelineEffects, audioTrim]);
 
   // Handle click or drag on timeline scrubber
   const handleTimelineScrub = useCallback(
@@ -2993,14 +3009,66 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             onDeleteItem={handleDeleteItem}
             onOpenFXTab={() => setActiveFlyoutTab('effects')}
             onUpdateItemDuration={(itemId, newStart, newDur) => {
-              // 1. Move & Resize Media Scene Clip (Magnetic Ripple Trimming like CapCut)
+              // 1. Move & Resize Media Scene Clip (CapCut Magnetic Timeline Trimming & Reordering)
               if (itemId.startsWith('media_')) {
                 const sId = parseInt(itemId.replace('media_', ''), 10);
+                const targetIdx = scenes.findIndex((s, idx) => s.scene_id === sId || idx + 1 === sId);
+                if (targetIdx === -1) return;
+
+                const currentScene = scenes[targetIdx];
+                const oldDur = currentScene.duration_sec || (currentScene.duration_frames || 150) / fps;
+                const oldStart = currentScene.start_sec ?? 0;
+
+                // Case 1A: Body Drag (Move left / right ➔ Reorder / Swap Scenes)
+                if (Math.abs(newDur - oldDur) < 0.08 && Math.abs(newStart - oldStart) > 0.05) {
+                  const draggedCenter = newStart + oldDur / 2;
+                  let accumulated = 0;
+                  let newSlotIdx = scenes.length - 1;
+                  for (let i = 0; i < scenes.length; i++) {
+                    const sDur = scenes[i].duration_sec || (scenes[i].duration_frames || 150) / fps;
+                    if (draggedCenter < accumulated + sDur) {
+                      newSlotIdx = i;
+                      break;
+                    }
+                    accumulated += sDur;
+                  }
+
+                  if (newSlotIdx !== targetIdx) {
+                    const reorderedScenes = [...scenes];
+                    const [movedScene] = reorderedScenes.splice(targetIdx, 1);
+                    reorderedScenes.splice(newSlotIdx, 0, movedScene);
+
+                    let curSec = 0;
+                    let curFrame = 0;
+                    const finalScenes = reorderedScenes.map((s) => {
+                      const durSec = s.duration_sec || (s.duration_frames || 150) / fps;
+                      const durFrames = Math.round(durSec * fps);
+                      const startSec = Number(curSec.toFixed(2));
+                      const startFrame = curFrame;
+                      curSec += durSec;
+                      curFrame += durFrames;
+                      return {
+                        ...s,
+                        start_sec: startSec,
+                        duration_sec: durSec,
+                        end_sec: Number(curSec.toFixed(2)),
+                        start_frame: startFrame,
+                        duration_frames: durFrames,
+                      };
+                    });
+                    setScenes(finalScenes);
+                    const calculatedFrames = finalScenes.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
+                    if (setDurationInFrames) setDurationInFrames(calculatedFrames);
+                    return;
+                  }
+                }
+
+                // Case 1B: Edge Trimming (Shorten or lengthen duration)
                 const safeDur = Math.max(0.5, newDur);
                 let curSec = 0;
                 let curFrame = 0;
                 const updatedScenes = scenes.map((s, idx) => {
-                  const match = (s.scene_id === sId) || (idx + 1 === sId);
+                  const match = idx === targetIdx;
                   const durSec = match ? safeDur : (s.duration_sec || (s.duration_frames || 150) / fps);
                   const durFrames = Math.round(durSec * fps);
                   const startSec = Number(curSec.toFixed(2));
@@ -3016,44 +3084,47 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                     duration_frames: durFrames,
                   };
                 });
-                updateScenesWithHistory(updatedScenes);
+                setScenes(updatedScenes);
                 const calculatedFrames = updatedScenes.reduce((acc, sc) => acc + (sc.duration_frames || 150), 0);
                 if (setDurationInFrames) setDurationInFrames(calculatedFrames);
-                setSyncStatusMsg(`Đã chỉnh Scene: ${safeDur.toFixed(1)}s (Tổng video: ${curSec.toFixed(1)}s)!`);
-                setTimeout(() => setSyncStatusMsg(null), 2500);
                 return;
               }
 
-              // 2. Move & Resize Audio Track (CapCut Audio Trimming)
-              if (itemId === 'bgm_main' || itemId.startsWith('audio_')) {
-                const safeStart = Math.max(0, newStart);
-                const safeDur = Math.max(0.5, newDur);
-                setAudioTrim({
-                  startTime: safeStart,
-                  duration: safeDur,
-                });
-                setSyncStatusMsg(`Đã cắt Audio: ${safeStart.toFixed(1)}s ➔ ${(safeStart + safeDur).toFixed(1)}s (${safeDur.toFixed(1)}s)!`);
-                setTimeout(() => setSyncStatusMsg(null), 2500);
-                return;
-              }
-
-              // 2. Resize & Move FX Item
+              // 2. Move & Resize FX / Shader Items (Clamped to Video Duration & Synced to Canvas)
               if (itemId.startsWith('fx_')) {
-                setTimelineEffects((prev) =>
-                  prev.map((fx) => {
-                    if (fx.id === itemId) {
-                      const safeStart = Math.max(0, newStart);
-                      const safeDur = Math.max(0.2, newDur);
-                      return {
-                        ...fx,
+                const safeStart = Math.max(0, Math.min(Math.max(0, totalDurationSec - 0.2), newStart));
+                const safeDur = Math.max(0.2, Math.min(totalDurationSec - safeStart, newDur));
+                const safeEnd = safeStart + safeDur;
+
+                setTimelineEffects((prev) => {
+                  const existing = prev.find((fx) => fx.id === itemId);
+                  if (existing) {
+                    return prev.map((fx) =>
+                      fx.id === itemId
+                        ? { ...fx, startTime: safeStart, duration: safeDur, endTime: safeEnd }
+                        : fx
+                    );
+                  }
+                  if (itemId.startsWith('fx_trans_')) {
+                    const sId = parseInt(itemId.replace('fx_trans_', ''), 10);
+                    const targetScene = scenes.find((s, idx) => s.scene_id === sId || idx + 1 === sId);
+                    const shName = (targetScene as any)?.shader_name || (targetScene as any)?.transition_out?.shader_name || 'Crossfade';
+                    return [
+                      ...prev,
+                      {
+                        id: itemId,
+                        name: `⚡ ${shName}`,
+                        effectId: itemId,
+                        shaderName: shName,
                         startTime: safeStart,
                         duration: safeDur,
-                        endTime: safeStart + safeDur,
-                      };
-                    }
-                    return fx;
-                  })
-                );
+                        endTime: safeEnd,
+                        trackIndex: 0,
+                      },
+                    ];
+                  }
+                  return prev;
+                });
 
                 if (itemId.startsWith('fx_trans_')) {
                   const sId = parseInt(itemId.replace('fx_trans_', ''), 10);
@@ -3066,7 +3137,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                             ...s,
                             transition_out: {
                               ...(s as any).transition_out,
-                              duration: Math.max(0.2, newDur),
+                              duration: safeDur,
+                              start_time: safeStart,
                             },
                           };
                         }
@@ -3075,9 +3147,78 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                     );
                   }
                 }
+                return;
+              }
 
-                setSyncStatusMsg(`Đã cập nhật thời lượng FX: ${newDur.toFixed(1)}s!`);
-                setTimeout(() => setSyncStatusMsg(null), 2500);
+              // 3. Move & Resize Caption Segment (Word-level Karaoke Highlight Scale & Live Canvas Sync)
+              if (itemId.startsWith('cap_')) {
+                const capIdx = parseInt(itemId.replace('cap_', ''), 10);
+                if (!isNaN(capIdx) && captionSegments && captionSegments[capIdx]) {
+                  const prevSeg = captionSegments[capIdx];
+                  const safeStart = Math.max(0, Math.min(Math.max(0, totalDurationSec - 0.2), newStart));
+                  const safeDur = Math.max(0.2, Math.min(totalDurationSec - safeStart, newDur));
+                  const safeEnd = safeStart + safeDur;
+                  const oldStart = prevSeg.start ?? 0;
+                  const oldEnd = prevSeg.end ?? (oldStart + 1.5);
+                  const oldDur = Math.max(0.01, oldEnd - oldStart);
+                  const scaleRatio = safeDur / oldDur;
+
+                  // Co giãn tỷ lệ mốc thời gian của từng từ cho hiệu ứng Karaoke Highlight
+                  const updatedWords = (prevSeg.words || []).map((w: any) => ({
+                    ...w,
+                    start: Number((safeStart + (w.start - oldStart) * scaleRatio).toFixed(2)),
+                    end: Number((safeStart + (w.end - oldStart) * scaleRatio).toFixed(2)),
+                  }));
+
+                  const updatedSeg: CaptionSegment = {
+                    ...prevSeg,
+                    start: Number(safeStart.toFixed(2)),
+                    end: Number(safeEnd.toFixed(2)),
+                    words: updatedWords,
+                  };
+
+                  const newSegments = [...captionSegments];
+                  newSegments[capIdx] = updatedSeg;
+                  setCaptionSegments(newSegments);
+
+                  if (subtitleMode === 'translated') {
+                    setTranslatedCaptionSegments(newSegments);
+                  } else {
+                    setOriginalCaptionSegments(newSegments);
+                  }
+                }
+                return;
+              }
+
+              // 4. Move & Resize Audio Track (CapCut Audio Windowing & Master Clock Sync)
+              if (itemId === 'bgm_main' || itemId.startsWith('audio_')) {
+                const safeStart = Math.max(0, Math.min(Math.max(0, totalDurationSec - 0.2), newStart));
+                const safeDur = Math.max(0.2, Math.min(totalDurationSec - safeStart, newDur));
+                setAudioTrim({
+                  startTime: safeStart,
+                  duration: safeDur,
+                });
+                setVoiceStartSec?.(safeStart);
+                setVoiceDurationSec?.(safeDur);
+                setBgmStartSec?.(safeStart);
+                setBgmDurationSec?.(safeDur);
+                return;
+              }
+            }}
+            onUpdateItemEnd={(itemId) => {
+              if (itemId.startsWith('media_')) {
+                updateScenesWithHistory(scenes);
+                setSyncStatusMsg('Đã đồng bộ vị trí & thời lượng Scene!');
+                setTimeout(() => setSyncStatusMsg(null), 2000);
+              } else if (itemId.startsWith('fx_')) {
+                setSyncStatusMsg('Đã đồng bộ vị trí & thời lượng FX!');
+                setTimeout(() => setSyncStatusMsg(null), 2000);
+              } else if (itemId.startsWith('cap_')) {
+                setSyncStatusMsg('Đã đồng bộ thời gian phụ đề & nhịp Karaoke!');
+                setTimeout(() => setSyncStatusMsg(null), 2000);
+              } else if (itemId === 'bgm_main' || itemId.startsWith('audio_')) {
+                setSyncStatusMsg('Đã đồng bộ cửa sổ phát Audio!');
+                setTimeout(() => setSyncStatusMsg(null), 2000);
               }
             }}
           />

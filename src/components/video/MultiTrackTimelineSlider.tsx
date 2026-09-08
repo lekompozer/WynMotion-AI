@@ -13,6 +13,7 @@ export interface MultiTrackTimelineSliderProps {
   onSeek: (time: number) => void;
   tracks: TimelineTrack[];
   onUpdateItemDuration: (itemId: string, newStartTime: number, newDuration: number) => void;
+  onUpdateItemEnd?: (itemId: string) => void;
   onSelectItem?: (itemId: string | null) => void;
   onDeleteItem?: (itemId: string) => void;
   selectedItemId?: string | null;
@@ -30,6 +31,7 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
   onSeek,
   tracks = [],
   onUpdateItemDuration,
+  onUpdateItemEnd,
   onSelectItem,
   onDeleteItem,
   selectedItemId,
@@ -40,6 +42,16 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = React.useState<number>(0);
+
+  // Realtime dragging info for floating tooltip
+  const [draggingInfo, setDraggingInfo] = React.useState<{
+    itemId: string;
+    type: 'move' | 'resize-left' | 'resize-right';
+    startTime: number;
+    duration: number;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!scrollContainerRef.current) return;
@@ -131,17 +143,30 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 
     const onMove = (moveEvt: MouseEvent | TouchEvent) => {
       const currentClientX = 'touches' in moveEvt ? moveEvt.touches[0].clientX : moveEvt.clientX;
+      const currentClientY = 'touches' in moveEvt ? moveEvt.touches[0].clientY : moveEvt.clientY;
       const deltaX = currentClientX - startClientX;
       const deltaTime = pixelsToTime(deltaX, zoom);
       const newStart = Math.max(0, Math.min(totalDuration - dur, snapToGrid(initialStart + deltaTime, 0.05)));
+
+      setDraggingInfo({
+        itemId: item.id,
+        type: 'move',
+        startTime: newStart,
+        duration: dur,
+        clientX: currentClientX,
+        clientY: currentClientY,
+      });
+
       onUpdateItemDuration(item.id, newStart, dur);
     };
 
     const onEnd = () => {
+      setDraggingInfo(null);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      onUpdateItemEnd?.(item.id);
     };
 
     window.addEventListener('mousemove', onMove);
@@ -163,24 +188,39 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
 
     const onMove = (moveEvt: MouseEvent | TouchEvent) => {
       const currentClientX = 'touches' in moveEvt ? moveEvt.touches[0].clientX : moveEvt.clientX;
+      const currentClientY = 'touches' in moveEvt ? moveEvt.touches[0].clientY : moveEvt.clientY;
       const deltaX = currentClientX - startClientX;
       const deltaTime = pixelsToTime(deltaX, zoom);
 
+      let calcStart = initialStart;
+      let calcDur = initialDur;
+
       if (direction === 'right') {
-        const newDur = Math.max(0.2, Math.min(totalDuration - initialStart, snapToGrid(initialDur + deltaTime, 0.05)));
-        onUpdateItemDuration(item.id, initialStart, newDur);
+        calcDur = Math.max(0.2, Math.min(totalDuration - initialStart, snapToGrid(initialDur + deltaTime, 0.05)));
+        onUpdateItemDuration(item.id, calcStart, calcDur);
       } else {
-        const newStart = Math.max(0, snapToGrid(initialStart + deltaTime, 0.05));
-        const newDur = Math.max(0.2, snapToGrid(initialDur - (newStart - initialStart), 0.05));
-        onUpdateItemDuration(item.id, newStart, newDur);
+        calcStart = Math.max(0, snapToGrid(initialStart + deltaTime, 0.05));
+        calcDur = Math.max(0.2, snapToGrid(initialDur - (calcStart - initialStart), 0.05));
+        onUpdateItemDuration(item.id, calcStart, calcDur);
       }
+
+      setDraggingInfo({
+        itemId: item.id,
+        type: direction === 'left' ? 'resize-left' : 'resize-right',
+        startTime: calcStart,
+        duration: calcDur,
+        clientX: currentClientX,
+        clientY: currentClientY,
+      });
     };
 
     const onEnd = () => {
+      setDraggingInfo(null);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      onUpdateItemEnd?.(item.id);
     };
 
     window.addEventListener('mousemove', onMove);
@@ -434,6 +474,21 @@ export const MultiTrackTimelineSlider: React.FC<MultiTrackTimelineSliderProps> =
           </div>
         </div>
       </div>
+
+      {/* Floating Timecode Tooltip during Clip Drag / Resize */}
+      {draggingInfo && (
+        <div
+          className="fixed pointer-events-none z-50 -translate-x-1/2 -translate-y-12 px-2.5 py-1 bg-[#090C15]/95 text-cyan-300 border border-cyan-500/50 rounded-xl shadow-2xl backdrop-blur-md text-[11px] font-mono font-bold flex items-center gap-1.5 ring-1 ring-white/10 select-none animate-in fade-in zoom-in-95 duration-100"
+          style={{ left: draggingInfo.clientX, top: draggingInfo.clientY }}
+        >
+          <span className="text-white">{formatTimestamp(draggingInfo.startTime)}</span>
+          <span className="text-slate-500">➔</span>
+          <span className="text-white">{formatTimestamp(draggingInfo.startTime + draggingInfo.duration)}</span>
+          <span className="text-cyan-400 font-extrabold bg-cyan-950/80 px-1 py-0.5 rounded border border-cyan-500/30 ml-0.5">
+            ({draggingInfo.duration.toFixed(2)}s)
+          </span>
+        </div>
+      )}
     </div>
   );
 };

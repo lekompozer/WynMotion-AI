@@ -276,21 +276,13 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
 
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-        setVoiceDurationSec(audio.duration);
-        const audioFrames = Math.round(audio.duration * fps);
-        if (audioFrames > 30) {
-          setCurrentDurationInFrames(audioFrames);
-        }
+        setVoiceDurationSec((prev) => (prev !== undefined ? prev : audio.duration));
       }
     };
 
     const handleEnded = () => {
-      setIsPlaying(false);
-      setFrame(0);
-      audio.currentTime = 0;
-      if (bgmAudioRef.current) {
-        bgmAudioRef.current.pause();
-        bgmAudioRef.current.currentTime = 0;
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
     };
 
@@ -340,7 +332,13 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     }
   }, [bgmVolume, isMuted]);
 
-  // Playhead update loop synced with audio (or rAF fallback)
+  // Ref to track latest frame without stale closure in requestAnimationFrame
+  const frameRef = useRef<number>(0);
+  useEffect(() => {
+    frameRef.current = frame;
+  }, [frame]);
+
+  // Playhead update loop synced with timeline master clock & windowed audio playback
   useEffect(() => {
     if (!isPlaying) {
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
@@ -350,44 +348,60 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     let lastTime = performance.now();
 
     const updatePlayhead = (now: number) => {
-      let currentSec = 0;
+      const deltaSec = Math.min(0.1, (now - lastTime) / 1000);
+      lastTime = now;
 
-      if (audioRef.current && currentAudioSrc) {
-        currentSec = audioRef.current.currentTime;
-        const currentFrame = Math.round(currentSec * fps);
+      const nextFrame = frameRef.current + deltaSec * fps;
 
-        if (currentFrame >= currentDurationInFrames) {
-          setIsPlaying(false);
-          setFrame(currentDurationInFrames);
+      if (nextFrame >= currentDurationInFrames) {
+        setIsPlaying(false);
+        setFrame(0);
+        frameRef.current = 0;
+        if (audioRef.current) {
           audioRef.current.pause();
-          if (bgmAudioRef.current) bgmAudioRef.current.pause();
-          return;
+          audioRef.current.currentTime = 0;
         }
-
-        setFrame(currentFrame);
-      } else {
-        // Clock-based fallback if no voice audio is loaded
-        const deltaSec = (now - lastTime) / 1000;
-        lastTime = now;
-        setFrame((prev) => {
-          const next = prev + deltaSec * fps;
-          if (next >= currentDurationInFrames) {
-            setIsPlaying(false);
-            if (bgmAudioRef.current) bgmAudioRef.current.pause();
-            return 0;
-          }
-          return next;
-        });
-        currentSec = frame / fps;
+        if (bgmAudioRef.current) {
+          bgmAudioRef.current.pause();
+          bgmAudioRef.current.currentTime = 0;
+        }
+        return;
       }
 
-      // Check and sync BGM playback timing
+      setFrame(nextFrame);
+      frameRef.current = nextFrame;
+      const currentSec = nextFrame / fps;
+
+      // 1. Sync Voice Audio Playback within [voiceStartSec, voiceEndSec]
+      if (audioRef.current && currentAudioSrc) {
+        const vStart = voiceStartSec || 0;
+        const vEnd = voiceDurationSec ? vStart + voiceDurationSec : (currentDurationInFrames / fps);
+        if (currentSec >= vStart && currentSec < vEnd) {
+          const targetVoiceTime = Math.max(0, currentSec - vStart);
+          if (audioRef.current.paused) {
+            audioRef.current.currentTime = targetVoiceTime;
+            audioRef.current.play().catch(() => {});
+          } else if (Math.abs(audioRef.current.currentTime - targetVoiceTime) > 0.15) {
+            audioRef.current.currentTime = targetVoiceTime;
+          }
+        } else {
+          if (!audioRef.current.paused) {
+            audioRef.current.pause();
+          }
+        }
+      }
+
+      // 2. Sync BGM Audio Playback within [bgmStartSec, bgmEndSec]
       if (bgmAudioRef.current && currentBgmAudioSrc) {
-        const bgmEnd = bgmDurationSec ? bgmStartSec + bgmDurationSec : (currentDurationInFrames / fps);
-        if (currentSec >= bgmStartSec && currentSec < bgmEnd) {
+        const bStart = bgmStartSec || 0;
+        const bEnd = bgmDurationSec ? bStart + bgmDurationSec : (currentDurationInFrames / fps);
+        if (currentSec >= bStart && currentSec < bEnd) {
+          const targetBgmTime = Math.max(0, currentSec - bStart);
           if (bgmAudioRef.current.paused) {
-            bgmAudioRef.current.currentTime = Math.max(0, currentSec - bgmStartSec);
+            bgmAudioRef.current.currentTime = targetBgmTime;
             bgmAudioRef.current.play().catch(() => {});
+          } else if (Math.abs(bgmAudioRef.current.currentTime - targetBgmTime) > 0.15) {
+            bgmAudioRef.current.currentTime = targetBgmTime;
           }
         } else {
           if (!bgmAudioRef.current.paused) {
@@ -404,29 +418,41 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     return () => {
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
     };
-  }, [isPlaying, fps, currentDurationInFrames, currentAudioSrc, currentBgmAudioSrc, bgmStartSec, bgmDurationSec, frame]);
+  }, [isPlaying, fps, currentDurationInFrames, currentAudioSrc, currentBgmAudioSrc, voiceStartSec, voiceDurationSec, bgmStartSec, bgmDurationSec]);
 
   const play = useCallback(() => {
-    const currentSec = frame / fps;
+    let currentSec = frameRef.current / fps;
 
-    if (audioRef.current) {
-      if (frame >= currentDurationInFrames) {
-        setFrame(0);
-        audioRef.current.currentTime = 0;
+    if (frameRef.current >= currentDurationInFrames) {
+      setFrame(0);
+      frameRef.current = 0;
+      currentSec = 0;
+    }
+
+    if (audioRef.current && currentAudioSrc) {
+      const vStart = voiceStartSec || 0;
+      const vEnd = voiceDurationSec ? vStart + voiceDurationSec : (currentDurationInFrames / fps);
+      if (currentSec >= vStart && currentSec < vEnd) {
+        audioRef.current.currentTime = Math.max(0, currentSec - vStart);
+        audioRef.current.play().catch(() => {});
+      } else {
+        audioRef.current.pause();
       }
-      audioRef.current.play().catch(() => {});
     }
 
     if (bgmAudioRef.current && currentBgmAudioSrc) {
-      const bgmEnd = bgmDurationSec ? bgmStartSec + bgmDurationSec : (currentDurationInFrames / fps);
-      if (currentSec >= bgmStartSec && currentSec < bgmEnd) {
-        bgmAudioRef.current.currentTime = Math.max(0, currentSec - bgmStartSec);
+      const bStart = bgmStartSec || 0;
+      const bEnd = bgmDurationSec ? bStart + bgmDurationSec : (currentDurationInFrames / fps);
+      if (currentSec >= bStart && currentSec < bEnd) {
+        bgmAudioRef.current.currentTime = Math.max(0, currentSec - bStart);
         bgmAudioRef.current.play().catch(() => {});
+      } else {
+        bgmAudioRef.current.pause();
       }
     }
 
     setIsPlaying(true);
-  }, [frame, currentDurationInFrames, fps, currentBgmAudioSrc, bgmStartSec, bgmDurationSec]);
+  }, [currentDurationInFrames, fps, currentAudioSrc, voiceStartSec, voiceDurationSec, currentBgmAudioSrc, bgmStartSec, bgmDurationSec]);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
@@ -450,16 +476,27 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
     (targetFrame: number) => {
       const clamped = Math.max(0, Math.min(currentDurationInFrames, targetFrame));
       setFrame(clamped);
+      frameRef.current = clamped;
       const targetSec = clamped / fps;
 
-      if (audioRef.current) {
-        audioRef.current.currentTime = targetSec;
+      if (audioRef.current && currentAudioSrc) {
+        const vStart = voiceStartSec || 0;
+        const vEnd = voiceDurationSec ? vStart + voiceDurationSec : (currentDurationInFrames / fps);
+        if (targetSec >= vStart && targetSec < vEnd) {
+          audioRef.current.currentTime = Math.max(0, targetSec - vStart);
+          if (isPlaying) {
+            audioRef.current.play().catch(() => {});
+          }
+        } else {
+          audioRef.current.pause();
+        }
       }
 
       if (bgmAudioRef.current && currentBgmAudioSrc) {
-        const bgmEnd = bgmDurationSec ? bgmStartSec + bgmDurationSec : (currentDurationInFrames / fps);
-        if (targetSec >= bgmStartSec && targetSec < bgmEnd) {
-          bgmAudioRef.current.currentTime = Math.max(0, targetSec - bgmStartSec);
+        const bStart = bgmStartSec || 0;
+        const bEnd = bgmDurationSec ? bStart + bgmDurationSec : (currentDurationInFrames / fps);
+        if (targetSec >= bStart && targetSec < bEnd) {
+          bgmAudioRef.current.currentTime = Math.max(0, targetSec - bStart);
           if (isPlaying) {
             bgmAudioRef.current.play().catch(() => {});
           }
@@ -468,7 +505,7 @@ export const RemotionPlayerProvider: React.FC<RemotionPlayerProviderProps> = ({
         }
       }
     },
-    [currentDurationInFrames, fps, currentBgmAudioSrc, bgmStartSec, bgmDurationSec, isPlaying]
+    [currentDurationInFrames, fps, currentAudioSrc, voiceStartSec, voiceDurationSec, currentBgmAudioSrc, bgmStartSec, bgmDurationSec, isPlaying]
   );
 
   const seekToSec = useCallback(
