@@ -143,6 +143,93 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
   const resolvedFont = fontFamily || '"Montserrat", "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif';
   const wordSpacing = Math.max(2, Math.round(fontSize * 0.1));
 
+  // Balanced 2-line break algorithm for subtitles
+  const splitWordsBalanced = <T extends { word: string }>(wList: T[]): T[][] => {
+    if (!wList || wList.length <= 4) return [wList];
+    const totalChars = wList.reduce((acc, w) => acc + (w.word ? w.word.length : 0), 0) + (wList.length - 1);
+    if (wList.length <= 5 && totalChars <= 26) return [wList];
+
+    const targetMid = totalChars / 2;
+    let bestSplit = Math.floor(wList.length / 2);
+    let minDiff = 999999;
+    let curChars = 0;
+
+    for (let i = 0; i < wList.length - 1; i++) {
+      curChars += (wList[i].word ? wList[i].word.length : 0) + (i > 0 ? 1 : 0);
+      let diff = Math.abs(curChars - targetMid);
+      const lastChar = (wList[i].word || '').slice(-1);
+      if (',.!?:;'.includes(lastChar)) diff -= 4;
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestSplit = i + 1;
+      }
+    }
+    return [wList.slice(0, bestSplit), wList.slice(bestSplit)];
+  };
+
+  const splitTextBalanced = (str: string): string => {
+    if (!str) return '';
+    const wArr = str.trim().split(/\s+/).filter(Boolean);
+    if (wArr.length <= 5 && str.length <= 26) return str;
+    const targetMid = str.length / 2;
+    let bestSplit = Math.floor(wArr.length / 2);
+    let minDiff = 999999;
+    let curChars = 0;
+    for (let i = 0; i < wArr.length - 1; i++) {
+      curChars += wArr[i].length + (i > 0 ? 1 : 0);
+      let diff = Math.abs(curChars - targetMid);
+      const lastChar = wArr[i].slice(-1);
+      if (',.!?:;'.includes(lastChar)) diff -= 4;
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestSplit = i + 1;
+      }
+    }
+    return wArr.slice(0, bestSplit).join(' ') + '\n' + wArr.slice(bestSplit).join(' ');
+  };
+
+  const formatTypewriterBalanced = (text: string, count: number): string => {
+    if (!text) return '';
+    const wArr = text.trim().split(/\s+/).filter(Boolean);
+    if (wArr.length <= 5 && text.length <= 26) {
+      return text.slice(0, count);
+    }
+    const targetMid = text.length / 2;
+    let bestSplit = Math.floor(wArr.length / 2);
+    let minDiff = 999999;
+    let curChars = 0;
+    for (let i = 0; i < wArr.length - 1; i++) {
+      curChars += wArr[i].length + (i > 0 ? 1 : 0);
+      let diff = Math.abs(curChars - targetMid);
+      const lastChar = wArr[i].slice(-1);
+      if (',.!?:;'.includes(lastChar)) diff -= 4;
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestSplit = i + 1;
+      }
+    }
+    const line1 = wArr.slice(0, bestSplit).join(' ');
+    const line2 = wArr.slice(bestSplit).join(' ');
+    if (count <= line1.length) {
+      return line1.slice(0, count);
+    } else {
+      const count2 = Math.max(0, Math.min(line2.length, count - line1.length - 1));
+      return line1 + '\n' + line2.slice(0, count2);
+    }
+  };
+
+  const wordLines = splitWordsBalanced(words);
+
+  const renderBalancedLines = (renderWord: (item: (typeof words)[0], idx: number) => React.ReactNode) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', maxWidth: '100%', margin: '0 auto' }}>
+      {wordLines.map((lineWords, lineIdx) => (
+        <div key={lineIdx} style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap' }}>
+          {lineWords.map((item, wIdx) => renderWord(item, lineIdx * 100 + wIdx))}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div style={getYPosStyle()}>
       {/* ─────────────────────────────────────────────────────────────
@@ -152,7 +239,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
@@ -161,7 +248,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textTransform: uppercase ? 'uppercase' : 'none',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             const isPassed = currentTime > item.end;
             return (
@@ -201,7 +288,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textTransform: uppercase ? 'uppercase' : 'none',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             const wordFrame = Math.max(0, (currentTime - item.start) * fps);
             const bounce = spring({ frame: wordFrame, fps, config: { damping: 10, stiffness: 160 } });
@@ -232,7 +319,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '82%',
             padding: `${Math.max(4, Math.round(fontSize * 0.24))}px ${Math.max(10, Math.round(fontSize * 0.5))}px`,
             borderRadius: `${Math.max(6, Math.round(fontSize * 0.3))}px`,
             backgroundColor: 'rgba(0, 0, 0, 0.82)',
@@ -245,9 +332,11 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontSize: `${fontSize}px`,
             fontWeight: 700,
             color: '#FFFFFF',
+            whiteSpace: 'pre-line',
+            textWrap: 'balance' as any,
           }}
         >
-          {activeSegment.text}
+          {splitTextBalanced(activeSegment.text)}
         </div>
       )}
 
@@ -258,7 +347,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '82%',
             padding: `${Math.max(4, Math.round(fontSize * 0.24))}px ${Math.max(10, Math.round(fontSize * 0.5))}px`,
             borderRadius: `${Math.max(6, Math.round(fontSize * 0.3))}px`,
             backgroundColor: 'rgba(255, 255, 255, 0.94)',
@@ -270,9 +359,11 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontSize: `${fontSize}px`,
             fontWeight: 800,
             color: '#0F172A',
+            whiteSpace: 'pre-line',
+            textWrap: 'balance' as any,
           }}
         >
-          {activeSegment.text}
+          {splitTextBalanced(activeSegment.text)}
         </div>
       )}
 
@@ -283,7 +374,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
@@ -293,7 +384,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 4px 20px rgba(0,0,0,0.85), 0 0 4px #000',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             return (
               <span
@@ -320,7 +411,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
@@ -330,7 +421,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textShadow: '0 1px 2px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.4)',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             return (
               <span
@@ -357,7 +448,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
@@ -366,7 +457,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textShadow: '0 3px 12px rgba(0,0,0,0.95), 0 0 4px #000',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             const isPassed = currentTime > item.end;
             return (
@@ -401,7 +492,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: resolvedFont,
@@ -411,7 +502,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textTransform: 'uppercase',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             const strokeWidth = Math.max(0.8, Math.min(2, fontSize * 0.04));
             return (
@@ -441,7 +532,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: fontFamily || '"Courier New", monospace',
@@ -451,7 +542,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             textTransform: 'uppercase',
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             return (
               <span
@@ -480,7 +571,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.45,
             fontFamily: resolvedFont,
@@ -488,7 +579,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontWeight: 800,
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             return (
               <span
@@ -522,7 +613,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             padding: `${Math.max(6, Math.round(fontSize * 0.24))}px ${Math.max(12, Math.round(fontSize * 0.5))}px`,
             borderRadius: `${Math.max(8, Math.round(fontSize * 0.32))}px`,
             background: 'rgba(15, 23, 42, 0.78)',
@@ -536,7 +627,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontWeight: 700,
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             return (
               <span
@@ -563,7 +654,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             textAlign: 'center',
             lineHeight: 1.35,
             fontFamily: fontFamily || '"Playfair Display", "Times New Roman", Georgia, serif',
@@ -572,7 +663,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             fontWeight: 800,
           }}
         >
-          {words.map((item, idx) => {
+          {renderBalancedLines((item, idx) => {
             const isActive = currentTime >= item.start && currentTime <= item.end;
             return (
               <span
@@ -628,7 +719,7 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
         <div
           style={{
             display: 'inline-block',
-            maxWidth: '88%',
+            maxWidth: '84%',
             background: 'rgba(0, 0, 0, 0.85)',
             padding: `${Math.max(4, Math.round(fontSize * 0.2))}px ${Math.max(12, Math.round(fontSize * 0.45))}px`,
             borderRadius: '6px',
@@ -640,15 +731,16 @@ export const CapCutCaptionRenderer: React.FC<CapCutCaptionRendererProps> = ({
             border: '1px solid rgba(167, 243, 208, 0.3)',
             textAlign: 'center',
             lineHeight: 1.35,
+            whiteSpace: 'pre-line',
+            textWrap: 'balance' as any,
           }}
         >
           {(() => {
             const segDuration = Math.max(0.3, activeSegment.end - activeSegment.start);
-            // Complete typing at 65% - 70% of segment duration (or 26 chars/sec) so full sentence stays completely visible
             const typingDuration = Math.max(0.4, Math.min(segDuration * 0.7, activeSegment.text.length / 26));
             const progress = Math.min(1.0, Math.max(0, (currentTime - activeSegment.start) / typingDuration));
             const charCount = Math.min(activeSegment.text.length, Math.ceil(progress * activeSegment.text.length));
-            const displayText = activeSegment.text.slice(0, charCount);
+            const displayText = formatTypewriterBalanced(activeSegment.text, charCount);
             const isBlink = Math.floor(frame / 8) % 2 === 0;
 
             return (
