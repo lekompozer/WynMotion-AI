@@ -52,6 +52,7 @@ import {
   LayoutTemplate,
   Languages,
   Plus,
+  Save,
   Star,
   Send,
   History,
@@ -1059,21 +1060,150 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
   const deleteScene = useCallback(
     (sceneId: string | number) => {
       setScenes((prev) => {
-        if (prev.length <= 1) return prev;
-        const next = prev.filter((s) => s.scene_id !== sceneId);
+        if (prev.length <= 1) {
+          const resetScene: DynamicSceneData = {
+            scene_id: '1',
+            title: isVietnamese ? 'Phân cảnh 1' : 'Scene 1',
+            duration_sec: 5.0,
+            duration_frames: 150,
+            start_sec: 0,
+            start_frame: 0,
+            voice_transcript: '',
+            image_url: undefined,
+            video_url: undefined,
+          };
+          setSyncStatusMsg(isVietnamese ? '🗑️ Đã làm mới phân cảnh!' : '🗑️ Reset scene!');
+          setTimeout(() => setSyncStatusMsg(null), 2500);
+          return [resetScene];
+        }
+        const next = prev.filter((s) => String(s.scene_id) !== String(sceneId));
+        let totalSec = 0;
+        let totalFrames = 0;
+        const reindexed = next.map((s) => {
+          const durSec = getSceneDuration(s);
+          const durFrames = Math.round(durSec * fps);
+          const updated = {
+            ...s,
+            start_sec: Number(totalSec.toFixed(2)),
+            start_frame: totalFrames,
+            duration_sec: durSec,
+            duration_frames: durFrames,
+          };
+          totalSec += durSec;
+          totalFrames += durFrames;
+          return updated;
+        });
         try {
           if (typeof window !== 'undefined') {
             localStorage.setItem(
               `wynmotion_draft_${project.project_id}`,
-              JSON.stringify({ scenes: next, swap_speakers: swapSpeakers, visual_style: visualStyle })
+              JSON.stringify({ scenes: reindexed, swap_speakers: swapSpeakers, visual_style: visualStyle })
             );
           }
         } catch (e) {}
-        return next;
+        setSyncStatusMsg(isVietnamese ? '🗑️ Đã xoá phân cảnh!' : '🗑️ Scene deleted!');
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+        return reindexed;
       });
     },
-    [project.project_id, swapSpeakers, visualStyle]
+    [project.project_id, swapSpeakers, visualStyle, isVietnamese, fps]
   );
+
+  // ── Lưu Dự Án Toàn Diện (Full 5 Tabs Project Configuration) ──
+  const [isSavingProject, setIsSavingProject] = useState(false);
+
+  const handleSaveProject = useCallback(async () => {
+    setIsSavingProject(true);
+    try {
+      const fullProjectPayload: any = {
+        project_id: project.project_id,
+        title: project.title || 'WynMotion Project',
+        scenes: scenes as any,
+        aspect_ratio: aspectRatio,
+        bg_color: bgColor,
+        visual_style: visualStyle,
+        fps,
+        swap_speakers: swapSpeakers,
+        model_type: (project as any).model_type || 'flash',
+        audio_url: isAudioRemoved ? '' : (audioSrc || ''),
+        voice_start_sec: voiceStartSec,
+        voice_duration_sec: voiceDurationSec,
+        bgm_url: bgmAudioUrl || (project as any).bgm_url || '',
+        bgm_track_title: bgmTrackTitle,
+        bgm_volume: bgmVolume,
+        voice_volume: (project as any).voice_volume ?? 1,
+        bgm_start_sec: bgmStartSec,
+        bgm_duration_sec: bgmDurationSec,
+        caption_segments: captionSegments,
+        caption_preset_style: captionPresetStyle,
+        show_whisper_subs: showWhisperSubs,
+        subs_pos_y: subsPosY,
+        card_pos_y: cardPosY,
+        updated_at: new Date().toISOString(),
+      };
+
+      // 1. Save locally (current project + draft)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`wynmotion_draft_${project.project_id}`, JSON.stringify(fullProjectPayload));
+        localStorage.setItem('wynmotion_current_project', JSON.stringify(fullProjectPayload));
+
+        // 2. Add / Update in offline projects list for easy reopening
+        try {
+          const offlineKey = 'wynmotion_offline_projects';
+          const raw = localStorage.getItem(offlineKey);
+          let list: any[] = raw ? JSON.parse(raw) : [];
+          const existingIdx = list.findIndex((p) => p.project_id === project.project_id);
+          if (existingIdx >= 0) {
+            list[existingIdx] = { ...list[existingIdx], ...fullProjectPayload };
+          } else {
+            list.unshift(fullProjectPayload);
+          }
+          localStorage.setItem(offlineKey, JSON.stringify(list));
+        } catch (e) {
+          console.warn('Failed to update wynmotion_offline_projects:', e);
+        }
+      }
+
+      // 3. Online sync to server if authenticated or available
+      try {
+        await wynmotionService.updateProject(project.project_id, fullProjectPayload);
+      } catch (srvErr) {
+        console.warn('Project saved offline locally (server sync skipped/failed):', srvErr);
+      }
+
+      setSyncStatusMsg(isVietnamese ? '💾 Đã lưu dự án thành công!' : '💾 Project saved successfully!');
+      setTimeout(() => setSyncStatusMsg(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to save project:', err);
+      setSyncStatusMsg(isVietnamese ? '❌ Lỗi khi lưu dự án' : '❌ Failed to save project');
+      setTimeout(() => setSyncStatusMsg(null), 3000);
+    } finally {
+      setIsSavingProject(false);
+    }
+  }, [
+    project,
+    scenes,
+    aspectRatio,
+    bgColor,
+    visualStyle,
+    fps,
+    swapSpeakers,
+    isAudioRemoved,
+    audioSrc,
+    voiceStartSec,
+    voiceDurationSec,
+    bgmAudioUrl,
+    bgmTrackTitle,
+    bgmVolume,
+    bgmStartSec,
+    bgmDurationSec,
+    captionSegments,
+    captionPresetStyle,
+    showWhisperSubs,
+    subsPosY,
+    cardPosY,
+    isVietnamese,
+  ]);
 
   // ── Thêm Phân Cảnh Mới (New Scene) ──
   const handleAddNewScene = useCallback(() => {
@@ -1392,17 +1522,6 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-
-          {/* + New Scene Button on Header */}
-          <button
-            type="button"
-            onClick={handleAddNewScene}
-            title={t('Thêm Phân Cảnh Mới', 'Add New Scene')}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25 active:scale-90 transition-all font-bold text-xs cursor-pointer shadow-sm"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span className="hidden sm:inline">{t('Cảnh Mới', 'New Scene')}</span>
-          </button>
         </div>
 
         <div className="flex flex-col items-center min-w-0 flex-1 mx-2">
@@ -1689,15 +1808,33 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            {/* Quick BGM Button */}
+            {/* Save Project Button (Full 5 tabs config) */}
             <button
               type="button"
-              onClick={() => setIsMusicLibraryOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-purple-500/15 border border-purple-400/40 text-purple-300 text-[10px] font-black hover:bg-purple-500/25 active:scale-95 transition-all shadow-sm"
+              onClick={handleSaveProject}
+              disabled={isSavingProject}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/25 active:scale-95 transition-all text-[10px] font-black shadow-sm cursor-pointer"
+              title={t('Lưu dự án (toàn bộ 5 tabs)', 'Save Project (All 5 Tabs)')}
             >
-              <Music className="w-3 h-3" />
-              <span>{bgmTrackTitle ? t('Đổi Nhạc Nền', 'Change BGM') : t('+ Nhạc Nền', '+ BGM')}</span>
+              {isSavingProject ? (
+                <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+              ) : (
+                <Save className="w-3 h-3 text-emerald-400" />
+              )}
+              <span>{t('Lưu', 'Save')}</span>
             </button>
+
+            {/* Quick BGM Button (Only shown if project has voice or BGM audio) */}
+            {Boolean(hasVoiceAudio || bgmAudioUrl || (project as any).bgm_url) && (
+              <button
+                type="button"
+                onClick={() => setIsMusicLibraryOpen(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-purple-500/15 border border-purple-400/40 text-purple-300 text-[10px] font-black hover:bg-purple-500/25 active:scale-95 transition-all shadow-sm"
+              >
+                <Music className="w-3 h-3" />
+                <span>{bgmTrackTitle ? t('Đổi Nhạc Nền', 'Change BGM') : t('+ Nhạc Nền', '+ BGM')}</span>
+              </button>
+            )}
 
             {isAnimationSyncableTemplate(project.visual_style || visualStyle) && hasVoiceAudio && (
               <button

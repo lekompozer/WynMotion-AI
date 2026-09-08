@@ -278,8 +278,151 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
     }
   }
 
-  // 2. Modular Style Pipeline Renderers (Product Ads, Strobe Teaser, Dialogue, Science STEM template fallback, etc.)
+  const getSubsStyle = (): React.CSSProperties => {
+    if (typeof subsPosY === 'number') {
+      return { top: `${subsPosY}%`, left: '50%', transform: 'translate(-50%, -50%)' };
+    }
+    if (typeof subsPosY === 'string') {
+      if (subsPosY.endsWith('%') || subsPosY.endsWith('px')) {
+        return { top: subsPosY, left: '50%', transform: 'translate(-50%, -50%)' };
+      }
+      const num = parseFloat(subsPosY);
+      if (!isNaN(num)) {
+        return { top: `${num}%`, left: '50%', transform: 'translate(-50%, -50%)' };
+      }
+    }
+    if (subsPosY === 'top') {
+      return { top: isPortrait ? 8 : 10, left: '50%', transform: 'translateX(-50%)' };
+    }
+    if (subsPosY === 'middle') {
+      return { top: '65%', left: '50%', transform: 'translate(-50%, -50%)' };
+    }
+    return { bottom: isPortrait ? 8 : isSquare ? 8 : 10, left: '50%', transform: 'translateX(-50%)' };
+  };
+
+  // 1.5. DIRECT VIDEO PLAYER (When scene has custom video_url uploaded)
+  if (scene.video_url) {
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#000000',
+        }}
+      >
+        <video
+          src={scene.video_url}
+          playsInline
+          loop
+          autoPlay
+          muted
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+        {showWhisperSubs && (scene.voice_transcript || scene.summary_text) && (
+          <div
+            style={{
+              position: 'absolute',
+              ...getSubsStyle(),
+              zIndex: 30,
+              maxWidth: isPortrait ? '88%' : '75%',
+              textAlign: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(8px)',
+              padding: '6px 14px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+            }}
+          >
+            <p
+              style={{
+                fontSize: isPortrait ? 13 : 15,
+                fontWeight: 700,
+                color: '#FFFFFF',
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {scene.voice_transcript || scene.summary_text}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 1.6. CUSTOM EMPTY PROJECT (100% Clean background / Single custom image, no templates)
   const effectiveStyle = (scene as any).template_type || (scene as any).visual_style || visualStyle;
+  if (effectiveStyle === 'custom_empty' || effectiveStyle === 'empty_project') {
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: bgColor || '#000000',
+        }}
+      >
+        {scene.image_url ? (
+          <img
+            src={scene.image_url}
+            alt={scene.title || 'Scene media'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', backgroundColor: bgColor || '#000000' }} />
+        )}
+        {showWhisperSubs && (scene.voice_transcript || scene.summary_text) && (
+          <div
+            style={{
+              position: 'absolute',
+              ...getSubsStyle(),
+              zIndex: 30,
+              maxWidth: isPortrait ? '88%' : '75%',
+              textAlign: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(8px)',
+              padding: '6px 14px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+            }}
+          >
+            <p
+              style={{
+                fontSize: isPortrait ? 13 : 15,
+                fontWeight: 700,
+                color: '#FFFFFF',
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {scene.voice_transcript || scene.summary_text}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 2. Modular Style Pipeline Renderers (Product Ads, Strobe Teaser, Dialogue, Science STEM template fallback, etc.)
   const ModularRenderer = getModularStyleRenderer(effectiveStyle) || getModularStyleRenderer(visualStyle);
   if (ModularRenderer) {
     return (
@@ -309,28 +452,6 @@ export const DynamicSceneRenderer: React.FC<DynamicSceneRendererProps> = ({
       };
     }
     return { top: '50%', left: '50%', transform: `translate(-50%, -50%) scale(${Math.max(0, headerSpring)})` };
-  };
-
-  const getSubsStyle = (): React.CSSProperties => {
-    if (typeof subsPosY === 'number') {
-      return { top: `${subsPosY}%`, left: '50%', transform: 'translate(-50%, -50%)' };
-    }
-    if (typeof subsPosY === 'string') {
-      if (subsPosY.endsWith('%') || subsPosY.endsWith('px')) {
-        return { top: subsPosY, left: '50%', transform: 'translate(-50%, -50%)' };
-      }
-      const num = parseFloat(subsPosY);
-      if (!isNaN(num)) {
-        return { top: `${num}%`, left: '50%', transform: 'translate(-50%, -50%)' };
-      }
-    }
-    if (subsPosY === 'top') {
-      return { top: isPortrait ? 8 : 10, left: '50%', transform: 'translateX(-50%)' };
-    }
-    if (subsPosY === 'middle') {
-      return { top: '65%', left: '50%', transform: 'translate(-50%, -50%)' };
-    }
-    return { bottom: isPortrait ? 8 : isSquare ? 8 : 10, left: '50%', transform: 'translateX(-50%)' };
   };
 
   // ─────────────────────────────────────────────────────────────

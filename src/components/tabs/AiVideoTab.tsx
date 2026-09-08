@@ -278,7 +278,7 @@ export const AiVideoTab: React.FC = () => {
         : `Empty Project (${new Date().toLocaleDateString()})`,
       prompt: 'Custom Empty Project with user uploaded media and audio',
       aspect_ratio: '9:16',
-      visual_style: 'product_ads_motion',
+      visual_style: 'custom_empty',
       duration_sec: perSceneDur,
       fps: 30,
       language_code: 'vi',

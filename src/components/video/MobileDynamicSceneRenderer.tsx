@@ -119,6 +119,67 @@ export const MobileDynamicSceneRenderer: React.FC<MobileDynamicSceneRendererProp
   };
 
   // ─────────────────────────────────────────────────────────────
+  // 0. DIRECT VIDEO PLAYER (When scene has custom video_url uploaded)
+  // ─────────────────────────────────────────────────────────────
+  if (scene.video_url) {
+    return (
+      <div className="w-full h-full bg-black flex items-center justify-center relative overflow-hidden select-none">
+        <video
+          src={scene.video_url}
+          playsInline
+          loop
+          autoPlay
+          muted
+          className="w-full h-full object-cover"
+        />
+        {showWhisperSubs && displayVoice && (
+          <div
+            onClick={onSubsClick}
+            style={getSubsPositionStyle()}
+            className="absolute z-30 max-w-[90%] bg-slate-950/85 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-center shadow-lg cursor-pointer active:scale-95 transition-all"
+          >
+            <p className="text-[11px] font-sans font-bold text-cyan-200 leading-snug">{displayVoice}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 0.5. CLEAN / CUSTOM EMPTY PROJECT CANVAS
+  // ─────────────────────────────────────────────────────────────
+  if (visualStyle === 'custom_empty' || visualStyle === 'empty_project') {
+    const bgMedia = scene.image_url || (scene as any).original_image_url;
+    return (
+      <div
+        className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden select-none"
+        style={{ backgroundColor: bgColor || '#000000' }}
+      >
+        {bgMedia ? (
+          <img src={bgMedia} alt="Scene Asset" className="w-full h-full object-contain" />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 text-white/40 pointer-events-none p-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <span className="text-xl font-mono">🎬</span>
+            </div>
+            <p className="text-xs font-semibold text-slate-400">{scene.title || 'Empty Scene'}</p>
+          </div>
+        )}
+
+        {showWhisperSubs && displayVoice && (
+          <div
+            onClick={onSubsClick}
+            style={getSubsPositionStyle()}
+            className="absolute z-30 max-w-[90%] bg-slate-950/85 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-center shadow-lg cursor-pointer active:scale-95 transition-all"
+          >
+            <p className="text-[11px] font-sans font-bold text-cyan-200 leading-snug">{displayVoice}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 1. STYLE: APPLE MODERN MOTION & TECH UI
   // ─────────────────────────────────────────────────────────────
   if (visualStyle === 'apple_modern_motion' || visualStyle === 'tech_ui') {

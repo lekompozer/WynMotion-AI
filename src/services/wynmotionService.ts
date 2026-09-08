@@ -34,7 +34,9 @@ export type MotionVisualStyle =
   | 'ads_strobe_teaser'
   | 'ads_cinematic_showcase'
   | 'animation_ads_image_veo'
-  | 'video_news_60s';
+  | 'video_news_60s'
+  | 'custom_empty'
+  | 'empty_project';
 
 export type CharacterSubtype =
   | 'full_character'
