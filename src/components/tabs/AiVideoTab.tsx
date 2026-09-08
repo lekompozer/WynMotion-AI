@@ -43,6 +43,7 @@ import { WynMotionCreationModal } from '../video/WynMotionCreationModal';
 import {
   wynmotionService,
   MotionProject,
+  MotionScene,
   MotionVisualStyle,
   CharacterSubtype,
   DialogueSpeakerConfig,
@@ -241,6 +242,57 @@ export const AiVideoTab: React.FC = () => {
         }).catch(() => {});
       }
     }
+  };
+
+  // ── Tạo Empty Project và mở thẳng Studio Editor (không qua modal step 2) ──
+  const handleCreateEmptyProjectDirect = () => {
+    if (!user) {
+      showAuthToast(
+        isVietnamese
+          ? '🔐 Vui lòng đăng nhập để tạo dự án'
+          : '🔐 Please sign in to create a project',
+      );
+      setTimeout(() => setIsLoginModalOpen(true), 400);
+      return;
+    }
+
+    const count = 3;
+    const perSceneDur = 4.0;
+    let curStartSec = 0;
+    const scenes: MotionScene[] = [];
+
+    for (let i = 0; i < count; i++) {
+      scenes.push({
+        scene_id: String(i + 1),
+        order: i + 1,
+        title: isVietnamese ? `Phân cảnh ${i + 1}` : `Scene ${i + 1}`,
+        image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1080',
+        voice_transcript: '',
+        duration_sec: perSceneDur,
+        start_time_sec: Number(curStartSec.toFixed(1)),
+        actions: [],
+      });
+      curStartSec += perSceneDur;
+    }
+
+    const emptyProject: MotionProject = {
+      project_id: `empty_${Date.now()}`,
+      title: isVietnamese
+        ? `Dự Án Trống (${new Date().toLocaleDateString('vi-VN')})`
+        : `Empty Project (${new Date().toLocaleDateString()})`,
+      prompt: 'Custom Empty Project with user uploaded media and audio',
+      aspect_ratio: '9:16',
+      visual_style: 'product_ads_motion',
+      duration_sec: count * perSceneDur,
+      fps: 30,
+      language_code: 'vi',
+      status: 'ready',
+      scenes,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    openProjectInEditor(emptyProject);
   };
 
   // Navigation mode: 'home' (CapCut Hub) vs 'studio' (Creation Flow)
@@ -2093,7 +2145,7 @@ export const AiVideoTab: React.FC = () => {
             {/* Mục Nổi Bật: Dự Án Trống / Tải Lên Tự Do (Empty Project) */}
             <button
               type="button"
-              onClick={() => setIsEmptyProjectModalOpen(true)}
+              onClick={handleCreateEmptyProjectDirect}
               className={`w-full p-4 rounded-3xl border text-left transition-all flex items-center gap-4 active:scale-98 group cursor-pointer ${
                 isDark
                   ? 'bg-gradient-to-r from-[#131728] via-[#101422] to-[#131728] border-cyan-500/40 text-white hover:border-cyan-400 shadow-xl shadow-cyan-500/10 hover:shadow-cyan-500/20'
@@ -2108,9 +2160,6 @@ export const AiVideoTab: React.FC = () => {
                   <div className={`text-sm font-black leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {isVietnamese ? 'Dự Án Trống (Tải Lên Tự Do)' : 'Empty Project (Custom Upload)'}
                   </div>
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 uppercase tracking-wider">
-                    ⚡ Mới
-                  </span>
                 </div>
                 <div className={`text-xs mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   {isVietnamese

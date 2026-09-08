@@ -11,10 +11,13 @@ PODS:
   - CapacitorFilesystem (7.1.8):
     - Capacitor
     - IONFilesystemLib (~> 1.1.1)
-  - CapacitorFirebaseAuthentication/Google (7.5.0):
+  - CapacitorFirebaseAuthentication (7.5.0):
+    - Capacitor
+    - CapacitorFirebaseAuthentication/Lite (= 7.5.0)
+    - FirebaseAuth (~> 11.7.0)
+  - CapacitorFirebaseAuthentication/Lite (7.5.0):
     - Capacitor
     - FirebaseAuth (~> 11.7.0)
-    - GoogleSignIn (~> 7.1.0)
   - CapacitorHaptics (7.0.5):
     - Capacitor
   - CapacitorKeyboard (7.0.6):
@@ -84,7 +87,7 @@ DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
-  - "CapacitorFirebaseAuthentication/Google (from `../../node_modules/@capacitor-firebase/authentication`)"
+  - "CapacitorFirebaseAuthentication (from `../../node_modules/@capacitor-firebase/authentication`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
@@ -156,6 +159,6 @@ SPEC CHECKSUMS:
   RevenueCat: 7e1d0768fb287c9983173c9b28e39ccbeeb828a9
   RevenuecatPurchasesCapacitor: c84ce1cd5253bf22758c28decfb4313267cabb2c
 
-PODFILE CHECKSUM: b978540b18f621345695a39e308214d004634ade
+PODFILE CHECKSUM: 835e4c15ed8a704221cce252c582be4631fbf092
 
 COCOAPODS: 1.16.2
