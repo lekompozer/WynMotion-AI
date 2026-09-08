@@ -438,14 +438,16 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement>(null);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
-  const audioUploadInputRef = useRef<HTMLInputElement>(null);
-  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const voiceUploadInputRef = useRef<HTMLInputElement>(null);
+  const bgmUploadInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+  const [isUploadingBgm, setIsUploadingBgm] = useState(false);
 
-  // ── Upload & Replace / Remove Attached Audio ──
-  const handleUploadCustomAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Dedicated Voiceover Track Upload & Sync ──
+  const handleUploadVoiceAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsUploadingAudio(true);
+    setIsUploadingVoice(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -453,20 +455,64 @@ const StudioInner: React.FC<StudioInnerProps> = ({ project, initialScenes, onBac
       if (res && res.url) {
         setIsAudioRemoved(false);
         setAudioSrc?.(res.url);
+        setMultilingualAudios((prev) => ({
+          ...prev,
+          [activeAudioLang]: {
+            ...(prev[activeAudioLang] || {}),
+            audio_url: res.url,
+            language_name: prev[activeAudioLang]?.language_name || 'Custom Voice',
+          },
+        }));
         libraryCacheManager.notifyLibraryUpdated('audio');
         const temp = new Audio(res.url);
         temp.addEventListener('loadedmetadata', () => {
           if (temp.duration && isFinite(temp.duration)) {
+            setVoiceDurationSec(temp.duration);
             if (isAnimationSyncableTemplate(project.visual_style || visualStyle)) {
               syncAnimationWithAudio(temp.duration, file.name);
             }
           }
         });
+        setSyncStatusMsg(isVietnamese ? `🎙️ Đã tải giọng đọc: ${file.name}` : `🎙️ Uploaded voice: ${file.name}`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
       }
     } catch (err: any) {
-      alert(err.message || 'Lỗi tải tệp âm thanh');
+      alert(err.message || 'Lỗi tải tệp giọng đọc');
     } finally {
-      setIsUploadingAudio(false);
+      setIsUploadingVoice(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // ── Dedicated Background Music (BGM) Upload & Sync ──
+  const handleUploadBgmAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingBgm(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await wynmotionService.uploadMedia(formData);
+      if (res && res.url) {
+        setBgmAudioUrl(res.url);
+        setBgmTrackTitle(file.name);
+        setCustomBgmFile(file.name);
+        setRemotionBgmAudioSrc?.(res.url);
+        libraryCacheManager.notifyLibraryUpdated('audio');
+        const temp = new Audio(res.url);
+        temp.addEventListener('loadedmetadata', () => {
+          if (temp.duration && isFinite(temp.duration)) {
+            setBgmDurationSec(temp.duration);
+          }
+        });
+        setSyncStatusMsg(isVietnamese ? `🎵 Đã tải nhạc nền: ${file.name}` : `🎵 Uploaded BGM: ${file.name}`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi tải tệp nhạc nền');
+    } finally {
+      setIsUploadingBgm(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -2127,145 +2173,83 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
             </div>
           )}
 
-          {/* AUDIO SHEET: ATTACHED AUDIO & SOUND MANAGEMENT */}
+          {/* AUDIO SHEET: ATTACHED AUDIO & SOUND MANAGEMENT (2 TRACKS: VOICEOVER & BGM) */}
           {activeBottomSheet === 'audio' && (
             <div className="space-y-4 scrollbar-none pb-8">
               <SheetHeader
-                title={t('🎵 Audio Đính Kèm & Âm Thanh', '🎵 Attached Audio & Sound')}
-                subtitle={t('Chạm vào audio để đổi mới hoặc xoá', 'Tap on audio to replace or remove')}
+                title={t('🎵 Quản Lý Âm Thanh & Voiceover', '🎵 Audio & Voiceover Tracks')}
+                subtitle={t('🎙️ Voiceover (Lời thoại) & 🎵 BGM (Nhạc nền)', '🎙️ Voiceover (Speech) & 🎵 BGM (Music)')}
                 isDark={isDark}
                 onClose={() => setActiveBottomSheet(null)}
               />
 
-              {/* Hidden file input for uploading/replacing attached audio */}
+              {/* Hidden file inputs for uploading Voice and BGM */}
               <input
-                ref={audioUploadInputRef}
+                ref={voiceUploadInputRef}
                 type="file"
-                accept="audio/*"
+                accept="audio/mp3,audio/wav,audio/m4a,audio/aac,audio/ogg,audio/flac,audio/*"
                 className="hidden"
-                onChange={handleUploadCustomAudio}
+                onChange={handleUploadVoiceAudio}
+              />
+              <input
+                ref={bgmUploadInputRef}
+                type="file"
+                accept="audio/mp3,audio/wav,audio/m4a,audio/aac,audio/ogg,audio/flac,audio/*"
+                className="hidden"
+                onChange={handleUploadBgmAudio}
               />
 
-              {/* 1. DYNAMIC PRIMARY AUDIO CARD (Attached Template Music OR AI Narration Voiceover) */}
-              {isCommercialMusicStyle ? (
-                <div
-                  className={`p-4 rounded-3xl border transition-all space-y-3 ${
-                    isDark
-                      ? 'bg-gradient-to-br from-slate-900 to-[#120F24] border-purple-500/40 shadow-lg shadow-purple-500/5'
-                      : 'bg-gradient-to-br from-purple-50/70 to-pink-50/70 border-purple-300 shadow-md'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-black shadow-md flex-shrink-0">
-                        <Music className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-black truncate text-purple-400">
-                          {t('Nhạc Đính Kèm Theo Mẫu', 'Template Attached Music')}
+              {/* 1. TRACK 1: VOICEOVER / GIỌNG ĐỌC LỜI THOẠI */}
+              <div
+                className={`p-4 rounded-3xl border transition-all space-y-3 ${
+                  isDark
+                    ? 'bg-gradient-to-br from-slate-900 to-[#0F1422] border-cyan-500/40 shadow-lg shadow-cyan-500/5'
+                    : 'bg-gradient-to-br from-cyan-50/70 to-blue-50/70 border-cyan-300 shadow-md'
+                }`}
+              >
+                {(() => {
+                  const activeTrack = multilingualAudios[activeAudioLang];
+                  const langMeta = AUDIO_STUDIO_LANGUAGES.find(
+                    (l) => l.code === activeAudioLang || l.code.toLowerCase() === activeAudioLang.toLowerCase() || (activeAudioLang === 'en' && l.code === 'en-US')
+                  );
+                  const trackFlag = activeTrack?.flag || langMeta?.flag || (activeAudioLang === 'vi' ? '🇻🇳' : '🌐');
+                  const trackLangName = activeTrack?.language_name || langMeta?.name || (activeAudioLang === 'vi' ? 'Tiếng Việt' : activeAudioLang.toUpperCase());
+                  const rawVoice = activeTrack?.voice_name || (project.language_code === activeAudioLang ? (project as any).voice_name : undefined);
+                  const trackVoiceName = rawVoice
+                    ? (rawVoice.includes('(') ? rawVoice.split('(')[0].trim() : rawVoice)
+                    : (activeAudioLang === 'vi' ? 'Giọng Đọc AI' : activeAudioLang.startsWith('en') ? 'Bella' : activeAudioLang === 'ja' ? 'Alpha' : activeAudioLang === 'zh' ? 'Xiaobei' : activeAudioLang === 'kr' || activeAudioLang === 'ko' ? 'Sarah' : 'Custom Voice');
+
+                  return (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
+                          <Languages className="w-5 h-5" />
                         </div>
-                        <div className={`text-[11px] truncate mt-0.5 font-bold ${hasVoiceAudio ? (isDark ? 'text-white' : 'text-slate-900') : 'text-slate-500'}`}>
-                          {hasVoiceAudio
-                            ? `🎵 ${(project as any).bgm_title || project.title || 'Cinematic Music Reel'}`
-                            : t('Chưa có âm thanh / Đã xoá', 'No audio / Removed')}
+                        <div className="min-w-0">
+                          <div className="text-xs font-black truncate text-cyan-400">
+                            {t('Track 1: Giọng Đọc / Lời Thoại (Voiceover)', 'Track 1: Voiceover / Narration')}
+                          </div>
+                          <div className={`text-[11px] truncate flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                            <span>{trackFlag}</span>
+                            <span className="font-bold">{hasVoiceAudio ? trackLangName : t('Chưa có âm thanh', 'No audio')}</span>
+                            {hasVoiceAudio && trackVoiceName && (
+                              <span className="text-[10px] text-slate-400 font-normal">({trackVoiceName})</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {hasVoiceAudio && (
+                        <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
+                          {Math.round(voiceDurationSec || totalDurationSec)}s
+                        </span>
+                      )}
                     </div>
+                  );
+                })()}
 
-                    {hasVoiceAudio && (
-                      <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black border border-purple-400/30 flex-shrink-0">
-                        {Math.round(totalDurationSec)}s
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Pick BGM from Sound & Music Library Button */}
-                  <button
-                    type="button"
-                    onClick={() => setIsMusicLibraryOpen(true)}
-                    className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
-                  >
-                    <Music className="w-3.5 h-3.5" />
-                    <span>{hasVoiceAudio ? t('Đổi Nhạc Nền / Âm Thanh Khác', 'Change Audio / Music') : t('Chọn Nhạc từ Library', 'Pick Music from Library')}</span>
-                  </button>
-
-                  {/* Actions: Upload Custom File or Delete Audio */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-500/20">
-                    <button
-                      type="button"
-                      disabled={isUploadingAudio}
-                      onClick={() => audioUploadInputRef.current?.click()}
-                      className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      {isUploadingAudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      <span>{t('Tải Tệp Từ Máy', 'Upload File')}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!hasVoiceAudio}
-                      onClick={handleRemoveAudio}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
-                        isDark
-                          ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
-                          : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
-                      }`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                      <span>{t('Xoá Audio', 'Delete Audio')}</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className={`p-4 rounded-3xl border transition-all space-y-3 ${
-                    isDark
-                      ? 'bg-gradient-to-br from-slate-900 to-[#0F1422] border-cyan-500/40 shadow-lg shadow-cyan-500/5'
-                      : 'bg-gradient-to-br from-cyan-50/70 to-blue-50/70 border-cyan-300 shadow-md'
-                  }`}
-                >
-                  {(() => {
-                    const activeTrack = multilingualAudios[activeAudioLang];
-                    const langMeta = AUDIO_STUDIO_LANGUAGES.find(
-                      (l) => l.code === activeAudioLang || l.code.toLowerCase() === activeAudioLang.toLowerCase() || (activeAudioLang === 'en' && l.code === 'en-US')
-                    );
-                    const trackFlag = activeTrack?.flag || langMeta?.flag || (activeAudioLang === 'vi' ? '🇻🇳' : '🌐');
-                    const trackLangName = activeTrack?.language_name || langMeta?.name || (activeAudioLang === 'vi' ? 'Tiếng Việt' : activeAudioLang.toUpperCase());
-                    const rawVoice = activeTrack?.voice_name || (project.language_code === activeAudioLang ? (project as any).voice_name : undefined);
-                    const trackVoiceName = rawVoice
-                      ? (rawVoice.includes('(') ? rawVoice.split('(')[0].trim() : rawVoice)
-                      : (activeAudioLang === 'vi' ? 'Giọng Đọc AI' : activeAudioLang.startsWith('en') ? 'Bella' : activeAudioLang === 'ja' ? 'Alpha' : activeAudioLang === 'zh' ? 'Xiaobei' : activeAudioLang === 'kr' || activeAudioLang === 'ko' ? 'Sarah' : 'AI Voice');
-
-                    return (
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-10 h-10 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
-                            <Languages className="w-5 h-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-xs font-black truncate text-cyan-400">
-                              {t('Giọng Đọc AI Đa Ngôn Ngữ', 'AI Narration Voiceover')}
-                            </div>
-                            <div className={`text-[11px] truncate flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                              <span>{trackFlag}</span>
-                              <span className="font-bold">{trackLangName}</span>
-                              {trackVoiceName && (
-                                <span className="text-[10px] text-slate-400 font-normal">({trackVoiceName})</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {hasVoiceAudio && (
-                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-black border border-cyan-400/30 flex-shrink-0">
-                            {Math.round(totalDurationSec)}s
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Multilingual Selector Dropdown Bar */}
+                {/* Multilingual Selector Dropdown Bar (if multiple languages exist) */}
+                {Object.keys(multilingualAudios).length > 1 && (
                   <div className="p-2 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
@@ -2286,47 +2270,46 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                       ))}
                     </select>
                   </div>
+                )}
 
-                  {/* Main Action: Create New Voice in Other Language */}
+                {/* Voice Action Buttons: Upload Custom Voice, Change AI Voice, Delete Voice */}
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={isUploadingVoice}
+                    onClick={() => voiceUploadInputRef.current?.click()}
+                    className="py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-bold flex flex-col items-center justify-center gap-1 border border-cyan-500/30 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isUploadingVoice ? <Loader2 className="w-4 h-4 animate-spin text-cyan-400" /> : <Upload className="w-4 h-4 text-cyan-400" />}
+                    <span className="truncate">{t('Tải Voice', 'Upload Voice')}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setIsNewVoiceModalOpen(true)}
-                    className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                    className="py-2.5 px-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-[11px] font-bold flex flex-col items-center justify-center gap-1 border border-cyan-400/40 active:scale-95 transition-all"
                   >
-                    <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                    <span>{t('Tạo / Đổi Giọng Đọc Ngôn Ngữ Khác', 'Create Voice in Other Language')}</span>
+                    <Sparkles className="w-4 h-4 text-cyan-300 fill-cyan-300/30" />
+                    <span className="truncate">{t('Đổi Giọng AI', 'AI Voice')}</span>
                   </button>
 
-                  {/* Touch Actions: Upload Custom or Delete Audio */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-500/20">
-                    <button
-                      type="button"
-                      disabled={isUploadingAudio}
-                      onClick={() => audioUploadInputRef.current?.click()}
-                      className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      {isUploadingAudio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      <span>{t('Tải Tệp Từ Máy', 'Upload File')}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!hasVoiceAudio}
-                      onClick={handleRemoveAudio}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 ${
-                        isDark
-                          ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
-                          : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
-                      }`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                      <span>{t('Xoá Audio', 'Delete Audio')}</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    disabled={!hasVoiceAudio}
+                    onClick={handleRemoveAudio}
+                    className={`py-2.5 px-2 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95 transition-all border disabled:opacity-30 ${
+                      isDark
+                        ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                        : 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                    }`}
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                    <span className="truncate">{t('Xoá Voice', 'Delete Voice')}</span>
+                  </button>
                 </div>
-              )}
+              </div>
 
-              {/* 2. BACKGROUND MUSIC (BGM) CARD */}
+              {/* 2. TRACK 2: BACKGROUND MUSIC (BGM) */}
               <div
                 className={`p-4 rounded-3xl border transition-all space-y-3 ${
                   isDark
@@ -2341,7 +2324,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-black truncate text-purple-400">
-                        {t('Nhạc Nền (Background Music)', 'Background Music (BGM)')}
+                        {t('Track 2: Nhạc Nền (Background Music - BGM)', 'Track 2: Background Music (BGM)')}
                       </div>
                       <div className={`text-[11px] truncate mt-0.5 font-bold ${bgmTrackTitle ? 'text-white' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                         {bgmTrackTitle ? `🎶 ${bgmTrackTitle}` : t('Chưa chọn nhạc nền', 'No BGM selected')}
@@ -2351,34 +2334,44 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
 
                   {bgmAudioUrl && (
                     <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black border border-purple-400/30 flex-shrink-0">
-                      Active
+                      {Math.round(bgmDurationSec || totalDurationSec)}s
                     </span>
                   )}
                 </div>
 
-                {/* Pick BGM from Sound & Music Library Button */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* BGM Action Buttons: Upload BGM, Pick Library, Delete BGM */}
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={isUploadingBgm}
+                    onClick={() => bgmUploadInputRef.current?.click()}
+                    className="py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 text-[11px] font-bold flex flex-col items-center justify-center gap-1 border border-purple-500/30 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isUploadingBgm ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Upload className="w-4 h-4 text-purple-400" />}
+                    <span className="truncate">{t('Tải Nhạc', 'Upload BGM')}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setIsMusicLibraryOpen(true)}
-                    className="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all whitespace-nowrap min-w-0"
+                    className="py-2.5 px-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 text-[11px] font-bold flex flex-col items-center justify-center gap-1 border border-purple-400/40 active:scale-95 transition-all"
                   >
-                    <Music className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{bgmAudioUrl ? t('Đổi Nhạc Nền', 'Change BGM') : t('Chọn từ Library', 'Pick from Library')}</span>
+                    <Music className="w-4 h-4 text-purple-300" />
+                    <span className="truncate">{t('Thư Viện Nhạc', 'Music Library')}</span>
                   </button>
 
                   <button
                     type="button"
                     disabled={!bgmAudioUrl}
                     onClick={handleRemoveBgm}
-                    className={`py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border disabled:opacity-30 whitespace-nowrap min-w-0 ${
+                    className={`py-2.5 px-2 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95 transition-all border disabled:opacity-30 ${
                       isDark
                         ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
                         : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                     }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                    <span className="truncate">{t('Xoá BGM', 'Remove BGM')}</span>
+                    <Trash2 className="w-4 h-4 text-purple-400" />
+                    <span className="truncate">{t('Xoá BGM', 'Delete BGM')}</span>
                   </button>
                 </div>
               </div>

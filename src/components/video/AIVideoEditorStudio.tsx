@@ -239,6 +239,7 @@ function StudioInner({
     setVoiceDurationSec,
     setBgmStartSec,
     setBgmDurationSec,
+    setBgmAudioSrc: setRemotionBgmAudioSrc,
   } = useRemotion();
 
   const [visualStyle, setVisualStyle] = useState<string>(initialStyle || projectData?.visual_style || 'product_ads_motion');
@@ -434,8 +435,72 @@ function StudioInner({
   const [exportElapsedSec, setExportElapsedSec] = useState<number>(0);
   const [bgmVolume, setBgmVolume] = useState(0.4);
   const [customBgmFile, setCustomBgmFile] = useState<string | null>(null);
+  const [bgmAudioUrl, setBgmAudioUrl] = useState<string | null>((projectData as any)?.bgm_url || null);
+  const [bgmTrackTitle, setBgmTrackTitle] = useState<string | null>((projectData as any)?.bgm_title || null);
+  const [voiceDurationSecState, setVoiceDurationSecState] = useState<number | undefined>(undefined);
+  const [isMusicLibraryOpen, setIsMusicLibraryOpen] = useState(false);
   const [availableAudioTracks, setAvailableAudioTracks] = useState<AvailableAudioTrack[]>([]);
   const [selectedExportAudioUrl, setSelectedExportAudioUrl] = useState<string>(audioUrl || '');
+
+  // ── Voice & BGM Track Handlers ──
+  const handleUploadVoiceFile = async (file: File) => {
+    try {
+      setSyncStatusMsg(`Đang tải lên Voice: ${file.name}...`);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await wynmotionService.uploadMedia(formData);
+      if (res?.url) {
+        setSelectedExportAudioUrl(res.url);
+        if (setAudioSrc) setAudioSrc(res.url);
+        const temp = new Audio(res.url);
+        temp.addEventListener('loadedmetadata', () => {
+          if (temp.duration && isFinite(temp.duration)) {
+            setVoiceDurationSecState(temp.duration);
+            setVoiceDurationSec?.(temp.duration);
+          }
+        });
+        setSyncStatusMsg(`🎙️ Đã tải giọng đọc: ${file.name}`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi tải tệp giọng đọc');
+    }
+  };
+
+  const handleRemoveVoice = () => {
+    setSelectedExportAudioUrl('');
+    setAudioSrc?.('');
+    setSyncStatusMsg('🗑️ Đã xoá giọng đọc');
+    setTimeout(() => setSyncStatusMsg(null), 2500);
+  };
+
+  const handleUploadBgmFile = async (file: File) => {
+    try {
+      setSyncStatusMsg(`Đang tải lên BGM: ${file.name}...`);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await wynmotionService.uploadMedia(formData);
+      if (res?.url) {
+        setBgmAudioUrl(res.url);
+        setBgmTrackTitle(file.name);
+        setCustomBgmFile(file.name);
+        setRemotionBgmAudioSrc?.(res.url);
+        setSyncStatusMsg(`🎵 Đã tải nhạc nền: ${file.name}`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi tải tệp nhạc');
+    }
+  };
+
+  const handleRemoveBgm = () => {
+    setBgmAudioUrl(null);
+    setBgmTrackTitle(null);
+    setCustomBgmFile(null);
+    setRemotionBgmAudioSrc?.(null);
+    setSyncStatusMsg('🗑️ Đã xoá nhạc nền');
+    setTimeout(() => setSyncStatusMsg(null), 2500);
+  };
 
   // Determine whether this project is commercial showcase / BGM based or voice narrator
   const isCommercialMusicStyle = useMemo(() => {
@@ -1632,28 +1697,58 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // Handle Replace Scene Image directly (Dialogue & Cartoon Sketches)
+  // Handle Replace Scene Media directly (Image or Video)
   const handleReplaceSceneImage = (sceneId: number | string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      if (!dataUrl) return;
-      const newScenes = scenes.map((sc) => {
-        if (sc.scene_id === sceneId) {
-          return {
-            ...sc,
-            image_url: dataUrl,
-            generated_image_url: dataUrl,
-            sketch_image_url: dataUrl,
-          };
-        }
-        return sc;
-      });
-      updateScenesWithHistory(newScenes);
-      setSyncStatusMsg(`Đã đổi ảnh cho Cảnh ${sceneId} thành công!`);
-      setTimeout(() => setSyncStatusMsg(null), 2500);
-    };
-    reader.readAsDataURL(file);
+    const isVideo = file.type.startsWith('video/');
+    const localUrl = URL.createObjectURL(file);
+
+    if (isVideo) {
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      tempVideo.src = localUrl;
+      tempVideo.onloadedmetadata = () => {
+        const exactDur = Math.max(1, Number(tempVideo.duration.toFixed(2)));
+        const newScenes = scenes.map((sc) => {
+          if (String(sc.scene_id) === String(sceneId)) {
+            return {
+              ...sc,
+              video_url: localUrl,
+              image_url: undefined,
+              duration_sec: exactDur,
+              duration_frames: Math.round(exactDur * (fps || 30)),
+              _rawFile: file,
+            };
+          }
+          return sc;
+        });
+        updateScenesWithHistory(newScenes);
+        setSyncStatusMsg(`🎥 Đã gắn video & đồng bộ thời lượng Cảnh ${sceneId}: ${exactDur}s!`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      };
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        if (!dataUrl) return;
+        const newScenes = scenes.map((sc) => {
+          if (String(sc.scene_id) === String(sceneId)) {
+            return {
+              ...sc,
+              image_url: dataUrl,
+              video_url: undefined,
+              generated_image_url: dataUrl,
+              sketch_image_url: dataUrl,
+              _rawFile: file,
+            };
+          }
+          return sc;
+        });
+        updateScenesWithHistory(newScenes);
+        setSyncStatusMsg(`🖼️ Đã đổi ảnh cho Cảnh ${sceneId} thành công!`);
+        setTimeout(() => setSyncStatusMsg(null), 2500);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Download Video: Render via Backend Docker Service (100% Reliable, Proper MP4 Muxing, Font & Layout)
@@ -2566,6 +2661,15 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                   setSyncStatusMsg(`Đã tải lên BGM: ${name}`);
                   setTimeout(() => setSyncStatusMsg(null), 2500);
                 }}
+                activeVoiceUrl={selectedExportAudioUrl || remotionAudioSrc}
+                voiceDurationSec={voiceDurationSecState}
+                onUploadVoiceFile={handleUploadVoiceFile}
+                onRemoveVoice={handleRemoveVoice}
+                activeBgmUrl={bgmAudioUrl}
+                bgmTrackTitle={bgmTrackTitle}
+                onUploadBgmFile={handleUploadBgmFile}
+                onRemoveBgm={handleRemoveBgm}
+                onOpenMusicLibrary={() => setIsMusicLibraryOpen(true)}
               />
             )}
 

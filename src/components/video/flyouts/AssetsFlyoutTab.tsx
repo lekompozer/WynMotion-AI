@@ -220,11 +220,11 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
         /* 2. DIALOGUE TEMPLATE: SCENE BACKDROP IMAGE (REPLACE / AI 3 PTS) + TURNS SCRIPT */
         /* ───────────────────────────────────────────────────────────── */
         <div className="space-y-4">
-          {/* Hidden File Input for Image Replacement */}
+          {/* Hidden File Input for Image/Video Replacement */}
           <input
             type="file"
             ref={replaceFileInputRef}
-            accept="image/*"
+            accept="image/*,video/*"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -472,8 +472,8 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
         <div className="space-y-3">
           <label className="p-2.5 rounded-xl border border-dashed border-[#2F374E] hover:border-cyan-400 bg-[#161926] cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-300 transition-all">
             <Upload className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-bold">+ Upload Ảnh Tùy Biến</span>
-            <input type="file" accept="image/*" onChange={onUploadImageFile} className="hidden" />
+            <span className="font-bold">+ Upload Ảnh / Video Tùy Biến</span>
+            <input type="file" accept="image/*,video/*" onChange={onUploadImageFile} className="hidden" />
           </label>
 
           <div className="grid grid-cols-2 gap-2.5 pt-1">
@@ -494,6 +494,11 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
                     <span className="absolute bottom-1 right-1 text-[8px] font-mono px-1 py-0.2 bg-black/80 text-white rounded">
                       {((s.duration_frames ?? 150) / fps).toFixed(1)}s
                     </span>
+                    {(s as any).video_url && (
+                      <span className="absolute top-1 left-1 text-[8px] font-bold px-1 py-0.2 bg-cyan-500/90 text-black rounded shadow">
+                        VID
+                      </span>
+                    )}
                   </div>
                   <h4 className="text-[11px] font-bold text-slate-200 line-clamp-1 mb-1">{s.title}</h4>
                   <div className="flex items-center justify-between mt-1">
@@ -501,6 +506,27 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
                       SCENE {s.scene_id}
                     </span>
                     <div className="flex items-center gap-0.5">
+                      {/* Upload Media to this Scene */}
+                      <label
+                        onClick={(e) => e.stopPropagation()}
+                        title="Tải ảnh / video lên cho Scene này"
+                        className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all cursor-pointer"
+                      >
+                        <Upload className="w-3 h-3" />
+                        <input
+                          type="file"
+                          accept="image/*,video/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f && onReplaceSceneImage) {
+                              onReplaceSceneImage(s.scene_id, f);
+                            }
+                            if (e.target) e.target.value = '';
+                          }}
+                        />
+                      </label>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
