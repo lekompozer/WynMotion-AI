@@ -1657,6 +1657,16 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
       // Step 1: Trigger backend export MP4 job
       let jobId: string | null = null;
       if (projectId) {
+        // Save latest state to project doc so backend worker reads up-to-date configuration
+        wynmotionService.updateProject(projectId, {
+          scenes: scenes as any,
+          studio_config: masterStudioConfig,
+          timeline_effects: timelineEffects,
+          bg_color: chosenBg,
+          visual_style: visualStyle,
+          caption_segments: captionSegments,
+        } as any).catch(() => {});
+
         const expRes = await (wynmotionService as any).exportMP4(projectId, scenes, {
           aspect_ratio: chosenAspect,
           show_scene_cards: showSceneCards,
@@ -1671,6 +1681,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
           caption_segments: captionSegments,
           caption_preset_style: captionPresetStyle,
           caption_font_size: captionFontSize,
+          voice_start_sec: audioTrim.startTime,
+          voice_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
           bgm_start_sec: audioTrim.startTime,
           bgm_duration_sec: audioTrim.duration > 0 ? audioTrim.duration : undefined,
           resolution: selectedExportResolution,

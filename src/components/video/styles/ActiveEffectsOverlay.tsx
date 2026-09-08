@@ -456,7 +456,7 @@ export const ActiveEffectsOverlay: React.FC<ActiveEffectsOverlayProps> = ({
               style={{
                 boxShadow: 'inset 0 0 50px rgba(0,0,0,0.6)',
                 transform: `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg)`,
-                transition: 'transform 0.1s linear',
+                willChange: 'transform',
               }}
             />
           );
@@ -608,7 +608,7 @@ export const ActiveEffectsOverlay: React.FC<ActiveEffectsOverlayProps> = ({
               style={{
                 boxShadow: 'inset 0 0 80px rgba(0,0,0,0.55)',
                 transform: `scale(${zoomScale})`,
-                transition: 'transform 0.1s linear',
+                willChange: 'transform',
               }}
             />
           );

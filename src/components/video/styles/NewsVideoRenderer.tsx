@@ -78,7 +78,7 @@ export const NewsVideoRenderer: React.FC<NewsVideoRendererProps> = ({
           width: '110%',
           height: '110%',
           transform: `scale(${kenBurnsScale}) translate(${kenBurnsTranslateX}px, ${kenBurnsTranslateY}px)`,
-          transition: 'transform 0.05s linear',
+          willChange: 'transform',
         }}
       >
         <img

@@ -349,6 +349,8 @@ export const wynmotionService = {
       force_rerender?: boolean;
       audio_url?: string;
       voice_volume?: number;
+      voice_start_sec?: number;
+      voice_duration_sec?: number;
       bgm_url?: string;
       bgm_volume?: number;
       bgm_start_sec?: number;
@@ -357,6 +359,9 @@ export const wynmotionService = {
       language_code?: string;
       resolution?: string;
       studio_config?: any;
+      timeline_effects?: any[];
+      visual_style?: string;
+      bg_color?: string;
       caption_segments?: any[];
       caption_preset_style?: string;
       caption_font_size?: number;
@@ -377,6 +382,8 @@ export const wynmotionService = {
         force_rerender: options?.force_rerender,
         audio_url: options?.audio_url,
         voice_volume: options?.voice_volume,
+        voice_start_sec: options?.voice_start_sec,
+        voice_duration_sec: options?.voice_duration_sec,
         bgm_url: options?.bgm_url,
         bgm_volume: options?.bgm_volume,
         bgm_start_sec: options?.bgm_start_sec,
@@ -385,6 +392,9 @@ export const wynmotionService = {
         language_code: options?.language_code,
         resolution: options?.resolution || '1080p',
         studio_config: options?.studio_config,
+        timeline_effects: options?.timeline_effects,
+        visual_style: options?.visual_style,
+        bg_color: options?.bg_color,
         caption_segments: options?.caption_segments,
         caption_preset_style: options?.caption_preset_style,
         caption_font_size: options?.caption_font_size,

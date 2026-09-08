@@ -1117,6 +1117,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         force_rerender: true,
         audio_url: currentActiveAudioUrl,
         voice_volume: volume,
+        voice_start_sec: voiceStartSec,
+        voice_duration_sec: voiceDurationSec,
         bgm_url: bgmAudioUrl || undefined,
         bgm_volume: bgmVolume,
         bgm_start_sec: bgmStartSec,
@@ -1127,6 +1129,10 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
         caption_preset_style: captionPresetStyle,
         caption_font_size: captionFontSize,
         subs_pos_y: subsPosY,
+        timeline_effects: timelineEffects,
+        visual_style: visualStyle,
+        bg_color: bgColor,
+        studio_config: studioConfig,
       });
 
       // Instant pre-rendered MP4 hit

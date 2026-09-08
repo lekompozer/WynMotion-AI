@@ -58,7 +58,7 @@ export const CharacterMascotRenderer: React.FC<StyleRendererProps> = ({ scene })
       <div
         style={{
           transform: `translateY(${bounceY}px)`,
-          transition: 'transform 0.05s linear',
+          willChange: 'transform',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

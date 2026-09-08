@@ -230,7 +230,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
               objectFit: 'cover',
               transform: `scale(${kenBurns})`,
               transformOrigin: 'center center',
-              transition: 'transform 0.1s linear',
+              willChange: 'transform',
               pointerEvents: 'none',
               WebkitTouchCallout: 'none',
               WebkitUserSelect: 'none',
@@ -326,7 +326,7 @@ export const DialogueSceneRenderer: React.FC<DialogueSceneRendererProps> = ({
                 : 'clamp(2px, 0.3cqi, 6px) solid rgba(255, 255, 255, 0.24)',
               zIndex: 20,
               pointerEvents: 'none',
-              transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+              willChange: 'transform',
             }}
           >
             {/* Comic Tail pointing down directly at character head */}
