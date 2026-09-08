@@ -587,15 +587,6 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                 <span>⚡</span>
                 <span>{t('DÙNG MẪU NHANH (BƯỚC 1/2)', 'USE QUICK TEMPLATE (STEP 1/2)')}</span>
               </button>
-
-              <button
-                type="button"
-                onClick={handleLaunchCreation}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-cyan-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
-              >
-                <span>🎨</span>
-                <span>{t('Mở Trực Tiếp Trong Video Editor Studio (20 Phân Cảnh)', 'Open Directly in Video Editor Studio (20 Scenes)')}</span>
-              </button>
             </div>
           </div>
         )}
@@ -947,15 +938,6 @@ export const CapCutTemplateModal: React.FC<CapCutTemplateModalProps> = ({
                     ? t('Tiếp theo: Thời Lượng & Độ Phân Giải (Bước 2) →', 'Next: Duration & Resolution (Step 2) →')
                     : t('Tiếp theo: Điền Nội Dung Chữ (Bước 2) →', 'Next: Topic & Copywriting (Step 2) →')}
                 </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLaunchCreation}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-cyan-300 hover:text-white bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
-              >
-                <span>🎨</span>
-                <span>{t('Mở Trực Tiếp Trong Video Editor Studio (Bỏ qua Bước 2)', 'Open Directly in Video Editor Studio (Skip Step 2)')}</span>
               </button>
             </div>
           </div>

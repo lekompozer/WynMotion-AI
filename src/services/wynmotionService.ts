@@ -762,5 +762,108 @@ export const wynmotionService = {
     }
     return await res.json();
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Modern Motion Suite — Phase Wizard API
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Lưu Modern Motion project (toàn bộ params + R2 URLs) vào DB
+   */
+  async saveModernMotionProject(params: ModernMotionParams): Promise<{ success: boolean; project_id: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/modern-motion/save-project`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ params }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi lưu dự án Modern Motion');
+    return data;
+  },
+
+  /**
+   * Trigger render MP4 từ project_id (chạy render_modern_motion_export.py)
+   */
+  async exportModernMotionMp4(projectId: string): Promise<{ success: boolean; job_id: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/modern-motion/export-mp4`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || data.message || 'Lỗi khởi động render MP4');
+    return data;
+  },
+
+  /**
+   * Poll trạng thái render job
+   */
+  async getModernMotionExportStatus(jobId: string): Promise<{
+    job_id: string;
+    status: 'queued' | 'rendering' | 'completed' | 'failed';
+    progress: number;
+    message: string;
+    mp4_url?: string;
+  }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/modern-motion/export-status/${jobId}`, { headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Lỗi kiểm tra trạng thái render');
+    return data;
+  },
+
+  /**
+   * Lấy danh sách Modern Motion projects của user
+   */
+  async listModernMotionProjects(): Promise<{ success: boolean; projects: ModernMotionSavedProject[] }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/api/ai/motion/modern-motion/projects`, { headers });
+    const data = await res.json().catch(() => ({ success: true, projects: [] }));
+    if (!res.ok) return { success: true, projects: [] };
+    return data;
+  },
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modern Motion Suite — Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ModernMotionParams {
+  main_video_1?: string;
+  main_video_2?: string;
+  main_video_3?: string;
+  train_videos?: string[];
+  brand_logo_url?: string;
+  brand_company?: string;
+  brand_name?: string;
+  title_primary?: string;
+  tagline_1?: string;
+  tagline_2?: string;
+  templates_header?: string;
+  category_1?: string;
+  category_2?: string;
+  category_3?: string;
+  category_4?: string;
+  category_4_sub?: string;
+  audio_title?: string;
+  audio_taglines?: string[];
+  editor_headline_1?: string;
+  editor_headline_2?: string;
+  slogan_text?: string;
+  slogan_price?: string;
+  bgm_url?: string;
+}
+
+export interface ModernMotionSavedProject {
+  project_id: string;
+  user_id: string;
+  template_id: string;
+  params: ModernMotionParams;
+  status: 'ready' | 'rendering' | 'completed' | 'failed';
+  mp4_url?: string;
+  created_at: string;
+  updated_at: string;
+}

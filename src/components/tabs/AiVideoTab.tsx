@@ -40,6 +40,7 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import { useWordaiAuth } from '@/contexts/WordaiAuthContext';
 import { WynMotionCreationModal } from '../video/WynMotionCreationModal';
+import { ModernMotionWizard } from '@/components/video/ModernMotionWizard';
 import {
   wynmotionService,
   MotionProject,
@@ -448,6 +449,7 @@ export const AiVideoTab: React.FC = () => {
   const [capcutModalTemplate, setCapcutModalTemplate] = useState<any | null>(null);
   const [isCapCutGalleryOpen, setIsCapCutGalleryOpen] = useState(false);
   const [isIntroVideoOpen, setIsIntroVideoOpen] = useState(false);
+  const [isModernMotionWizardOpen, setIsModernMotionWizardOpen] = useState(false);
 
   // Video News 60s States
   const [newsInputMode, setNewsInputMode] = useState<'url' | 'text'>('url');
@@ -1921,6 +1923,10 @@ export const AiVideoTab: React.FC = () => {
                     <button
                       key={style.id}
                       onClick={() => {
+                        if (style.id === 'apple_modern_motion') {
+                          setIsModernMotionWizardOpen(true);
+                          return;
+                        }
                         setSelectedGalleryStyle(style.id);
                         setIsCapCutGalleryOpen(true);
                       }}
@@ -1971,6 +1977,13 @@ export const AiVideoTab: React.FC = () => {
             setIsCapCutGalleryOpen(false);
             setCapcutModalTemplate(tplId);
           }}
+        />
+
+        {/* ── Modern Motion Suite Phase Wizard ── */}
+        <ModernMotionWizard
+          isOpen={isModernMotionWizardOpen}
+          onClose={() => setIsModernMotionWizardOpen(false)}
+          isVietnamese={isVietnamese}
         />
 
         {/* ── WynMotion Fullscreen Keynote Intro Modal ── */}
@@ -2312,6 +2325,10 @@ export const AiVideoTab: React.FC = () => {
                       key={style.id}
                       type="button"
                       onClick={() => {
+                        if (style.id === 'apple_modern_motion') {
+                          setIsModernMotionWizardOpen(true);
+                          return;
+                        }
                         setSelectedGalleryStyle(style.id);
                         setIsCapCutGalleryOpen(true);
                       }}
