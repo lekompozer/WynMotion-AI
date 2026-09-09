@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { X, Radio, Play, Pause, Volume2, Music, Upload, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { X, Radio, Play, Pause, Volume2, Music, Upload, Trash2, CheckCircle2, Clock, Film } from 'lucide-react';
 
 export interface AudioTrackItem {
   id: string;
@@ -44,6 +44,8 @@ export interface AudioFlyoutTabProps {
   setVideoAudioVolume?: (vol: number) => void;
   isVideoAudioMuted?: boolean;
   setIsVideoAudioMuted?: (muted: boolean) => void;
+  onExtractAudioFromScene?: (sceneIdOrIndex?: string | number) => Promise<string | undefined>;
+  scenes?: any[];
 }
 
 export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
@@ -77,12 +79,15 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
   setVideoAudioVolume,
   isVideoAudioMuted = false,
   setIsVideoAudioMuted,
+  onExtractAudioFromScene,
+  scenes,
 }) => {
   const voiceFileInputRef = useRef<HTMLInputElement | null>(null);
   const bgmFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const hasVoice = Boolean(activeVoiceUrl || selectedExportAudioUrl);
   const hasBgm = Boolean(activeBgmUrl || customBgmFile);
+  const hasVideoScenes = Boolean(scenes?.some((s: any) => s.video_url));
 
   const handleVoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -170,7 +175,7 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
           )}
         </div>
 
-        {/* Voiceover Actions: Upload File & Delete */}
+        {/* Voiceover Actions: Upload File, Delete, and Extract from Scene Video */}
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -191,6 +196,19 @@ export const AudioFlyoutTab: React.FC<AudioFlyoutTabProps> = ({
             <span>Xoá Giọng Đọc</span>
           </button>
         </div>
+
+        {/* Extract Audio from Scene Video Button */}
+        {hasVideoScenes && onExtractAudioFromScene && (
+          <button
+            type="button"
+            onClick={() => onExtractAudioFromScene()}
+            className="w-full py-2 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
+            title="Trích xuất âm thanh từ video phân cảnh làm voice track"
+          >
+            <Film className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Tách MP3 từ Video Phân Cảnh</span>
+          </button>
+        )}
 
         {/* Available Slide Voiceovers (Multilingual AI Tracks) */}
         {availableAudioTracks.length > 0 && (

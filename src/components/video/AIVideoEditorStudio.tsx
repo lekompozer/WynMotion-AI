@@ -78,6 +78,7 @@ import { CustomTimelineEffect } from './styles/ActiveEffectsOverlay';
 import { snapToGrid } from '../../../packages/timeline-core/math_timeline';
 import { wordaiAuth } from '@/lib/wordai-firebase';
 import { wynmotionService, MotionProject } from '@/services/wynmotionService';
+import { extractAudioFromVideo } from '@/utils/audioExtractor';
 
 const API_BASE = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'https://ai.wordai.pro';
 
@@ -837,6 +838,44 @@ function StudioInner({
       alert(err.message || 'Không thể tạo phụ đề lúc này');
     } finally {
       setIsTranscribingCaptions(false);
+    }
+  };
+
+  // ── Extract audio (MP3) from a scene video (blob URL or remote URL) using Web Audio API ──
+  const handleExtractAudioFromScene = async (sceneIdOrIndex?: string | number): Promise<string | undefined> => {
+    try {
+      setSyncStatusMsg('🎬 Đang tách MP3 từ video phân cảnh...');
+
+      // Find target scene
+      let targetScene: any = scenes.find((s) => String(s.scene_id) === String(sceneIdOrIndex));
+      if (!targetScene) {
+        targetScene = scenes.find((s) => (s as any).video_url);
+      }
+      if (!targetScene?.video_url) {
+        setSyncStatusMsg(null);
+        alert('Không tìm thấy video nào trong phân cảnh để tách MP3.');
+        return undefined;
+      }
+
+      const videoSrc: string = (targetScene as any).video_url;
+      const result = await extractAudioFromVideo(videoSrc);
+      if (!result?.audioUrl) throw new Error('Tách MP3 thất bại – không có audio URL trả về.');
+
+      // Set as the active voice track so Whisper / Add Lyrics buttons can use it
+      setSelectedExportAudioUrl(result.audioUrl);
+      if (setAudioSrc) setAudioSrc(result.audioUrl);
+      setVoiceDurationSecState(result.durationSec);
+      setVoiceDurationSec?.(result.durationSec);
+
+      setSyncStatusMsg(`🎵 Đã tách MP3 từ video (${result.durationSec.toFixed(1)}s). Bấm Tạo Lời Bài Hát hoặc Whisper!`);
+      setTimeout(() => setSyncStatusMsg(null), 4000);
+
+      return result.audioUrl;
+    } catch (err: any) {
+      console.error('Extract audio from scene error:', err);
+      setSyncStatusMsg(null);
+      alert(err.message || 'Không thể tách âm thanh từ video này.');
+      return undefined;
     }
   };
 
@@ -3070,6 +3109,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 onRemoveUploadedAsset={handleRemoveUploadedAsset}
                 isGeneratingOmni={isGeneratingOmni}
                 projectData={projectData}
+                onExtractAudioFromScene={handleExtractAudioFromScene}
               />
             )}
 
@@ -3109,6 +3149,8 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                 setIsVideoAudioMuted={setIsVideoAudioMuted}
                 bgmOffsetSec={bgmOffsetSec}
                 setBgmOffsetSec={setBgmOffsetSec}
+                scenes={scenes}
+                onExtractAudioFromScene={handleExtractAudioFromScene}
               />
             )}
 
@@ -3351,6 +3393,7 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
                     )
                   );
                 }}
+                onExtractAudioFromScene={handleExtractAudioFromScene}
               />
             )}
             </div>

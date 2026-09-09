@@ -13,6 +13,7 @@ import {
   ImageIcon,
   MessageSquare,
   Radio,
+  Music,
 } from 'lucide-react';
 import { DynamicSceneData } from '../DynamicSceneRenderer';
 
@@ -40,6 +41,7 @@ export interface AssetsFlyoutTabProps {
   onOpenOmniModal?: () => void;
   projectData?: any;
   onDirectRegenerateOmni?: () => void;
+  onExtractAudioFromScene?: (sceneIdOrIndex?: string | number) => Promise<string | undefined>;
 }
 
 const SceneMiniThumbnail: React.FC<{ scene: DynamicSceneData }> = ({ scene }) => {
@@ -94,6 +96,7 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
   onOpenOmniModal,
   projectData,
   onDirectRegenerateOmni,
+  onExtractAudioFromScene,
 }) => {
   const activeScene = scenes.find((s) => s.scene_id === activeSceneId) || scenes[0];
   const replaceFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -597,6 +600,21 @@ export const AssetsFlyoutTab: React.FC<AssetsFlyoutTabProps> = ({
                       SCENE {s.scene_id}
                     </span>
                     <div className="flex items-center gap-0.5">
+                      {/* Extract Audio / MP3 from Scene Video */}
+                      {(s as any).video_url && onExtractAudioFromScene && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onExtractAudioFromScene(s.scene_id);
+                          }}
+                          title="Tách MP3 từ video phân cảnh này"
+                          className="p-1 rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all flex items-center"
+                        >
+                          <Music className="w-3 h-3" />
+                        </button>
+                      )}
+
                       {/* Upload Media to this Scene */}
                       <label
                         onClick={(e) => e.stopPropagation()}

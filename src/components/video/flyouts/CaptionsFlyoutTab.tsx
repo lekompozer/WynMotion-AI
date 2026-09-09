@@ -20,6 +20,7 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   Plus,
+  Film,
 } from 'lucide-react';
 import { CaptionSegment, CaptionPresetStyle, CAPTION_PRESET_LABELS } from '../subtitles/CapCutCaptionRenderer';
 import { filterVocalTrackFromAudioUrl } from '@/utils/audioVocalFilter';
@@ -67,6 +68,7 @@ export interface CaptionsFlyoutTabProps {
   originalSegments?: CaptionSegment[];
   translatedSegments?: CaptionSegment[];
   onSaveBothSegments?: (orig: CaptionSegment[], trans: CaptionSegment[], mode: 'original' | 'translated') => void;
+  onExtractAudioFromScene?: (sceneIdOrIndex?: string | number) => Promise<string | undefined>;
 }
 
 function getLangFlag(lang?: string): string {
@@ -141,6 +143,7 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   originalSegments,
   translatedSegments,
   onSaveBothSegments,
+  onExtractAudioFromScene,
 }) => {
   const effectiveOriginalLang = React.useMemo(() => {
     if (originalLanguage && originalLanguage !== 'vi') return originalLanguage;
@@ -182,9 +185,16 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editText, setEditText] = useState<string>('');
   const [isSeparatingLyrics, setIsSeparatingLyrics] = useState(false);
+  const [isExtractingAudio, setIsExtractingAudio] = useState(false);
   const [sceneSentences, setSceneSentences] = useState<SentenceItem[]>([]);
   const [isAppliedSuccess, setIsAppliedSuccess] = useState(false);
 
+  // Check if any scene has an uploaded video
+  const firstVideoScene = React.useMemo(() => {
+    return (scenes || []).find((s) => s.video_url) || (activeScene?.video_url ? activeScene : undefined);
+  }, [scenes, activeScene]);
+
+  const hasVideoInScenes = Boolean(firstVideoScene?.video_url);
 
   const isNewsStyle =
     visualStyle === 'video_news_60s' ||
@@ -192,29 +202,48 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
     visualStyle === 'breaking_news' ||
     visualStyle === 'video_news';
 
+  const handleExtractAudio = async () => {
+    if (!hasVideoInScenes || !onExtractAudioFromScene) return undefined;
+    setIsExtractingAudio(true);
+    try {
+      const resUrl = await onExtractAudioFromScene(activeScene?.scene_id || firstVideoScene?.scene_id);
+      return resUrl;
+    } finally {
+      setIsExtractingAudio(false);
+    }
+  };
+
   const handleStartTranscribe = async () => {
-    if (!audioUrl || !hasVoiceAudio) {
-      alert('Vui lòng tạo âm thanh Giọng đọc AI hoặc tải lên Audio có lời trước khi tạo phụ đề tự động.');
+    let currentAudioUrl = audioUrl;
+    if (!currentAudioUrl && hasVideoInScenes && onExtractAudioFromScene) {
+      currentAudioUrl = await handleExtractAudio();
+    }
+    if (!currentAudioUrl) {
+      alert('Vui lòng tạo âm thanh Giọng đọc AI, tải lên Audio hoặc tách MP3 từ video phân cảnh trước khi tạo phụ đề tự động.');
       return;
     }
-    await onTranscribeWhisper(audioUrl, selectedLanguage);
+    await onTranscribeWhisper(currentAudioUrl, selectedLanguage);
   };
 
   const handleStartAddLyrics = async () => {
-    if (!audioUrl) {
-      alert('Vui lòng chọn hoặc tải lên bài hát / audio trước khi tạo lời bài hát.');
+    let currentAudioUrl = audioUrl;
+    if (!currentAudioUrl && hasVideoInScenes && onExtractAudioFromScene) {
+      currentAudioUrl = await handleExtractAudio();
+    }
+    if (!currentAudioUrl) {
+      alert('Vui lòng chọn hoặc tải lên bài hát / audio hoặc tách MP3 từ video phân cảnh trước khi tạo lời bài hát.');
       return;
     }
     setIsSeparatingLyrics(true);
     try {
       // Step 1: Run lightweight DSP vocal separation on client (Mid-Side Extraction + Bandpass)
-      const cleanAudioUrl = await filterVocalTrackFromAudioUrl(audioUrl);
+      const cleanAudioUrl = await filterVocalTrackFromAudioUrl(currentAudioUrl);
       // Step 2: Feed into Whisper, which upon completion automatically triggers the 2-step CaptionReviewModal!
       await onTranscribeWhisper(cleanAudioUrl, selectedLanguage);
     } catch (err: any) {
       console.error('Error in Add Lyrics:', err);
       // Fallback directly to original audio
-      await onTranscribeWhisper(audioUrl, selectedLanguage);
+      await onTranscribeWhisper(currentAudioUrl, selectedLanguage);
     } finally {
       setIsSeparatingLyrics(false);
     }
@@ -665,6 +694,42 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
         /* VOICE AI NARRATION MODE: Whisper AI Transcriber & Scene Transcript */
         <>
           <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#1A1F30] to-[#121522] border border-[#2A334C] space-y-3">
+            {/* If scenes have video but no separate audio track yet, show video audio extract card */}
+            {hasVideoInScenes && !audioUrl && (
+              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-cyan-950/40 border border-emerald-500/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-emerald-300 flex items-center gap-1.5">
+                    <Film className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Video Phân Cảnh Có Âm Thanh</span>
+                  </span>
+                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Cảnh {firstVideoScene?.order || firstVideoScene?.scene_id || 1}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-300 leading-relaxed">
+                  Trích xuất MP3 từ video phân cảnh để kích hoạt Tạo Lời Bài Hát (Add Lyrics - Lọc Beat) hoặc Phụ đề Whisper tự động.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleExtractAudio}
+                  disabled={isExtractingAudio || isTranscribing || isSeparatingLyrics}
+                  className="w-full py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  {isExtractingAudio ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-950" />
+                      <span>Đang trích xuất MP3 từ Video...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Music className="w-3.5 h-3.5" />
+                      <span>Tách MP3 Từ Video Phân Cảnh</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-cyan-400" /> Ngôn ngữ phát âm
@@ -685,16 +750,21 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
 
             <button
               onClick={handleStartTranscribe}
-              disabled={isTranscribing || isSeparatingLyrics || !audioUrl || !hasVoiceAudio}
+              disabled={isTranscribing || isSeparatingLyrics || isExtractingAudio || (!audioUrl && !hasVideoInScenes)}
               className={`w-full py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 ${
-                isTranscribing
+                isTranscribing || isExtractingAudio
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  : !audioUrl || !hasVoiceAudio
+                  : !audioUrl && !hasVideoInScenes
                   ? 'bg-[#202538] text-slate-500 cursor-not-allowed border border-[#282F45]'
-                  : 'bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-lg shadow-cyan-500/20 active:scale-[0.98]'
+                  : 'bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-lg shadow-cyan-500/20 active:scale-[0.98] cursor-pointer'
               }`}
             >
-              {isTranscribing ? (
+              {isExtractingAudio ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                  Đang tách MP3 từ video...
+                </>
+              ) : isTranscribing ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
                   Đang phân tích Whisper AI...
@@ -711,17 +781,22 @@ export const CaptionsFlyoutTab: React.FC<CaptionsFlyoutTabProps> = ({
             <button
               type="button"
               onClick={handleStartAddLyrics}
-              disabled={isTranscribing || isSeparatingLyrics || !audioUrl}
+              disabled={isTranscribing || isSeparatingLyrics || isExtractingAudio || (!audioUrl && !hasVideoInScenes)}
               className={`w-full py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                isSeparatingLyrics || isTranscribing
+                isSeparatingLyrics || isTranscribing || isExtractingAudio
                   ? 'bg-purple-950/60 border border-purple-500/40 text-purple-300 cursor-not-allowed'
-                  : !audioUrl
+                  : !audioUrl && !hasVideoInScenes
                   ? 'bg-[#181B28] text-slate-500 cursor-not-allowed border border-[#242A3E]'
                   : 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:brightness-110 text-white shadow-lg shadow-purple-500/20 active:scale-[0.98]'
               }`}
               title="Lọc bớt tiếng trống, bass & nhạc cụ stereo để Whisper nhận diện lời bài hát (lyrics) chính xác"
             >
-              {isSeparatingLyrics ? (
+              {isExtractingAudio ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-purple-300" />
+                  <span>🎬 Đang tách MP3 từ video...</span>
+                </>
+              ) : isSeparatingLyrics ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
                   <span>🎵 Đang lọc beat & tách vocal on-device...</span>
