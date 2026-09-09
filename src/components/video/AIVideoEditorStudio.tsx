@@ -79,6 +79,8 @@ import { snapToGrid } from '../../../packages/timeline-core/math_timeline';
 import { wordaiAuth } from '@/lib/wordai-firebase';
 import { wynmotionService, MotionProject } from '@/services/wynmotionService';
 import { extractAudioFromVideo } from '@/utils/audioExtractor';
+import { saveAndShareMedia } from '@/utils/mediaSaveHelper';
+import { libraryCacheManager } from '@/services/libraryCacheManager';
 
 const API_BASE = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'https://ai.wordai.pro';
 
@@ -2350,32 +2352,17 @@ export const Scene_${activeScene ? activeScene.scene_id : 1}: React.FC = () => {
 
         if (statusData.status === 'completed' && statusData.mp4_url) {
           setExportProgress(100);
-          setExportStatusText('Completed! Downloading your MP4 video...');
+          setExportStatusText('🎉 Xuất video thành công! Đang mở tùy chọn lưu...');
 
           const mp4Url = statusData.mp4_url;
           const fileName = statusData.filename || (projectId ? `WynMotion_${projectId.slice(0, 8)}.mp4` : `wynrise_slide_${slideIndex + 1}.mp4`);
 
-          try {
-            const blobRes = await fetch(mp4Url);
-            if (!blobRes.ok) throw new Error('Blob fetch error');
-            const blob = await blobRes.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-          } catch {
-            const link = document.createElement('a');
-            link.href = mp4Url;
-            link.setAttribute('download', fileName);
-            link.setAttribute('target', '_blank');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
+          // ✅ iOS: triggers native Share Sheet (Save Video / Save to Files / AirDrop)
+          // ✅ Web: falls back to <a download> click
+          await saveAndShareMedia(mp4Url, fileName);
+          // Refresh library tab so video shows up immediately
+          libraryCacheManager.notifyLibraryUpdated('videos');
+          libraryCacheManager.notifyLibraryUpdated('projects');
           return;
         }
 
